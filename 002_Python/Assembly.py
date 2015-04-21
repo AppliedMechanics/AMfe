@@ -22,17 +22,17 @@ import Mesh
 import time
 
 
-my_mesh = Mesh.Mesh_generator(x_len=3*3, y_len=4*3, x_no_elements=3*3, y_no_elements=3*3)
-my_mesh.build_mesh()
+my_meshgenerator = Mesh.Mesh_generator(x_len=3*3, y_len=4*3, x_no_elements=3*3*3, y_no_elements=3*3*3)
+my_meshgenerator.build_mesh()
 
 
 t1 = time.clock()
 
 # Hier kommt das Assembly-Zeugs:
-nodes = np.array(my_mesh.nodes)[:,1:]
-elements = np.array(my_mesh.elements, dtype=int)[:,1:]
+nodes = np.array(my_meshgenerator.nodes)[:,1:]
+elements = np.array(my_meshgenerator.elements, dtype=int)[:,1:]
 
-ndof_global = nodes.shape[0]
+ndof_global = nodes.size
 row_global = []
 col_global = []
 vals_global = []
@@ -45,8 +45,9 @@ my_element = Element.ElementPlanar(E_modul=10)
 
 for element in elements:
     # vielleicht a bisserl ineffizient... ;-)
+    # Knotenpositionen x des Elements
     x = np.array([nodes[i] for i in element]).reshape(-1)
-    ndof_local = x.shape[0]
+    ndof_local = len(x)
     # Nur Test-Zeugs, um die Performance zu checken
     # k_element = np.zeros((ndof_local, ndof_local))
     k_element = my_element.k_int(x, x)
@@ -54,9 +55,12 @@ for element in elements:
     row = np.zeros(ndof_local**2)
     col = np.zeros(ndof_local**2)
     vals = np.zeros(ndof_local**2)
+    # element_indices have to be corrected in order respect the dimensions
+    # Attention: This only works for planar scenarios. Otherwise the list comprehension hast to be changed!
+    element_indices = np.array([(2*i, 2*i+1) for i in element]).reshape(-1)
     # Double-Loop for indexing
-    for i_loc, i_glob in enumerate(element):
-        for j_loc, j_glob in enumerate(element):
+    for i_loc, i_glob in enumerate(element_indices):
+        for j_loc, j_glob in enumerate(element_indices):
             row[counter] = i_glob
             col[counter] = j_glob
             vals[counter] = k_element[i_loc, j_loc]
@@ -89,10 +93,10 @@ print('und die Rechenzeit für Aufbau der Matrix:', t3-t2)
 import matplotlib.pylab as pylab
 pylab.matshow(K_array)
 
-# Test der
+# Kraft-Randbedingungen
 force_vector = np.zeros(ndof_global)
-force_index = 55
-force_vector[55] = 100
+force_index = -1
+force_vector[force_index] = 1.
 
 
 
@@ -110,15 +114,44 @@ def apply_boundaries(K, boundary_indices):
     else:
         print('Kein Vektor oder keine Matrix übergeben')
 
+def remove_boundaries(K, boundary_indices):
+    '''
+    Ist die inverse Funktion zu apply_boundaries; Rekonstruiert den vollen Verschiebungsvektor bzw. die volle Matrix mit leeren Zeilen und Spalten
+    '''
+    ndof_red = K.shape[0]
+    ndof = ndof_red + len(boundary_indices)
+    positive_index_list = [i for i in range(ndof) if not i in boundary_indices]
+    if len(K.shape) == 1:
+        K_return = np.zeros(ndof)
+        K_return[positive_index_list] = K
+    elif len(K.shape) == 2:
+        K_return = np.zeros((ndof, ndof))
+        K_return[np.ix_(positive_index_list, positive_index_list)] = K
+    return K_return
 
-boundary_indices = np.arange(10)
+boundary_indices = np.arange(0,2*27,3)
 K_bound = apply_boundaries(K_array, boundary_indices)
 f_bound = apply_boundaries(force_vector, boundary_indices)
-u = np.linalg.solve(K_bound, f_bound)
+u_bound = np.linalg.solve(K_bound, f_bound)
+
+u = remove_boundaries(u_bound, boundary_indices)
+K_new = remove_boundaries(K_bound, boundary_indices)
+
+t4 = time.clock()
+print('und die Rechenzeit fürs Lösen des Systems:', t4-t3)
 
 
 
+# Mesh handling
+knotenfile = 'Vernetzungen/nodes.csv'
+elementfile = 'Vernetzungen/elements.csv'
+my_meshgenerator.save_mesh(knotenfile, elementfile)
 
+my_mesh = Mesh.Mesh()
+my_mesh.read_nodes(knotenfile)
+my_mesh.read_elements(elementfile)
+my_mesh.set_displacement(u)
+my_mesh.save_mesh_for_paraview('Sepp')
 
 
 

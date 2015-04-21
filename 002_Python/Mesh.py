@@ -33,6 +33,7 @@ class Mesh:
     def __init__(self):
         self.nodes = []
         self.elements = []
+        self.u = None
 
     def read_nodes(self, filename, node_dof=2):
         '''
@@ -51,6 +52,7 @@ class Mesh:
         except:
             print('FEHLER beim lesen der Datei', filename, '\n Vermutlich stimmt die erwartete Dimension der Knotenfreiheitsgrade', node_dof, 'nicht mit der Dimension in der Datei zusammen.')
         self.no_of_nodes = len(self.nodes)
+        self.u = np.zeros((self.no_of_nodes, self.node_dof))
 
     def read_elements(self, filename):
         '''Liest die Elementmatrizen aus'''
@@ -72,6 +74,14 @@ class Mesh:
         B = sp.sparse.csr_matrix((ones, (row_indices, column_indices)), shape = (self.element_dof, self.no_of_nodes*self.node_dof))
         return B
 
+    def set_displacement(self, u, node_dof=2):
+        if self.u.size != u.size:
+            print('Die Dimension des Vektors u ist nicht Korrekt. ')
+            print('Der Vektor muss insgesamt ', self.u.size, 'Einträge enthalten')
+            print('Übergeben wurde aber ein Vektor mit ', u.size, 'Einträgen')
+        else:
+            self.u = np.array(u).reshape((-1, node_dof))
+        pass
 
     def save_mesh_for_paraview(self, filename):
         '''
@@ -131,9 +141,9 @@ class Mesh:
             savefile_vtu.write(' '.join('5' for x in self.elements))
             savefile_vtu.write('\n</DataArray>\n')
             savefile_vtu.write('</Cells> \n<PointData>\n')
-            savefile_vtu.write('<DataArray type="Int32" Name="displacement" NumberOfComponents="2" format="ascii">\n')
-            for j in self.nodes:
-                savefile_vtu.write(' '.join('0' for x in list(j)[1:]) + '\n')
+            savefile_vtu.write('<DataArray type="Float64" Name="displacement" NumberOfComponents="3" format="ascii">\n')
+            for j in self.u:
+                savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
             savefile_vtu.write('\n</DataArray>\n')
             savefile_vtu.write(vtu_footer)
             savefile_vtu.close()
