@@ -7,7 +7,7 @@ Created on Fri Mar 20 15:25:24 2015
 
 import numpy as np
 import scipy as sp
-import scipy.sparse
+
 
 class Mesh:
     '''
@@ -108,7 +108,6 @@ class Mesh:
             # Es muss die Anzahl der gesamten Punkte und Elemente angegeben werden
             savefile_vtu.write('<Piece NumberOfPoints="' + str(len(self.nodes)) + '" NumberOfCells="' + str(len(self.elements)) + '">\n')
             savefile_vtu.write('<Points>\n')
-            # Hier gibt's einen kleinen Hack; die Anzahl der Komponenten muss 3 betragen; Hier ist als z-Komponente die 0 zum Schluss mit dabei...
             savefile_vtu.write('<DataArray type="Float64" Name="Array" NumberOfComponents="3" format="ascii">\n')
             # bei Systemen mit 2 Knotenfreiheitsgraden wird die dritte 0-Komponenten noch extra durch die endflag hinzugefügt...
             if self.node_dof == 2:
@@ -140,7 +139,7 @@ class Mesh:
             savefile_vtu.close()
         pass
 
-
+# test
 my_mesh = Mesh()
 my_mesh.read_elements('saved_elements.csv')
 my_mesh.read_nodes('saved_nodes.csv')
@@ -195,7 +194,7 @@ class Mesh_generator:
         '''
         Building the mesh by first producing the points, and secondly the elements
         '''
-        # Building the nodes
+        # Length of one element
         l_x = self.x_len / self.x_no_elements
         l_y = self.y_len / self.y_no_elements
         # Generating the nodes
