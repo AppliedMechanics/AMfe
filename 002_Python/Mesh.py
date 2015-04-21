@@ -139,12 +139,12 @@ class Mesh:
             savefile_vtu.close()
         pass
 
-# test
-my_mesh = Mesh()
-my_mesh.read_elements('saved_elements.csv')
-my_mesh.read_nodes('saved_nodes.csv')
-my_mesh.provide_assembly_matrix(3).toarray()
-my_mesh.save_mesh_for_paraview('myfilename')
+## test
+#my_mesh = Mesh()
+#my_mesh.read_elements('saved_elements.csv')
+#my_mesh.read_nodes('saved_nodes.csv')
+#my_mesh.provide_assembly_matrix(3).toarray()
+#my_mesh.save_mesh_for_paraview('myfilename')
 
 #%%
 
@@ -279,13 +279,13 @@ class Mesh_generator:
         pass
 
 
-
-# Test
-my_meshgenerator = Mesh_generator(x_len=3*3, y_len=4*3, x_no_elements=3*3*3, y_no_elements=3*3*3, height = 1.5, x_curve=True, y_curve=False)
-my_meshgenerator.build_mesh()
-my_meshgenerator.save_mesh('saved_nodes.csv', 'saved_elements.csv')
-
-my_mesh = Mesh()
-my_mesh.read_elements('saved_elements.csv')
-my_mesh.read_nodes('saved_nodes.csv', node_dof=3)
-my_mesh.save_mesh_for_paraview('myfilename')
+#
+## Test
+#my_meshgenerator = Mesh_generator(x_len=3*3, y_len=4*3, x_no_elements=3*3*3, y_no_elements=3*3*3, height = 1.5, x_curve=True, y_curve=False)
+#my_meshgenerator.build_mesh()
+#my_meshgenerator.save_mesh('saved_nodes.csv', 'saved_elements.csv')
+#
+#my_mesh = Mesh()
+#my_mesh.read_elements('saved_elements.csv')
+#my_mesh.read_nodes('saved_nodes.csv', node_dof=3)
+#my_mesh.save_mesh_for_paraview('myfilename')

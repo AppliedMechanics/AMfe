@@ -14,6 +14,8 @@ import numpy as np
 
 class ElementPlanar():
     '''
+    Elementklasse für ein ebenes Dreieckselement. Die Knoten sind an de drei Ecken und haben jeweils Verschiebungen in x- und y-Richtung.
+
     Das ist die Klasse, in dem die Elemente definiert sind und für die Berechnung zur Verfügung stehen.
     Die Elementklasse wird zusammen mit der Mesh-Klasse in eine FE-Klasse eingebunden.
     Hier weren nur dreieckige Elemente betrachtet.
@@ -143,6 +145,7 @@ def jacobian(func, vec, X):
 #
 #K = my_element.k_int(X, X)
 #K_finite_differenzen = jacobian(my_element.f_int, X, X)
+#print(K - K_finite_differenzen)
 #M = my_element.m_int(X, X)
 
 
