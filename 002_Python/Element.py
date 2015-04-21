@@ -19,18 +19,23 @@ class ElementPlanar():
     Hier weren nur dreieckige Elemente betrachtet.
     '''
 
-    def __init__(self, E_modul=210E9, poisson_ratio=0.3):
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=10):
         self.lame_mu = E_modul / (2*(1+poisson_ratio))
         self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
         self.C_SE = np.array([[self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
                          [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, 0],
                          [0, 0, self.lame_mu]])
+        self.t = element_thickness
+        self.rho = density
+        self.I = np.eye(2)
         pass
 
     def compute_tensors(self, x, X):
+        '''
+        In allen Tensorberechnungen werden nur ebene Größen betrachtet. Die Dickeninformation (self.t) kommt dann erst später bei der Bestimmung der internen Kräfte f_int bzw. der Massen- und Steifigkeitsmatrizen zustande.
+        '''
         x1, y1, x2, y2, x3, y3 = x
         X1, Y1, X2, Y2, X3, Y3 = X
-        self.I = np.eye(2)
         # Darstellung der Verschiebung in Voigt-Notation;
         # Vermutlich ist das direkte Eingruppieren in ein Array schneller...
         # u_voigt = x - X
@@ -59,7 +64,7 @@ class ElementPlanar():
         '''
         self.compute_tensors(x, X)
         self.P = self.S.dot(self.F.T)
-        f_int = self.B0_tilde.T.dot(self.P)*self.A0
+        f_int = self.B0_tilde.T.dot(self.P)*self.A0*self.t
         return f_int.reshape(-1)
 
 
@@ -70,17 +75,23 @@ class ElementPlanar():
         '''
         self.compute_tensors(x, X)
         # Tangentiale Steifigkeitsmatrix
-        self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0
+        self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0*self.t
         self.K_geo = np.kron(self.K_geo_small, self.I)
         #
         self.B0 = np.zeros((3, 6))
         for i in range(3):
             self.B0[:,2*i:2*i+2] = np.array([[self.B0_tilde[0,i], 0], [0, self.B0_tilde[1,i]], [self.B0_tilde[1,i], self.B0_tilde[0,i]]]).dot(self.F.T)
-        self.K_mat = self.B0.T.dot(self.C_SE.dot(self.B0))*self.A0
+        self.K_mat = self.B0.T.dot(self.C_SE.dot(self.B0))*self.A0*self.t
         return self.K_mat + self.K_geo
 
     def m_int(self, x, X):
-        pass
+
+        X1, Y1, X2, Y2, X3, Y3 = X
+        self.A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
+        self.M_small = np.array([[2, 1, 1], [1, 2, 1,], [1, 1, 2]])*self.A0/12*self.t*self.rho
+        self.M = np.kron(self.M_small, self.I)
+        return self.M
+
 
 
 
@@ -119,7 +130,8 @@ def jacobian(func, vec, X):
         jacobian[:,i] = (f_tmp - f) / h
     return jacobian
 
-#
+
+
 ## Definition von h
 #h = np.sqrt(np.finfo(float).eps)
 #
@@ -131,38 +143,8 @@ def jacobian(func, vec, X):
 #
 #K = my_element.k_int(X, X)
 #K_finite_differenzen = jacobian(my_element.f_int, X, X)
-#
-#
-#x = X.copy()
-#x[1] += h
-#f_nl = my_element.f_int(x, X)
-#
+#M = my_element.m_int(X, X)
 
-#
-#y_stretch = 1.
-#x = np.array([y_stretch*1, 0, 0, 1, 0, 0], dtype=float)
-#X = np.array([y_stretch*1, 0, 0, 1, 0, 0], dtype=float)
-#
-#
-#
-#X = x_new
-#
-#x_tmp = x.copy()
-#x_tmp[1] += h*100
-#
-#f = my_element.f_int(x_tmp, X)
-#K = my_element.k_int(x_new, x_new)
-#K_finite_diff =
-#
-#
-#
-## Test
-## my_element.f_int(x_new, x)
-## my_element.k_int(x_new, x)
-#
-#
-#S_new = my_element.C_SE.dot(my_element.B0.dot(my_element.u.reshape(-1)))
-#E_new = my_element.B0.dot(my_element.u.reshape(-1))
 
 #%%
 
