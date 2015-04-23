@@ -16,7 +16,7 @@ import numpy as np
 import scipy as sp
 import Element
 import Mesh
-# from scipy import sparse
+from scipy import sparse
 
 # Zeitmessung:
 import time
