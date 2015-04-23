@@ -32,6 +32,18 @@ t1 = time.clock()
 nodes = np.array(my_meshgenerator.nodes)[:,1:]
 elements = np.array(my_meshgenerator.elements, dtype=int)[:,1:]
 
+
+class SmallAssembly():
+    '''
+
+    '''
+
+    def __init__(self):
+        pass
+
+
+
+
 ndof_global = nodes.size
 row_global = []
 col_global = []
@@ -42,7 +54,7 @@ vals_global = []
 my_element = Element.ElementPlanar(E_modul=10)
 
 
-
+# Schleife über alle Elemente
 for element in elements:
     # vielleicht a bisserl ineffizient... ;-)
     # Knotenpositionen x des Elements

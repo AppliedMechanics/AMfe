@@ -2,6 +2,9 @@
 """
 Created on Tue Mar 24 11:13:52 2015
 
+Element-Modul, in der die Elementformulierungen enthalten sind.
+
+
 Aufruf der IPython-Konsole über
     >>> ipython console
 
@@ -15,13 +18,18 @@ import numpy as np
 class ElementPlanar():
     '''
     Elementklasse für ein ebenes Dreieckselement. Die Knoten sind an de drei Ecken und haben jeweils Verschiebungen in x- und y-Richtung.
+    Die Feldgrößen des Elements (Spannung, Dehnung etc.) sind konstant über das Element, daher ist die Approximationsgüte moderat.
 
-    Das ist die Klasse, in dem die Elemente definiert sind und für die Berechnung zur Verfügung stehen.
-    Die Elementklasse wird zusammen mit der Mesh-Klasse in eine FE-Klasse eingebunden.
-    Hier weren nur dreieckige Elemente betrachtet.
+    Bisher ist nur die Toal Lagrange Darstellung implementiert.
+
+    Der Elementtyp ist auf Basis von Belytschko, Ted: Nonlinear Finite Elements for Continua and Structures programmiert.
+    Die wichtigen Referenzen sind auf S. 201 und 207 zu finden.
     '''
 
     def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=10):
+        '''
+        Definition der Materialgrößen und Dicke, da es sich um 2D-Elemente handelt
+        '''
         self.lame_mu = E_modul / (2*(1+poisson_ratio))
         self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
         self.C_SE = np.array([[self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
@@ -34,7 +42,17 @@ class ElementPlanar():
 
     def compute_tensors(self, x, X):
         '''
-        In allen Tensorberechnungen werden nur ebene Größen betrachtet. Die Dickeninformation (self.t) kommt dann erst später bei der Bestimmung der internen Kräfte f_int bzw. der Massen- und Steifigkeitsmatrizen zustande.
+        Bestimmung der tensoriellen Größen des Elements für eine Total Lagrange Betrachtungsweise. Die Tensoren werden als Objektvariablen abgespeichert, daher hat diese Funktion keine Rückgabewerte.
+
+        Die bestimmten Größen sind:
+            B0_tilde:   Die Ableitung der Ansatzfunktionen nach den x- und y-Koordinaten (2x3-Matrix)
+                        In den Zeilein stehen die Koordinatenrichtungen, in den Spalten die Ansatzfunktionen
+            F:          Der Deformationsgradient (2x2-Matrix)
+            E:          Der Green-Lagrange Dehnungstensor (2x2-Matrix)
+            S:          Der 2. Piola-Kirchhoff-Spannungstensor, berechnet auf Basis des Kirchhoff'schen Materialmodells (2x2-Matrix)
+
+        In allen Tensorberechnungen werden nur ebene Größen betrachtet.
+        Die Dickeninformation (self.t) kommt dann erst später bei der Bestimmung der internen Kräfte f_int bzw. der Massen- und Steifigkeitsmatrizen zustande.
         '''
         x1, y1, x2, y2, x3, y3 = x
         X1, Y1, X2, Y2, X3, Y3 = X
@@ -44,9 +62,9 @@ class ElementPlanar():
         # u = u_voigt.reshape((-1,2)).T
         # Hier scheint jedoch die Verschiebungsdarstellung in Matrix-Notation besser zu sein
         self.u = np.array([[x1 - X1, y1 - Y1], [x2 - X2, y2 - Y2], [x3 - X3, y3 - Y3]])
-        # compute B_tilde-matrix:
+        # # compute B_tilde-matrix:
         # A = 0.5*((x3-x2)*(y1-y2) - (x1-x2)*(y3-y2))
-        # just some stuff for updated Lagrangian
+        # # just some stuff for updated Lagrangian
         # B_tilde = 1/(2*A)*np.array([[y2-y3, x3-x2], [y3-y1, x1-x3], [y1-y2, x2-x1]])
         # B = 1/(2*A)*np.array([  [y2-y3, 0, y3-y1, 0, y1-y2, 0],
         #                         [0, x3-x2, 0, x1-x3, 0, x2-x1],
@@ -62,7 +80,9 @@ class ElementPlanar():
 
     def f_int(self, x, X):
         '''
-        Beschreibung des Koordinatenvektors über x = [x1, y1, x2, y2, x3, y3]
+        Bestimmt die internen Kräfte und liefert einen Kraftvektor in Voigt-Notation zurück, also f = [f1x, f1y, f2x, f2y, f3x, f3y]
+        Kraft- und Koordinatenvektor sind beiden in Voig-Notation beschrieben, also x = [x1, y1, x2, y2, x3, y3]
+        Die Methode für die Bestimmung der inneren Kraft ist Total Lagrange. Es wird als Konstitutivgesetz das Kirchhoff-Material angenommen.
         '''
         self.compute_tensors(x, X)
         self.P = self.S.dot(self.F.T)
@@ -72,22 +92,27 @@ class ElementPlanar():
 
     def k_int(self, x, X):
         '''
-        Beschreibung des Koordinatenvektors über x = [x1, y1, x2, y2, x3, y3]
+        Bestimmt die tangentiale Steifigkeitstmatrix auf Basis von Total Lagrange und liefert diese in Voigt-Koordinaten zurück. Die Steifigkeitstmatrix ist daher eine 6x6-Matrix.
 
+        Beschreibung des Koordinatenvektors über x = [x1, y1, x2, y2, x3, y3]
         '''
         self.compute_tensors(x, X)
-        # Tangentiale Steifigkeitsmatrix
+        # Tangentiale Steifigkeitsmatrix resultierend aus der geometrischen Änderung
         self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0*self.t
         self.K_geo = np.kron(self.K_geo_small, self.I)
-        #
+        # Aufbau der B0-Matrix aus den Produkt mit dem Deformationsgradienten
         self.B0 = np.zeros((3, 6))
         for i in range(3):
             self.B0[:,2*i:2*i+2] = np.array([[self.B0_tilde[0,i], 0], [0, self.B0_tilde[1,i]], [self.B0_tilde[1,i], self.B0_tilde[0,i]]]).dot(self.F.T)
+        # Bestimmung der materiellen Steifigkeitmatrix
         self.K_mat = self.B0.T.dot(self.C_SE.dot(self.B0))*self.A0*self.t
+        # Rückgabewert ist die Summe aus materieller und geometrischer Steifigkeitsmatrix
         return self.K_mat + self.K_geo
 
     def m_int(self, x, X):
-
+        '''
+        Bestimmt die Massenmatrix. Erstellt die Massenmatrix durch die fest einprogrammierte Darstellung aus dem Lehrbuch.
+        '''
         X1, Y1, X2, Y2, X3, Y3 = X
         self.A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
         self.M_small = np.array([[2, 1, 1], [1, 2, 1,], [1, 1, 2]])*self.A0/12*self.t*self.rho
@@ -120,6 +145,10 @@ class ElementSchale():
 
 
 def jacobian(func, vec, X):
+    '''
+    Bestimmung der Jacobimatrix auf Basis von finiten Differenzen. 
+    Die Funktion func(vec, X) wird nach dem Vektor vec abgeleitet, also d func / d vec an der Stelle X
+    '''
     ndof = vec.shape[0]
     jacobian = np.zeros((ndof, ndof))
     h = np.sqrt(np.finfo(float).eps)
