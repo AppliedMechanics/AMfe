@@ -7,7 +7,7 @@ Created on Fri Mar 20 15:25:24 2015
 
 import numpy as np
 import scipy as sp
-
+import os
 
 class Mesh:
     '''
@@ -34,6 +34,7 @@ class Mesh:
         self.nodes = []
         self.elements = []
         self.u = None
+        self.timesteps = 1
 
     def read_nodes(self, filename, node_dof=2):
         '''
@@ -80,8 +81,15 @@ class Mesh:
             print('Der Vektor muss insgesamt ', self.u.size, 'Einträge enthalten')
             print('Übergeben wurde aber ein Vektor mit ', u.size, 'Einträgen')
         else:
-            self.u = np.array(u).reshape((-1, node_dof))
+            self.u = [np.array(u).reshape((-1, node_dof))]
         pass
+
+    def set_displacement_with_time(self, u, ntimesteps, node_dof=2):
+        self.timesteps = ntimesteps
+        self.u = []
+        for i in range(ntimesteps):
+            self.u.append(np.array(u[:,i]).reshape((-1, node_dof)))
+
 
     def save_mesh_for_paraview(self, filename):
         '''
@@ -90,14 +98,15 @@ class Mesh:
         # Make the pvd-File with the links to vtu-files
         pvd_header = '''<?xml version="1.0"?> \n <VTKFile type="Collection" version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
         pvd_footer = ''' </Collection> \n </VTKFile>'''
-        pvd_line_start = '''<DataSet timestep="0" group="" part="0" file="'''
+        pvd_line_start = '''<DataSet timestep="'''
+        pvd_line_middle = '''" group="" part="0" file="'''
         pvd_line_end = '''"/>\n'''
         filename_pvd = filename + '.pvd'
+        filename_head, filename_tail = os.path.split(filename)
         savefile_pvd = open(filename_pvd, 'w')
         savefile_pvd.write(pvd_header)
-        timesteps = 1
-        for i in range(timesteps):
-            savefile_pvd.write(pvd_line_start + filename + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
+        for i in range(self.timesteps):
+            savefile_pvd.write(pvd_line_start + str(i) + pvd_line_middle + filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
         savefile_pvd.write(pvd_footer)
         savefile_pvd.close()
 
@@ -111,7 +120,7 @@ class Mesh:
         </Piece>
         </UnstructuredGrid>
         </VTKFile>'''
-        for i in range(timesteps):
+        for i in range(self.timesteps):
             filename_vtu = filename + '_' + str(i).zfill(3) + '.vtu'
             savefile_vtu = open(filename_vtu, 'w')
             savefile_vtu.write(vtu_header)
@@ -142,7 +151,8 @@ class Mesh:
             savefile_vtu.write('\n</DataArray>\n')
             savefile_vtu.write('</Cells> \n<PointData>\n')
             savefile_vtu.write('<DataArray type="Float64" Name="displacement" NumberOfComponents="3" format="ascii">\n')
-            for j in self.u:
+            # pick the i-th timestep
+            for j in self.u[i]:
                 savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
             savefile_vtu.write('\n</DataArray>\n')
             savefile_vtu.write(vtu_footer)

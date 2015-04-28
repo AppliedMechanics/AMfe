@@ -40,7 +40,7 @@ class ElementPlanar():
         self.I = np.eye(2)
         pass
 
-    def compute_tensors(self, x, X):
+    def compute_tensors(self, X, u):
         '''
         Bestimmung der tensoriellen Größen des Elements für eine Total Lagrange Betrachtungsweise. Die Tensoren werden als Objektvariablen abgespeichert, daher hat diese Funktion keine Rückgabewerte.
 
@@ -54,14 +54,8 @@ class ElementPlanar():
         In allen Tensorberechnungen werden nur ebene Größen betrachtet.
         Die Dickeninformation (self.t) kommt dann erst später bei der Bestimmung der internen Kräfte f_int bzw. der Massen- und Steifigkeitsmatrizen zustande.
         '''
-        x1, y1, x2, y2, x3, y3 = x
         X1, Y1, X2, Y2, X3, Y3 = X
-        # Darstellung der Verschiebung in Voigt-Notation;
-        # Vermutlich ist das direkte Eingruppieren in ein Array schneller...
-        # u_voigt = x - X
-        # u = u_voigt.reshape((-1,2)).T
-        # Hier scheint jedoch die Verschiebungsdarstellung in Matrix-Notation besser zu sein
-        self.u = np.array([[x1 - X1, y1 - Y1], [x2 - X2, y2 - Y2], [x3 - X3, y3 - Y3]])
+        self.u = u.reshape((-1,2))
         # # compute B_tilde-matrix:
         # A = 0.5*((x3-x2)*(y1-y2) - (x1-x2)*(y3-y2))
         # # just some stuff for updated Lagrangian
@@ -75,28 +69,28 @@ class ElementPlanar():
         self.H = self.B0_tilde.dot(self.u)
         self.F = self.H + self.I
         self.E = 1/2*(self.H + self.H.T + self.H.T.dot(self.H))
-        self.S = self.lame_lambda*np.trace(self.E)*np.eye(2) + 2*self.lame_mu*self.E
+        self.S = self.lame_lambda*np.trace(self.E)*self.I + 2*self.lame_mu*self.E
         pass
 
-    def f_int(self, x, X):
+    def f_int(self, X, u):
         '''
         Bestimmt die internen Kräfte und liefert einen Kraftvektor in Voigt-Notation zurück, also f = [f1x, f1y, f2x, f2y, f3x, f3y]
         Kraft- und Koordinatenvektor sind beiden in Voig-Notation beschrieben, also x = [x1, y1, x2, y2, x3, y3]
         Die Methode für die Bestimmung der inneren Kraft ist Total Lagrange. Es wird als Konstitutivgesetz das Kirchhoff-Material angenommen.
         '''
-        self.compute_tensors(x, X)
+        self.compute_tensors(X, u)
         self.P = self.S.dot(self.F.T)
         f_int = self.B0_tilde.T.dot(self.P)*self.A0*self.t
         return f_int.reshape(-1)
 
 
-    def k_int(self, x, X):
+    def k_int(self, X, u):
         '''
         Bestimmt die tangentiale Steifigkeitstmatrix auf Basis von Total Lagrange und liefert diese in Voigt-Koordinaten zurück. Die Steifigkeitstmatrix ist daher eine 6x6-Matrix.
 
         Beschreibung des Koordinatenvektors über x = [x1, y1, x2, y2, x3, y3]
         '''
-        self.compute_tensors(x, X)
+        self.compute_tensors(X, u)
         # Tangentiale Steifigkeitsmatrix resultierend aus der geometrischen Änderung
         self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0*self.t
         self.K_geo = np.kron(self.K_geo_small, self.I)
@@ -109,7 +103,7 @@ class ElementPlanar():
         # Rückgabewert ist die Summe aus materieller und geometrischer Steifigkeitsmatrix
         return self.K_mat + self.K_geo
 
-    def m_int(self, x, X):
+    def m_int(self, X, u):
         '''
         Bestimmt die Massenmatrix. Erstellt die Massenmatrix durch die fest einprogrammierte Darstellung aus dem Lehrbuch.
         '''
@@ -146,7 +140,7 @@ class ElementSchale():
 
 def jacobian(func, vec, X):
     '''
-    Bestimmung der Jacobimatrix auf Basis von finiten Differenzen. 
+    Bestimmung der Jacobimatrix auf Basis von finiten Differenzen.
     Die Funktion func(vec, X) wird nach dem Vektor vec abgeleitet, also d func / d vec an der Stelle X
     '''
     ndof = vec.shape[0]
@@ -172,10 +166,10 @@ def jacobian(func, vec, X):
 #X = np.array([0, 0, 3, 1, 2, 2.])
 #x = np.array([0, 0, 3.1, 1, 2, 2.])
 #
-#K = my_element.k_int(X, X)
+#K = my_element.k_int(X, u)
 #K_finite_differenzen = jacobian(my_element.f_int, X, X)
 #print(K - K_finite_differenzen)
-#M = my_element.m_int(X, X)
+#M = my_element.m_int(X, u)
 
 
 #%%
