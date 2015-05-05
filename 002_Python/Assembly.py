@@ -1,3 +1,4 @@
+#!/bin/env python
 # -*- coding: utf-8 -*-
 """
 Created on Tue Apr 21 11:13:52 2015
@@ -19,6 +20,7 @@ import scipy as sp
 import Element
 import Mesh
 from scipy import sparse
+from scipy import linalg
 
 import multiprocessing as mp
 from multiprocessing import Pool
@@ -47,6 +49,7 @@ class PrimitiveAssembly():
         self.vals_global = []
         pass
 
+
     def assemble(self, u=None):
         '''
         assembliert die matrix_function für eine gegebene aktuelle Konfiguration x und die Ursprungskonfiguration X
@@ -68,22 +71,11 @@ class PrimitiveAssembly():
             if u:
                 u_local = u(element_indices)
             element_matrix = self.matrix_function(X, u_local)
-#            print('Element-Matrix:', element_matrix)
-#            print('X, u_local', X, u_local)
-            counter = 0
-            row = np.zeros(ndof_local**2)
-            col = np.zeros(ndof_local**2)
-            vals = np.zeros(ndof_local**2)
-            # Double-Loop for indexing
-            for i_loc, i_glob in enumerate(element_indices):
-                for j_loc, j_glob in enumerate(element_indices):
-                    row[counter] = i_glob
-                    col[counter] = j_glob
-                    vals[counter] = element_matrix[i_loc, j_loc]
-                    counter += 1
-            self.row_global.append(row)
-            self.col_global.append(col)
-            self.vals_global.append(vals)
+            row = np.zeros((ndof_local, ndof_local))
+            row[:,:] = element_indices
+            self.row_global.append(row.reshape(-1))
+            self.col_global.append((row.T).reshape(-1))
+            self.vals_global.append(element_matrix.reshape(-1))
             pass
         row_global_array = np.array(self.row_global).reshape(-1)
         col_global_array = np.array(self.col_global).reshape(-1)
@@ -120,21 +112,6 @@ def remove_boundaries(K, boundary_indices):
         K_return = np.zeros((ndof, ndof))
         K_return[np.ix_(positive_index_list, positive_index_list)] = K
     return K_return
-
-def apply_master_boundaries(K, boundary_indices, master_slave_list=None):
-    '''
-    The boundary application method; Maybe it's better to transform this to a class able to perform this computations
-    '''
-    # sum all slaves to the master / coordinate transoform them to multiple masters via matrix vector operations
-    # make a list of all elements to be deleted from slave and boundaries
-    # delete the elements to be deleted
-    pass
-
-def remove_master_boundaries(K, boundary_indices, master_slave_list=None):
-    # make a list of all elements to be added from slave and boundaries
-    # insert all slave and blocked coordinates
-    # copy the slave information to the master coordinate
-    pass
 
 
 
@@ -178,65 +155,155 @@ class MultiprocessAssembly():
         return matrix_coo
 
 
+class ConvertIndices():
+    '''
+    Klasse, die sich um die Konversion von Indizes Kümmert. Hauptfunktion ist, dass die Indizes von Knotendarstellungen und Koordinatenrichtung in Voigt-Notation übertragen werden können und umgekehrt.     
+    '''
+    def __init__(self, no_of_dofs_per_node=2):
+        self.node_dof = no_of_dofs_per_node        
+        pass
+    
+    def node2total(self, node_index, coordinate_index):
+        '''
+        Konvertiert den Knotenindex, wie er im Mesh-Programm dargestellt wird 
+        zusammen mit dem Index der Koordinatenrichtung zum globalen Freiheitsgrad        
+        '''
+        return node_index*self.node_dof + coordinate_index
+    
+    def total2node(self, total_dof):
+        '''
+        Konvertiert den globalen Freiheitsgrad, wie er von den Berechnungsroutinen 
+        verwendet wird, zu Knoten- und Indexfreiheitsgrad
+        '''
+        return total_dof // self.node_dof, total_dof%self.node_dof
+
+
+class Boundary():
+    '''
+    Randbedingungen-Klasse: 
+    
+    Mit ihr können die Randbedingungen auf eine Struktur aufgebracht werden. Es werden generell Master-Slave-Randbedingungen unterstützt... 
+    
+    Generell sind zwei Lösungsmöglichkeiten da: Streichen der Slave-Koordinaten und Elimination der Slave-Koordinaten,     
+    
+    Die B-Matrix kann zur Verfügung gestellt werden
+    '''
+    def __init__(self, ndof_full_system, master_slave_list=None):
+        self.ndof_full_system = ndof_full_system
+        self.master_slave_list = master_slave_list
+        pass
+
+    
+    def b_matrix(self):
+        '''
+        Erzeugt die B-Matrix, die die globalen (u_global) Freiheitsgrade mit den beschränkten Freiheitsgraden (u_bound) verbindet: 
+        
+        u_global = B*u_bound
+        
+        Die globalen 
+        '''
+        B = sp.sparse.eye(self.ndof_full_system).tocsr()
+        global_slave_node_list = np.array([], dtype=int)
+        for master_node, slave_node_list, b_matrix in self.master_slave_list:
+            if (type(b_matrix) != type(np.zeros(1))): # a little hack in order to get the types right
+                # Make a B-Matrix, if it's not there
+                b_matrix = np.ones(len(slave_node_list))
+            if master_node != None:
+                # check, if the master node is existent; otherwise the columns will only be deleted
+                for i in range(len(slave_node_list)):
+                    # Hier werden die Sklaven-Knoten auf die Master-Knoten aufaddiert
+                    col = B[:,slave_node_list[i]]*b_matrix[i]
+                    row_indices = col.nonzero()[0]
+                    no_of_nonzero_entries = row_indices.shape[0]
+                    col_indices = np.ones(no_of_nonzero_entries)*master_node
+                    B = B + sp.sparse.csr_matrix((col.data, (row_indices, col_indices)), shape=(self.ndof_full_system, self.ndof_full_system))
+                # Der Master-Knoten wird nochmals subtrahiert:
+                B[master_node, master_node] -= 1
+            # Lösche den Master-Knoten aus der slave_node_list, um ihn zu erhalten...
+            cleaned_slave_node_list = [x for x in slave_node_list if x != master_node]
+            global_slave_node_list = np.append(global_slave_node_list, cleaned_slave_node_list)
+        # delete the rows which are slave-nodes with a boolean mask:
+        mask = np.ones(self.ndof_full_system, dtype=bool)
+        mask[global_slave_node_list] = False
+        B = B[:,mask]
+        return B
+    
+if False:
+    # Test of the Boundary-Class-Routine; Should work more or less now!    
+    master_slave_list = [[0, [0, 1, 2, 5], np.array([0.5, 1, 1.5, 3])], ]
+    #master_slave_list = [[4, [0, 1, 2], None, ]]
+    my_boundary = Boundary(10, master_slave_list)
+    B = my_boundary.b_matrix()
+    B_array = B.toarray()
+
+
+   
 #%%
-t1 = time.clock()
 
-# Netz
-my_meshgenerator = Mesh.Mesh_generator(x_len=3, y_len=3*3, x_no_elements=3*3*3*3*3, y_no_elements=3*3*3*3*3)
-my_meshgenerator.build_mesh()
-ndof = len(my_meshgenerator.nodes)*2
-nelements = len(my_meshgenerator.elements)
-nodes_array = np.array(my_meshgenerator.nodes)[:,1:]
-element_array = np.array(my_meshgenerator.elements)[:,1:]
-t2 = time.clock()
-print('Netz mit', ndof, 'Freiheitsgraden und', nelements, 'Elementen erstellt')
-
-# Element
-my_element = Element.ElementPlanar()
-multiproc = False
-if multiproc:
-    no_of_proc= 6
-    element_object_list = [Element.ElementPlanar() for i in range(no_of_proc)]
-    element_function_list_k = [j.k_int for j in element_object_list]
-    element_function_list_m = [j.m_int for j in element_object_list]
-    my_multiprocessing = MultiprocessAssembly(PrimitiveAssembly, element_function_list_k, nodes_array, element_array)
-    K_coo = my_multiprocessing.assemble()
-else:
-    my_assembly = PrimitiveAssembly(np.array(my_meshgenerator.nodes)[:,1:], np.array(my_meshgenerator.elements)[:,1:], my_element.k_int)
-    K_coo = my_assembly.assemble()
-K = K_coo.tocsr()
-print('Matrix K assembliert')
-
-t3 = time.clock()
-# update der Matrix-Funktion
-if multiproc:
-    my_multiprocessing = MultiprocessAssembly(PrimitiveAssembly, element_function_list_m, nodes_array, element_array)
-    M_coo = my_multiprocessing.assemble()
-else:
-    my_assembly.matrix_function = my_element.m_int
-    M_coo = my_assembly.assemble()
-M = M_coo.tocsr()
-print('Matrix M assembliert')
-
-t4 = time.clock()
-print('Das System hat', ndof, 'Freiheitsgrade und', nelements, 'Elemente.')
-print('Zeit zum generieren des Netzes:', t2 - t1)
-print('Zeit zum Assemblieren der Steifigkeitsmatrix:', t3 - t2)
-print('Zeit zum Assemblieren der Massenmatrix:', t4 - t3)
-
+#
+#t1 = time.clock()
+#
+## Netz
+#my_meshgenerator = Mesh.Mesh_generator(x_len=3, y_len=3*3*3, x_no_elements=3*3*3*3*3, y_no_elements=3*3*3*3*3*3)
+#my_meshgenerator.build_mesh()
+#ndof = len(my_meshgenerator.nodes)*2
+#nelements = len(my_meshgenerator.elements)
+#nodes_array = np.array(my_meshgenerator.nodes)[:,1:]
+#element_array = np.array(my_meshgenerator.elements)[:,1:]
+#t2 = time.clock()
+#print('Netz mit', ndof, 'Freiheitsgraden und', nelements, 'Elementen erstellt')
+#
+## Element
+#my_element = Element.ElementPlanar()
+#multiproc = False
+#if multiproc:
+#    no_of_proc= 6
+#    element_object_list = [Element.ElementPlanar() for i in range(no_of_proc)]
+#    element_function_list_k = [j.k_int for j in element_object_list]
+#    element_function_list_m = [j.m_int for j in element_object_list]
+#    my_multiprocessing = MultiprocessAssembly(PrimitiveAssembly, element_function_list_k, nodes_array, element_array)
+#    K_coo = my_multiprocessing.assemble()
+#else:
+#    my_assembly = PrimitiveAssembly(np.array(my_meshgenerator.nodes)[:,1:], np.array(my_meshgenerator.elements)[:,1:], my_element.k_int)
+#    K_coo = my_assembly.assemble()
+#K = K_coo.tocsr()
+#print('Matrix K assembliert')
+#
+#t3 = time.clock()
+## update der Matrix-Funktion
+#if multiproc:
+#    my_multiprocessing = MultiprocessAssembly(PrimitiveAssembly, element_function_list_m, nodes_array, element_array)
+#    M_coo = my_multiprocessing.assemble()
+#else:
+#    my_assembly.matrix_function = my_element.m_int
+#    M_coo = my_assembly.assemble()
+#M = M_coo.tocsr()
+#print('Matrix M assembliert')
+#
+#t4 = time.clock()
+#print('Das System hat', ndof, 'Freiheitsgrade und', nelements, 'Elemente.')
+#print('Zeit zum generieren des Netzes:', t2 - t1)
+#print('Zeit zum Assemblieren der Steifigkeitsmatrix:', t3 - t2)
+#print('Zeit zum Assemblieren der Massenmatrix:', t4 - t3)
+#
+#
+#shit_product = M.T.dot(K.dot(M))
 #%%
+#
+#M = M_coo.toarray()
+#K = K_coo.toarray()
 #boundaries = [0, 1, 2, 3, 4, 5, 6]
 #M_bound = apply_boundaries(M, boundaries)
 #K_bound = apply_boundaries(K, boundaries)
 #print('Randbedingungen aufgebracht')
 #
 ## Hermit'sches generalisiertes Eigenwertproblem
-#eigvals_bound, eigvecs_bound = sp.linalg.eigh(K_bound, M_bound)
+#eigvals, eigvecs = sp.linalg.eigh(K, M)
 #print('Eigenwertproblem gelöst')
 #
-#eigvecs = M*0
-#for i in range(M_bound.shape[0]):
-#    eigvecs[:,i] = remove_boundaries(eigvecs_bound[:,i], boundaries)
+##eigvecs = M*0
+##for i in range(M_bound.shape[0]):
+##    eigvecs[:,i] = remove_boundaries(eigvecs_bound[:,i], boundaries)
 #
 #print('Eigenformen geupdated')
 #
@@ -249,12 +316,12 @@ print('Zeit zum Assemblieren der Massenmatrix:', t4 - t3)
 #my_mesh.read_nodes(knotenfile)
 #my_mesh.read_elements(elementfile)
 ##my_mesh.set_displacement(eigvecs[:,-2])
-#my_mesh.set_displacement_with_time(eigvecs, len(eigvals_bound))
+#my_mesh.set_displacement_with_time(eigvecs, len(eigvals))
 #my_mesh.save_mesh_for_paraview('Versuche/Balken')
 #
 #
 #import matplotlib.pylab as pylab
-#pylab.plot(eigvals_bound[:30])
+#pylab.plot(eigvals)
 
 
 #%%

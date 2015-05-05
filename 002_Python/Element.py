@@ -5,6 +5,13 @@ Created on Tue Mar 24 11:13:52 2015
 Element-Modul, in der die Elementformulierungen enthalten sind.
 
 
+Beobachtungen aus dem Profiler: 
+Die Meiste Zeit im Assembly-Prozess wird mit der kron-Funktion und der 
+trace-funktion verbraucht; Es lohnt sich sicherlich, diese Funktionen 
+geschickter zu implementieren! 
+
+
+
 Aufruf der IPython-Konsole über
     >>> ipython console
 
@@ -69,7 +76,10 @@ class ElementPlanar():
         self.H = self.B0_tilde.dot(self.u)
         self.F = self.H + self.I
         self.E = 1/2*(self.H + self.H.T + self.H.T.dot(self.H))
-        self.S = self.lame_lambda*np.trace(self.E)*self.I + 2*self.lame_mu*self.E
+        ## Trace is very slow; use a direct sum instead...
+        # self.S = self.lame_lambda*np.trace(self.E)*self.I + 2*self.lame_mu*self.E
+        self.S = self.lame_lambda*(self.E[0,0] + self.E[1,1])*self.I + 2*self.lame_mu*self.E
+                
         pass
 
     def f_int(self, X, u):
@@ -93,7 +103,14 @@ class ElementPlanar():
         self.compute_tensors(X, u)
         # Tangentiale Steifigkeitsmatrix resultierend aus der geometrischen Änderung
         self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0*self.t
-        self.K_geo = np.kron(self.K_geo_small, self.I)
+        self.K_geo = np.array([[self.K_geo_small[0,0], 0, self.K_geo_small[0,1], 0, self.K_geo_small[0,2], 0], 
+                           [0, self.K_geo_small[0,0], 0, self.K_geo_small[0,1], 0, self.K_geo_small[0,2]], 
+                           [self.K_geo_small[1,0], 0, self.K_geo_small[1,1], 0, self.K_geo_small[1,2], 0], 
+                           [0, self.K_geo_small[1,0], 0, self.K_geo_small[1,1], 0, self.K_geo_small[1,2]],
+                           [self.K_geo_small[2,0], 0, self.K_geo_small[2,1], 0, self.K_geo_small[2,2], 0], 
+                           [0, self.K_geo_small[2,0], 0, self.K_geo_small[2,1], 0, self.K_geo_small[2,2]]])
+        # Kronecker-Produkt ist wahnsinnig aufwändig; Daher Versuch, dies so zu lösen...
+#        self.K_geo = np.kron(self.K_geo_small, self.I)
         # Aufbau der B0-Matrix aus den Produkt mit dem Deformationsgradienten
         self.B0 = np.zeros((3, 6))
         for i in range(3):
@@ -109,8 +126,15 @@ class ElementPlanar():
         '''
         X1, Y1, X2, Y2, X3, Y3 = X
         self.A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
-        self.M_small = np.array([[2, 1, 1], [1, 2, 1,], [1, 1, 2]])*self.A0/12*self.t*self.rho
-        self.M = np.kron(self.M_small, self.I)
+        self.M = np.array([[2, 0, 1, 0, 1, 0], 
+                           [0, 2, 0, 1, 0, 1], 
+                           [1, 0, 2, 0, 1, 0], 
+                           [0, 1, 0, 2, 0, 1],
+                           [1, 0, 1, 0, 2, 0], 
+                           [0, 1, 0, 1, 0, 2]])*self.A0/12*self.t*self.rho
+        # Dauert ewig mit der kron-Funktion; Viel einfacher scheint die direkte Berechnungsmethode zu sein...
+#        self.M_small = np.array([[2, 1, 1], [1, 2, 1,], [1, 1, 2]])*self.A0/12*self.t*self.rho
+#        self.M = np.kron(self.M_small, self.I)
         return self.M
 
 
