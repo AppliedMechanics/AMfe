@@ -10,11 +10,6 @@ Die Meiste Zeit im Assembly-Prozess wird mit der kron-Funktion und der
 trace-funktion verbraucht; Es lohnt sich sicherlich, diese Funktionen 
 geschickter zu implementieren! 
 
-
-
-Aufruf der IPython-Konsole über
-    >>> ipython console
-
 @author: johannesr
 """
 
