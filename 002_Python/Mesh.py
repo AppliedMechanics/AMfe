@@ -53,7 +53,7 @@ class Mesh:
         except:
             print('FEHLER beim lesen der Datei', filename, '\n Vermutlich stimmt die erwartete Dimension der Knotenfreiheitsgrade', node_dof, 'nicht mit der Dimension in der Datei zusammen.')
         self.no_of_nodes = len(self.nodes)
-        self.u = np.zeros((self.no_of_nodes, self.node_dof))
+        self.u = [np.zeros((self.no_of_nodes, self.node_dof))]
 
     def read_elements(self, filename):
         '''Liest die Elementmatrizen aus'''
@@ -76,7 +76,7 @@ class Mesh:
         return B
 
     def set_displacement(self, u, node_dof=2):
-        if self.u.size != u.size:
+        if self.u[0].size != u.size:
             print('Die Dimension des Vektors u ist nicht Korrekt. ')
             print('Der Vektor muss insgesamt ', self.u.size, 'Einträge enthalten')
             print('Übergeben wurde aber ein Vektor mit ', u.size, 'Einträgen')

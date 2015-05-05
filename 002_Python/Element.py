@@ -34,9 +34,16 @@ class ElementPlanar():
         '''
         self.lame_mu = E_modul / (2*(1+poisson_ratio))
         self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
-        self.C_SE = np.array([[self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
+        # Achtung: hier gibt's ebene Dehnung
+        plane_stress = True
+        if plane_stress:
+            self.C_SE = E_modul/(1 - poisson_ratio**2)*np.array([[1, poisson_ratio, 0],
+                              [poisson_ratio, 1, 0], 
+                              [0, 0, (1-poisson_ratio) / 2]])
+        else: # hier gibt's ebene Dehnung
+            self.C_SE = np.array([[self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
                          [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, 0],
-                         [0, 0, self.lame_mu]])
+                         [0, 0, self.lame_mu]])                         
         self.t = element_thickness
         self.rho = density
         self.I = np.eye(2)

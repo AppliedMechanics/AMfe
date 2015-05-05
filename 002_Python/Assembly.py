@@ -49,8 +49,7 @@ class PrimitiveAssembly():
 
     def assemble(self, u=None):
         '''
-        assembliert die matrix_function für eine gegebene aktuelle Konfiguration x und die Ursprungskonfiguration X
-        möglicherweise ist eine verschiebungsbasierte Darstellung mit X und u geschickter! Wäre näher dran an der Realität und man könnte einfacher lineare Elemente beschreiben, weil per Default u zu null gesetzt wird!
+        assembliert die matrix_function für die Ursprungskonfiguration X und die Verschiebung u. 
         '''
         # Löschen der alten Variablen
         self.row_global = []
@@ -150,6 +149,8 @@ class Boundary():
         Master-DOF: (typ: int) Der DOF, auf den die Sklaven-DOFs projiziert werden. Der Master-DOF wird am ende eliminiert, d.h. er sollte üblicherweise auch in den Sklaven-DOFs auftauchen
         
         [Liste_von_Sklaven-DOFs]: (typ: liste mit ints) Die DOFs, die auf den Master-DOF projiziert werden. Zur Gewichtung wird der Gewichtungsvektor angewendet, der genauso viele Einträge haben muss wie die Sklaven-DOF-Liste
+        
+        Gewichtungsvektor: (typ: np.array oder None) TODO Beschreibung
         
         
         Wichtig: Für die Dirichlet-Randbedingungen werden Freiheitsgrade des globalen Systems und nicht die Knotenfreiheitsgrade berücksichtigt. Die Indexwerte der Knoten müssen stets in DOFs des globalen Sytems umgerechnet werden
