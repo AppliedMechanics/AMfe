@@ -30,7 +30,7 @@ class PrimitiveAssembly():
     Assemblierungsklasse, die für gegebene Tableaus von Knotenkoordinaten und Assemblierungsknoten eine Matrix assembliert
     '''
 
-    def __init__(self, node_coordinates_array = None, element_assembly_array=None, matrix_function=None, ndof_node=2):
+    def __init__(self, node_coordinates_array = None, element_assembly_array=None, matrix_function=None, ndof_node=2, force_function=None):
         '''
         Verlangt ein dreispaltiges Koordinatenarray, indem die Koordinaten in x, y, und z-Koordinaten angegeben sind
         Anzahl der Freiheitsgrade für einen Knotenfreiheitsgrad: ndof_node gibt an, welche Koordinaten verwendet werden sollen;
@@ -39,8 +39,9 @@ class PrimitiveAssembly():
         self.nodes = node_coordinates_array
         self.elements = element_assembly_array
         self.matrix_function = matrix_function
+        self.force_function = force_function
         self.ndof_node = ndof_node
-        self.ndof_global = self.nodes.size*self.ndof_node
+        self.ndof_global = self.nodes.size
         self.row_global = []
         self.col_global = []
         self.vals_global = []
@@ -78,6 +79,18 @@ class PrimitiveAssembly():
         vals_global_array = np.array(self.vals_global).reshape(-1)
         Matrix_coo = sp.sparse.coo_matrix((vals_global_array, (row_global_array, col_global_array)), dtype=float)
         return Matrix_coo
+    
+    def assemble_force(self, u):
+        '''
+        Assembliert die Force-Function für die Usprungskonfiguration X und die Verschiebung u        
+        '''
+        global_force = np.zeros(self.ndof_global)
+        for element in self.elements:
+            X = np.array([self.nodes[i] for i in element]).reshape(-1)
+            element_indices = np.array([[2*i + j for j in range(self.ndof_node)] for i in element]).reshape(-1)
+            global_force[element_indices] = self.force_function(X, u[element_indices])
+        return global_force
+        
 
 
 class MultiprocessAssembly():
@@ -183,38 +196,38 @@ class Boundary():
         return B
 
 
-###############################################################################
-## Ist eher veraletetes Zeugs; soll durch die Boundary-Klasse besser gemacht und ersetzt werden. 
-###############################################################################
-
-def apply_boundaries(K, boundary_indices):
-    '''
-    Funktion zum Aufbringen von Randbedingungen an den Vektor bzw. die Matrix K,
-    dessen Zeilen (und Spalten) gelöscht werden, wenn diese in der Liste oder dem Array boundary_indices auftreten.
-    '''
-    ndof = K.shape[0]
-    positive_index_list = [i for i in range(ndof) if not i in boundary_indices]
-    if len(K.shape) == 1:
-        return K[positive_index_list]
-    elif len(K.shape) ==2:
-        return K[np.ix_(positive_index_list, positive_index_list)]
-    else:
-        print('Kein Vektor oder keine Matrix übergeben')
-
-def remove_boundaries(K, boundary_indices):
-    '''
-    Ist die inverse Funktion zu apply_boundaries; Rekonstruiert den vollen Verschiebungsvektor bzw. die volle Matrix mit leeren Zeilen und Spalten
-    '''
-    ndof_red = K.shape[0]
-    ndof = ndof_red + len(boundary_indices)
-    positive_index_list = [i for i in range(ndof) if not i in boundary_indices]
-    if len(K.shape) == 1:
-        K_return = np.zeros(ndof)
-        K_return[positive_index_list] = K
-    elif len(K.shape) == 2:
-        K_return = np.zeros((ndof, ndof))
-        K_return[np.ix_(positive_index_list, positive_index_list)] = K
-    return K_return
+################################################################################
+### Ist eher veraltetes Zeugs; soll durch die Boundary-Klasse besser gemacht und ersetzt werden. 
+################################################################################
+#
+#def apply_boundaries(K, boundary_indices):
+#    '''
+#    Funktion zum Aufbringen von Randbedingungen an den Vektor bzw. die Matrix K,
+#    dessen Zeilen (und Spalten) gelöscht werden, wenn diese in der Liste oder dem Array boundary_indices auftreten.
+#    '''
+#    ndof = K.shape[0]
+#    positive_index_list = [i for i in range(ndof) if not i in boundary_indices]
+#    if len(K.shape) == 1:
+#        return K[positive_index_list]
+#    elif len(K.shape) ==2:
+#        return K[np.ix_(positive_index_list, positive_index_list)]
+#    else:
+#        print('Kein Vektor oder keine Matrix übergeben')
+#
+#def remove_boundaries(K, boundary_indices):
+#    '''
+#    Ist die inverse Funktion zu apply_boundaries; Rekonstruiert den vollen Verschiebungsvektor bzw. die volle Matrix mit leeren Zeilen und Spalten
+#    '''
+#    ndof_red = K.shape[0]
+#    ndof = ndof_red + len(boundary_indices)
+#    positive_index_list = [i for i in range(ndof) if not i in boundary_indices]
+#    if len(K.shape) == 1:
+#        K_return = np.zeros(ndof)
+#        K_return[positive_index_list] = K
+#    elif len(K.shape) == 2:
+#        K_return = np.zeros((ndof, ndof))
+#        K_return[np.ix_(positive_index_list, positive_index_list)] = K
+#    return K_return
 
 
 class ConvertIndices():
