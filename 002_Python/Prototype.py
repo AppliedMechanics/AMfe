@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 '''
-Hier eine Prototypen-Klasse, mit der allerhand Zeugs ausprobiert werden kann... 
+Hier eine Prototypen-Klasse, mit der allerhand Zeugs ausprobiert werden kann...
 
-Ist nicht wirklich ernst zu nehmen, erfüllt allerdings seinen Zweck! 
+Ist nicht wirklich ernst zu nehmen, erfüllt allerdings seinen Zweck!
 
 
 Aufruf der IPython-Konsole über
