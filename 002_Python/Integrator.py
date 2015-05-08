@@ -7,6 +7,9 @@ Integratoren-Klasse, mit der dynamische Probleme berechnet werden können
 import numpy as np
 
 
+def norm_of_vector(array):
+    return np.sqrt(array.T.dot(array))
+
 class NewmarkIntegrator():
     '''
     Newmark-Integrator-Schema zur Bestimmung der dynamischen Antwort...
@@ -32,7 +35,7 @@ class NewmarkIntegrator():
         self.f_ext = f_ext
 
     def residual(self, q, dq, ddq, t):
-        if self.f_ext:
+        if self.f_ext is not None:
             res = self.M.dot(ddq) + self.f_non(q) - self.f_ext(q, dq, t)
         else:
             res = self.M.dot(ddq) + self.f_non(q)
@@ -84,7 +87,7 @@ class NewmarkIntegrator():
             # Newcton-Correction-loop
 
             n_iter = 0
-            while np.linalg.norm(res) > self.eps*np.linalg.norm(f_non):
+            while norm_of_vector(res) > self.eps*norm_of_vector(f_non):
                 S = self.K(q) + 1/(self.beta*dt**2)*self.M
                 delta_q = - np.linalg.solve(S, res)
                 q   += delta_q
@@ -107,10 +110,6 @@ class NewmarkIntegrator():
         return np.array(q_global), np.array(dq_global)
 
 
-class DynamicalSystem():
-    '''
-    Diese Klasse ist die Basisklasse für ein dynamisches System. In diesem System wird
-    '''
 
 #%%
 

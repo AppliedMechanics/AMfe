@@ -30,7 +30,7 @@ class PrimitiveAssembly():
     Assemblierungsklasse, die für gegebene Tableaus von Knotenkoordinaten und Assemblierungsknoten eine Matrix assembliert
     '''
 
-    def __init__(self, node_coordinates_array = None, element_assembly_array=None, matrix_function=None, ndof_node=2, force_function=None):
+    def __init__(self, node_coordinates_array = None, element_assembly_array=None, matrix_function=None, ndof_node=2, vector_function=None):
         '''
         Verlangt ein dreispaltiges Koordinatenarray, indem die Koordinaten in x, y, und z-Koordinaten angegeben sind
         Anzahl der Freiheitsgrade für einen Knotenfreiheitsgrad: ndof_node gibt an, welche Koordinaten verwendet werden sollen;
@@ -39,7 +39,7 @@ class PrimitiveAssembly():
         self.nodes = node_coordinates_array
         self.elements = element_assembly_array
         self.matrix_function = matrix_function
-        self.force_function = force_function
+        self.vector_function = vector_function
         self.ndof_node = ndof_node
         self.ndof_global = self.nodes.size
         self.row_global = []
@@ -48,9 +48,9 @@ class PrimitiveAssembly():
         pass
 
 
-    def assemble(self, u=None):
+    def assemble_matrix(self, u=None):
         '''
-        assembliert die matrix_function für die Ursprungskonfiguration X und die Verschiebung u. 
+        assembliert die matrix_function für die Ursprungskonfiguration X und die Verschiebung u.
         '''
         # Löschen der alten Variablen
         self.row_global = []
@@ -79,25 +79,25 @@ class PrimitiveAssembly():
         vals_global_array = np.array(self.vals_global).reshape(-1)
         Matrix_coo = sp.sparse.coo_matrix((vals_global_array, (row_global_array, col_global_array)), dtype=float)
         return Matrix_coo
-    
-    def assemble_force(self, u):
+
+    def assemble_vector(self, u):
         '''
-        Assembliert die Force-Function für die Usprungskonfiguration X und die Verschiebung u        
+        Assembliert die Force-Function für die Usprungskonfiguration X und die Verschiebung u
         '''
         global_force = np.zeros(self.ndof_global)
         for element in self.elements:
             X = np.array([self.nodes[i] for i in element]).reshape(-1)
             element_indices = np.array([[2*i + j for j in range(self.ndof_node)] for i in element]).reshape(-1)
-            global_force[element_indices] = self.force_function(X, u[element_indices])
+            global_force[element_indices] = self.vector_function(X, u[element_indices])
         return global_force
-        
+
 
 
 class MultiprocessAssembly():
     '''
     Klasse um schnell im Multiprozess zu assemblieren; Verteilt die Assemblierung auf alle Assemblierungsklassen und summiert die anschließend alles auf
-    - funktioniert nicht so schnell, wie ich es erwartet hätte; großer Aufwand scheint nach wie vor zu sein,
-
+    - funktioniert nicht so schnell, wie ich es erwartet hätte; genauere Analysen bisher noch nicht vorhanden, da profile-Tool nich zuverlässig für multiprocessing-Probleme zu funktionieren scheint.
+    - ACHTUNG: Diese Klasse ist derzeit nicht in aktiver Nutzung. Möglicherweise macht es Sinn, diese Klasse zu überarbeiten, da sich die gesamte Programmstruktur gerade noch ändert.
     '''
     def __init__(self, assembly_class, list_of_matrix_functions, nodes_array, element_array):
         '''
@@ -135,12 +135,10 @@ class MultiprocessAssembly():
 
 class Boundary():
     '''
-    Randbedingungen-Klasse: 
-    
-    Mit ihr können die Randbedingungen auf eine Struktur aufgebracht werden. Es werden generell Master-Slave-Randbedingungen unterstützt... 
-    
-    Generell sind zwei Lösungsmöglichkeiten da: Streichen der Slave-Koordinaten und Elimination der Slave-Koordinaten,     
-    
+    Randbedingungen-Klasse:
+
+    Mit ihr können die Randbedingungen auf eine Struktur aufgebracht werden. Es werden generell Master-Slave-Randbedingungen unterstützt...
+
     Die B-Matrix kann zur Verfügung gestellt werden
     '''
     def __init__(self, ndof_full_system, master_slave_list=None):
@@ -148,24 +146,24 @@ class Boundary():
         self.master_slave_list = master_slave_list
         pass
 
-    
+
     def b_matrix(self):
         '''
-        Erzeugt die B-Matrix, die die globalen (u_global) Freiheitsgrade mit den beschränkten Freiheitsgraden (u_bound) verbindet: 
-        
+        Erzeugt die B-Matrix, die die globalen (u_global) Freiheitsgrade mit den beschränkten Freiheitsgraden (u_bound) verbindet:
+
         u_global = B*u_bound
-        
-        Die globalen Freiheitsgrade differieren daher von den Freiheitsgraden des beschränkten Systems; 
-        Eingabeparameter ist eine Liste mit Dirichlet-Randbedingungen: 
+
+        Die globalen Freiheitsgrade differieren daher von den Freiheitsgraden des beschränkten Systems;
+        Eingabeparameter ist eine Liste mit Dirichlet-Randbedingungen:
         [Master-DOF, [Liste_von_Sklaven-DOFs], Gewichtungsvektor]
-        
+
         Master-DOF: (typ: int) Der DOF, auf den die Sklaven-DOFs projiziert werden. Der Master-DOF wird am ende eliminiert, d.h. er sollte üblicherweise auch in den Sklaven-DOFs auftauchen
-        
+
         [Liste_von_Sklaven-DOFs]: (typ: liste mit ints) Die DOFs, die auf den Master-DOF projiziert werden. Zur Gewichtung wird der Gewichtungsvektor angewendet, der genauso viele Einträge haben muss wie die Sklaven-DOF-Liste
-        
+
         Gewichtungsvektor: (typ: np.array oder None) TODO Beschreibung
-        
-        
+
+
         Wichtig: Für die Dirichlet-Randbedingungen werden Freiheitsgrade des globalen Systems und nicht die Knotenfreiheitsgrade berücksichtigt. Die Indexwerte der Knoten müssen stets in DOFs des globalen Sytems umgerechnet werden
         '''
         B = sp.sparse.eye(self.ndof_full_system).tocsr()
@@ -197,7 +195,7 @@ class Boundary():
 
 
 ################################################################################
-### Ist eher veraltetes Zeugs; soll durch die Boundary-Klasse besser gemacht und ersetzt werden. 
+### Ist eher veraltetes Zeugs; soll durch die Boundary-Klasse besser gemacht und ersetzt werden.
 ################################################################################
 #
 #def apply_boundaries(K, boundary_indices):
@@ -232,22 +230,22 @@ class Boundary():
 
 class ConvertIndices():
     '''
-    Klasse, die sich um die Konversion von Indizes Kümmert. Hauptfunktion ist, dass die Indizes von Knotendarstellungen und Koordinatenrichtung in Voigt-Notation übertragen werden können und umgekehrt.     
+    Klasse, die sich um die Konversion von Indizes Kümmert. Hauptfunktion ist, dass die Indizes von Knotendarstellungen und Koordinatenrichtung in Voigt-Notation übertragen werden können und umgekehrt.
     '''
     def __init__(self, no_of_dofs_per_node=2):
-        self.node_dof = no_of_dofs_per_node        
+        self.node_dof = no_of_dofs_per_node
         pass
-    
+
     def node2total(self, node_index, coordinate_index):
         '''
-        Konvertiert den Knotenindex, wie er im Mesh-Programm dargestellt wird 
-        zusammen mit dem Index der Koordinatenrichtung zum globalen Freiheitsgrad        
+        Konvertiert den Knotenindex, wie er im Mesh-Programm dargestellt wird
+        zusammen mit dem Index der Koordinatenrichtung zum globalen Freiheitsgrad
         '''
         return node_index*self.node_dof + coordinate_index
-    
+
     def total2node(self, total_dof):
         '''
-        Konvertiert den globalen Freiheitsgrad, wie er von den Berechnungsroutinen 
+        Konvertiert den globalen Freiheitsgrad, wie er von den Berechnungsroutinen
         verwendet wird, zu Knoten- und Indexfreiheitsgrad
         '''
         return total_dof // self.node_dof, total_dof%self.node_dof

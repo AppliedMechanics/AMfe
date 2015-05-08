@@ -33,7 +33,7 @@ import time
 t1 = time.clock()
 
 # Netz
-my_meshgenerator = Mesh.Mesh_generator(x_len=3, y_len=3*3*3, x_no_elements=3*3*3*3, y_no_elements=3*3*3*3*3)
+my_meshgenerator = Mesh.MeshGenerator(x_len=3, y_len=3*3*3, x_no_elements=3*3*3*3, y_no_elements=3*3*3*3*3)
 my_meshgenerator.build_mesh()
 ndof = len(my_meshgenerator.nodes)*2
 nelements = len(my_meshgenerator.elements)
@@ -310,7 +310,7 @@ my_mesh.save_mesh_for_paraview('Versuche/Dehnstab')
 #
 
 ## Test
-#my_meshgenerator = Mesh_generator(x_len=3*3, y_len=4*3, x_no_elements=3*3*3, y_no_elements=3*3*3, height = 1.5, x_curve=True, y_curve=False)
+#my_meshgenerator = MeshGenerator(x_len=3*3, y_len=4*3, x_no_elements=3*3*3, y_no_elements=3*3*3, height = 1.5, x_curve=True, y_curve=False)
 #my_meshgenerator.build_mesh()
 #my_meshgenerator.save_mesh('saved_nodes.csv', 'saved_elements.csv')
 #

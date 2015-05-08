@@ -10,8 +10,7 @@ import scipy as sp
 import os
 
 class Mesh:
-    '''
-    Die Netz-Klasse, die für die Verarbeitung des Netzes und die zugehörigen Operationen zuständig ist
+    '''Die Netz-Klasse, die für die Verarbeitung des Netzes und die zugehörigen Operationen zuständig ist
     Features
     - Import von Netzdaten aus Textdateien
     - Export von Netzdaten und Verschiebungsvektoren in Textdaten
@@ -168,12 +167,11 @@ class Mesh:
 
 #%%
 
-class Mesh_generator:
+class MeshGenerator:
     '''
     Klasse zum Erzeugen von zweidimensionalen Netzen, die Dreieckstruktur haben.
     Ausgabe in Netz-Files, die von der Netz-Klasse wieder eingelesen werden können
 
-    3d_mesh = False
     '''
 
     def __init__(self, x_len, y_len, x_no_elements, y_no_elements, height = 0, x_curve = False, y_curve = False, flat_mesh = True, mesh_style = 'tetra'):
@@ -301,7 +299,7 @@ class Mesh_generator:
 
 #
 ## Test
-#my_meshgenerator = Mesh_generator(x_len=3*3, y_len=4*3, x_no_elements=3*3*3, y_no_elements=3*3*3, height = 1.5, x_curve=True, y_curve=False)
+#my_meshgenerator = MeshGenerator(x_len=3*3, y_len=4*3, x_no_elements=3*3*3, y_no_elements=3*3*3, height = 1.5, x_curve=True, y_curve=False)
 #my_meshgenerator.build_mesh()
 #my_meshgenerator.save_mesh('saved_nodes.csv', 'saved_elements.csv')
 #

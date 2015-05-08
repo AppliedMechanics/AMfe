@@ -5,10 +5,10 @@ Created on Tue Mar 24 11:13:52 2015
 Element-Modul, in der die Elementformulierungen enthalten sind.
 
 
-Beobachtungen aus dem Profiler: 
-Die Meiste Zeit im Assembly-Prozess wird mit der kron-Funktion und der 
-trace-funktion verbraucht; Es lohnt sich sicherlich, diese Funktionen 
-geschickter zu implementieren! 
+Beobachtungen aus dem Profiler:
+Die Meiste Zeit im Assembly-Prozess wird mit der kron-Funktion und der
+trace-funktion verbraucht; Es lohnt sich sicherlich, diese Funktionen
+geschickter zu implementieren!
 
 @author: johannesr
 """
@@ -27,6 +27,7 @@ class ElementPlanar():
     Der Elementtyp ist auf Basis von Belytschko, Ted: Nonlinear Finite Elements for Continua and Structures programmiert.
     Die wichtigen Referenzen sind auf S. 201 und 207 zu finden.
     '''
+    plane_stress = True
 
     def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=10):
         '''
@@ -35,15 +36,14 @@ class ElementPlanar():
         self.lame_mu = E_modul / (2*(1+poisson_ratio))
         self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
         # Achtung: hier gibt's ebene Dehnung
-        plane_stress = True
-        if plane_stress:
+        if self.plane_stress:
             self.C_SE = E_modul/(1 - poisson_ratio**2)*np.array([[1, poisson_ratio, 0],
-                              [poisson_ratio, 1, 0], 
+                              [poisson_ratio, 1, 0],
                               [0, 0, (1-poisson_ratio) / 2]])
         else: # hier gibt's ebene Dehnung
             self.C_SE = np.array([[self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
                          [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, 0],
-                         [0, 0, self.lame_mu]])                         
+                         [0, 0, self.lame_mu]])
         self.t = element_thickness
         self.rho = density
         self.I = np.eye(2)
@@ -81,7 +81,7 @@ class ElementPlanar():
         ## Trace is very slow; use a direct sum instead...
         # self.S = self.lame_lambda*np.trace(self.E)*self.I + 2*self.lame_mu*self.E
         self.S = self.lame_lambda*(self.E[0,0] + self.E[1,1])*self.I + 2*self.lame_mu*self.E
-                
+
         pass
 
     def f_int(self, X, u):
@@ -105,11 +105,11 @@ class ElementPlanar():
         self.compute_tensors(X, u)
         # Tangentiale Steifigkeitsmatrix resultierend aus der geometrischen Änderung
         self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0*self.t
-        self.K_geo = np.array([[self.K_geo_small[0,0], 0, self.K_geo_small[0,1], 0, self.K_geo_small[0,2], 0], 
-                           [0, self.K_geo_small[0,0], 0, self.K_geo_small[0,1], 0, self.K_geo_small[0,2]], 
-                           [self.K_geo_small[1,0], 0, self.K_geo_small[1,1], 0, self.K_geo_small[1,2], 0], 
+        self.K_geo = np.array([[self.K_geo_small[0,0], 0, self.K_geo_small[0,1], 0, self.K_geo_small[0,2], 0],
+                           [0, self.K_geo_small[0,0], 0, self.K_geo_small[0,1], 0, self.K_geo_small[0,2]],
+                           [self.K_geo_small[1,0], 0, self.K_geo_small[1,1], 0, self.K_geo_small[1,2], 0],
                            [0, self.K_geo_small[1,0], 0, self.K_geo_small[1,1], 0, self.K_geo_small[1,2]],
-                           [self.K_geo_small[2,0], 0, self.K_geo_small[2,1], 0, self.K_geo_small[2,2], 0], 
+                           [self.K_geo_small[2,0], 0, self.K_geo_small[2,1], 0, self.K_geo_small[2,2], 0],
                            [0, self.K_geo_small[2,0], 0, self.K_geo_small[2,1], 0, self.K_geo_small[2,2]]])
         # Kronecker-Produkt ist wahnsinnig aufwändig; Daher Versuch, dies so zu lösen...
 #        self.K_geo = np.kron(self.K_geo_small, self.I)
@@ -128,11 +128,11 @@ class ElementPlanar():
         '''
         X1, Y1, X2, Y2, X3, Y3 = X
         self.A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
-        self.M = np.array([[2, 0, 1, 0, 1, 0], 
-                           [0, 2, 0, 1, 0, 1], 
-                           [1, 0, 2, 0, 1, 0], 
+        self.M = np.array([[2, 0, 1, 0, 1, 0],
+                           [0, 2, 0, 1, 0, 1],
+                           [1, 0, 2, 0, 1, 0],
                            [0, 1, 0, 2, 0, 1],
-                           [1, 0, 1, 0, 2, 0], 
+                           [1, 0, 1, 0, 2, 0],
                            [0, 1, 0, 1, 0, 2]])*self.A0/12*self.t*self.rho
         # Dauert ewig mit der kron-Funktion; Viel einfacher scheint die direkte Berechnungsmethode zu sein...
 #        self.M_small = np.array([[2, 1, 1], [1, 2, 1,], [1, 1, 2]])*self.A0/12*self.t*self.rho
