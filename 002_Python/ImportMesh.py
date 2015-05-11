@@ -21,11 +21,12 @@ class Mesh():
         import_msh(filepath): import files of type .msh
     
     Attributes:
-    
+        nodes:      Liste aller Knoten; Zeile [i] enthaelt die x-, y- und z-Koordinate von Knoten [i]
+        elements:   Liste aller Elemente; Zeile [i] enthaelt die Knotennummern von Element [i}
+        properties: Liste der Elementeigenschaften (noch nicht genauer spezifiziert)
     """
  
     def __init__(self):
-
         self.nodes = []
         self.elements = []
         self.properties = []
@@ -38,8 +39,7 @@ class Mesh():
         tag_nodes_end      = "$EndNodes"
         tag_elements_start = "$Elements"
         tag_elements_end   = "$EndElements"
-        
-        
+       
         try:
             infile = open(filepath,  'r')
         except:
@@ -88,7 +88,7 @@ class Mesh():
         # Zeile [i] von [elements] beinhaltet die Knotennummern von Element [i+1]
         for j in range(len(list_imported_elements)):
             # Nur fuer Dreieckselemente!!!
-            if list_imported_elements[j][1] == 2:
+            if list_imported_elements[j][1] == 2: # Elementyp '2' in gmsh sind Dreieckselemente
                 tag = list_imported_elements[j][2]
                 self.properties.append(list_imported_elements[j][3:3+tag])
                 self.elements.append(list_imported_elements[j][3+tag:])              
