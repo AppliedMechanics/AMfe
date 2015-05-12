@@ -34,6 +34,15 @@ class NewmarkIntegrator():
         self.M = M
         self.f_ext = f_ext
 
+    def set_dynamical_system(self, dynamical_system):
+        '''
+        hands over the dynamical system as a whole to the integrator. The matrices for the integration routine are then taken right from the dynamical system
+
+        Has to be implemented yet
+        '''
+#        TODO: to be implemented yet
+        pass
+
     def residual(self, q, dq, ddq, t):
         if self.f_ext is not None:
             res = self.M.dot(ddq) + self.f_non(q) - self.f_ext(q, dq, t)

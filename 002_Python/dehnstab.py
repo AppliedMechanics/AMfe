@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 
 
-
-# Eigene Module
-import Element
-import Mesh
-import Assembly
-import ImportMesh
-import boundary
-
-
 # Standard-Module
 import numpy as np
 import scipy as sp
+
+
+# Eigene Module
+import element
+import mesh
+import assembly
+import import_mesh
+import boundary
+
 
 
 
@@ -23,7 +23,7 @@ import time
 t1 = time.clock()
 
 # Netz
-my_meshgenerator = Mesh.MeshGenerator(x_len=3, y_len=3*3*3, x_no_elements=3*3, y_no_elements=3*3*3*3)
+my_meshgenerator = mesh.MeshGenerator(x_len=3, y_len=3*3*3, x_no_elements=3*3, y_no_elements=3*3*3*3)
 my_meshgenerator.build_mesh()
 ndof = len(my_meshgenerator.nodes)*2
 nelements = len(my_meshgenerator.elements)
@@ -33,17 +33,17 @@ t2 = time.clock()
 print('Netz mit', ndof, 'Freiheitsgraden und', nelements, 'Elementen erstellt')
 
 # Element
-my_element = Element.ElementPlanar(poisson_ratio=0.3)
+my_element = element.ElementPlanar(poisson_ratio=0.3)
 multiproc = False
 if multiproc:
     no_of_proc= 6
-    element_object_list = [Element.ElementPlanar() for i in range(no_of_proc)]
+    element_object_list = [element.ElementPlanar() for i in range(no_of_proc)]
     element_function_list_k = [j.k_int for j in element_object_list]
     element_function_list_m = [j.m_int for j in element_object_list]
     my_multiprocessing = Assembly.MultiprocessAssembly(Assembly.PrimitiveAssembly, element_function_list_k, nodes_array, element_array)
     K_coo = my_multiprocessing.assemble()
 else:
-    my_assembly = Assembly.PrimitiveAssembly(np.array(my_meshgenerator.nodes)[:,1:], np.array(my_meshgenerator.elements)[:,1:], my_element.k_int)
+    my_assembly = assembly.PrimitiveAssembly(np.array(my_meshgenerator.nodes)[:,1:], np.array(my_meshgenerator.elements)[:,1:], my_element.k_int)
     K_coo = my_assembly.assemble_matrix()
 K = K_coo.tocsr()
 print('Matrix K assembliert')
@@ -51,7 +51,7 @@ print('Matrix K assembliert')
 t3 = time.clock()
 # update der Matrix-Funktion
 if multiproc:
-    my_multiprocessing = Assembly.MultiprocessAssembly(Assembly.PrimitiveAssembly, element_function_list_m, nodes_array, element_array)
+    my_multiprocessing = assembly.MultiprocessAssembly(assembly.PrimitiveAssembly, element_function_list_m, nodes_array, element_array)
     M_coo = my_multiprocessing.assemble()
 else:
     my_assembly.matrix_function = my_element.m_int
@@ -71,7 +71,7 @@ knotenfile = 'Vernetzungen/nodes.csv'
 elementfile = 'Vernetzungen/elements.csv'
 my_meshgenerator.save_mesh(knotenfile, elementfile)
 
-my_mesh = Mesh.Mesh()
+my_mesh = mesh.Mesh()
 my_mesh.read_nodes(knotenfile)
 my_mesh.read_elements(elementfile)
 my_mesh.set_displacement(np.zeros(ndof))
@@ -82,7 +82,7 @@ t5 = time.clock()
 bottom_fixation = [None, range(20), None]
 #bottom_fixation = [None, [1 + 2*x for x in range(10)], None]
 #bottom_fixation2 = [None, [0, ], None]
-conv = Assembly.ConvertIndices(2)
+conv = assembly.ConvertIndices(2)
 master_node = conv.node2total(810, 1)
 top_fixation = [master_node, [master_node + 2*x for x in range(10)], None]
 dirichlet_boundary_list = [bottom_fixation, top_fixation]

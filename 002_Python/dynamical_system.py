@@ -10,11 +10,11 @@ By now it's just a skeleton; Maybe it grows further in the coming days and weeks
 import numpy as np
 import scipy as sp
 
-import Mesh
-import Element
-import Assembly
-import boundary # the boundaries are in the Assembly module by now...
-import Integrator
+import mesh
+import element
+import assembly
+import boundary
+import integrator
 
 
 class DynamicalSystem():
@@ -78,26 +78,6 @@ class DynamicalSystem():
         '''
         pass
 
-    def integrate_nonlinear_system(self, start_time, end_time, stepwidth, integrator_timestep):
-        '''Integrate the given system considering the geometric nonlinearity.
-        '''
-        pass
-
-    def integrate_linear_system(self, start_time, end_time, stepwidth, integrator_timestep):
-        '''Integrate the given system ignoring geometric nonlinearity.
-        '''
-        pass
-
-    def static_linear_analysis(self):
-        '''Solve the linear system for the given boundary conditions
-        '''
-        pass
-
-    def static_nonlinear_analysis(self):
-        '''Solve the nonlinear system for the given boundary conditions;
-        '''
-        pass
-
     def export_paraview(self, filename):
         '''Export the system with the given information to paraview
         '''
@@ -112,6 +92,10 @@ my_dirichlet_boundary_list = [[None, np.arange(40), None], [200, [200 + 2*i for 
 my_neumann_boundary_list = [[200, 'harmonic', (20, 2*np.pi*8)]]
 my_dynamical_system.apply_dirichlet_boundaries(my_dirichlet_boundary_list)
 my_dynamical_system.apply_neumann_boundaries(my_neumann_boundary_list)
+
+my_integrator = integrator.NewmarkIntegrator(alpha=0)
+my_integrator.set_dynamical_system(my_dynamical_system)
+
 my_dynamical_system.static_linear_analysis()
 my_dynamical_system.export_paraview('ParaView/linear_static_testcase')
 my_dynamical_system.integrate_nonlinear_system(0, 10, 0.01, 1E-4)
