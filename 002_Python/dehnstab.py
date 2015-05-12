@@ -12,7 +12,6 @@ import time
 import element
 import mesh
 import assembly
-import import_mesh
 import boundary
 
 output_dir = os.path.splitext(os.path.basename(__file__))[0] + time.strftime("_%Y%m%d_%H%M%S")
