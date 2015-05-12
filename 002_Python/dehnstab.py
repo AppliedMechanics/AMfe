@@ -72,7 +72,7 @@ my_meshgenerator.save_mesh(knotenfile, elementfile)
 my_mesh = mesh.Mesh()
 my_mesh.read_nodes_from_csv(knotenfile)
 my_mesh.read_elements_from_csv(elementfile)
-my_mesh.save_mesh_for_paraview(output_dir + '/Paraview/Dehnstab')
+#my_mesh.save_mesh_for_paraview(output_dir + '/Paraview/Dehnstab')
 
 t5 = time.clock()
 # Randbedingungen

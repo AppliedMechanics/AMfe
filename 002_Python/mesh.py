@@ -110,8 +110,6 @@ class Mesh:
                 savefile_pvd.write(pvd_line_start + str(i) + pvd_line_middle + filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
             savefile_pvd.write(pvd_footer)
 
-
-
         vtu_header = '''<?xml version="1.0"?> \n
         <VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian">
         <UnstructuredGrid>\n'''
