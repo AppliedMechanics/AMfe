@@ -27,6 +27,14 @@ class DirichletBoundary():
 
     def b_matrix(self):
         '''
+        Parameters
+        ----------
+        no parameters
+
+        Information
+        -----------
+
+
         Erzeugt die B-Matrix, die die globalen (u_global) Freiheitsgrade mit den beschränkten Freiheitsgraden (u_bound) verbindet:
 
         u_global = B*u_bound

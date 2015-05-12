@@ -30,17 +30,17 @@ class PrimitiveAssembly():
     Assemblierungsklasse, die für gegebene Tableaus von Knotenkoordinaten und Assemblierungsknoten eine Matrix assembliert
     '''
 
-    def __init__(self, node_coordinates_array = None, element_assembly_array=None, matrix_function=None, ndof_node=2, vector_function=None):
+    def __init__(self, node_coordinates_array = None, element_assembly_array=None, matrix_function=None, node_dof=2, vector_function=None):
         '''
         Verlangt ein dreispaltiges Koordinatenarray, indem die Koordinaten in x, y, und z-Koordinaten angegeben sind
-        Anzahl der Freiheitsgrade für einen Knotenfreiheitsgrad: ndof_node gibt an, welche Koordinaten verwendet werden sollen;
+        Anzahl der Freiheitsgrade für einen Knotenfreiheitsgrad: node_dof gibt an, welche Koordinaten verwendet werden sollen;
         Wenn mehr Koordinaten pro Knoten nötig sind (z.B. finite Rotationen), werden Nullen hinzugefügt
         '''
         self.nodes = node_coordinates_array
         self.elements = element_assembly_array
         self.matrix_function = matrix_function
         self.vector_function = vector_function
-        self.ndof_node = ndof_node
+        self.node_dof = node_dof
         self.ndof_global = self.nodes.size
         self.row_global = []
         self.col_global = []
@@ -57,7 +57,7 @@ class PrimitiveAssembly():
         self.col_global = []
         self.vals_global = []
         # number of local dofs
-        ndof_local = len(self.elements[0])*self.ndof_node
+        ndof_local = len(self.elements[0])*self.node_dof
         # preset for u_local; necessary, when u=None
         u_local = np.zeros(ndof_local)
 
@@ -65,7 +65,7 @@ class PrimitiveAssembly():
             # Koordinaten des elements
             X = np.array([self.nodes[i] for i in element]).reshape(-1)
             # element_indices have to be corrected in order respect the dimensions
-            element_indices = np.array([[2*i + j for j in range(self.ndof_node)] for i in element]).reshape(-1)
+            element_indices = np.array([[2*i + j for j in range(self.node_dof)] for i in element]).reshape(-1)
             if u:
                 u_local = u(element_indices)
             element_matrix = self.matrix_function(X, u_local)
@@ -88,7 +88,7 @@ class PrimitiveAssembly():
         global_force = np.zeros(self.ndof_global)
         for element in self.elements:
             X = np.array([self.nodes[i] for i in element]).reshape(-1)
-            element_indices = np.array([[2*i + j for j in range(self.ndof_node)] for i in element]).reshape(-1)
+            element_indices = np.array([[2*i + j for j in range(self.node_dof)] for i in element]).reshape(-1)
             global_force[element_indices] = self.vector_function(X, u[element_indices])
         return global_force
 

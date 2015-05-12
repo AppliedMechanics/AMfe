@@ -17,12 +17,11 @@ class Mesh:
     - Import von Netzdaten aus Textdateien
     - Export von Netzdaten und Verschiebungsvektoren in Textdaten
     - Zusammenarbeit mit ParaView
-    - Bereitstellung von Gather- und Assembly-Matrizen
     -
 
     Interne Variablen:
-    - nodes: Ist eine Liste bzw. ein numpy-Array, welches Angibt, wie die x-y-z-Koordinaten eines Knotens lauten. Die erste Spalte ist der Knotenindex (Zählung beginnt bei 0)
-    - elements: Ist eine Liste bzw. ein numpy-Array, welches angibt, welche Knoten zu welchem Element gehören. Die erstes Spalte ist der Elementindex (Zählung beginnt bei 0)
+    - nodes: Ist eine Liste bzw. ein numpy-Array, welches Angibt, wie die x-y-z-Koordinaten eines Knotens lauten. Es gibt keinen Zählindex.
+    - elements: Ist eine Liste bzw. ein numpy-Array, welches angibt, welche Knoten zu welchem Element gehören. Es gibt keinen Zählindex.
     - no_of_element_nodes: Anzahl der Knoten pro Element
     - no_of_elements: Globale Anzahl der Elemente im System
     - no_of_nodes: Globale Anzahl der Knoten im System
@@ -37,44 +36,35 @@ class Mesh:
         self.u = None
         self.timesteps = 1
 
-    def read_nodes(self, filename, node_dof=2):
+    def read_nodes_from_csv(self, filename, node_dof=2, explicit_node_numbering=False):
         '''
         Liest die Knotenwerte aus der Datei Filename aus
         updated interne Variablen
         '''
         self.node_dof = node_dof
-        if node_dof == 2:
-            dtype = (int, float, float)
-        elif node_dof== 3:
-            dtype = (int, float, float, float)
-        else:
-            raise('Dimensionen passen nicht zum Programm!')
+#        if node_dof == 2:
+#            dtype = (int, float, float)
+#        elif node_dof== 3:
+#            dtype = (int, float, float, float)
+#        else:
+#            raise('Dimensionen passen nicht zum Programm!')
         try:
-            self.nodes = np.genfromtxt(filename, delimiter = ',', dtype = dtype,  skip_header = 1)
+            self.nodes = np.genfromtxt(filename, delimiter = ',', skip_header = 1)
         except:
             print('FEHLER beim lesen der Datei', filename, '\n Vermutlich stimmt die erwartete Dimension der Knotenfreiheitsgrade', node_dof, 'nicht mit der Dimension in der Datei zusammen.')
+        # when line numbers are erased if they are content of the csv
+        if explicit_node_numbering:
+            self.nodes = self.nodes[:,1:]
         self.no_of_nodes = len(self.nodes)
         self.u = [np.zeros((self.no_of_nodes, self.node_dof))]
 
-    def read_elements(self, filename):
+    def read_elements_from_csv(self, filename, explicit_node_numbering=False):
         '''Liest die Elementmatrizen aus'''
         self.elements = np.genfromtxt(filename, delimiter = ',', dtype = int, skip_header = 1)
-        self.no_of_element_nodes = len(self.elements[0]) - 1
+        if explicit_node_numbering:
+            self.elements = self.elements[:,1:]
+        self.no_of_element_nodes = len(self.elements[0])
         self.no_of_elements = len(self.elements)
-
-    def provide_assembly_matrix(self, no_of_element):
-        '''
-        returns the assembly matrix B
-        '''
-        self.element_dof = self.no_of_element_nodes*self.node_dof
-        row_indices = np.arange(self.element_dof)
-        column_indices = []
-        for x in self.elements[no_of_element][1:]:
-            for j in range(self.node_dof):
-                column_indices.append(x)
-        ones = np.ones(self.element_dof)
-        B = sp.sparse.csr_matrix((ones, (row_indices, column_indices)), shape = (self.element_dof, self.no_of_nodes*self.node_dof))
-        return B
 
     def set_displacement(self, u, node_dof=2):
         if self.u[0].size != u.size:
@@ -111,6 +101,7 @@ class Mesh:
         savefile_pvd.write(pvd_footer)
         savefile_pvd.close()
 
+
         vtu_header = '''<?xml version="1.0"?> \n
         <VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian">
         <UnstructuredGrid>\n'''
@@ -135,17 +126,17 @@ class Mesh:
             elif self.node_dof == 3:
                 endflag = '\n'
             for j in self.nodes:
-                savefile_vtu.write(' '.join(str(x) for x in list(j)[1:]) + endflag)
+                savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
             savefile_vtu.write('\n</DataArray>\n')
             savefile_vtu.write('</Points>\n<Cells>\n')
             savefile_vtu.write('<DataArray type="Int32" Name="connectivity" format="ascii">\n')
             for j in self.elements:
-                savefile_vtu.write(' '.join(str(x) for x in list(j)[1:]) + '\n')
+                savefile_vtu.write(' '.join(str(x) for x in list(j)) + '\n')
             savefile_vtu.write('\n</DataArray>\n')
             # Writing the offset for the elements; they are ascending by the number of dofs and have to start with the real integer
             savefile_vtu.write('<DataArray type="Int32" Name="offsets" format="ascii">\n')
-            for j in self.elements:
-                savefile_vtu.write(str((j[0] + 1)*3) + ' ')
+            for j in range(self.no_of_elements):
+                savefile_vtu.write(str(3*j +3) + ' ')
             savefile_vtu.write('\n</DataArray>\n')
             savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
             savefile_vtu.write(' '.join('5' for x in self.elements))
@@ -222,7 +213,7 @@ class MeshGenerator:
         if self.flat_mesh == True:
             for y_counter in range(self.y_no_elements + 1):
                 for x_counter in range(self.x_no_elements + 1):
-                    self.nodes.append([node_number, l_x*x_counter, l_y*y_counter])
+                    self.nodes.append([l_x*x_counter, l_y*y_counter])
                     node_number += 1
         else:
             # a 3d-mesh will be generated; the meshing has to be done with a little calculation in andvance
@@ -253,7 +244,7 @@ class MeshGenerator:
                     else:
                         r_OP_y = np.array([0, - self.y_len/2 + l_y*y_counter, 0])
                     r_OP = r_OP_x + r_OP_y + r_OO_x + r_OO_y + r_OO
-                    self.nodes.append( [node_number] + [x for x in r_OP])
+                    self.nodes.append([x for x in r_OP])
         # ELEMENTS
         # Building the elements which have to be tetrahedron
         element_number = 0 # element_number counter; element numbers start with 0
@@ -263,13 +254,13 @@ class MeshGenerator:
                 first_node  = y_counter*(self.x_no_elements + 1) + x_counter + 0
                 second_node = y_counter*(self.x_no_elements + 1) + x_counter + 1
                 third_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
-                self.elements.append([element_number, first_node, second_node, third_node])
+                self.elements.append([first_node, second_node, third_node])
                 element_number += 1
                 # second the upper triangulars
                 first_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 1
                 second_node = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
                 third_node  = y_counter*(self.x_no_elements + 1) + x_counter + 1
-                self.elements.append([element_number, first_node, second_node, third_node])
+                self.elements.append([first_node, second_node, third_node])
                 element_number += 1
         pass
 
@@ -290,9 +281,9 @@ class MeshGenerator:
         savefile_nodes = open(filename_nodes, 'w')
         # Header for file:
         if self.flat_mesh:
-            header = 'Node_id' + delimiter + 'x_coord' + delimiter + 'y_coord' + newline
+            header = 'x_coord' + delimiter + 'y_coord' + newline
         else:
-            header = 'Node_id' + delimiter + 'x_coord' + delimiter + 'y_coord' + delimiter + 'z_coord' + newline
+            header = 'x_coord' + delimiter + 'y_coord' + delimiter + 'z_coord' + newline
         savefile_nodes.write(header)
         for nodes in self.nodes:
             savefile_nodes.write(delimiter.join(str(x) for x in nodes) + newline)
@@ -300,7 +291,7 @@ class MeshGenerator:
 
         savefile_elements = open(filename_elements, 'w')
         # Header for the file:
-        savefile_elements.write('Element_id' + delimiter + 'node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
+        savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
         for elements in self.elements:
             savefile_elements.write(delimiter.join(str(x) for x in elements) + newline)
         pass

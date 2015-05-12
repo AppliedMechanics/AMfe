@@ -27,8 +27,8 @@ my_meshgenerator = mesh.MeshGenerator(x_len=3, y_len=3*3*3, x_no_elements=3*3, y
 my_meshgenerator.build_mesh()
 ndof = len(my_meshgenerator.nodes)*2
 nelements = len(my_meshgenerator.elements)
-nodes_array = np.array(my_meshgenerator.nodes)[:,1:]
-element_array = np.array(my_meshgenerator.elements)[:,1:]
+nodes_array = my_meshgenerator.nodes.copy()
+element_array = my_meshgenerator.elements.copy()
 t2 = time.clock()
 print('Netz mit', ndof, 'Freiheitsgraden und', nelements, 'Elementen erstellt')
 
@@ -43,7 +43,7 @@ if multiproc:
     my_multiprocessing = Assembly.MultiprocessAssembly(Assembly.PrimitiveAssembly, element_function_list_k, nodes_array, element_array)
     K_coo = my_multiprocessing.assemble()
 else:
-    my_assembly = assembly.PrimitiveAssembly(np.array(my_meshgenerator.nodes)[:,1:], np.array(my_meshgenerator.elements)[:,1:], my_element.k_int)
+    my_assembly = assembly.PrimitiveAssembly(np.array(my_meshgenerator.nodes), np.array(my_meshgenerator.elements), my_element.k_int)
     K_coo = my_assembly.assemble_matrix()
 K = K_coo.tocsr()
 print('Matrix K assembliert')
@@ -75,9 +75,8 @@ if not os.path.exists(os.path.dirname(knotenfile)):
 my_meshgenerator.save_mesh(knotenfile, elementfile)
 
 my_mesh = mesh.Mesh()
-my_mesh.read_nodes(knotenfile)
-my_mesh.read_elements(elementfile)
-my_mesh.set_displacement(np.zeros(ndof))
+my_mesh.read_nodes_from_csv(knotenfile)
+my_mesh.read_elements_from_csv(elementfile)
 my_mesh.save_mesh_for_paraview('Versuche/Dehnstab')
 
 t5 = time.clock()

@@ -33,15 +33,20 @@ class DynamicalSystem():
         # internally store node_array and element_array to self.node_array and self.element_array
         pass
 
-    def load_mesh_from_csv(self, node_list_csv, element_list_csv, trailing_index=False):
+    def load_mesh_from_csv(self, node_list_csv, element_list_csv, node_dof=2, explicit_node_numbering=False):
         '''Loads the mesh from two csv-files:
         node_list_csv:       contains the coordinates of the nodes (x, y, z);
         element_list_csv:    contains the nodes which belong to one element
         trailing_index:      flag which tells, if the csv-file has explicit element- and node-numbering
         '''
+        self.node_dof = node_dof=2
+        self.mesh_class = mesh.Mesh()
+        self.mesh_class.read_nodes_from_csv(node_list_csv, node_dof=node_dof, explicit_node_numbering=explicit_node_numbering)
+        self.mesh_class.read_elements_from_csv(element_list_csv, explicit_node_numbering=explicit_node_numbering)
+        self.node_list = self.mesh_class.nodes.copy()
+        self.element_list = self.mesh_class.elements.copy()
+        self.ndof_global = self.node_list.size
 
-        # internally store node_array and element_array to self.node_array and self.element_array
-        pass
 
     def apply_dirichlet_boundaries(self, dirichlet_boundary_list):
         '''
@@ -59,7 +64,9 @@ class DynamicalSystem():
             list_of_slave_dofs:   The list of the dofs which will be projected onto the master dof; the weights of the projection are stored in the B_matrix
             B_matrix:             The weighting-matrix which gives enables to apply complicated boundary conditions showing up in symmetry-conditions or rotational dofs. The default-value for B_matrix is None, which weighs all members of the slave_dof_list equally with 1.
         '''
-        pass
+        self.dirichlet_bc_class = boundary.DirichletBoundary(self.ndof_global, dirichlet_boundary_list)
+        self.b_constraints = self.dirichlet_bc_class.b_matrix()
+
 
     def apply_neumann_boundaries(self, neumann_boundary_list):
         '''Applies neumann-boundaries to the system.
@@ -78,26 +85,65 @@ class DynamicalSystem():
         '''
         pass
 
+    def set_element(self, element_class):
+        '''Gives the dynamical system routine an element class'''
+        self.element_class = element_class
+        pass
+
     def export_paraview(self, filename):
         '''Export the system with the given information to paraview
         '''
         pass
+
+    def M_global(self):
+        '''
+        Return the global stiffness matrix with dirichlet boundary conditions imposed.
+        Computes the Mass-Matrix every time again
+        '''
+        self.assembly_class = assembly.PrimitiveAssembly(self.node_list, self.element_list, self.element_class.m_int, node_dof=self.node_dof)
+        _M = self.assembly_class.assemble_matrix()
+        self._M_bc = self.b_constraints.T.dot(_M.dot(self.b_constraints))
+        return self._M_bc
+
+    def K_global(self, u=None):
+        '''Return the global tangential stiffness matrix with dirichlet boundary conditions imposed'''
+        self.assembly_class = assembly.PrimitiveAssembly(self.node_list, self.element_list, self.element_class.k_int, node_dof=self.node_dof)
+        _K = self.assembly_class.assemble_matrix(u)
+        self._K_bc = self.b_constraints.T.dot(_K.dot(self.b_constraints))
+        return self._K_bc
+
+    def f_int_global(self, u=None):
+        '''Return the global elastic restoring force of the system '''
+        self.assembly_class = assembly.PrimitiveAssembly(self.node_list, self.element_list, node_dof=self.node_dof, vector_function=self.element_class.f_int)
+        _f = self.assembly_class.assemble_vector(u)
+        self._f_bc = self.b_constraints.T.dot(_f)
+        return self._f_bc
+
+    def f_ext_global(self, u, du, t):
+        '''return the global nonlinear external force of the right hand side of the equation, i.e. the excitation'''
+
+
 
 
 
 # Idee, wie's ablaufen soll:
 my_dynamical_system = DynamicalSystem()
 my_dynamical_system.load_mesh_from_gmsh('gmsh/my_mesh.msh')
+my_dynamical_system.load_mesh_from_csv('Vernetzungen/nodes.csv', 'Vernetzungen/elements.csv' )
+my_element = element.ElementPlanar()
+my_dynamical_system.set_element(my_element)
+
 my_dirichlet_boundary_list = [[None, np.arange(40), None], [200, [200 + 2*i for i in range(40)], None]]
 my_neumann_boundary_list = [[200, 'harmonic', (20, 2*np.pi*8)]]
 my_dynamical_system.apply_dirichlet_boundaries(my_dirichlet_boundary_list)
 my_dynamical_system.apply_neumann_boundaries(my_neumann_boundary_list)
 
-my_integrator = integrator.NewmarkIntegrator(alpha=0)
-my_integrator.set_dynamical_system(my_dynamical_system)
+# Test
 
-my_dynamical_system.static_linear_analysis()
+my_integrator = integrator.NewmarkIntegrator(alpha=0)
+#my_integrator.set_dynamical_system(my_dynamical_system)
+#my_integrator.integrate_linear_system(0, 10, 0.1)
+
 my_dynamical_system.export_paraview('ParaView/linear_static_testcase')
-my_dynamical_system.integrate_nonlinear_system(0, 10, 0.01, 1E-4)
 my_dynamical_system.export_paraview('Para_View/nonlinear_dynamic_testcase')
 
