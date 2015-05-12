@@ -273,14 +273,21 @@ class MeshGenerator:
                 element_number += 1
         pass
 
-    def save_mesh(self, filenname_nodes, filename_elements):
+    def save_mesh(self, filename_nodes, filename_elements):
         '''
         Speichert das Netz ab; Funktioniert für alle Elementtypen,
         es muss also stets nur eine Liste vorhanden sein
         '''
         delimiter = ','
         newline = '\n'
-        savefile_nodes = open(filenname_nodes, 'w')
+        
+        if not os.path.exists(os.path.dirname(filename_nodes)): # check if directory exists
+            os.makedirs(os.path.dirname(filename_nodes))
+            
+        if not os.path.exists(os.path.dirname(filename_elements)): # check if directory exists
+            os.makedirs(os.path.dirname(filename_elements))  
+            
+        savefile_nodes = open(filename_nodes, 'w')
         # Header for file:
         if self.flat_mesh:
             header = 'Node_id' + delimiter + 'x_coord' + delimiter + 'y_coord' + newline

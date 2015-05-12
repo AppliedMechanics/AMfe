@@ -4,6 +4,7 @@
 # Standard-Module
 import numpy as np
 import scipy as sp
+import os
 
 
 # Eigene Module
@@ -12,7 +13,6 @@ import mesh
 import assembly
 import import_mesh
 import boundary
-
 
 
 
@@ -69,6 +69,9 @@ print('Zeit zum Assemblieren der Massenmatrix:', t4 - t3)
 # Graphische Analyse des Netzes
 knotenfile = 'Vernetzungen/nodes.csv'
 elementfile = 'Vernetzungen/elements.csv'
+if not os.path.exists(os.path.dirname(knotenfile)):
+    os.makedirs(os.path.dirname(knotenfile))
+
 my_meshgenerator.save_mesh(knotenfile, elementfile)
 
 my_mesh = mesh.Mesh()
