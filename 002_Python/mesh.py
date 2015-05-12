@@ -9,7 +9,14 @@ import numpy as np
 import scipy as sp
 import os
 
-#import lxml
+
+def check_dir(*filenames):
+    '''Checkt ob Verzeichnis vorliegt; falls nicht, wird Verzeichnis angelegt'''
+    for filename in filenames:                              # loop on files
+        if not os.path.exists(os.path.dirname(filename)):   # check if directory does not exists...
+            os.makedirs(os.path.dirname(filename))          # then create directory 
+            print("Created directory: " + os.path.dirname(filename))
+
 
 class Mesh:
     '''Die Netz-Klasse, die für die Verarbeitung des Netzes und die zugehörigen Operationen zuständig ist
@@ -93,13 +100,16 @@ class Mesh:
         pvd_line_middle = '''" group="" part="0" file="'''
         pvd_line_end = '''"/>\n'''
         filename_pvd = filename + '.pvd'
+
         filename_head, filename_tail = os.path.split(filename)
-        savefile_pvd = open(filename_pvd, 'w')
-        savefile_pvd.write(pvd_header)
-        for i in range(self.timesteps):
-            savefile_pvd.write(pvd_line_start + str(i) + pvd_line_middle + filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
-        savefile_pvd.write(pvd_footer)
-        savefile_pvd.close()
+        
+        check_dir(filename_pvd)
+        with open(filename_pvd, 'w') as savefile_pvd:
+            savefile_pvd.write(pvd_header)
+            for i in range(self.timesteps):
+                savefile_pvd.write(pvd_line_start + str(i) + pvd_line_middle + filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
+            savefile_pvd.write(pvd_footer)
+
 
 
         vtu_header = '''<?xml version="1.0"?> \n
@@ -114,42 +124,43 @@ class Mesh:
         </VTKFile>'''
         for i in range(self.timesteps):
             filename_vtu = filename + '_' + str(i).zfill(3) + '.vtu'
-            savefile_vtu = open(filename_vtu, 'w')
-            savefile_vtu.write(vtu_header)
-            # Es muss die Anzahl der gesamten Punkte und Elemente angegeben werden
-            savefile_vtu.write('<Piece NumberOfPoints="' + str(len(self.nodes)) + '" NumberOfCells="' + str(len(self.elements)) + '">\n')
-            savefile_vtu.write('<Points>\n')
-            savefile_vtu.write('<DataArray type="Float64" Name="Array" NumberOfComponents="3" format="ascii">\n')
-            # bei Systemen mit 2 Knotenfreiheitsgraden wird die dritte 0-Komponenten noch extra durch die endflag hinzugefügt...
-            if self.node_dof == 2:
-                endflag = ' 0 \n'
-            elif self.node_dof == 3:
-                endflag = '\n'
-            for j in self.nodes:
-                savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
-            savefile_vtu.write('\n</DataArray>\n')
-            savefile_vtu.write('</Points>\n<Cells>\n')
-            savefile_vtu.write('<DataArray type="Int32" Name="connectivity" format="ascii">\n')
-            for j in self.elements:
-                savefile_vtu.write(' '.join(str(x) for x in list(j)) + '\n')
-            savefile_vtu.write('\n</DataArray>\n')
-            # Writing the offset for the elements; they are ascending by the number of dofs and have to start with the real integer
-            savefile_vtu.write('<DataArray type="Int32" Name="offsets" format="ascii">\n')
-            for j in range(self.no_of_elements):
-                savefile_vtu.write(str(3*j +3) + ' ')
-            savefile_vtu.write('\n</DataArray>\n')
-            savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
-            savefile_vtu.write(' '.join('5' for x in self.elements))
-            savefile_vtu.write('\n</DataArray>\n')
-            savefile_vtu.write('</Cells> \n<PointData>\n')
-            savefile_vtu.write('<DataArray type="Float64" Name="displacement" NumberOfComponents="3" format="ascii">\n')
-            # pick the i-th timestep
-            for j in self.u[i]:
-                savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
-            savefile_vtu.write('\n</DataArray>\n')
-            savefile_vtu.write(vtu_footer)
-            savefile_vtu.close()
-        pass
+            check_dir(filename_vtu)
+            with open(filename_vtu, 'w') as savefile_vtu:
+                savefile_vtu.write(vtu_header)
+                # Es muss die Anzahl der gesamten Punkte und Elemente angegeben werden
+                savefile_vtu.write('<Piece NumberOfPoints="' + str(len(self.nodes)) + '" NumberOfCells="' + str(len(self.elements)) + '">\n')
+                savefile_vtu.write('<Points>\n')
+                savefile_vtu.write('<DataArray type="Float64" Name="Array" NumberOfComponents="3" format="ascii">\n')
+                # bei Systemen mit 2 Knotenfreiheitsgraden wird die dritte 0-Komponenten noch extra durch die endflag hinzugefügt...
+                if self.node_dof == 2:
+                    endflag = ' 0 \n'
+                elif self.node_dof == 3:
+                    endflag = '\n'
+                for j in self.nodes:
+                    savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
+                savefile_vtu.write('\n</DataArray>\n')
+                savefile_vtu.write('</Points>\n<Cells>\n')
+                savefile_vtu.write('<DataArray type="Int32" Name="connectivity" format="ascii">\n')
+                for j in self.elements:
+                    savefile_vtu.write(' '.join(str(x) for x in list(j)) + '\n')
+                savefile_vtu.write('\n</DataArray>\n')
+                # Writing the offset for the elements; they are ascending by the number of dofs and have to start with the real integer
+                savefile_vtu.write('<DataArray type="Int32" Name="offsets" format="ascii">\n')
+                for j in range(self.no_of_elements):
+                    savefile_vtu.write(str(3*j +3) + ' ')
+                savefile_vtu.write('\n</DataArray>\n')
+                savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
+                savefile_vtu.write(' '.join('5' for x in self.elements))
+                savefile_vtu.write('\n</DataArray>\n')
+                savefile_vtu.write('</Cells> \n<PointData>\n')
+                savefile_vtu.write('<DataArray type="Float64" Name="displacement" NumberOfComponents="3" format="ascii">\n')
+                # pick the i-th timestep
+                for j in self.u[i]:
+                    savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
+                savefile_vtu.write('\n</DataArray>\n')
+                savefile_vtu.write(vtu_footer)
+
+
 
 ## test
 #my_mesh = Mesh()
@@ -269,32 +280,26 @@ class MeshGenerator:
         Speichert das Netz ab; Funktioniert für alle Elementtypen,
         es muss also stets nur eine Liste vorhanden sein
         '''
+        
         delimiter = ','
         newline = '\n'
         
-        if not os.path.exists(os.path.dirname(filename_nodes)): # check if directory exists
-            os.makedirs(os.path.dirname(filename_nodes))
-            
-        if not os.path.exists(os.path.dirname(filename_elements)): # check if directory exists
-            os.makedirs(os.path.dirname(filename_elements))  
-            
-        savefile_nodes = open(filename_nodes, 'w')
-        # Header for file:
-        if self.flat_mesh:
-            header = 'x_coord' + delimiter + 'y_coord' + newline
-        else:
-            header = 'x_coord' + delimiter + 'y_coord' + delimiter + 'z_coord' + newline
-        savefile_nodes.write(header)
-        for nodes in self.nodes:
-            savefile_nodes.write(delimiter.join(str(x) for x in nodes) + newline)
-        savefile_nodes.close()
-
-        savefile_elements = open(filename_elements, 'w')
-        # Header for the file:
-        savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
-        for elements in self.elements:
-            savefile_elements.write(delimiter.join(str(x) for x in elements) + newline)
-        pass
+        check_dir(filename_nodes, filename_elements)
+        with open(filename_nodes, 'w') as savefile_nodes: # Save nodes
+            # Header for file:
+            if self.flat_mesh:
+                header = 'x_coord' + delimiter + 'y_coord' + newline
+            else:
+                header = 'x_coord' + delimiter + 'y_coord' + delimiter + 'z_coord' + newline
+            savefile_nodes.write(header)
+            for nodes in self.nodes:
+                savefile_nodes.write(delimiter.join(str(x) for x in nodes) + newline)
+                
+        with open(filename_elements, 'w') as savefile_elements: # Save elements
+            # Header for the file:
+            savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
+            for elements in self.elements:
+                savefile_elements.write(delimiter.join(str(x) for x in elements) + newline)
 
 
 #

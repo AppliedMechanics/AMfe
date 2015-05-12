@@ -5,6 +5,7 @@
 import numpy as np
 import scipy as sp
 import os
+import time
 
 
 # Eigene Module
@@ -14,11 +15,7 @@ import assembly
 import import_mesh
 import boundary
 
-
-
-# Zeitmessung:
-import time
-
+output_dir = os.path.splitext(os.path.basename(__file__))[0] + time.strftime("_%Y%m%d_%H%M%S")
 
 t1 = time.clock()
 
@@ -67,17 +64,15 @@ print('Zeit zum Assemblieren der Massenmatrix:', t4 - t3)
 
 
 # Graphische Analyse des Netzes
-knotenfile = 'Vernetzungen/nodes.csv'
-elementfile = 'Vernetzungen/elements.csv'
-if not os.path.exists(os.path.dirname(knotenfile)):
-    os.makedirs(os.path.dirname(knotenfile))
+knotenfile = output_dir + '/Vernetzung/nodes.csv'
+elementfile = output_dir + '/Vernetzung/elements.csv'
 
 my_meshgenerator.save_mesh(knotenfile, elementfile)
 
 my_mesh = mesh.Mesh()
 my_mesh.read_nodes_from_csv(knotenfile)
 my_mesh.read_elements_from_csv(elementfile)
-my_mesh.save_mesh_for_paraview('Versuche/Dehnstab')
+my_mesh.save_mesh_for_paraview(output_dir + '/Paraview/Dehnstab')
 
 t5 = time.clock()
 # Randbedingungen
@@ -103,7 +98,7 @@ F_bound = B.T.dot(F)
 u_bound = sp.linalg.solve(K_bound.toarray(), F_bound)
 u_full = B.dot(u_bound)
 my_mesh.set_displacement(u_full)
-my_mesh.save_mesh_for_paraview('Versuche/Dehnstab')
+my_mesh.save_mesh_for_paraview(output_dir + '/Paraview/Dehnstab')
 
 
 
