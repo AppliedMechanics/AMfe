@@ -148,7 +148,7 @@ class Mesh:
                     savefile_vtu.write(str(3*j +3) + ' ')
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
-                savefile_vtu.write(' '.join('5' for x in self.elements))
+                savefile_vtu.write(' '.join('5' for x in self.elements)) # Elementtyp ueber Zahl gesetzt
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Cells> \n<PointData>\n')
                 savefile_vtu.write('<DataArray type="Float64" Name="displacement" NumberOfComponents="3" format="ascii">\n')
