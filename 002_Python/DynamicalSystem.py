@@ -43,7 +43,12 @@ class DynamicalSystem():
         pass
 
     def apply_dirichlet_boundaries(self, dirichlet_boundary_list):
-        '''Applies dirichlet-boundaries to the system.
+        '''
+        Applies dirichlet-boundaries to the system.
+
+        Parameters:
+        -----------
+
 
         dirichlet_boundary_list:    list containing the dirichlet-boundary triples (DBT):
             [DBT_1, DBT_2, DBT_3, ]

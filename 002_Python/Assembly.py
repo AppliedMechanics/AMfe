@@ -52,14 +52,15 @@ class PrimitiveAssembly():
         '''
         assembliert die matrix_function für die Ursprungskonfiguration X und die Verschiebung u.
         '''
-        # Löschen der alten Variablen
+        # deletion of former variables...
         self.row_global = []
         self.col_global = []
         self.vals_global = []
-        # Anzahl der lokalen Freiheitsgrade
+        # number of local dofs
         ndof_local = len(self.elements[0])*self.ndof_node
-        # Wenn keine Verschiebung gegeben ist, wird u_local gleich 0 gesetzt
+        # preset for u_local; necessary, when u=None
         u_local = np.zeros(ndof_local)
+
         for element in self.elements:
             # Koordinaten des elements
             X = np.array([self.nodes[i] for i in element]).reshape(-1)
@@ -73,7 +74,7 @@ class PrimitiveAssembly():
             self.row_global.append(row.reshape(-1))
             self.col_global.append((row.T).reshape(-1))
             self.vals_global.append(element_matrix.reshape(-1))
-            pass
+
         row_global_array = np.array(self.row_global).reshape(-1)
         col_global_array = np.array(self.col_global).reshape(-1)
         vals_global_array = np.array(self.vals_global).reshape(-1)
@@ -133,66 +134,8 @@ class MultiprocessAssembly():
         return matrix_coo
 
 
-class Boundary():
-    '''
-    Randbedingungen-Klasse:
 
-    Mit ihr können die Randbedingungen auf eine Struktur aufgebracht werden. Es werden generell Master-Slave-Randbedingungen unterstützt...
-
-    Die B-Matrix kann zur Verfügung gestellt werden
-    '''
-    def __init__(self, ndof_full_system, master_slave_list=None):
-        self.ndof_full_system = ndof_full_system
-        self.master_slave_list = master_slave_list
-        pass
-
-
-    def b_matrix(self):
-        '''
-        Erzeugt die B-Matrix, die die globalen (u_global) Freiheitsgrade mit den beschränkten Freiheitsgraden (u_bound) verbindet:
-
-        u_global = B*u_bound
-
-        Die globalen Freiheitsgrade differieren daher von den Freiheitsgraden des beschränkten Systems;
-        Eingabeparameter ist eine Liste mit Dirichlet-Randbedingungen:
-        [Master-DOF, [Liste_von_Sklaven-DOFs], Gewichtungsvektor]
-
-        Master-DOF: (typ: int) Der DOF, auf den die Sklaven-DOFs projiziert werden. Der Master-DOF wird am ende eliminiert, d.h. er sollte üblicherweise auch in den Sklaven-DOFs auftauchen
-
-        [Liste_von_Sklaven-DOFs]: (typ: liste mit ints) Die DOFs, die auf den Master-DOF projiziert werden. Zur Gewichtung wird der Gewichtungsvektor angewendet, der genauso viele Einträge haben muss wie die Sklaven-DOF-Liste
-
-        Gewichtungsvektor: (typ: np.array oder None) TODO Beschreibung
-
-
-        Wichtig: Für die Dirichlet-Randbedingungen werden Freiheitsgrade des globalen Systems und nicht die Knotenfreiheitsgrade berücksichtigt. Die Indexwerte der Knoten müssen stets in DOFs des globalen Sytems umgerechnet werden
-        '''
-        B = sp.sparse.eye(self.ndof_full_system).tocsr()
-        global_slave_node_list = np.array([], dtype=int)
-        for master_node, slave_node_list, b_matrix in self.master_slave_list:
-            if (type(b_matrix) != type(np.zeros(1))): # a little hack in order to get the types right
-                # Make a B-Matrix, if it's not there
-                b_matrix = np.ones(len(slave_node_list))
-            if len(slave_node_list) != len(b_matrix):
-                raise ValueError('Die Dimension der Sklaven-Knotenliste entspricht nicht der Dimension des Gewichtungsvektors!')
-            if master_node != None: # check, if the master node is existent; otherwise the columns will only be deleted
-                for i in range(len(slave_node_list)):
-                    # Hier werden die Sklaven-Knoten auf die Master-Knoten aufaddiert
-                    col = B[:,slave_node_list[i]]*b_matrix[i]
-                    row_indices = col.nonzero()[0]
-                    no_of_nonzero_entries = row_indices.shape[0]
-                    col_indices = np.ones(no_of_nonzero_entries)*master_node
-                    B = B + sp.sparse.csr_matrix((col.data, (row_indices, col_indices)), shape=(self.ndof_full_system, self.ndof_full_system))
-                # Der Master-Knoten wird nochmals subtrahiert:
-                B[master_node, master_node] -= 1
-            # Lösche den Master-Knoten aus der slave_node_list, um ihn zu erhalten...
-            cleaned_slave_node_list = [x for x in slave_node_list if x != master_node]
-            global_slave_node_list = np.append(global_slave_node_list, cleaned_slave_node_list)
-        # delete the rows which are slave-nodes with a boolean mask:
-        mask = np.ones(self.ndof_full_system, dtype=bool)
-        mask[global_slave_node_list] = False
-        B = B[:,mask]
-        return B
-
+#%%
 
 ################################################################################
 ### Ist eher veraltetes Zeugs; soll durch die Boundary-Klasse besser gemacht und ersetzt werden.

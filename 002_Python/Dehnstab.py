@@ -7,6 +7,8 @@ import Element
 import Mesh
 import Assembly
 import ImportMesh
+import boundary
+
 
 # Standard-Module
 import numpy as np
@@ -21,7 +23,7 @@ import time
 t1 = time.clock()
 
 # Netz
-my_meshgenerator = Mesh.Mesh_generator(x_len=3, y_len=3*3*3, x_no_elements=3*3, y_no_elements=3*3*3*3)
+my_meshgenerator = Mesh.MeshGenerator(x_len=3, y_len=3*3*3, x_no_elements=3*3, y_no_elements=3*3*3*3)
 my_meshgenerator.build_mesh()
 ndof = len(my_meshgenerator.nodes)*2
 nelements = len(my_meshgenerator.elements)
@@ -42,7 +44,7 @@ if multiproc:
     K_coo = my_multiprocessing.assemble()
 else:
     my_assembly = Assembly.PrimitiveAssembly(np.array(my_meshgenerator.nodes)[:,1:], np.array(my_meshgenerator.elements)[:,1:], my_element.k_int)
-    K_coo = my_assembly.assemble()
+    K_coo = my_assembly.assemble_matrix()
 K = K_coo.tocsr()
 print('Matrix K assembliert')
 
@@ -53,7 +55,7 @@ if multiproc:
     M_coo = my_multiprocessing.assemble()
 else:
     my_assembly.matrix_function = my_element.m_int
-    M_coo = my_assembly.assemble()
+    M_coo = my_assembly.assemble_matrix()
 M = M_coo.tocsr()
 print('Matrix M assembliert')
 
@@ -84,7 +86,7 @@ conv = Assembly.ConvertIndices(2)
 master_node = conv.node2total(810, 1)
 top_fixation = [master_node, [master_node + 2*x for x in range(10)], None]
 dirichlet_boundary_list = [bottom_fixation, top_fixation]
-my_dirichlet_bcs = Assembly.Boundary(M.shape[0], dirichlet_boundary_list)
+my_dirichlet_bcs = boundary.DirichletBoundary(M.shape[0], dirichlet_boundary_list)
 B = my_dirichlet_bcs.b_matrix()
 
 
