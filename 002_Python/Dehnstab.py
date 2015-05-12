@@ -77,7 +77,7 @@ my_mesh.read_elements(elementfile)
 my_mesh.set_displacement(np.zeros(ndof))
 my_mesh.save_mesh_for_paraview('Versuche/Dehnstab')
 
-
+t5 = time.clock()
 # Randbedingungen
 bottom_fixation = [None, range(20), None]
 #bottom_fixation = [None, [1 + 2*x for x in range(10)], None]
@@ -88,7 +88,8 @@ top_fixation = [master_node, [master_node + 2*x for x in range(10)], None]
 dirichlet_boundary_list = [bottom_fixation, top_fixation]
 my_dirichlet_bcs = boundary.DirichletBoundary(M.shape[0], dirichlet_boundary_list)
 B = my_dirichlet_bcs.b_matrix()
-
+t6 = time.clock()
+print('Zeit zum Aufbringen der Randbedingungen:', t6-t5)
 
 # Statische Analyse:
 K_bound = B.T.dot(K.dot(B))

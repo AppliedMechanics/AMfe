@@ -61,12 +61,15 @@ class DirichletBoundary():
 
             if master_node != None: # check, if the master node is existent; otherwise the columns will only be deleted
                 for i in range(len(slave_node_list)):
-                    # All slave nodes are added on top of the master node
+                    ## This is incredible slow!!!, but it's exactly what is done:
+                    # B_tmp[:,master_node] += B[:,i]*b_matrix[i]
+                    # so here's the alternative:
                     col = B[:,slave_node_list[i]]*b_matrix[i]
                     row_indices = col.nonzero()[0]
                     no_of_nonzero_entries = row_indices.shape[0]
                     col_indices = np.ones(no_of_nonzero_entries)*master_node
                     B_tmp = B_tmp + sp.sparse.csr_matrix((col.data, (row_indices, col_indices)), shape=(self.ndof_full_system, self.ndof_full_system))
+
                 global_master_node_list = np.append(global_master_node_list, master_node)
             global_slave_node_list = np.append(global_slave_node_list, slave_node_list)
 

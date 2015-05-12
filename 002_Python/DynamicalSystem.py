@@ -13,7 +13,7 @@ import scipy as sp
 import Mesh
 import Element
 import Assembly
-#import Boundary # the boundaries are in the Assembly module by now...
+import boundary # the boundaries are in the Assembly module by now...
 import Integrator
 
 
@@ -39,6 +39,7 @@ class DynamicalSystem():
         element_list_csv:    contains the nodes which belong to one element
         trailing_index:      flag which tells, if the csv-file has explicit element- and node-numbering
         '''
+
         # internally store node_array and element_array to self.node_array and self.element_array
         pass
 
@@ -49,8 +50,7 @@ class DynamicalSystem():
         Parameters:
         -----------
 
-
-        dirichlet_boundary_list:    list containing the dirichlet-boundary triples (DBT):
+        dirichlet_boundary_list:    list containing the dirichlet-boundary triples (DBT)
             [DBT_1, DBT_2, DBT_3, ]
 
             each dirchilet_boundary_triple is itself a list containing

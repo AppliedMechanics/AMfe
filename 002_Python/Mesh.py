@@ -9,6 +9,8 @@ import numpy as np
 import scipy as sp
 import os
 
+import lxml
+
 class Mesh:
     '''Die Netz-Klasse, die für die Verarbeitung des Netzes und die zugehörigen Operationen zuständig ist
     Features
