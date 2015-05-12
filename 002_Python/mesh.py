@@ -40,6 +40,7 @@ class Mesh:
     def __init__(self):
         self.nodes = []
         self.elements = []
+        self.element_properties = []        
         self.u = None
         self.timesteps = 1
 
