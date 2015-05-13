@@ -30,18 +30,18 @@ class PrimitiveAssembly():
     Assemblierungsklasse, die für gegebene Tableaus von Knotenkoordinaten und Assemblierungsknoten eine Matrix assembliert
     '''
 
-    def __init__(self, node_coordinates_array = None, element_assembly_array=None, matrix_function=None, node_dof=2, vector_function=None):
+    def __init__(self, mesh = None, matrix_function=None, node_dof=2, vector_function=None):
         '''
         Verlangt ein dreispaltiges Koordinatenarray, indem die Koordinaten in x, y, und z-Koordinaten angegeben sind
         Anzahl der Freiheitsgrade für einen Knotenfreiheitsgrad: node_dof gibt an, welche Koordinaten verwendet werden sollen;
         Wenn mehr Koordinaten pro Knoten nötig sind (z.B. finite Rotationen), werden Nullen hinzugefügt
         '''
-        self.nodes = node_coordinates_array
-        self.elements = element_assembly_array
+        self.nodes = mesh.nodes
+        self.elements = mesh.elements
         self.matrix_function = matrix_function
         self.vector_function = vector_function
-        self.node_dof = node_dof
-        self.ndof_global = self.nodes.size
+        self.node_dof = mesh.node_dof
+        self.ndof_global = mesh.no_of_dofs
         self.row_global = []
         self.col_global = []
         self.vals_global = []

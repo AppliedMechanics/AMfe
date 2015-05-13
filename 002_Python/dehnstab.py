@@ -47,7 +47,7 @@ if multiproc:
     my_multiprocessing = Assembly.MultiprocessAssembly(Assembly.PrimitiveAssembly, element_function_list_k, nodes_array, element_array)
     K_coo = my_multiprocessing.assemble()
 else:
-    my_assembly = assembly.PrimitiveAssembly(my_mesh.nodes, my_mesh.elements, my_element.k_int)
+    my_assembly = assembly.PrimitiveAssembly(my_mesh, my_element.k_int)
     K_coo = my_assembly.assemble_matrix()
 K = K_coo.tocsr()
 print('Matrix K assembliert')
