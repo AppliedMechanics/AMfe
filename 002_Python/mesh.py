@@ -37,12 +37,19 @@ class Mesh:
     -
     '''
 
-    def __init__(self):
+    def __init__(self,  node_dof=2):
         self.nodes = []
         self.elements = []
         self.element_properties = []        
         self.u = None
         self.timesteps = 1
+        self.node_dof = node_dof
+        
+    def compute_dimensions(self):
+        self.no_of_nodes = len(self.nodes)
+        self.no_of_elements = len(self.elements)
+        self.no_of_dofs = self.no_of_nodes*self.node_dof
+
 
     def read_nodes_from_csv(self, filename, node_dof=2, explicit_node_numbering=False):
         '''

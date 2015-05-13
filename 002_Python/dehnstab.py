@@ -14,22 +14,34 @@ import mesh
 import assembly
 import boundary
 
+# Output-Ordner
 output_dir = os.path.splitext(os.path.basename(__file__))[0] + time.strftime("_%Y%m%d_%H%M%S")
-
 t1 = time.clock()
 
-# Netz
+# Netzgenerator
+knotenfile = output_dir + '/Vernetzung/nodes.csv'
+elementfile = output_dir + '/Vernetzung/elements.csv'
 my_meshgenerator = mesh.MeshGenerator(x_len=3, y_len=3*3*3, x_no_elements=3*3, y_no_elements=3*3*3*3)
 my_meshgenerator.build_mesh()
-ndof = len(my_meshgenerator.nodes)*2
-nelements = len(my_meshgenerator.elements)
-nodes_array = my_meshgenerator.nodes.copy()
-element_array = my_meshgenerator.elements.copy()
+my_meshgenerator.save_mesh(knotenfile, elementfile)
+
+# Netz
+my_mesh = mesh.Mesh(2)
+my_mesh.read_nodes_from_csv(knotenfile)
+my_mesh.read_elements_from_csv(elementfile)
+my_mesh.compute_dimensions()
+
+#ndof = len(my_meshgenerator.nodes)*2
+#nelements = len(my_meshgenerator.elements)
+#nodes_array = my_meshgenerator.nodes.copy()
+#element_array = my_meshgenerator.elements.copy()
+
 t2 = time.clock()
-print('Netz mit', ndof, 'Freiheitsgraden und', nelements, 'Elementen erstellt')
+print('Netz mit', my_mesh.no_of_dofs, 'Freiheitsgraden und', my_mesh.no_of_elements, 'Elementen erstellt')
 
 # Element
 my_element = element.ElementPlanar(poisson_ratio=0.3)
+
 multiproc = False
 if multiproc:
     no_of_proc= 6
@@ -39,7 +51,7 @@ if multiproc:
     my_multiprocessing = Assembly.MultiprocessAssembly(Assembly.PrimitiveAssembly, element_function_list_k, nodes_array, element_array)
     K_coo = my_multiprocessing.assemble()
 else:
-    my_assembly = assembly.PrimitiveAssembly(np.array(my_meshgenerator.nodes), np.array(my_meshgenerator.elements), my_element.k_int)
+    my_assembly = assembly.PrimitiveAssembly(my_mesh.nodes, my_mesh.elements, my_element.k_int)
     K_coo = my_assembly.assemble_matrix()
 K = K_coo.tocsr()
 print('Matrix K assembliert')
@@ -56,22 +68,11 @@ M = M_coo.tocsr()
 print('Matrix M assembliert')
 
 t4 = time.clock()
-print('Das System hat', ndof, 'Freiheitsgrade und', nelements, 'Elemente.')
+
 print('Zeit zum generieren des Netzes:', t2 - t1)
 print('Zeit zum Assemblieren der Steifigkeitsmatrix:', t3 - t2)
 print('Zeit zum Assemblieren der Massenmatrix:', t4 - t3)
 
-
-# Graphische Analyse des Netzes
-knotenfile = output_dir + '/Vernetzung/nodes.csv'
-elementfile = output_dir + '/Vernetzung/elements.csv'
-
-my_meshgenerator.save_mesh(knotenfile, elementfile)
-
-my_mesh = mesh.Mesh()
-my_mesh.read_nodes_from_csv(knotenfile)
-my_mesh.read_elements_from_csv(elementfile)
-#my_mesh.save_mesh_for_paraview(output_dir + '/Paraview/Dehnstab')
 
 t5 = time.clock()
 # Randbedingungen
@@ -90,7 +91,7 @@ print('Zeit zum Aufbringen der Randbedingungen:', t6-t5)
 # Statische Analyse:
 K_bound = B.T.dot(K.dot(B))
 
-F = np.zeros(ndof)
+F = np.zeros(my_mesh.no_of_dofs)
 F[master_node] = 1E10
 F_bound = B.T.dot(F)
 
@@ -98,6 +99,7 @@ u_bound = sp.linalg.solve(K_bound.toarray(), F_bound)
 u_full = B.dot(u_bound)
 my_mesh.set_displacement(u_full)
 my_mesh.save_mesh_for_paraview(output_dir + '/Paraview/Dehnstab')
+print("Verschiebung oberer Rand:",   u_full[my_mesh.no_of_dofs -1])
 
 
 
