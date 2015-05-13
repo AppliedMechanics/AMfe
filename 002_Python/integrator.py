@@ -5,7 +5,9 @@ Integratoren-Klasse, mit der dynamische Probleme berechnet werden können
 '''
 
 import numpy as np
-
+import scipy as sp
+from scipy import sparse
+from scipy.sparse import linalg
 
 def norm_of_vector(array):
     return np.sqrt(array.T.dot(array))
@@ -21,6 +23,7 @@ class NewmarkIntegrator():
         self.gamma = 1/2 + alpha
         self.delta_t = 1E-3
         self.eps = 1E-10
+        self.dynamical_system = None
         pass
 
     def set_nonlinear_model(self, f_non, K, M, f_ext=None):
@@ -38,10 +41,13 @@ class NewmarkIntegrator():
         '''
         hands over the dynamical system as a whole to the integrator. The matrices for the integration routine are then taken right from the dynamical system
 
-        Has to be implemented yet
         '''
-#        TODO: to be implemented yet
-        pass
+        self.dynamical_system = dynamical_system
+        self.M = dynamical_system.M_global()
+        self.K = dynamical_system.K_global
+        self.f_non = dynamical_system.f_int_global
+        self.f_ext = dynamical_system.f_ext_global
+
 
     def residual(self, q, dq, ddq, t):
         if self.f_ext is not None:
@@ -51,7 +57,7 @@ class NewmarkIntegrator():
         return res
 
 
-    def integrate(self, q_start, dq_start, time_range):
+    def integrate_nonlinear_system(self, q_start, dq_start, time_range):
         '''
         Funktion, die das System nach der generalized-alpha-Methode integriert
         '''
@@ -74,7 +80,7 @@ class NewmarkIntegrator():
             time_index = 0
 
         # Korrekte Startbedingungen ddq:
-        ddq = np.linalg.solve(M, self.f_non(q))
+        ddq = linalg.spsolve(self.M, self.f_non(q))
         while time_index < len(time_range):
             if t + self.delta_t >= time_range[time_index]:
                 dt = time_range[time_index] - t
@@ -98,7 +104,7 @@ class NewmarkIntegrator():
             n_iter = 0
             while norm_of_vector(res) > self.eps*norm_of_vector(f_non):
                 S = self.K(q) + 1/(self.beta*dt**2)*self.M
-                delta_q = - np.linalg.solve(S, res)
+                delta_q = - linalg.spsolve(S, res)
                 q   += delta_q
                 dq  += self.gamma/(self.beta*dt)*delta_q
                 ddq += 1/(self.beta*dt**2)*delta_q
@@ -109,8 +115,12 @@ class NewmarkIntegrator():
 
             # Writing if necessary:
             if write_flag:
-                q_global.append(q.copy())
-                dq_global.append(dq.copy())
+                # writint in the dynamical system, if possible
+                if self.dynamical_system:
+                    self.dynamical_system.write_timestep(t, q)
+                else:
+                    q_global.append(q.copy())
+                    dq_global.append(dq.copy())
                 write_flag = False
                 if self.verbose:
                     print('Zeit:', t, 'Anzahl an Iterationen:', n_iter)
@@ -151,12 +161,12 @@ if __name__ == "__main__":
     q_start = np.array([1, 0, 2.])*0
     dq_start = q_start*0
 
-    T = np.arange(0,30,0.01)
+    T = np.arange(0,30,0.05)
 
     my_integrator = NewmarkIntegrator()
     my_integrator.set_nonlinear_model(f_non, my_k, M, f_ext)
-    #my_integrator.verbose = True
-    q, dq = my_integrator.integrate(q_start, dq_start, T)
+    my_integrator.verbose = True
+    q, dq = my_integrator.integrate_nonlinear_system(q_start, dq_start, T)
 
     from matplotlib import pyplot
     pyplot.plot(T, q)

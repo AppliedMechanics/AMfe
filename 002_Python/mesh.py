@@ -14,7 +14,7 @@ def check_dir(*filenames):
     '''Checkt ob Verzeichnis vorliegt; falls nicht, wird Verzeichnis angelegt'''
     for filename in filenames:                              # loop on files
         if not os.path.exists(os.path.dirname(filename)):   # check if directory does not exists...
-            os.makedirs(os.path.dirname(filename))          # then create directory 
+            os.makedirs(os.path.dirname(filename))          # then create directory
             print("Created directory: " + os.path.dirname(filename))
 
 
@@ -40,7 +40,7 @@ class Mesh:
     def __init__(self,  node_dof=2):
         self.nodes = []
         self.elements = []
-        self.element_properties = []        
+        self.element_properties = []
         self.u = None
         self.timesteps = 1
         self.node_dof = node_dof
@@ -88,12 +88,12 @@ class Mesh:
             print('Übergeben wurde aber ein Vektor mit ', u.size, 'Einträgen')
         else:
             self.u = [np.array(u).reshape((-1, node_dof))]
-        pass
 
-    def set_displacement_with_time(self, u, ntimesteps, node_dof=2):
-        self.timesteps = ntimesteps
+
+    def set_displacement_with_time(self, u, timesteps, node_dof=2):
+        self.timesteps = timesteps
         self.u = []
-        for i in range(ntimesteps):
+        for i in timesteps:
             self.u.append(np.array(u[:,i]).reshape((-1, node_dof)))
 
 
@@ -110,12 +110,12 @@ class Mesh:
         filename_pvd = filename + '.pvd'
 
         filename_head, filename_tail = os.path.split(filename)
-        
+
         check_dir(filename_pvd)
         with open(filename_pvd, 'w') as savefile_pvd:
             savefile_pvd.write(pvd_header)
-            for i in range(self.timesteps):
-                savefile_pvd.write(pvd_line_start + str(i) + pvd_line_middle + filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
+            for i, t in enumerate(self.timesteps):
+                savefile_pvd.write(pvd_line_start + str(t) + pvd_line_middle + filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
             savefile_pvd.write(pvd_footer)
 
         vtu_header = '''<?xml version="1.0"?> \n
@@ -128,7 +128,7 @@ class Mesh:
         </Piece>
         </UnstructuredGrid>
         </VTKFile>'''
-        for i in range(self.timesteps):
+        for i, t in enumerate(self.timesteps):
             filename_vtu = filename + '_' + str(i).zfill(3) + '.vtu'
             check_dir(filename_vtu)
             with open(filename_vtu, 'w') as savefile_vtu:
@@ -286,10 +286,10 @@ class MeshGenerator:
         Speichert das Netz ab; Funktioniert für alle Elementtypen,
         es muss also stets nur eine Liste vorhanden sein
         '''
-        
+
         delimiter = ','
         newline = '\n'
-        
+
         check_dir(filename_nodes, filename_elements)
         with open(filename_nodes, 'w') as savefile_nodes: # Save nodes
             # Header for file:
@@ -300,7 +300,7 @@ class MeshGenerator:
             savefile_nodes.write(header)
             for nodes in self.nodes:
                 savefile_nodes.write(delimiter.join(str(x) for x in nodes) + newline)
-                
+
         with open(filename_elements, 'w') as savefile_elements: # Save elements
             # Header for the file:
             savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)

@@ -66,8 +66,8 @@ class PrimitiveAssembly():
             X = np.array([self.nodes[i] for i in element]).reshape(-1)
             # element_indices have to be corrected in order respect the dimensions
             element_indices = np.array([[self.node_dof*i + j for j in range(self.node_dof)] for i in element]).reshape(-1)
-            if u:
-                u_local = u(element_indices)
+            if u is not None:
+                u_local = u[element_indices]
             element_matrix = self.matrix_function(X, u_local)
             row = np.zeros((ndof_local, ndof_local))
             row[:,:] = element_indices

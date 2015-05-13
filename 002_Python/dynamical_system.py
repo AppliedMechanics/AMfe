@@ -26,6 +26,8 @@ class DynamicalSystem():
         '''Init-Function for the dynamical system;
         Main parameters are processed with the specific functions
         '''
+        self.T_output = []
+        self.u_output = []
         pass
 
     def load_mesh_from_gmsh(self, msh_file):
@@ -73,17 +75,20 @@ class DynamicalSystem():
 
         the neumann_boundary_list is a list containing the neumann_boundaries:
 
-        [dofs, type, properties]
+        [dofs_list, type, properties, B_matrix=None]
         types are
         type:             properties:
           - stepload      amplitude, time
           - dirac         amplitude, time
           - harmonic      amplitude, frequency
+          - ramp          slope, time
+          - const         amplitude
 
         This has to be elaborated further...
         the time dependent properties are ignored for static analysis
         '''
-        pass
+        self.neumann_bc_class = boundary.NeumannBoundary(self.ndof_global, neumann_boundary_list)
+        self._f_ext_without_bc = self.neumann_bc_class.f_ext()
 
     def set_element(self, element_class):
         '''Gives the dynamical system routine an element class'''
@@ -108,19 +113,29 @@ class DynamicalSystem():
     def K_global(self, u=None):
         '''Return the global tangential stiffness matrix with dirichlet boundary conditions imposed'''
         self.assembly_class = assembly.PrimitiveAssembly(self.node_list, self.element_list, self.element_class.k_int, node_dof=self.node_dof)
-        _K = self.assembly_class.assemble_matrix(u)
+        _K = self.assembly_class.assemble_matrix(self.b_constraints.dot(u))
         self._K_bc = self.b_constraints.T.dot(_K.dot(self.b_constraints))
         return self._K_bc
 
-    def f_int_global(self, u=None):
+    def f_int_global(self, u):
         '''Return the global elastic restoring force of the system '''
         self.assembly_class = assembly.PrimitiveAssembly(self.node_list, self.element_list, node_dof=self.node_dof, vector_function=self.element_class.f_int)
-        _f = self.assembly_class.assemble_vector(u)
+        _f = self.assembly_class.assemble_vector(self.b_constraints.dot(u))
         self._f_bc = self.b_constraints.T.dot(_f)
         return self._f_bc
 
     def f_ext_global(self, u, du, t):
         '''return the global nonlinear external force of the right hand side of the equation, i.e. the excitation'''
+        return self.b_constraints.T.dot(self._f_ext_without_bc(t))
+
+    def write_timestep(self, t, u):
+        '''
+        write the timestep into the dynamical_system_class
+        '''
+        self.T_output.append(t)
+        self.u_output.append(u.copy())
+
+
 
 
 
@@ -128,21 +143,36 @@ class DynamicalSystem():
 
 # Idee, wie's ablaufen soll:
 my_dynamical_system = DynamicalSystem()
-my_dynamical_system.load_mesh_from_gmsh('gmsh/my_mesh.msh')
+# my_dynamical_system.load_mesh_from_gmsh('gmsh/my_mesh.msh')
 my_dynamical_system.load_mesh_from_csv('Vernetzungen/nodes.csv', 'Vernetzungen/elements.csv' )
+
 my_element = element.ElementPlanar()
 my_dynamical_system.set_element(my_element)
 
-my_dirichlet_boundary_list = [[None, np.arange(40), None], [200, [200 + 2*i for i in range(40)], None]]
-my_neumann_boundary_list = [[200, 'harmonic', (20, 2*np.pi*8)]]
-my_dynamical_system.apply_dirichlet_boundaries(my_dirichlet_boundary_list)
+bottom_fixation = [None, range(20), None]
+#bottom_fixation = [None, [1 + 2*x for x in range(10)], None]
+#bottom_fixation2 = [None, [0, ], None]
+conv = assembly.ConvertIndices(2)
+master_node = conv.node2total(810, 1)
+top_fixation = [master_node, [master_node + 2*x for x in range(10)], None]
+dirichlet_boundary_list = [bottom_fixation, top_fixation]
+
+
+# my_dirichlet_boundary_list = [[None, np.arange(40), None], [200, [200 + 2*i for i in range(40)], None]]
+my_neumann_boundary_list = [[[master_node,], 'ramp', (8E1, 0), None]]
+my_dynamical_system.apply_dirichlet_boundaries(dirichlet_boundary_list)
 my_dynamical_system.apply_neumann_boundaries(my_neumann_boundary_list)
 
+
+a = my_dynamical_system.f_ext_global(None, None, 0)
+ndof_bc = len(a)
 # Test
+# my_dynamical_system.neumann_bc_class.function_list[0](3)
 
 my_integrator = integrator.NewmarkIntegrator(alpha=0)
-#my_integrator.set_dynamical_system(my_dynamical_system)
-#my_integrator.integrate_linear_system(0, 10, 0.1)
+my_integrator.set_dynamical_system(my_dynamical_system)
+my_integrator.verbose = True
+my_integrator.integrate_nonlinear_system(np.zeros(ndof_bc), np.zeros(ndof_bc),  np.arange(0,0.4,0.05))
 
 my_dynamical_system.export_paraview('ParaView/linear_static_testcase')
 my_dynamical_system.export_paraview('Para_View/nonlinear_dynamic_testcase')

@@ -93,3 +93,127 @@ class DirichletBoundary():
         B = B[:,mask]
         return B
 
+
+
+class NeumannBoundary():
+    '''Class for application of von Neumann coundary conditions. Works a little bit crazy but it's working.
+    '''
+
+    def __init__(self, ndof_global, neumann_boundary_list):
+        self.neumann_boundary_list = neumann_boundary_list
+        self.ndof_global = ndof_global
+        pass
+
+    def _harmonic_excitation(self, amplitude, frequency):
+        '''
+        function returning the harmonic function
+        '''
+
+        def internal_harmonic(t):
+            return amplitude*np.cos(frequency*2*np.pi*t)
+
+        return internal_harmonic
+
+
+    def _step_function(self, step_size, time):
+        '''
+        function returning a step function
+        '''
+        def internal_step_function(t):
+            if t > time:
+                return step_size
+            else:
+                return 0
+
+        return internal_step_function
+
+    def _dirac_impulse(self, amplitude, time, time_interval):
+        '''
+        returns a dirac impulse as excitation
+        '''
+
+        def internal_dirac(t):
+            if abs(t - time) < time_interval:
+                return amplitude / time_interval
+            else:
+                return 0
+
+        return internal_dirac
+
+    def _ramp_function(self, slope, time):
+        '''returns a ramp function '''
+
+        def internal_ramp(t):
+            delta_t = t - time
+            if delta_t < 0:
+                return 0
+            else:
+                return delta_t*slope
+
+        return internal_ramp
+
+    def _constant_function(self, amplitude):
+        '''returns a constant function; this makes most sense for static applications'''
+
+        def internal_constant(t):
+            return amplitude
+
+        return internal_constant
+
+    function_dict = {'harmonic': _harmonic_excitation,
+                     'stepload': _step_function,
+                     'dirac'   : _dirac_impulse,
+                     'ramp'    : _ramp_function,
+                     'static'  : _constant_function}
+
+    def f_ext(self):
+        '''
+        Input:
+        ------
+        no input is required for this function
+
+        Output:
+        -------
+        a function f, which can be called with f(t) giving back the von neumann bcs
+
+        '''
+        self.function_list = []
+        counter = 0
+        row_global = np.array([], dtype=int)
+        col_global = np.array([], dtype=int)
+        vals_global = np.array([], dtype=float)
+
+        for dofs, type_, props, B_matrix in self.neumann_boundary_list:
+            # constructing the indices for the boolean matrix grouping the functions in the right place
+            col = np.ones(len(dofs), dtype=int)*counter
+            row = np.array(dofs)
+            if B_matrix:
+                vals = B_matrix
+            else:
+                vals = np.ones(len(dofs))
+
+            row_global  = np.append(row_global, row)
+            col_global  = np.append(col_global, col)
+            vals_global = np.append(vals_global, vals)
+            counter += 1
+
+            # construct_the_list
+            self.function_list.append(self.function_dict[type_](self, *props))
+
+        self.boolean_force_matrix = sp.sparse.csr_matrix((vals, (row_global, col_global)), shape=(self.ndof_global, len(self.function_list)))
+
+        # export external forcing function
+        def external_forcing_function(t):
+            return self.boolean_force_matrix.dot(np.array([i(t) for i in self.function_list]))
+        return external_forcing_function
+
+
+# TEST
+if __name__ == '__main__':
+    my_neumann_bc = NeumannBoundary(2000, [[[0,], 'dirac', (5, 0.5, 1E-3), None],])
+    f = my_neumann_bc.f_ext()
+    T = np.arange(-1, 5, 0.1)
+    res = np.array([f(t) for t in T])
+    from matplotlib import pyplot
+    pyplot.plot(T, res[:, 0])
+
