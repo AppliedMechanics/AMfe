@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-
+"""
+Beispiel Dehnstab
+"""
 
 # Standard-Module
 import numpy as np
 import scipy as sp
 import os
 import time
-
 
 # Eigene Module
 import element
@@ -26,15 +27,10 @@ my_meshgenerator.build_mesh()
 my_meshgenerator.save_mesh(knotenfile, elementfile)
 
 # Netz
-my_mesh = mesh.Mesh(2)
+my_mesh = mesh.Mesh(2) # 2 Freiheitsgrade pro Knoten 
 my_mesh.read_nodes_from_csv(knotenfile)
 my_mesh.read_elements_from_csv(elementfile)
-my_mesh.compute_dimensions()
-
-#ndof = len(my_meshgenerator.nodes)*2
-#nelements = len(my_meshgenerator.elements)
-#nodes_array = my_meshgenerator.nodes.copy()
-#element_array = my_meshgenerator.elements.copy()
+my_mesh.initialize_dimensions()
 
 t2 = time.clock()
 print('Netz mit', my_mesh.no_of_dofs, 'Freiheitsgraden und', my_mesh.no_of_elements, 'Elementen erstellt')
@@ -57,7 +53,7 @@ K = K_coo.tocsr()
 print('Matrix K assembliert')
 
 t3 = time.clock()
-# update der Matrix-Funktion
+# update der Matrix-Funktion des Elements
 if multiproc:
     my_multiprocessing = assembly.MultiprocessAssembly(assembly.PrimitiveAssembly, element_function_list_m, nodes_array, element_array)
     M_coo = my_multiprocessing.assemble()
@@ -68,11 +64,9 @@ M = M_coo.tocsr()
 print('Matrix M assembliert')
 
 t4 = time.clock()
-
-print('Zeit zum generieren des Netzes:', t2 - t1)
+print('Zeit zum Generieren des Netzes:', t2 - t1)
 print('Zeit zum Assemblieren der Steifigkeitsmatrix:', t3 - t2)
 print('Zeit zum Assemblieren der Massenmatrix:', t4 - t3)
-
 
 t5 = time.clock()
 # Randbedingungen
@@ -85,6 +79,7 @@ top_fixation = [master_node, [master_node + 2*x for x in range(10)], None]
 dirichlet_boundary_list = [bottom_fixation, top_fixation]
 my_dirichlet_bcs = boundary.DirichletBoundary(M.shape[0], dirichlet_boundary_list)
 B = my_dirichlet_bcs.b_matrix()
+
 t6 = time.clock()
 print('Zeit zum Aufbringen der Randbedingungen:', t6-t5)
 
