@@ -42,9 +42,9 @@ class Mesh:
         self.elements = []
         self.element_properties = []
         self.u = None
-        self.timesteps = 1
+        self.timesteps = []
         self.node_dof = node_dof
-        
+
     def compute_dimensions(self):
         self.no_of_nodes = len(self.nodes)
         self.no_of_elements = len(self.elements)
@@ -72,6 +72,7 @@ class Mesh:
             self.nodes = self.nodes[:,1:]
         self.no_of_nodes = len(self.nodes)
         self.u = [np.zeros((self.no_of_nodes, self.node_dof))]
+        self.timesteps.append(0)
 
     def read_elements_from_csv(self, filename, explicit_node_numbering=False):
         '''Liest die Elementmatrizen aus'''

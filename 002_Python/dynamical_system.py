@@ -159,7 +159,7 @@ dirichlet_boundary_list = [bottom_fixation, top_fixation]
 
 
 # my_dirichlet_boundary_list = [[None, np.arange(40), None], [200, [200 + 2*i for i in range(40)], None]]
-my_neumann_boundary_list = [[[master_node,], 'ramp', (8E1, 0), None]]
+my_neumann_boundary_list = [[[master_node,], 'static', (8E10,), None]]
 my_dynamical_system.apply_dirichlet_boundaries(dirichlet_boundary_list)
 my_dynamical_system.apply_neumann_boundaries(my_neumann_boundary_list)
 
@@ -168,6 +168,9 @@ a = my_dynamical_system.f_ext_global(None, None, 0)
 ndof_bc = len(a)
 # Test
 # my_dynamical_system.neumann_bc_class.function_list[0](3)
+
+# Zuerst das statische Problem:
+my_dynamical_system
 
 my_integrator = integrator.NewmarkIntegrator(alpha=0)
 my_integrator.set_dynamical_system(my_dynamical_system)
