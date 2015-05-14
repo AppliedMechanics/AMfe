@@ -96,6 +96,7 @@ class ElementPlanar():
         return f_int.reshape(-1)
 
 
+
     def k_int(self, X, u):
         '''
         Bestimmt die tangentiale Steifigkeitstmatrix auf Basis von Total Lagrange und liefert diese in Voigt-Koordinaten zurück. Die Steifigkeitstmatrix ist daher eine 6x6-Matrix.

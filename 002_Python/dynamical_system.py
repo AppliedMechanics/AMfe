@@ -98,6 +98,8 @@ class DynamicalSystem():
     def export_paraview(self, filename):
         '''Export the system with the given information to paraview
         '''
+        self.mesh_class.set_displacement_with_time(self.u_output, self.T_output)
+        self.mesh_class.save_mesh_for_paraview(filename)
         pass
 
     def M_global(self):
@@ -112,6 +114,8 @@ class DynamicalSystem():
 
     def K_global(self, u=None):
         '''Return the global tangential stiffness matrix with dirichlet boundary conditions imposed'''
+        if u is None:
+            u = np.zeros(self.b_constraints.shape[-1])
         self.assembly_class = assembly.PrimitiveAssembly(self.node_list, self.element_list, self.element_class.k_int, node_dof=self.node_dof)
         _K = self.assembly_class.assemble_matrix(self.b_constraints.dot(u))
         self._K_bc = self.b_constraints.T.dot(_K.dot(self.b_constraints))
@@ -133,7 +137,7 @@ class DynamicalSystem():
         write the timestep into the dynamical_system_class
         '''
         self.T_output.append(t)
-        self.u_output.append(u.copy())
+        self.u_output.append(self.b_constraints.dot(u))
 
 
 
@@ -158,8 +162,10 @@ top_fixation = [master_node, [master_node + 2*x for x in range(10)], None]
 dirichlet_boundary_list = [bottom_fixation, top_fixation]
 
 
+# Test der assembly-funktion:
+
 # my_dirichlet_boundary_list = [[None, np.arange(40), None], [200, [200 + 2*i for i in range(40)], None]]
-my_neumann_boundary_list = [[[master_node,], 'static', (8E10,), None]]
+my_neumann_boundary_list = [[[master_node,], 'ramp', (8E10, 0.0), None]]
 my_dynamical_system.apply_dirichlet_boundaries(dirichlet_boundary_list)
 my_dynamical_system.apply_neumann_boundaries(my_neumann_boundary_list)
 
@@ -169,14 +175,22 @@ ndof_bc = len(a)
 # Test
 # my_dynamical_system.neumann_bc_class.function_list[0](3)
 
-# Zuerst das statische Problem:
-my_dynamical_system
+## Zuerst das statische Problem:
+#u_bc = sp.sparse.linalg.spsolve(my_dynamical_system.K_global(), my_dynamical_system.f_ext_global(None, None, 0))
+#u_global = my_dynamical_system.b_constraints.dot(u_bc)
+#my_dynamical_system.write_timestep(1, u_bc)
+#my_dynamical_system.export_paraview('Versuche/dynamisches_system')
+
+# Dann das dynamische Problem:
 
 my_integrator = integrator.NewmarkIntegrator(alpha=0)
+my_integrator.delta_t = 5E-3
 my_integrator.set_dynamical_system(my_dynamical_system)
+# my_integrator.f_ext = None
 my_integrator.verbose = True
-my_integrator.integrate_nonlinear_system(np.zeros(ndof_bc), np.zeros(ndof_bc),  np.arange(0,0.4,0.05))
+my_integrator.integrate_nonlinear_system(np.zeros(ndof_bc), np.zeros(ndof_bc),  np.arange(0,0.08,0.01))
+my_dynamical_system.export_paraview('Versuche/dynamisches_system_3')
 
-my_dynamical_system.export_paraview('ParaView/linear_static_testcase')
-my_dynamical_system.export_paraview('Para_View/nonlinear_dynamic_testcase')
+#my_dynamical_system.export_paraview('ParaView/linear_static_testcase')
+#my_dynamical_system.export_paraview('Para_View/nonlinear_dynamic_testcase')
 

@@ -23,6 +23,8 @@ class NewmarkIntegrator():
         self.gamma = 1/2 + alpha
         self.delta_t = 1E-3
         self.eps = 1E-10
+        self.newton_damping = 0.8
+        self.residual_threshold = 1E6
         self.dynamical_system = None
         pass
 
@@ -105,6 +107,8 @@ class NewmarkIntegrator():
             while norm_of_vector(res) > self.eps*norm_of_vector(f_non):
                 S = self.K(q) + 1/(self.beta*dt**2)*self.M
                 delta_q = - linalg.spsolve(S, res)
+                if norm_of_vector(res) > self.residual_threshold:
+                    delta_q *= self.newton_damping
                 q   += delta_q
                 dq  += self.gamma/(self.beta*dt)*delta_q
                 ddq += 1/(self.beta*dt**2)*delta_q
@@ -113,6 +117,8 @@ class NewmarkIntegrator():
                 n_iter += 1
                 pass
 
+            if self.verbose:
+                print('Zeit:', t, 'Anzahl an Iterationen:', n_iter, 'Residuum:', norm_of_vector(res))
             # Writing if necessary:
             if write_flag:
                 # writint in the dynamical system, if possible

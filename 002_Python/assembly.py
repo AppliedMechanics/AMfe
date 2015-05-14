@@ -89,7 +89,7 @@ class PrimitiveAssembly():
         for element in self.elements:
             X = np.array([self.nodes[i] for i in element]).reshape(-1)
             element_indices = np.array([[2*i + j for j in range(self.node_dof)] for i in element]).reshape(-1)
-            global_force[element_indices] = self.vector_function(X, u[element_indices])
+            global_force[element_indices] += self.vector_function(X, u[element_indices])
         return global_force
 
 

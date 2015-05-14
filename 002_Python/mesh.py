@@ -92,10 +92,10 @@ class Mesh:
 
 
     def set_displacement_with_time(self, u, timesteps, node_dof=2):
-        self.timesteps = timesteps
+        self.timesteps = timesteps.copy()
         self.u = []
-        for i in timesteps:
-            self.u.append(np.array(u[:,i]).reshape((-1, node_dof)))
+        for i, timestep in enumerate(self.timesteps):
+            self.u.append(np.array(u[i]).reshape((-1, node_dof)))
 
 
     def save_mesh_for_paraview(self, filename):
