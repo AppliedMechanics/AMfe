@@ -24,12 +24,13 @@ import multiprocessing as mp
 from multiprocessing import Pool
 
 
-
 class PrimitiveAssembly():
     '''
     Assemblierungsklasse, die für gegebene Tableaus von Knotenkoordinaten und Assemblierungsknoten eine Matrix assembliert
     '''
 
+    # Hier muessen wir uns mal genau ueberlegen, was alles dem assembly uebergeben werden soll
+    # ob das ganze Mesh, oder nur ein paar Attribute
     def __init__(self, mesh = None, matrix_function=None, node_dof=2, vector_function=None):
         '''
         Verlangt ein dreispaltiges Koordinatenarray, indem die Koordinaten in x, y, und z-Koordinaten angegeben sind
@@ -42,6 +43,7 @@ class PrimitiveAssembly():
         self.vector_function = vector_function
         self.node_dof = mesh.node_dof
         self.ndof_global = mesh.no_of_dofs
+        self.no_of_element_nodes = mesh.no_of_element_nodes
         self.row_global = []
         self.col_global = []
         self.vals_global = []
@@ -52,13 +54,13 @@ class PrimitiveAssembly():
         '''
         assembliert die matrix_function für die Ursprungskonfiguration X und die Verschiebung u.
         '''
-        # deletion of former variables...
+        # deletion of former variables
         self.row_global = []
         self.col_global = []
         self.vals_global = []
-        # number of dofs per element
-        ndof_local = len(self.elements[0])*self.node_dof
-        # preset for u_local; necessary, when u=None
+        # number of dofs per element (6 for triangle since no_of_element_nodes = 3 and node_dof = 2)
+        ndof_local = self.no_of_element_nodes*self.node_dof
+        # preset for u_local; necessary, when u=None       
         u_local = np.zeros(ndof_local)
 
         for element in self.elements:
@@ -91,6 +93,10 @@ class PrimitiveAssembly():
             element_indices = np.array([[2*i + j for j in range(self.node_dof)] for i in element]).reshape(-1)
             global_force[element_indices] += self.vector_function(X, u[element_indices])
         return global_force
+
+
+
+
 
 
 

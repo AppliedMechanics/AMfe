@@ -33,6 +33,8 @@ class ElementPlanar():
         '''
         Definition der Materialgrößen und Dicke, da es sich um 2D-Elemente handelt
         '''
+        self.poisson_ratio = poisson_ratio
+        self.e_modul = E_modul
         self.lame_mu = E_modul / (2*(1+poisson_ratio))
         self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
         # Achtung: hier gibt's ebene Dehnung
@@ -198,6 +200,4 @@ def jacobian(func, vec, X):
 #print(K - K_finite_differenzen)
 #M = my_element.m_int(X, u)
 
-
-#%%
 
