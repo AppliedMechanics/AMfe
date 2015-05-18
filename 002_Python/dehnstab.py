@@ -30,7 +30,7 @@ my_meshgenerator.save_mesh(knotenfile, elementfile)
 my_mesh = mesh.Mesh(node_dof=2)  # 2 Freiheitsgrade pro Knoten
 my_mesh.read_nodes_from_csv(knotenfile)
 my_mesh.read_elements_from_csv(elementfile)
-my_mesh.initialize_dimensions()
+
 
 t2 = time.clock()
 print('Netz mit', my_mesh.no_of_dofs, 'Freiheitsgraden und', my_mesh.no_of_elements, 'Elementen erstellt')
@@ -47,7 +47,7 @@ if multiproc:
     my_multiprocessing = Assembly.MultiprocessAssembly(Assembly.PrimitiveAssembly, element_function_list_k, nodes_array, element_array)
     K_coo = my_multiprocessing.assemble()
 else:
-    my_assembler = assembly.PrimitiveAssembly(my_mesh, my_element.k_int)
+    my_assembler = assembly.PrimitiveAssembly(my_mesh.nodes, my_mesh.elements, my_element.k_int)
     K_coo = my_assembler.assemble_matrix()
 K = K_coo.tocsr()
 print('Matrix K assembliert')

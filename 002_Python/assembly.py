@@ -31,22 +31,28 @@ class PrimitiveAssembly():
 
     # Hier muessen wir uns mal genau ueberlegen, was alles dem assembly uebergeben werden soll
     # ob das ganze Mesh, oder nur ein paar Attribute
-    def __init__(self, mesh = None, matrix_function=None, node_dof=2, vector_function=None):
+    def __init__(self, nodes=None, elements=None, matrix_function=None, node_dof=2, vector_function=None):
         '''
         Verlangt ein dreispaltiges Koordinatenarray, indem die Koordinaten in x, y, und z-Koordinaten angegeben sind
         Anzahl der Freiheitsgrade für einen Knotenfreiheitsgrad: node_dof gibt an, welche Koordinaten verwendet werden sollen;
         Wenn mehr Koordinaten pro Knoten nötig sind (z.B. finite Rotationen), werden Nullen hinzugefügt
         '''
-        self.nodes = mesh.nodes
-        self.elements = mesh.elements
+        self.nodes = nodes
+        self.elements = elements
         self.matrix_function = matrix_function
-        self.vector_function = vector_function
-        self.node_dof = mesh.node_dof
-        self.ndof_global = mesh.no_of_dofs
-        self.no_of_element_nodes = mesh.no_of_element_nodes
+        self.vector_function = vector_function       
+        self.node_dof = node_dof
+        
         self.row_global = []
         self.col_global = []
         self.vals_global = []
+        
+        self.no_of_nodes = len(self.nodes)
+        self.no_of_elements = len(self.elements)
+        self.no_of_dofs = self.no_of_nodes*self.node_dof
+        self.no_of_element_nodes = len(self.elements[0])         
+
+        self.ndof_global = self.no_of_dofs
         pass
 
 

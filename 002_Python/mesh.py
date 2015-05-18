@@ -45,12 +45,6 @@ class Mesh:
         self.timesteps = []
         self.node_dof = node_dof
 
-    def initialize_dimensions(self):
-        self.no_of_nodes = len(self.nodes)
-        self.no_of_elements = len(self.elements)
-        self.no_of_dofs = self.no_of_nodes*self.node_dof
-        self.no_of_element_nodes = len(self.elements[0])
-        self.u = [np.zeros((self.no_of_nodes, self.node_dof))]
         self.timesteps.append(0)
 
 
@@ -73,13 +67,17 @@ class Mesh:
         # when line numbers are erased if they are content of the csv
         if explicit_node_numbering:
             self.nodes = self.nodes[:,1:]
-
+        self.no_of_nodes = len(self.nodes)            
+        self.no_of_dofs = self.no_of_nodes*self.node_dof
+        self.u = [np.zeros((self.no_of_nodes, self.node_dof))]
+        
     def read_elements_from_csv(self, filename, explicit_node_numbering=False):
         '''Liest die Elementmatrizen aus'''
         self.elements = np.genfromtxt(filename, delimiter = ',', dtype = int, skip_header = 1)
         if explicit_node_numbering:
             self.elements = self.elements[:,1:]
-
+        self.no_of_elements = len(self.elements)
+        self.no_of_element_nodes = len(self.elements[0])       
 
 
     def set_displacement(self, u, node_dof=2):
