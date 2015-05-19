@@ -24,6 +24,94 @@ import multiprocessing as mp
 from multiprocessing import Pool
 
 
+class Assembly():
+    '''
+    Class for the more fancy assembly of a mesh and an element;
+    In this state it is only possible to assemble homegeneous meshes;
+    heterogeneous meshes should be assembled by another routine.
+    '''
+    def __init__(self, mesh, element):
+        '''
+        Parameters:
+        ----
+
+        mesh :      instance of the Mesh-class or a child of it
+
+        element:    instance of the Element-class or a child of it
+
+        Returns:
+        ---
+        None
+        '''
+        self.mesh = mesh
+        self.element = element
+        pass
+
+    def assemble_m(self, u):
+        '''
+        Assembles the mass matrix of the given mesh and element.
+
+        Parameters:
+        ---
+
+        u :         nodal displacement of the nodes in Voigt-notation
+
+        Returns:
+        ---
+
+        M :         unconstrained assembled mass matrix in sparse matrix coo
+                    format.
+        '''
+        pass
+
+    def assemble_k(self, u):
+        '''
+        Assembles the stiffness matrix of the given mesh and element.
+
+        Parameters:
+        ---
+
+        u :         nodal displacement of the nodes in Voigt-notation
+
+        Returns:
+        ---
+
+        K :         unconstrained assembled stiffness matrix in sparse matrix
+                    coo format.
+        '''
+        pass
+
+    def assemble_f(self, u):
+        '''
+        Assembles the force vector of the given mesh and element.
+
+        Parameters:
+        ---
+
+        u :         nodal displacement of the nodes in Voigt-notation
+
+        Returns:
+        ---
+
+        f :         unconstrained force vector in numpy.ndarray format of
+                    dimension (ndim, )
+
+        '''
+        pass
+
+    def assemble_k_and_f(self, u):
+        '''
+        Assembles the tangential stiffness matrix and the force matrix in one
+        run as it is very often needed by an implicit integration scheme.
+
+        Takes the advantage, that some element properties only have to be
+        computed once.
+        '''
+        pass
+
+
+
+
 class PrimitiveAssembly():
     '''
     Assemblierungsklasse, die für gegebene Tableaus von Knotenkoordinaten und Assemblierungsknoten eine Matrix assembliert
@@ -40,17 +128,17 @@ class PrimitiveAssembly():
         self.nodes = nodes
         self.elements = elements
         self.matrix_function = matrix_function
-        self.vector_function = vector_function       
+        self.vector_function = vector_function
         self.node_dof = node_dof
-        
+
         self.row_global = []
         self.col_global = []
         self.vals_global = []
-        
+
         self.no_of_nodes = len(self.nodes)
         self.no_of_elements = len(self.elements)
         self.no_of_dofs = self.no_of_nodes*self.node_dof
-        self.no_of_element_nodes = len(self.elements[0])         
+        self.no_of_element_nodes = len(self.elements[0])
 
         self.ndof_global = self.no_of_dofs
         pass
@@ -66,7 +154,7 @@ class PrimitiveAssembly():
         self.vals_global = []
         # number of dofs per element (6 for triangle since no_of_element_nodes = 3 and node_dof = 2)
         ndof_local = self.no_of_element_nodes*self.node_dof
-        # preset for u_local; necessary, when u=None       
+        # preset for u_local; necessary, when u=None
         u_local = np.zeros(ndof_local)
 
         for element in self.elements:

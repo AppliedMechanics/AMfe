@@ -17,7 +17,122 @@ geschickter zu implementieren!
 import numpy as np
 
 
-class ElementPlanar():
+class Element():
+    '''
+    this is the baseclass for all elements. It contains the methods needed
+    for the computation of the element stuff...
+    '''
+
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, density=10):
+        pass
+
+    def _compute_tensors(self, X, u):
+        '''
+        Virtual function for the element specific implementation of a tensor
+        computation routine which will be called before _k_int and _f_int
+        will be called. For many computations the tensors need to be computed
+        the same way.
+        '''
+        pass
+
+    def _k_int(self, X, u):
+        pass
+
+    def _f_int(self, X, u):
+        pass
+
+    def _m_int(self, X, u):
+        '''
+        Virtual function for the element specific implementation of the mass
+        matrix;
+        '''
+        print('The function is not implemented yet...')
+        pass
+
+    def k_and_f_int(X, u):
+        '''
+        Returns the tangential stiffness matrix and the internal nodal force
+        of the Element.
+
+        Parameters:
+        -----------
+        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
+                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+
+        u :         nodal displacements given in Voigt notation
+
+        Returns:
+        --------
+        k_int :     The tangential stiffness matrix (numpy.ndarray of
+                    dimension (ndim, ndim))
+
+        f_int :     The nodal force vector (numpy.ndarray of dimension (ndim,))
+
+        '''
+        self._compute_tensors(X, u)
+        return self._k_int(X, u), self._f_int(X, u)
+
+    def k_int(self, X, u):
+        '''
+        Returns the tangential stiffness matrix of the Element.
+
+        Parameters:
+        -----------
+        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
+                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+
+        u :         nodal displacements given in Voigt notation
+
+        Returns:
+        --------
+        k_int :     The tangential stiffness matrix (numpy.ndarray of
+                    type ndim x ndim)
+
+        '''
+        self._compute_tensors(X, u)
+        return self._k_int(X, u)
+
+    def f_int(self, X, u):
+        '''
+        Returns the tangential stiffness matrix of the Element.
+
+        Parameters:
+        -----------
+        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
+                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+
+        u :         nodal displacements given in Voigt notation
+
+        Returns:
+        --------
+        f_int :     The nodal force vector (numpy.ndarray of dimension (ndim,))
+
+        '''
+        self._compute_tensors(X, u)
+        return self._f_int(X, u)
+
+    def m_int(self, X, u):
+        '''
+        Returns the tangential stiffness matrix of the Element.
+
+        Parameters:
+        -----------
+        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
+                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+
+        u :         nodal displacements given in Voigt notation
+
+        Returns:
+        --------
+        m_int :     The consistent mass matrix of the element
+                    (numpy.ndarray of dimension (ndim,ndim))
+
+        '''
+        return self._m_int(X, u)
+
+
+
+class ElementPlanar(Element):
     '''
     Elementklasse für ein ebenes Dreieckselement. Die Knoten sind an de drei Ecken und haben jeweils Verschiebungen in x- und y-Richtung.
     Die Feldgrößen des Elements (Spannung, Dehnung etc.) sind konstant über das Element, daher ist die Approximationsgüte moderat.
@@ -51,7 +166,7 @@ class ElementPlanar():
         self.I = np.eye(2)
         pass
 
-    def compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u):
         '''
         Bestimmung der tensoriellen Größen des Elements für eine Total Lagrange Betrachtungsweise. Die Tensoren werden als Objektvariablen abgespeichert, daher hat diese Funktion keine Rückgabewerte.
 
@@ -86,26 +201,19 @@ class ElementPlanar():
 
         pass
 
-    def f_int(self, X, u):
+    def _f_int(self, X, u):
         '''
-        Bestimmt die internen Kräfte und liefert einen Kraftvektor in Voigt-Notation zurück, also f = [f1x, f1y, f2x, f2y, f3x, f3y]
-        Kraft- und Koordinatenvektor sind beiden in Voig-Notation beschrieben, also x = [x1, y1, x2, y2, x3, y3]
-        Die Methode für die Bestimmung der inneren Kraft ist Total Lagrange. Es wird als Konstitutivgesetz das Kirchhoff-Material angenommen.
+        Private method for the computation of the internal nodal forces without computation of the relevant tensors
         '''
-        self.compute_tensors(X, u)
         self.P = self.S.dot(self.F.T)
         f_int = self.B0_tilde.T.dot(self.P)*self.A0*self.t
         return f_int.reshape(-1)
 
-
-
-    def k_int(self, X, u):
+    def _k_int(self, X, u):
         '''
-        Bestimmt die tangentiale Steifigkeitstmatrix auf Basis von Total Lagrange und liefert diese in Voigt-Koordinaten zurück. Die Steifigkeitstmatrix ist daher eine 6x6-Matrix.
+        Private method for computation of internal tangential stiffness matrix without an update of the internal tensors
 
-        Beschreibung des Koordinatenvektors über x = [x1, y1, x2, y2, x3, y3]
         '''
-        self.compute_tensors(X, u)
         # Tangentiale Steifigkeitsmatrix resultierend aus der geometrischen Änderung
         self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0*self.t
         self.K_geo = np.array([[self.K_geo_small[0,0], 0, self.K_geo_small[0,1], 0, self.K_geo_small[0,2], 0],
@@ -125,7 +233,7 @@ class ElementPlanar():
         # Rückgabewert ist die Summe aus materieller und geometrischer Steifigkeitsmatrix
         return self.K_mat + self.K_geo
 
-    def m_int(self, X, u):
+    def _m_int(self, X, u):
         '''
         Bestimmt die Massenmatrix. Erstellt die Massenmatrix durch die fest einprogrammierte Darstellung aus dem Lehrbuch.
         '''
@@ -141,28 +249,6 @@ class ElementPlanar():
 #        self.M_small = np.array([[2, 1, 1], [1, 2, 1,], [1, 1, 2]])*self.A0/12*self.t*self.rho
 #        self.M = np.kron(self.M_small, self.I)
         return self.M
-
-
-
-
-class ElementSchale():
-    '''
-    Schalenelement
-    - Freiheitsgrad-Definition muss noch überprüft werden
-    - unklar: Handling von Rotationen
-    '''
-
-    def __init(self):
-        pass
-
-    def f_int(self, x, X):
-        pass
-
-    def k_int(self, x, X):
-        pass
-
-    def m_int(self, x, X):
-        pass
 
 
 
