@@ -36,8 +36,7 @@ my_mechanical_system.set_element(my_element)
 bottom_fixation = [None, range(22), None]
 #bottom_fixation = [None, [1 + 2*x for x in range(10)], None]
 #bottom_fixation2 = [None, [0, ], None]
-conv = amfe.ConvertIndices(2)
-master_node = conv.node2total(110, 1)
+master_node = amfe.node2total(110, 1, ndof_node=2)
 top_fixation = [master_node, [master_node + 2*x for x in range(11)], None]
 top_fixation_2 = [None, [master_node - 1 + 2*x for x in range(11)], None]
 dirichlet_boundary_list = [bottom_fixation, top_fixation, top_fixation_2]

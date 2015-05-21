@@ -51,6 +51,9 @@ K = el.k_int(x, u)
 print('Difference between analytical and approximated tangential stiffness matrix')
 print(K - K_finite_diff)
 
+print('Maximum absolute deviation:', np.max(abs(K - K_finite_diff)))
+print('Maximum relative deviation:', np.max(abs(K - K_finite_diff))/np.max(abs(K)))
+
 #%%
 
 
