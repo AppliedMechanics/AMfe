@@ -134,13 +134,21 @@ class Element():
 
 class ElementPlanar(Element):
     '''
-    Elementklasse für ein ebenes Dreieckselement. Die Knoten sind an de drei Ecken und haben jeweils Verschiebungen in x- und y-Richtung.
-    Die Feldgrößen des Elements (Spannung, Dehnung etc.) sind konstant über das Element, daher ist die Approximationsgüte moderat.
+    Element class for a plane triangle element in Total Lagrangian formulation.
+    The displacements are given in x- and y-coordinates;
 
-    Bisher ist nur die Toal Lagrange Darstellung implementiert.
+    Element-properties:
+    -----------
+    The Element assumes constant strain and stress over the whole element.
+    Thus the approximation quality is very moderate.
 
-    Der Elementtyp ist auf Basis von Belytschko, Ted: Nonlinear Finite Elements for Continua and Structures programmiert.
-    Die wichtigen Referenzen sind auf S. 201 und 207 zu finden.
+
+    References:
+    ------------
+    Basis for this implementation is the Monograph of Ted Belytschko:
+    Nonlinear Finite Elements for Continua and Structures.
+    pp. 201 and 207.
+
     '''
     plane_stress = True
 
@@ -164,6 +172,8 @@ class ElementPlanar(Element):
         self.t = element_thickness
         self.rho = density
         self.I = np.eye(2)
+        self.S = np.zeros((2,2))
+        self.K_geo = np.zeros((6,6))
         pass
 
     def _compute_tensors(self, X, u):
@@ -182,39 +192,38 @@ class ElementPlanar(Element):
         '''
         X1, Y1, X2, Y2, X3, Y3 = X
         self.u = u.reshape((-1,2))
-        # # compute B_tilde-matrix:
-        # A = 0.5*((x3-x2)*(y1-y2) - (x1-x2)*(y3-y2))
-        # # just some stuff for updated Lagrangian
-        # B_tilde = 1/(2*A)*np.array([[y2-y3, x3-x2], [y3-y1, x1-x3], [y1-y2, x2-x1]])
-        # B = 1/(2*A)*np.array([  [y2-y3, 0, y3-y1, 0, y1-y2, 0],
-        #                         [0, x3-x2, 0, x1-x3, 0, x2-x1],
-        #                         [x3-x2, y2-y3, x1-x3, y3-y1, x2-x1, y1-y2]])
-        # Total Lagrangian values:
         self.A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
         self.B0_tilde = 1/(2*self.A0)*np.array([[Y2-Y3, X3-X2], [Y3-Y1, X1-X3], [Y1-Y2, X2-X1]]).T
-        self.H = self.B0_tilde.dot(self.u)
+        self.H = self.u.T.dot(self.B0_tilde.T)
         self.F = self.H + self.I
         self.E = 1/2*(self.H + self.H.T + self.H.T.dot(self.H))
         ## Trace is very slow; use a direct sum instead...
         # self.S = self.lame_lambda*np.trace(self.E)*self.I + 2*self.lame_mu*self.E
-        self.S = self.lame_lambda*(self.E[0,0] + self.E[1,1])*self.I + 2*self.lame_mu*self.E
 
-        pass
+        # This is sick but it improves the stuff...
+        self.S_voigt = self.C_SE.dot([self.E[0,0], self.E[1,1], 2*self.E[0,1]])
+        self.S[0,0] , self.S[1,1], self.S[1,0], self.S[0,1] = self.S_voigt[0], self.S_voigt[1], self.S_voigt[2], self.S_voigt[2]
+
+        # Building B0 with the product of the deformation gradient
+        self.B0 = np.zeros((3, 6))
+        for i in range(3):
+            self.B0[:,2*i:2*i+2] = np.array([[self.B0_tilde[0,i], 0], [0, self.B0_tilde[1,i]], [self.B0_tilde[1,i], self.B0_tilde[0,i]]]).dot(self.F.T)
+
 
     def _f_int(self, X, u):
         '''
         Private method for the computation of the internal nodal forces without computation of the relevant tensors
         '''
-        self.P = self.S.dot(self.F.T)
-        f_int = self.B0_tilde.T.dot(self.P)*self.A0*self.t
-        return f_int.reshape(-1)
+        f_int = self.B0.T.dot(self.S_voigt)*self.A0*self.t
+        return f_int
 
     def _k_int(self, X, u):
         '''
         Private method for computation of internal tangential stiffness matrix without an update of the internal tensors
 
         '''
-        # Tangentiale Steifigkeitsmatrix resultierend aus der geometrischen Änderung
+        # as the kronecker product is very expensive, the stuff is done explicitly
+        # self.K_geo = np.kron(self.K_geo_small, self.I)
         self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0*self.t
         self.K_geo = np.array([[self.K_geo_small[0,0], 0, self.K_geo_small[0,1], 0, self.K_geo_small[0,2], 0],
                            [0, self.K_geo_small[0,0], 0, self.K_geo_small[0,1], 0, self.K_geo_small[0,2]],
@@ -222,15 +231,7 @@ class ElementPlanar(Element):
                            [0, self.K_geo_small[1,0], 0, self.K_geo_small[1,1], 0, self.K_geo_small[1,2]],
                            [self.K_geo_small[2,0], 0, self.K_geo_small[2,1], 0, self.K_geo_small[2,2], 0],
                            [0, self.K_geo_small[2,0], 0, self.K_geo_small[2,1], 0, self.K_geo_small[2,2]]])
-        # Kronecker-Produkt ist wahnsinnig aufwändig; Daher Versuch, dies so zu lösen...
-#        self.K_geo = np.kron(self.K_geo_small, self.I)
-        # Aufbau der B0-Matrix aus den Produkt mit dem Deformationsgradienten
-        self.B0 = np.zeros((3, 6))
-        for i in range(3):
-            self.B0[:,2*i:2*i+2] = np.array([[self.B0_tilde[0,i], 0], [0, self.B0_tilde[1,i]], [self.B0_tilde[1,i], self.B0_tilde[0,i]]]).dot(self.F.T)
-        # Bestimmung der materiellen Steifigkeitmatrix
         self.K_mat = self.B0.T.dot(self.C_SE.dot(self.B0))*self.A0*self.t
-        # Rückgabewert ist die Summe aus materieller und geometrischer Steifigkeitsmatrix
         return self.K_mat + self.K_geo
 
     def _m_int(self, X, u):
@@ -250,40 +251,5 @@ class ElementPlanar(Element):
 #        self.M = np.kron(self.M_small, self.I)
         return self.M
 
-
-
-
-def jacobian(func, vec, X):
-    '''
-    Bestimmung der Jacobimatrix auf Basis von finiten Differenzen.
-    Die Funktion func(vec, X) wird nach dem Vektor vec abgeleitet, also d func / d vec an der Stelle X
-    '''
-    ndof = vec.shape[0]
-    jacobian = np.zeros((ndof, ndof))
-    h = np.sqrt(np.finfo(float).eps)
-    f = func(vec, X)
-    for i in range(ndof):
-        vec_tmp = vec.copy()
-        vec_tmp[i] += h
-        f_tmp = func(vec_tmp, X)
-        print(vec_tmp - vec)
-        jacobian[:,i] = (f_tmp - f) / h
-    return jacobian
-
-
-
-## Definition von h
-#h = np.sqrt(np.finfo(float).eps)
-#
-#
-## my_element = ElementPlanar(E_modul = 60, poisson_ratio=1/4)
-#my_element = ElementPlanar(E_modul = 57.6, poisson_ratio=1/5)
-#X = np.array([0, 0, 3, 1, 2, 2.])
-#x = np.array([0, 0, 3.1, 1, 2, 2.])
-#
-#K = my_element.k_int(X, u)
-#K_finite_differenzen = jacobian(my_element.f_int, X, X)
-#print(K - K_finite_differenzen)
-#M = my_element.m_int(X, u)
 
 
