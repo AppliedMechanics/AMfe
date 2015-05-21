@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 '''
-Integratoren-Klasse, mit der dynamische Probleme berechnet werden können
+Module for solving static and dynamic problems.
+
 '''
 
 import numpy as np
@@ -16,9 +17,8 @@ class NewmarkIntegrator():
     '''
     Newmark-Integrator-Schema zur Bestimmung der dynamischen Antwort...
     '''
-    verbose = False
 
-    def __init__(self, alpha=0):
+    def __init__(self, alpha=0, verbose=True):
         self.beta = 1/4*(1 + alpha)**2
         self.gamma = 1/2 + alpha
         self.delta_t = 1E-3
@@ -26,6 +26,7 @@ class NewmarkIntegrator():
         self.newton_damping = 0.8
         self.residual_threshold = 1E6
         self.mechanical_system = None
+        self.verbose = verbose
         pass
 
     def set_nonlinear_model(self, f_non, K, M, f_ext=None):
@@ -51,7 +52,7 @@ class NewmarkIntegrator():
         self.f_ext = mechanical_system.f_ext_global
 
 
-    def residual(self, q, dq, ddq, t):
+    def _residual(self, q, dq, ddq, t):
         if self.f_ext is not None:
             res = self.M.dot(ddq) + self.f_non(q) - self.f_ext(q, dq, t)
         else:
@@ -100,7 +101,7 @@ class NewmarkIntegrator():
 
             # checking residual and convergence
             f_non = self.f_non(q)
-            res = self.residual(q, dq, ddq, t)
+            res = self._residual(q, dq, ddq, t)
             # Newcton-Correction-loop
 
             n_iter = 0
@@ -113,7 +114,7 @@ class NewmarkIntegrator():
                 dq  += self.gamma/(self.beta*dt)*delta_q
                 ddq += 1/(self.beta*dt**2)*delta_q
                 f_non = self.f_non(q)
-                res = self.residual(q, dq, ddq, t)
+                res = self._residual(q, dq, ddq, t)
                 n_iter += 1
                 pass
 
