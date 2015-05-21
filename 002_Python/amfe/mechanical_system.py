@@ -10,11 +10,10 @@ By now it's just a skeleton; Maybe it grows further in the coming days and weeks
 import numpy as np
 import scipy as sp
 
-if True:# __name__ == "__main__":
-    from amfe.mesh import *
-    from amfe.element import *
-    from amfe.assembly import *
-    from amfe.boundary import *
+from amfe.mesh import *
+from amfe.element import *
+from amfe.assembly import *
+from amfe.boundary import *
 
 
 class MechanicalSystem():

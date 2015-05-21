@@ -63,6 +63,7 @@ class Assembly():
         M :         unconstrained assembled mass matrix in sparse matrix coo
                     format.
         '''
+
         pass
 
     def assemble_k(self, u):

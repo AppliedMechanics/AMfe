@@ -16,7 +16,8 @@ from amfe.boundary import *
 from amfe.element import *
 from amfe.mesh import *
 from amfe.solver import *
-from amfe.import_mesh import *
+# Deprecated as the import gmsh routine is added to the mesh class
+# from amfe.import_mesh import *
 from amfe.tools import *
 from amfe.mechanical_system import *
 
