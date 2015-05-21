@@ -5,34 +5,33 @@ Created on Tue May 19 17:44:04 2015
 @author: johannesr
 """
 
+import sys
+import time
 
 import numpy as np
 import scipy as sp
 
 
-import mesh
-import element
-import assembly
-import boundary
-import integrator
-import dynamical_system
+sys.path.insert(0,'..')
+
+import amfe
 
 
-my_mesh_generator = mesh.MeshGenerator(x_len=1., y_len=1, x_no_elements=10, y_no_elements=10)
+my_mesh_generator = amfe.MeshGenerator(x_len=1., y_len=1, x_no_elements=10, y_no_elements=10)
 my_mesh_generator.build_mesh()
-my_mesh_generator.save_mesh('Vernetzungen/nodes.csv', 'Vernetzungen/elements.csv')
+my_mesh_generator.save_mesh('../meshes/selbstgebaut/nodes.csv', '../meshes/selbstgebaut/elements.csv')
 
-my_dynamical_system = dynamical_system.DynamicalSystem()
-my_dynamical_system.load_mesh_from_csv('Vernetzungen/nodes.csv', 'Vernetzungen/elements.csv' )
-my_dynamical_system.export_paraview('Versuche/dynamisches_system_5')
+my_dynamical_system = amfe.DynamicalSystem()
+my_dynamical_system.load_mesh_from_csv('../meshes/selbstgebaut/nodes.csv', '../meshes/selbstgebaut/elements.csv' )
 
-my_element = element.ElementPlanar(E_modul=210E9, poisson_ratio=0.3)
+
+my_element = amfe.ElementPlanar(E_modul=210E9, poisson_ratio=0.3)
 my_dynamical_system.set_element(my_element)
 
 bottom_fixation = [None, range(22), None]
 #bottom_fixation = [None, [1 + 2*x for x in range(10)], None]
 #bottom_fixation2 = [None, [0, ], None]
-conv = assembly.ConvertIndices(2)
+conv = amfe.ConvertIndices(2)
 master_node = conv.node2total(110, 1)
 top_fixation = [master_node, [master_node + 2*x for x in range(11)], None]
 top_fixation_2 = [None, [master_node - 1 + 2*x for x in range(11)], None]
@@ -88,7 +87,8 @@ for forcing_factor in np.arange(stepwidth, 1+stepwidth, stepwidth):
 
     sys.write_timestep(forcing_factor, u)
 
-sys.export_paraview('Versuche/statisches_system5')
+export_path = '../results/gummi_dehnstab' + time.strftime("_%Y%m%d_%H%M%S") + '/gummi_dehnstab'
+sys.export_paraview(export_path)
 
 
 
