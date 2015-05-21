@@ -18,6 +18,6 @@ from amfe.mesh import *
 from amfe.integrator import *
 from amfe.import_mesh import *
 # import amfe.dummy
-from amfe.dynamical_system import *
+from amfe.mechanical_system import *
 
 

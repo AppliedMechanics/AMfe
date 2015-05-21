@@ -25,7 +25,7 @@ class NewmarkIntegrator():
         self.eps = 1E-10
         self.newton_damping = 0.8
         self.residual_threshold = 1E6
-        self.dynamical_system = None
+        self.mechanical_system = None
         pass
 
     def set_nonlinear_model(self, f_non, K, M, f_ext=None):
@@ -39,16 +39,16 @@ class NewmarkIntegrator():
         self.M = M
         self.f_ext = f_ext
 
-    def set_dynamical_system(self, dynamical_system):
+    def set_mechanical_system(self, mechanical_system):
         '''
-        hands over the dynamical system as a whole to the integrator. The matrices for the integration routine are then taken right from the dynamical system
+        hands over the mechanical system as a whole to the integrator. The matrices for the integration routine are then taken right from the mechanical system
 
         '''
-        self.dynamical_system = dynamical_system
-        self.M = dynamical_system.M_global()
-        self.K = dynamical_system.K_global
-        self.f_non = dynamical_system.f_int_global
-        self.f_ext = dynamical_system.f_ext_global
+        self.mechanical_system = mechanical_system
+        self.M = mechanical_system.M_global()
+        self.K = mechanical_system.K_global
+        self.f_non = mechanical_system.f_int_global
+        self.f_ext = mechanical_system.f_ext_global
 
 
     def residual(self, q, dq, ddq, t):
@@ -121,9 +121,9 @@ class NewmarkIntegrator():
                 print('Zeit:', t, 'Anzahl an Iterationen:', n_iter, 'Residuum:', norm_of_vector(res))
             # Writing if necessary:
             if write_flag:
-                # writint in the dynamical system, if possible
-                if self.dynamical_system:
-                    self.dynamical_system.write_timestep(t, q)
+                # writing to the mechanical system, if possible
+                if self.mechanical_system:
+                    self.mechanical_system.write_timestep(t, q)
                 else:
                     q_global.append(q.copy())
                     dq_global.append(dq.copy())
@@ -133,3 +133,96 @@ class NewmarkIntegrator():
                 pass
 
         return np.array(q_global), np.array(dq_global)
+
+
+
+def solve_linear_displacement(mechanical_system, t=0, verbose=True):
+    '''
+    Solve the linear static problem of the mechanical system
+
+    Prints the results directly to the mechanical system
+
+    Parameters:
+    ----------
+    mechanical_system :   Instance of the class MechanicalSystem
+
+    t :                   time for the external force call in MechanicalSystem
+
+    Returns:
+    -------
+    None
+
+    '''
+    f_ext = mechanical_system.f_ext_global(None, None, t)
+    mechanical_system.write_timestep(0, f_ext*0) # write zeros
+
+    if verbose: print('Start solving linear static problem')
+
+    u = linalg.spsolve(mechanical_system.K_global(), f_ext)
+    mechanical_system.write_timestep(1, u)
+
+    if verbose: print('Static problem solved')
+
+    pass
+
+def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
+                                 t=0, eps=1E-12, newton_damping=1,
+                                 n_max_iter=1000, smplfd_nwtn_itr=20, verbose=True):
+    '''
+    Solver for the nonlinear system applied directly on the mechanical system.
+
+    Prints the results directly to the mechanical system
+
+    Parameters:
+    ----------
+    mechanical_system :          Instance of the class MechanicalSystem
+
+    no_of_load_steps :          Number of equally spaced load steps which are
+                                applied in order to receive the solution
+
+    t :                         time for the external force call in mechanical_system
+
+    eps :                       Epsilon for assessment, when a loadstep has converged
+
+    newton_damping :            Newton-Damping factor applied in the solution routine
+
+    n_max_iter :                Maximum number of interations in the Newton-Loop
+
+    smplfd_nwtn_itr :           Number at which the jacobian is updated; if 1,
+                                then a full newton scheme is applied;
+                                if very large, it's a fixpoint iteration with
+                                constant jacobian
+
+    verbose :                   print messages if necessary
+
+    Returns:
+    -------
+    None
+
+    '''
+    stepwidth = 1/no_of_load_steps
+    f_ext = mechanical_system.f_ext_global(None, None, t)
+    ndof = f_ext.shape[0]
+    u = np.zeros(ndof)
+    mechanical_system.write_timestep(0, u) # initial write
+
+    abs_f_ext = np.sqrt(f_ext.dot(f_ext))
+    for force_factor in np.arange(stepwidth, 1+stepwidth, stepwidth):
+        # prediction
+        res = mechanical_system.f_int_global(u) - f_ext*force_factor
+        abs_res = norm_of_vector(res)
+
+        # Newton-Loop
+        n_iter = 0
+        while (abs_res > eps*abs_f_ext) and (n_max_iter > n_iter):
+            if n_iter%smplfd_nwtn_itr is 0:
+                K = mechanical_system.K_global(u)
+            corr = linalg.spsolve(K, res)
+            u -= corr*newton_damping
+            res = mechanical_system.f_int_global(u) - f_ext*force_factor
+            abs_res = norm_of_vector(res)
+            n_iter += 1
+            if verbose: print('Stufe', force_factor, 'Iteration Nr.', n_iter, \
+                                'Residuum:', abs_res)
+
+        mechanical_system.write_timestep(force_factor, u)

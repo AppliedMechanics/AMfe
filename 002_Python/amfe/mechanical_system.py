@@ -17,13 +17,13 @@ if True:# __name__ == "__main__":
     from amfe.boundary import *
 
 
-class DynamicalSystem():
+class MechanicalSystem():
     '''
-    Base-class for the dynamic systems; It combines the modules to a black-box scheme for static and dynamic analysis.
+    Base-class for the static and dynamic systems; It combines the modules to a black-box scheme for static and dynamic analysis.
     '''
 
     def __init__(self):
-        '''Init-Function for the dynamical system;
+        '''Init-Function for the mechanical system;
         Main parameters are processed with the specific functions
         '''
         self.T_output = []
@@ -92,7 +92,7 @@ class DynamicalSystem():
         self._f_ext_without_bc = self.neumann_bc_class.f_ext()
 
     def set_element(self, element_class):
-        '''Gives the dynamical system routine an element class'''
+        '''Gives the mechanical system routine an element class'''
         self.element_class = element_class
         pass
 
@@ -138,7 +138,7 @@ class DynamicalSystem():
 
     def write_timestep(self, t, u):
         '''
-        write the timestep into the dynamical_system_class
+        write the timestep to the mechanical_system class
         '''
         self.T_output.append(t)
         self.u_output.append(self.b_constraints.dot(u))
