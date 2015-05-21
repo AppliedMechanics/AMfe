@@ -15,9 +15,9 @@ from amfe.assembly import *
 from amfe.boundary import *
 from amfe.element import *
 from amfe.mesh import *
-from amfe.integrator import *
+from amfe.solver import *
 from amfe.import_mesh import *
-# import amfe.dummy
+from amfe.tools import *
 from amfe.mechanical_system import *
 
 
