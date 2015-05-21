@@ -9,6 +9,7 @@ Created on Tue May 19 17:44:04 2015
 import numpy as np
 import scipy as sp
 
+
 import mesh
 import element
 import assembly

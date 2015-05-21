@@ -10,11 +10,11 @@ By now it's just a skeleton; Maybe it grows further in the coming days and weeks
 import numpy as np
 import scipy as sp
 
-import mesh
-import element
-import assembly
-import boundary
-import integrator
+if __name__ == "__main__":
+    from mesh import *
+    from element import *
+    from assembly import *
+    from boundary import *
 
 
 class DynamicalSystem():
@@ -43,7 +43,7 @@ class DynamicalSystem():
         trailing_index:      flag which tells, if the csv-file has explicit element- and node-numbering
         '''
         self.node_dof = node_dof=2
-        self.mesh_class = mesh.Mesh()
+        self.mesh_class = Mesh()
         self.mesh_class.read_nodes_from_csv(node_list_csv, node_dof=node_dof, explicit_node_numbering=explicit_node_numbering)
         self.mesh_class.read_elements_from_csv(element_list_csv, explicit_node_numbering=explicit_node_numbering)
         self.node_list = self.mesh_class.nodes.copy()
@@ -67,7 +67,7 @@ class DynamicalSystem():
             list_of_slave_dofs:   The list of the dofs which will be projected onto the master dof; the weights of the projection are stored in the B_matrix
             B_matrix:             The weighting-matrix which gives enables to apply complicated boundary conditions showing up in symmetry-conditions or rotational dofs. The default-value for B_matrix is None, which weighs all members of the slave_dof_list equally with 1.
         '''
-        self.dirichlet_bc_class = boundary.DirichletBoundary(self.ndof_global, dirichlet_boundary_list)
+        self.dirichlet_bc_class = DirichletBoundary(self.ndof_global, dirichlet_boundary_list)
         self.b_constraints = self.dirichlet_bc_class.b_matrix()
 
 
@@ -88,7 +88,7 @@ class DynamicalSystem():
         This has to be elaborated further...
         the time dependent properties are ignored for static analysis
         '''
-        self.neumann_bc_class = boundary.NeumannBoundary(self.ndof_global, neumann_boundary_list)
+        self.neumann_bc_class = NeumannBoundary(self.ndof_global, neumann_boundary_list)
         self._f_ext_without_bc = self.neumann_bc_class.f_ext()
 
     def set_element(self, element_class):
@@ -111,7 +111,7 @@ class DynamicalSystem():
         Return the global stiffness matrix with dirichlet boundary conditions imposed.
         Computes the Mass-Matrix every time again
         '''
-        self.assembly_class = assembly.PrimitiveAssembly(self.node_list, self.element_list, self.element_class.m_int, node_dof=self.node_dof)
+        self.assembly_class = PrimitiveAssembly(self.node_list, self.element_list, self.element_class.m_int, node_dof=self.node_dof)
         _M = self.assembly_class.assemble_matrix()
         self._M_bc = self.b_constraints.T.dot(_M.dot(self.b_constraints))
         return self._M_bc
@@ -120,14 +120,14 @@ class DynamicalSystem():
         '''Return the global tangential stiffness matrix with dirichlet boundary conditions imposed'''
         if u is None:
             u = np.zeros(self.b_constraints.shape[-1])
-        self.assembly_class = assembly.PrimitiveAssembly(self.node_list, self.element_list, self.element_class.k_int, node_dof=self.node_dof)
+        self.assembly_class = PrimitiveAssembly(self.node_list, self.element_list, self.element_class.k_int, node_dof=self.node_dof)
         _K = self.assembly_class.assemble_matrix(self.b_constraints.dot(u))
         self._K_bc = self.b_constraints.T.dot(_K.dot(self.b_constraints))
         return self._K_bc
 
     def f_int_global(self, u):
         '''Return the global elastic restoring force of the system '''
-        self.assembly_class = assembly.PrimitiveAssembly(self.node_list, self.element_list, node_dof=self.node_dof, vector_function=self.element_class.f_int)
+        self.assembly_class = PrimitiveAssembly(self.node_list, self.element_list, node_dof=self.node_dof, vector_function=self.element_class.f_int)
         _f = self.assembly_class.assemble_vector(self.b_constraints.dot(u))
         self._f_bc = self.b_constraints.T.dot(_f)
         return self._f_bc
