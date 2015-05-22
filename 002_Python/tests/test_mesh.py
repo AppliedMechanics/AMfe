@@ -21,7 +21,7 @@ import amfe
 # test gmsh input-output functionality
 
 gmsh_input_file = '../meshes/gmsh/2D_Rectangle_partition1.msh'
-paraview_output_file = '../results/gmsh' + time.strftime("_%Y%m%d_%H%M%S") + '/gmsh_import'
+paraview_output_file = '../results/gmsh_test/gmsh_import'
 
 my_mesh = amfe.Mesh()
 my_mesh.import_msh(gmsh_input_file)
@@ -42,3 +42,7 @@ my_mesh.read_elements_from_csv(element_file)
 
 my_mesh.save_mesh_for_paraview('../results/selbstgebaut/selbstgebaut')
 
+print('List boundary nodes sorted by the lines. \nTake care: The lines start indexing with 0, gmsh does this with 1.\n')
+for i, line in enumerate(my_mesh.boundary_line_list):
+    print('Line', i)
+    print(line, '\n')

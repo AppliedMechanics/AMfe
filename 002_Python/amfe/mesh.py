@@ -43,11 +43,11 @@ class Mesh:
         self.nodes = []
         self.elements = []
         self.elements_properties = []
-        self.u = None
+        self.u = None # the displacements; They are stored as a list of numpy-arrays with shape (ndof, node_dof)
         self.timesteps = []
         self.node_dof = node_dof
 
-        self.timesteps.append(0)
+
 
     def _update_mesh_props(self):
         '''
@@ -59,7 +59,6 @@ class Mesh:
             self.elements = np.array(self.elements)
         self.no_of_nodes = len(self.nodes)
         self.no_of_dofs = self.no_of_nodes*self.node_dof
-        self.u = [np.zeros((self.no_of_nodes, self.node_dof))]
         # element stuff
         self.no_of_elements = len(self.elements)
         self.no_of_element_nodes = len(self.elements[0])
@@ -157,17 +156,32 @@ class Mesh:
         # Zeile [i] von [nodes] beinhaltet die X-, Y-, Z-Koordinate von Knoten [i+1]
         self.nodes = [list_imported_nodes[j][1:] for j in range(len(list_imported_nodes))]
 
+        boundary_line_list = [] # The nodes of a line are stored here
         # Zeile [i] von [elements] beinhaltet die Knotennummern von Element [i+1]
-        for j in range(len(list_imported_elements)):
+        for j, element in enumerate(list_imported_elements):
+            tag = element[2]
             # Nur fuer Dreieckselemente!!!
-            if list_imported_elements[j][1] == 2: # Elementyp '2' in gmsh sind Dreieckselemente
-                tag = list_imported_elements[j][2]
-                self.elements_properties.append(list_imported_elements[j][3:3+tag])
-                self.elements.append(list_imported_elements[j][3+tag:])
-
+            if element[1] == 2: # Elementyp '2' in gmsh sind Dreieckselemente
+                self.elements_properties.append(element[3:3+tag])
+                self.elements.append(element[3+tag:])
+            # Handling of the line numbers in order to make it easier for boundary conditions
+            elif element[1] == 1: # element type '1' in gmsh is a line
+                line_number = element[2+tag]
+                if len(boundary_line_list) < line_number: # append line if line was not called
+                    boundary_line_list.append([])
+                boundary_line_list[line_number - 1].append(element[3+tag:])
+        ########
+        # Postprocessing of the line_sets
+        ########
+        self.boundary_line_list = []
+        # flatten and remove duplicates
+        for set_ in boundary_line_list:
+            set_ = np.array(set_).reshape(-1)
+            self.boundary_line_list.append(list(set(set_)))
         self.nodes = np.array(self.nodes)
         self.elements = np.array(self.elements)
-        # Node handling in order to make flat meshes flat:
+
+        # Node handling in order to make 2D-meshes flat by removing z-coordinate:
         if flat_mesh:
             self.nodes = self.nodes[:,:-1]
             self.node_dof = 2
@@ -176,8 +190,21 @@ class Mesh:
         # Take care here!!! gmsh starts indexing with 1,
         # paraview with 0!
         self.elements = np.array(self.elements) - 1
+        empty_list = []
+        for list_ in self.boundary_line_list:
+            empty_list.append(np.array(list_) - 1)
+        self.boundary_line_list = empty_list
 
         # cleaning up redundant nodes, which may show up in gmsh files
+        # This looks littel tedious but is necessary, as the 'flying' nodes
+        # have neither stiffness nor mass in the assembled structure and make
+        # the handling very complicated
+        # Thus the preprocessing for boundary conditions has to be done with
+        # paraview
+        #
+        # The Idea here is to make a mapping of all used nodes and the full
+        # nodes and map the elements and the nodes with this mapping dict
+        # called new_old_mapping_dict.
         used_node_set = set(self.elements.reshape(-1))
         no_of_used_nodes = len(used_node_set)
         new_old_node_mapping_dict = dict(zip(used_node_set, np.arange(no_of_used_nodes)))
@@ -191,26 +218,35 @@ class Mesh:
         self._update_mesh_props()
 
 
-    def set_displacement(self, u, node_dof=2):
-        if self.u[0].size != u.size:
-            print('Die Dimension des Vektors u ist nicht Korrekt. ')
-            print('Der Vektor muss insgesamt ', self.u.size, 'Einträge enthalten')
-            print('Übergeben wurde aber ein Vektor mit ', u.size, 'Einträgen')
-        else:
-            self.u = [np.array(u).reshape((-1, node_dof))]
+    def set_displacement(self, u):
+#        if self.u[0].size != u.size:
+#            print('Die Dimension des Vektors u ist nicht Korrekt. ')
+#            print('Der Vektor muss insgesamt ', self.u.size, 'Einträge enthalten')
+#            print('Übergeben wurde aber ein Vektor mit ', u.size, 'Einträgen')
+#        else:
+        self.timesteps.append(1)
+        self.u = [np.array(u).reshape((-1, self.node_dof))]
 
 
-    def set_displacement_with_time(self, u, timesteps, node_dof=2):
+    def set_displacement_with_time(self, u, timesteps, ):
+        '''
+        Set the displacement of the mesh with the corresponding timesteps;
+        expects for the timesteps a list containing the displacement vector in any shape.
+        '''
         self.timesteps = timesteps.copy()
         self.u = []
         for i, timestep in enumerate(self.timesteps):
-            self.u.append(np.array(u[i]).reshape((-1, node_dof)))
+            self.u.append(np.array(u[i]).reshape((-1, self.node_dof)))
 
 
     def save_mesh_for_paraview(self, filename):
         '''
         Speichert das Netz für ParaView ab. Die Idee ist, dass eine Hauptdatei mit Endung .pvd als Hauptdatei für Paraview erstellt wird und anschließend das Netz in .vtu-Dateien entsprechend den Zeitschritten abgespeichert wird.
         '''
+        if len(self.timesteps) == 0:
+            self.u = [np.zeros((self.no_of_nodes, self.node_dof))]
+            self.timesteps.append(0)
+
         # Make the pvd-File with the links to vtu-files
         pvd_header = '''<?xml version="1.0"?> \n <VTKFile type="Collection" version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
         pvd_footer = ''' </Collection> \n </VTKFile>'''
