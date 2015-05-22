@@ -39,14 +39,14 @@ def jacobian(func, X, u):
 
 x = np.array([0,0,3,1,2,2.])
 u = np.array([0,0,-0.5,0,0,0.])
-u = np.random.rand(6)
+# u *= 0
+
 my_element = amfe.ElementPlanar(E_modul=60, poisson_ratio=1/4)
 K = my_element.k_int(x, u)
 my_element.f_int(x, u)
 el = my_element
 
 K_finite_diff = jacobian(el.f_int, x, u)
-K = el.k_int(x, u)
 
 print('Difference between analytical and approximated tangential stiffness matrix')
 print(K - K_finite_diff)
@@ -54,6 +54,10 @@ print(K - K_finite_diff)
 print('Maximum absolute deviation:', np.max(abs(K - K_finite_diff)))
 print('Maximum relative deviation:', np.max(abs(K - K_finite_diff))/np.max(abs(K)))
 
+
+M = my_element.m_int(x, u)
+lambda_m = sp.linalg.eigvalsh(M)
+lambda_k = sp.linalg.eigvalsh(K)
 #%%
 
 

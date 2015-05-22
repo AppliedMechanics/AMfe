@@ -53,7 +53,10 @@ class Mesh:
         '''
         Just purely updates the elements props when the nodes and elements have changed
         '''
-        # node stuff
+        # elements should be given as arrays; Thus this is not necessary
+        if False:
+            self.nodes = np.array(self.nodes)
+            self.elements = np.array(self.elements)
         self.no_of_nodes = len(self.nodes)
         self.no_of_dofs = self.no_of_nodes*self.node_dof
         self.u = [np.zeros((self.no_of_nodes, self.node_dof))]
@@ -84,7 +87,7 @@ class Mesh:
         self._update_mesh_props()
 
 
-    def import_msh(self, filename):
+    def import_msh(self, filename, flat_mesh=True):
         """
         Import the mesh file from gmsh
 
@@ -161,10 +164,30 @@ class Mesh:
                 tag = list_imported_elements[j][2]
                 self.elements_properties.append(list_imported_elements[j][3:3+tag])
                 self.elements.append(list_imported_elements[j][3+tag:])
-        self.node_dof = 3 # gmsh always exports 3dim-meshes?
+
+        self.nodes = np.array(self.nodes)
+        self.elements = np.array(self.elements)
+        # Node handling in order to make flat meshes flat:
+        if flat_mesh:
+            self.nodes = self.nodes[:,:-1]
+            self.node_dof = 2
+        else:
+            self.node_dof = 3
         # Take care here!!! gmsh starts indexing with 1,
         # paraview with 0!
         self.elements = np.array(self.elements) - 1
+
+        # cleaning up redundant nodes, which may show up in gmsh files
+        used_node_set = set(self.elements.reshape(-1))
+        no_of_used_nodes = len(used_node_set)
+        new_old_node_mapping_dict = dict(zip(used_node_set, np.arange(no_of_used_nodes)))
+        # update indexing in the element list
+        for index_1, element in enumerate(self.elements):
+            for index_2, node in enumerate(element):
+                self.elements[index_1, index_2] = new_old_node_mapping_dict[node]
+        # update indexing in the nodes list
+        self.nodes = self.nodes[list(used_node_set)]
+
         self._update_mesh_props()
 
 
