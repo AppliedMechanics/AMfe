@@ -15,4 +15,8 @@ Index starts with 0:
 Index stars with 1:
 - gmsh node-, line-, and element-numbering
 
-So the rule is, that the system works on indexing 0, and the import data from gmsh are changed.
+So the rule is, that the system works on indexing 0, and the import data from gmsh are changed. So should be done when importing ANSYS-files as well.
+
+
+
+

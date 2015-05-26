@@ -43,8 +43,8 @@ my_dirichlet_bounds = [bottom_bounds_1, bottom_bounds_2]
 
 my_system.apply_dirichlet_boundaries(my_dirichlet_bounds)
 
-neumann_bounds = [[[amfe.node2total(i,1) for i in other_side], 'harmonic', (3E6, 100), None],
-                    [[amfe.node2total(i,0) for i in other_side], 'harmonic', (1E6, 200), None]]
+neumann_bounds = [[[amfe.node2total(i,1) for i in other_side], 'harmonic', (3E5, 100), None],
+                    [[amfe.node2total(i,0) for i in other_side], 'harmonic', (1E5, 200), None]]
 my_system.apply_neumann_boundaries(neumann_bounds)
 
 
