@@ -29,7 +29,7 @@ my_mechanical_system = amfe.MechanicalSystem()
 my_mechanical_system.load_mesh_from_csv('../meshes/selbstgebaut/nodes.csv', '../meshes/selbstgebaut/elements.csv' )
 
 # Building the Element and handing it over to the mechanical system
-my_element = amfe.ElementPlanar(E_modul=210E9, poisson_ratio=0.3)
+my_element = amfe.Tri3(E_modul=210E9, poisson_ratio=0.3)
 my_mechanical_system.set_element(my_element)
 
 

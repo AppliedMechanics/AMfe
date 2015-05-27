@@ -63,7 +63,7 @@ omega = np.sqrt(lambda_)
 # time integration
 my_newmark = amfe.NewmarkIntegrator()
 my_newmark.set_mechanical_system(my_system)
-my_newmark.delta_t = 5E-5
+my_newmark.delta_t = 1E-5
 my_newmark.integrate_nonlinear_system(np.zeros(ndof), np.zeros(ndof), np.arange(0,0.1,0.001))
 
 # modal derivatives:

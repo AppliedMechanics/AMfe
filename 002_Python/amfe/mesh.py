@@ -11,6 +11,35 @@ import os
 import sys
 
 
+# Element mapping is described here. If a new element is implemented, the
+# features for import and export should work when the followig list will be updated.
+element_mapping_list = [
+    # internal Name,    gmsh-Key, vtk/ParaView-Key, no_of_nodes, description
+    ['Tri6',            9, 22, 6, 'Quadratic triangle / 6 node second order triangle'],
+    ['Tri3',            2,  5, 3, 'Straight triangle / 3 node first order triangle'],
+    ['Tri10',           21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
+    ['straight_line',   1,  3, 2, 'Straight line composed of 2 nodes'],
+    ['quadratic_line',  8, 21, 3, 'Quadratic edge/line composed of 3 nodes']
+]
+
+# actual set of implemented elements
+element_set = {'Tri6', 'Tri3', 'Tri10'}
+line_set = {'straight_line', 'quadratic_line'}
+
+#
+# Starting from here everything's working automatically
+#
+gmsh2amfe = dict([])
+amfe2gmsh = dict([])
+amfe2vtk = dict([])
+amfe2no_of_nodes = dict([])
+for element in element_mapping_list:
+    gmsh2amfe.update({element[1] : element[0]})
+    amfe2gmsh.update({element[0] : element[1]})
+    amfe2vtk.update({element[0] : element[2]})
+    amfe2no_of_nodes.update({element[0] : element[3]})
+
+
 
 def check_dir(*filenames):
     '''Checkt ob Verzeichnis vorliegt; falls nicht, wird Verzeichnis angelegt'''
@@ -76,7 +105,7 @@ class Mesh:
         # when line numbers are erased if they are content of the csv
         if explicit_node_numbering:
             self.nodes = self.nodes[:,1:]
-        self._update_mesh_props()
+        # self._update_mesh_props()
 
     def read_elements_from_csv(self, filename, explicit_node_numbering=False):
         '''Liest die Elementmatrizen aus'''
@@ -107,6 +136,7 @@ class Mesh:
 
         self.nodes = []
         self.elements = []
+        self.elements_type = []
         self.elements_properties = []
 
         # Oeffnen der einzulesenden Datei
@@ -156,31 +186,25 @@ class Mesh:
         # Zeile [i] von [nodes] beinhaltet die X-, Y-, Z-Koordinate von Knoten [i+1]
         self.nodes = [list_imported_nodes[j][1:] for j in range(len(list_imported_nodes))]
 
-        boundary_line_list = [] # The nodes of a line are stored here
+        boundary_line_list = [] # The nodes of a line are stored here in a unordered way
         # Zeile [i] von [elements] beinhaltet die Knotennummern von Element [i+1]
-        for j, element in enumerate(list_imported_elements):
-            tag = element[2]
-            # Nur fuer Dreieckselemente!!!
-            if element[1] == 2: # Elementyp '2' in gmsh sind Dreieckselemente
-                self.elements_properties.append(element[3:3+tag])
-                self.elements.append(element[3+tag:])
-            # Handling of the line numbers in order to make it easier for boundary conditions
-            elif element[1] == 1: # element type '1' in gmsh is a line
-                line_number = element[2+tag]
-                if len(boundary_line_list) < line_number: # append line if line was not called
-                    boundary_line_list.append([])
-                boundary_line_list[line_number - 1].append(element[3+tag:])
-        ########
-        # Postprocessing of the line_sets
-        ########
-        self.boundary_line_list = []
-        # flatten and remove duplicates
-        for set_ in boundary_line_list:
-            set_ = np.array(set_).reshape(-1)
-            self.boundary_line_list.append(list(set(set_)))
+        for element in list_imported_elements:
+            gmsh_element_key = element[1]
+            tag = element[2] # Tag information giving everything where the structure belongs to and so on...
+            if gmsh_element_key in gmsh2amfe:
+                if gmsh2amfe[gmsh_element_key] in element_set:
+                    self.elements_properties.append(element[3:3+tag])
+                    self.elements.append(element[3+tag:])
+                    self.elements_type.append(gmsh2amfe[gmsh_element_key])
+                if gmsh2amfe[gmsh_element_key] in line_set:
+                    line_number = element[2+tag]
+                    if len(boundary_line_list) < line_number: # append line if line was not called
+                        boundary_line_list.append([])
+                    boundary_line_list[line_number - 1].append(element[3+tag:])
+
+        # even if the nodes are heterogeneous, it should work out...
         self.nodes = np.array(self.nodes)
         self.elements = np.array(self.elements)
-
         # Node handling in order to make 2D-meshes flat by removing z-coordinate:
         if flat_mesh:
             self.nodes = self.nodes[:,:-1]
@@ -190,10 +214,6 @@ class Mesh:
         # Take care here!!! gmsh starts indexing with 1,
         # paraview with 0!
         self.elements = np.array(self.elements) - 1
-        empty_list = []
-        for list_ in self.boundary_line_list:
-            empty_list.append(np.array(list_) - 1)
-        self.boundary_line_list = empty_list
 
         # cleaning up redundant nodes, which may show up in gmsh files
         # This looks littel tedious but is necessary, as the 'flying' nodes
@@ -214,6 +234,17 @@ class Mesh:
                 self.elements[index_1, index_2] = new_old_node_mapping_dict[node]
         # update indexing in the nodes list
         self.nodes = self.nodes[list(used_node_set)]
+
+        ########
+        # Postprocessing of the line_sets
+        ########
+        self.boundary_line_list = []
+        for set_ in boundary_line_list:
+            set_ = np.array(set_).reshape(-1)
+            set_ = np.array(list(set(set_))) # remove the duplicates
+            set_ -= 1 # consider node indexing change of gmsh
+            set_ = [new_old_node_mapping_dict[node] for node in set_ if node in new_old_node_mapping_dict]
+            self.boundary_line_list.append(np.array(set_))
 
         self._update_mesh_props()
 
@@ -298,11 +329,11 @@ class Mesh:
                 savefile_vtu.write('\n</DataArray>\n')
                 # Writing the offset for the elements; they are ascending by the number of dofs and have to start with the real integer
                 savefile_vtu.write('<DataArray type="Int32" Name="offsets" format="ascii">\n')
-                for j in range(self.no_of_elements):
-                    savefile_vtu.write(str(3*j +3) + ' ')
+                for j, el_ty in enumerate(self.elements_type):
+                    savefile_vtu.write(str(amfe2no_of_nodes[el_ty]*j +amfe2no_of_nodes[el_ty]) + ' ')
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
-                savefile_vtu.write(' '.join('5' for x in self.elements)) # Elementtyp ueber Zahl gesetzt
+                savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) for el_ty in self.elements_type)) # Elementtyp ueber Zahl gesetzt
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Cells> \n<PointData>\n')
                 savefile_vtu.write('<DataArray type="Float64" Name="displacement" NumberOfComponents="3" format="ascii">\n')

@@ -132,7 +132,7 @@ class Element():
 
 
 
-class ElementPlanar(Element):
+class Tri3(Element):
     '''
     Element class for a plane triangle element in Total Lagrangian formulation.
     The displacements are given in x- and y-coordinates;
@@ -252,4 +252,138 @@ class ElementPlanar(Element):
         return self.M
 
 
+class Tri6(Element):
+    '''
+    6 node second order triangle
+    Triangle Element with 6 dofs; 3 dofs at the corner, 3 dofs in the intermediate point of every face.
+    '''
+    plane_stress = True
 
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=10):
+        '''
+        Definition der Materialgrößen und Dicke, da es sich um 2D-Elemente handelt
+        '''
+        self.poisson_ratio = poisson_ratio
+        self.e_modul = E_modul
+        self.lame_mu = E_modul / (2*(1+poisson_ratio))
+        self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
+        # Achtung: hier gibt's ebene Dehnung
+        if self.plane_stress:
+            self.C_SE = E_modul/(1 - poisson_ratio**2)*np.array([[1, poisson_ratio, 0],
+                              [poisson_ratio, 1, 0],
+                              [0, 0, (1-poisson_ratio) / 2]])
+        else: # hier gibt's ebene Dehnung
+            self.C_SE = np.array([[self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
+                         [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, 0],
+                         [0, 0, self.lame_mu]])
+        self.t = element_thickness
+        self.rho = density
+        self.I = np.eye(2)
+        self.B0_tilde = [[],[],[]]
+        self.H = [[],[],[]]
+        self.F = [[],[],[]]
+        self.E = [[],[],[]]
+        self.S_voigt = [[],[],[]]
+        self.S = [np.zeros((2,2)),np.zeros((2,2)),np.zeros((2,2))]
+        self.B0 = [[],[],[]]
+
+    def _B0_tilde_func(self, X_vec, X, Y):
+        # maybe this is in the scope here
+        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X_vec
+        det = X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2
+        # linear coordinates
+        L1 = (X*(Y2 - Y3) + X2*Y3 - X3*Y2 + Y*(-X2 + X3))/det
+        L2 = (X*(-Y1 + Y3) - X1*Y3 + X3*Y1 + Y*(X1 - X3))/det
+        L3 = (X*(Y1 - Y2) + X1*Y2 - X2*Y1 + Y*(-X1 + X2))/det
+        # diff of coordinates with respect to X and Y
+        L1_X = (Y2-Y3)/det
+        L1_Y = (X3-X2)/det
+        L2_X = (-Y1+Y3)/det
+        L2_Y = (X1-X3)/det
+        L3_X = (Y1-Y2)/det
+        L3_Y = (-X1+X2)/det
+        # Full diff of coordinates
+        N1_X = (4*L1 - 1)*L1_X
+        N1_Y = (4*L1 - 1)*L1_Y
+        N2_X = (4*L2 - 1)*L2_X
+        N2_Y = (4*L2 - 1)*L2_Y
+        N3_X = (4*L3 - 1)*L3_X
+        N3_Y = (4*L3 - 1)*L3_Y
+
+        N4_X = 4*(L1*L2_X + L1_X*L2)
+        N4_Y = 4*(L1*L2_Y + L1_Y*L2)
+        N5_X = 4*(L2*L3_X + L2_X*L3)
+        N5_Y = 4*(L2*L3_Y + L2_Y*L3)
+        N6_X = 4*(L1*L3_X + L1_X*L3)
+        N6_Y = 4*(L1*L3_Y + L1_Y*L3)
+
+        B0_tilde = np.array([[N1_X, N2_X, N3_X, N4_X, N5_X, N6_X], [N1_Y, N2_Y, N3_Y, N4_Y, N5_Y, N6_Y]])
+        return B0_tilde
+
+    def _compute_tensors(self, X, u):
+        '''
+        Tensor computation the same way as in the Tri3 element
+        '''
+        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
+        self.u = u.reshape((-1,2))
+        det = X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2
+        self.A0 = det/2
+        quadrature_points = np.array([[X4, Y4], [X5, Y5], [X6, Y6]])
+        for i, quadrature_coord in enumerate(quadrature_points):
+            self.B0_tilde[i] = self._B0_tilde_func(X, *quadrature_coord)
+            self.H[i] = self.u.T.dot(self.B0_tilde[i].T)
+            self.F[i] = self.H[i] + self.I
+            self.E[i] = 1/2*(self.H[i] + self.H[i].T + self.H[i].T.dot(self.H[i]))
+            self.S_voigt[i] = self.C_SE.dot([self.E[i][0,0], self.E[i][1,1], 2*self.E[i][0,1]])
+            self.S[i][0,0] , self.S[i][1,1], self.S[i][1,0], self.S[i][0,1] = self.S_voigt[i][0], self.S_voigt[i][1], self.S_voigt[i][2], self.S_voigt[i][2]
+            self.B0[i] = np.zeros((3, 12))
+            for j in range(6):
+                self.B0[i][:,2*j:2*j+2] = np.array([[self.B0_tilde[i][0,j], 0], [0, self.B0_tilde[i][1,j]], [self.B0_tilde[i][1,j], self.B0_tilde[i][0,j]]]).dot(self.F[i].T)
+
+    def _f_int(self, X, u):
+        f_int = np.zeros(12)
+        for i in range(3):
+            f_int += self.B0[i].T.dot(self.S_voigt[i])*self.A0*self.t*1/3
+        return f_int
+
+    def _k_int(self, X, u):
+        self.K_geo = np.zeros((12, 12))
+        self.K_mat = np.zeros((12, 12))
+        for i in range(3):
+            self.K_geo_small = self.B0_tilde[i].T.dot(self.S[i].dot(self.B0_tilde[i]))*self.A0*self.t*1/3
+            k = self.K_geo_small
+            self.K_geo += np.array([
+                [k[0,0], 0, k[0,1], 0, k[0,2], 0, k[0,3], 0, k[0,4], 0, k[0,5], 0],
+                [0, k[0,0], 0, k[0,1], 0, k[0,2], 0, k[0,3], 0, k[0,4], 0, k[0,5]],
+                [k[1,0], 0, k[1,1], 0, k[1,2], 0, k[1,3], 0, k[1,4], 0, k[1,5], 0],
+                [0, k[1,0], 0, k[1,1], 0, k[1,2], 0, k[1,3], 0, k[1,4], 0, k[1,5]],
+                [k[2,0], 0, k[2,1], 0, k[2,2], 0, k[2,3], 0, k[2,4], 0, k[2,5], 0],
+                [0, k[2,0], 0, k[2,1], 0, k[2,2], 0, k[2,3], 0, k[2,4], 0, k[2,5]],
+                [k[3,0], 0, k[3,1], 0, k[3,2], 0, k[3,3], 0, k[3,4], 0, k[3,5], 0],
+                [0, k[3,0], 0, k[3,1], 0, k[3,2], 0, k[3,3], 0, k[3,4], 0, k[3,5]],
+                [k[4,0], 0, k[4,1], 0, k[4,2], 0, k[4,3], 0, k[4,4], 0, k[4,5], 0],
+                [0, k[4,0], 0, k[4,1], 0, k[4,2], 0, k[4,3], 0, k[4,4], 0, k[4,5]],
+                [k[5,0], 0, k[5,1], 0, k[5,2], 0, k[5,3], 0, k[5,4], 0, k[5,5], 0],
+                [0, k[5,0], 0, k[5,1], 0, k[5,2], 0, k[5,3], 0, k[5,4], 0, k[5,5]]])
+
+            self.K_mat += self.B0[i].T.dot(self.C_SE.dot(self.B0[i]))*self.A0*self.t*1/3
+        return self.K_mat + self.K_geo
+
+    def _m_int(self, X, u):
+        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
+        det = X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2
+        self.A0 = det/2
+        self.M = self.A0 / 180 * self.t * self.rho * np.array([
+        [  6.,   0.,  -1.,  -0.,  -1.,  -0.,   0.,   0.,  -4.,  -0.,   0.,  0.],
+        [  0.,   6.,  -0.,  -1.,  -0.,  -1.,   0.,   0.,  -0.,  -4.,   0.,  0.],
+        [ -1.,  -0.,   6.,   0.,  -1.,  -0.,   0.,   0.,   0.,   0.,  -4., -0.],
+        [ -0.,  -1.,   0.,   6.,  -0.,  -1.,   0.,   0.,   0.,   0.,  -0., -4.],
+        [ -1.,  -0.,  -1.,  -0.,   6.,   0.,  -4.,  -0.,   0.,   0.,   0.,  0.],
+        [ -0.,  -1.,  -0.,  -1.,   0.,   6.,  -0.,  -4.,   0.,   0.,   0.,  0.],
+        [  0.,   0.,   0.,   0.,  -4.,  -0.,  32.,   0.,  16.,   0.,  16.,  0.],
+        [  0.,   0.,   0.,   0.,  -0.,  -4.,   0.,  32.,   0.,  16.,   0., 16.],
+        [ -4.,  -0.,   0.,   0.,   0.,   0.,  16.,   0.,  32.,   0.,  16.,  0.],
+        [ -0.,  -4.,   0.,   0.,   0.,   0.,   0.,  16.,   0.,  32.,   0., 16.],
+        [  0.,   0.,  -4.,  -0.,   0.,   0.,  16.,   0.,  16.,   0.,  32.,  0.],
+        [  0.,   0.,  -0.,  -4.,   0.,   0.,   0.,  16.,   0.,  16.,   0., 32.]])
+        return self.M
