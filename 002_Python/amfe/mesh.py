@@ -23,7 +23,7 @@ element_mapping_list = [
 ]
 
 # actual set of implemented elements
-element_set = {'Tri6', 'Tri3', 'Tri10'}
+element_set = {'Tri6', 'Tri3'}
 line_set = {'straight_line', 'quadratic_line'}
 
 #

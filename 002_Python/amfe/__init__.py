@@ -10,6 +10,10 @@ Fabian Gruber
 
 """
 
+import pyximport
+pyximport.install()
+
+
 
 from amfe.assembly import *
 from amfe.boundary import *

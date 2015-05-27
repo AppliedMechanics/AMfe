@@ -49,7 +49,7 @@ class Element():
         print('The function is not implemented yet...')
         pass
 
-    def k_and_f_int(X, u):
+    def k_and_f_int(self, X, u):
         '''
         Returns the tangential stiffness matrix and the internal nodal force
         of the Element.
@@ -335,10 +335,13 @@ class Tri6(Element):
             self.F[i] = self.H[i] + self.I
             self.E[i] = 1/2*(self.H[i] + self.H[i].T + self.H[i].T.dot(self.H[i]))
             self.S_voigt[i] = self.C_SE.dot([self.E[i][0,0], self.E[i][1,1], 2*self.E[i][0,1]])
-            self.S[i][0,0] , self.S[i][1,1], self.S[i][1,0], self.S[i][0,1] = self.S_voigt[i][0], self.S_voigt[i][1], self.S_voigt[i][2], self.S_voigt[i][2]
+            self.S[i][0,0] , self.S[i][1,1], self.S[i][1,0], self.S[i][0,1] = \
+                self.S_voigt[i][0], self.S_voigt[i][1], self.S_voigt[i][2], self.S_voigt[i][2]
             self.B0[i] = np.zeros((3, 12))
             for j in range(6):
-                self.B0[i][:,2*j:2*j+2] = np.array([[self.B0_tilde[i][0,j], 0], [0, self.B0_tilde[i][1,j]], [self.B0_tilde[i][1,j], self.B0_tilde[i][0,j]]]).dot(self.F[i].T)
+                self.B0[i][:,2*j:2*j+2] = np.array([[self.B0_tilde[i][0,j], 0],
+                        [0, self.B0_tilde[i][1,j]], [self.B0_tilde[i][1,j],
+                         self.B0_tilde[i][0,j]]]).dot(self.F[i].T)
 
     def _f_int(self, X, u):
         f_int = np.zeros(12)
