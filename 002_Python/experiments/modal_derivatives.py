@@ -24,7 +24,7 @@ my_system = amfe.MechanicalSystem()
 my_system.load_mesh_from_gmsh(gmsh_input_file)
 # my_system.export_paraview(paraview_output_file)
 
-my_element = amfe.ElementPlanar()
+my_element = amfe.Tri3()
 my_system.set_element(my_element)
 
 start_index = amfe.node2total(54, 0)
@@ -43,8 +43,8 @@ my_dirichlet_bounds = [bottom_bounds_1, bottom_bounds_2]
 
 my_system.apply_dirichlet_boundaries(my_dirichlet_bounds)
 
-neumann_bounds = [[[amfe.node2total(i,1) for i in other_side], 'harmonic', (3E5, 100), None],
-                    [[amfe.node2total(i,0) for i in other_side], 'harmonic', (1E5, 200), None]]
+neumann_bounds = [[[amfe.node2total(i,1) for i in other_side], 'harmonic', (6E5, 100), None],
+                    [[amfe.node2total(i,0) for i in other_side], 'harmonic', (2E5, 200), None]]
 my_system.apply_neumann_boundaries(neumann_bounds)
 
 
@@ -60,11 +60,13 @@ M = my_system.M_global()
 lambda_, V = sp.linalg.eigh(K.toarray(), M.toarray())
 omega = np.sqrt(lambda_)
 
+
+
 # time integration
 my_newmark = amfe.NewmarkIntegrator()
 my_newmark.set_mechanical_system(my_system)
-my_newmark.delta_t = 1E-5
-my_newmark.integrate_nonlinear_system(np.zeros(ndof), np.zeros(ndof), np.arange(0,0.1,0.001))
+my_newmark.delta_t = 8E-5
+my_newmark.integrate_nonlinear_system(np.zeros(ndof), np.zeros(ndof), np.arange(0,0.2,0.00008))
 
 # modal derivatives:
 

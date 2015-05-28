@@ -18,15 +18,16 @@ class NewmarkIntegrator():
     Newmark-Integrator-Schema zur Bestimmung der dynamischen Antwort...
     '''
 
-    def __init__(self, alpha=0, verbose=True):
+    def __init__(self, alpha=0, verbose=True, n_iter_max=40):
         self.beta = 1/4*(1 + alpha)**2
         self.gamma = 1/2 + alpha
         self.delta_t = 1E-3
-        self.eps = 1E-10
+        self.eps = 1E-8
         self.newton_damping = 0.8
         self.residual_threshold = 1E6
         self.mechanical_system = None
         self.verbose = verbose
+        self.n_iter_max = n_iter_max
         pass
 
     def set_nonlinear_model(self, f_non, K, M, f_ext=None):
@@ -84,6 +85,7 @@ class NewmarkIntegrator():
 
         # Korrekte Startbedingungen ddq:
         ddq = linalg.spsolve(self.M, self.f_non(q))
+        no_newton_convergence_flag = False
         while time_index < len(time_range):
             if t + self.delta_t >= time_range[time_index]:
                 dt = time_range[time_index] - t
@@ -93,6 +95,14 @@ class NewmarkIntegrator():
                 time_index += 1
             else:
                 dt = self.delta_t
+                if no_newton_convergence_flag:
+                    dt /= 2
+                    no_newton_convergence_flag = False
+            # Handling if no convergence is gained:
+            t_old = t
+            q_old = q.copy()
+            dq_old = dq.copy()
+
             t += dt
             # Prediction
             q += dt*dq + (1/2-self.beta)*dt**2*ddq
@@ -102,24 +112,34 @@ class NewmarkIntegrator():
             # checking residual and convergence
             f_non = self.f_non(q)
             res = self._residual(q, dq, ddq, t)
+            res_abs = norm_of_vector(res)
             # Newcton-Correction-loop
 
             n_iter = 0
-            while norm_of_vector(res) > self.eps*norm_of_vector(f_non):
+            while res_abs > self.eps*norm_of_vector(f_non):
                 S = self.K(q) + 1/(self.beta*dt**2)*self.M
                 delta_q = - linalg.spsolve(S, res)
-                if norm_of_vector(res) > self.residual_threshold:
+                if res_abs > self.residual_threshold:
                     delta_q *= self.newton_damping
                 q   += delta_q
                 dq  += self.gamma/(self.beta*dt)*delta_q
                 ddq += 1/(self.beta*dt**2)*delta_q
                 f_non = self.f_non(q)
                 res = self._residual(q, dq, ddq, t)
+                res_abs = norm_of_vector(res)
                 n_iter += 1
+                if self.verbose:
+                    print('Iteration', n_iter, 'Residuum:', res_abs)
+                # catch when the newton loop doesn't converge
+                if n_iter > self.n_iter_max:
+                    t = t_old
+                    q = q_old.copy()
+                    dq = dq_old.copy()
+                    no_newton_convergence_flag = True
+                    break
                 pass
 
-            if self.verbose:
-                print('Zeit:', t, 'Anzahl an Iterationen:', n_iter, 'Residuum:', norm_of_vector(res))
+            print('Zeit:', t, 'Anzahl an Iterationen:', n_iter, 'Residuum:', res_abs)
             # Writing if necessary:
             if write_flag:
                 # writing to the mechanical system, if possible
@@ -129,9 +149,7 @@ class NewmarkIntegrator():
                     q_global.append(q.copy())
                     dq_global.append(dq.copy())
                 write_flag = False
-                if self.verbose:
-                    print('Zeit:', t, 'Anzahl an Iterationen:', n_iter)
-                pass
+            pass # end of time loop
 
         return np.array(q_global), np.array(dq_global)
 
@@ -168,7 +186,7 @@ def solve_linear_displacement(mechanical_system, t=0, verbose=True):
 
 def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
                                  t=0, eps=1E-12, newton_damping=1,
-                                 n_max_iter=1000, smplfd_nwtn_itr=20, verbose=True):
+                                 n_max_iter=1000, smplfd_nwtn_itr=1, verbose=True):
     '''
     Solver for the nonlinear system applied directly on the mechanical system.
 
