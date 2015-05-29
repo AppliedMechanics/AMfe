@@ -20,7 +20,14 @@ import amfe
 gmsh_input_file = '../meshes/gmsh/bogen_grob.msh'
 paraview_output_file = '../results/gmsh_bogen_grob' + time.strftime("_%Y%m%d_%H%M%S") + '/bogen_grob'
 
+
+# Default values;
+kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'density' : 1E4}
+element_class_dict = {'Tri3' : amfe.Tri3(**kwargs), 'Tri6' : amfe.Tri6(**kwargs)}
+
+
 my_system = amfe.MechanicalSystem()
+my_system.element_class_dict = element_class_dict
 my_system.load_mesh_from_gmsh(gmsh_input_file)
 # my_system.export_paraview(paraview_output_file)
 
@@ -44,22 +51,23 @@ my_system.apply_neumann_boundaries(neumann_bounds)
 
 
 ndof = my_system.ndof_global_constrained
+#
+################################################################################
+### time integration
+################################################################################
+#
+#my_newmark = amfe.NewmarkIntegrator()
+#my_newmark.set_mechanical_system(my_system)
+#my_newmark.delta_t = 8E-5
+#my_newmark.integrate_nonlinear_system(np.zeros(ndof), np.zeros(ndof), np.arange(0,0.2,0.00008))
 
-###############################################################################
-## time integration
-###############################################################################
 
-my_newmark = amfe.NewmarkIntegrator()
-my_newmark.set_mechanical_system(my_system)
-my_newmark.delta_t = 8E-5
-my_newmark.integrate_nonlinear_system(np.zeros(ndof), np.zeros(ndof), np.arange(0,0.2,0.00008))
+
+
 
 
 
 # modal derivatives:
-
-
-# amfe.solve_linear_displacement(my_system)
 
 
 

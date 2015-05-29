@@ -18,7 +18,7 @@ class NewmarkIntegrator():
     Newmark-Integrator-Schema zur Bestimmung der dynamischen Antwort...
     '''
 
-    def __init__(self, alpha=0, verbose=True, n_iter_max=40):
+    def __init__(self, alpha=0, verbose=False, n_iter_max=40):
         self.beta = 1/4*(1 + alpha)**2
         self.gamma = 1/2 + alpha
         self.delta_t = 1E-3
