@@ -43,7 +43,7 @@ my_dirichlet_bounds = [bottom_bounds_1, bottom_bounds_2]
 
 my_system.apply_dirichlet_boundaries(my_dirichlet_bounds)
 
-neumann_bounds = [[[amfe.node2total(i,1) for i in other_side], 'harmonic', (6E5, 100), None],
+neumann_bounds = [  [[amfe.node2total(i,1) for i in other_side], 'harmonic', (6E5, 100), None],
                     [[amfe.node2total(i,0) for i in other_side], 'harmonic', (2E5, 200), None]]
 my_system.apply_neumann_boundaries(neumann_bounds)
 
@@ -61,8 +61,9 @@ lambda_, V = sp.linalg.eigh(K.toarray(), M.toarray())
 omega = np.sqrt(lambda_)
 
 
-
-# time integration
+###############################################################################
+## time integration
+###############################################################################
 my_newmark = amfe.NewmarkIntegrator()
 my_newmark.set_mechanical_system(my_system)
 my_newmark.delta_t = 8E-5
@@ -70,14 +71,60 @@ my_newmark.integrate_nonlinear_system(np.zeros(ndof), np.zeros(ndof), np.arange(
 
 # modal derivatives:
 
+K = K.toarray()
+M = M.toarray()
+
+h = np.sqrt(np.finfo(float).eps)*100
+
+# mass normalize V:
+for i in range(V.shape[0]):
+    V[:,i] /= np.sqrt(V[:,i].dot(M.dot(V[:,i])))
+
+#%%
+# d_phi_i / d_phi_j
+i, j = 0, 0
+
+def my_K_func(u):
+    return my_system.K_global(u).toarray()
+
+def calc_modal_deriv(omega, V, K_func, i, j):
+    '''Calculates the modal derivative of the given system'''
+    h = np.sqrt(np.finfo(float).eps)*100
+    ndof = V.shape[0]
+    K = K_func(np.zeros(ndof))
+    x_i = V[:,i]
+    eta_j = V[:,j]
+    om = omega[i]
+    dK_deta_j = (K_func(eta_j*h) - K)/h
+    F_i = (x_i.dot(dK_deta_j.dot(x_i))*M - dK_deta_j).dot(x_i)
+    K_dyn_i = K - om**2*M
+    row_index = 0
+    K_dyn_i[:,row_index], K_dyn_i[row_index,:], K_dyn_i[row_index,row_index] = 0, 0, 1
+    F_i[row_index] = 0
+    v_i = sp.linalg.solve(K_dyn_i, F_i)
+    c_i = -v_i.dot(M.dot(x_i))
+    dphi_i_deta_j = v_i + c_i*x_i
+    return dphi_i_deta_j
 
 
+no_of_mod_devs = 7
+for i in range(no_of_mod_devs):
+    for j in range(no_of_mod_devs):
+        dphi_deta = calc_modal_deriv(omega, V, my_K_func, i, j)
+        my_system.write_timestep((i+1)*10+j+1, dphi_deta)
 
-## plotting results
-#plt.semilogy(omega)
+# my_system.write_timestep(10, dphi_i_deta_j)
+#my_system.write_timestep(11, v_i/amfe.norm_of_vector(v_i))
+
+
+#%%
+
+# plotting results
+plt.semilogy(omega)
 #
-#for i in range(40):
-#    my_system.write_timestep(omega[i], V[:,i])
+for i in range(no_of_mod_devs):
+    my_system.write_timestep((i+1)*100, V[:,i])
+
 
 
 
