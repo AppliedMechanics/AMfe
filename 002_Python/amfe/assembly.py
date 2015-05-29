@@ -24,31 +24,32 @@ import multiprocessing as mp
 from multiprocessing import Pool
 
 
+#import mesh
+#mesh.Mesh.no_of_dofs
+
 class Assembly():
     '''
-    Class for the more fancy assembly of a mesh and an element;
-    In this state it is only possible to assemble homegeneous meshes;
-    heterogeneous meshes should be assembled by another routine.
+    Class for the more fancy assembly of meshes with heterogeneous elements.
     '''
-    def __init__(self, mesh, element):
+    def __init__(self, mesh, element_class_dict):
         '''
         Parameters:
         ----
 
         mesh :      instance of the Mesh-class or a child of it
 
-        element:    instance of the Element-class or a child of it
+        element_class_dict:    dict where the official keyword and the the Element-objects are linked
 
         Returns:
         ---
         None
         '''
         self.mesh = mesh
-        self.element = element
-        print('This Module is not implemented yet!\nDo not use!')
+        self.element_class_dict = element_class_dict
+        self.save_stresses = False
         pass
 
-    def assemble_m(self, u):
+    def assemble_m(self, u=None):
         '''
         Assembles the mass matrix of the given mesh and element.
 
@@ -63,10 +64,46 @@ class Assembly():
         M :         unconstrained assembled mass matrix in sparse matrix coo
                     format.
         '''
+        def decorated_m_func(X, u_local, k, global_element_indices=None):
+            return self.element_class_dict[self.mesh.elements_type[k]].m_int(X, u_local)
 
-        pass
+        return self._assemble_matrix(u, decorated_m_func)
 
-    def assemble_k(self, u):
+    def _assemble_matrix(self, u, decorated_matrix_func):
+        '''
+        Matrix assembly routine where the matrix function is stored in the
+        decorated_matrix_func; it is called with
+        decorated_matrix_func(X, u_local, k)
+        where k is the index of the called element.
+
+        '''
+        self.row_global = []
+        self.col_global = []
+        self.vals_global = []
+        node_dof = self.mesh.node_dof
+        if u is None:
+            u = np.zeros(self.mesh.no_of_dofs)
+        # loop over all elements
+        for k, element in enumerate(self.mesh.elements):
+            # coordinates of element
+            X = np.array([self.mesh.nodes[i] for i in element]).reshape(-1)
+            # global coordinates of element
+            global_element_indices = np.array([(np.arange(node_dof) + node_dof*i)  for i in element]).reshape(-1)
+            u_local = u[global_element_indices]
+            # evaluation of element matrix
+            element_matrix = decorated_matrix_func(X, u_local, k, global_element_indices)
+            self.row = np.zeros(element_matrix.shape)
+            self.row[:,:] = global_element_indices
+            self.row_global.append(self.row.reshape(-1))
+            self.col_global.append((self.row.T).reshape(-1))
+            self.vals_global.append(element_matrix.reshape(-1))
+        row_global_array = np.array(self.row_global).reshape(-1)
+        col_global_array = np.array(self.col_global).reshape(-1)
+        vals_global_array = np.array(self.vals_global).reshape(-1)
+        Matrix_coo = sp.sparse.coo_matrix((vals_global_array, (row_global_array, col_global_array)), dtype=float)
+        return Matrix_coo
+
+    def assemble_k(self, u=None):
         '''
         Assembles the stiffness matrix of the given mesh and element.
 
@@ -81,7 +118,23 @@ class Assembly():
         K :         unconstrained assembled stiffness matrix in sparse matrix
                     coo format.
         '''
-        pass
+        if self.save_stresses:
+            # clean up the previous stress stuff...
+            pass
+
+        def decorated_k_func(X, u_local, k, global_element_indices=None):
+            element = self.element_class_dict[self.mesh.elements_type[k]]
+            k_local = element.k_int(X, u_local)
+            if self.save_stresses:
+                pass
+            return k_local
+
+        K = self._assemble_matrix(u, decorated_k_func)
+        if self.save_stresses:
+            # compute the stress stuff...
+            pass
+        return K
+
 
     def assemble_f(self, u):
         '''
@@ -99,9 +152,17 @@ class Assembly():
                     dimension (ndim, )
 
         '''
-        pass
+        self.global_force = np.zeros(self.mesh.no_of_dofs)
+        node_dof = self.mesh.node_dof
+        for k, element in enumerate(self.mesh.elements):
+            X = np.array([self.mesh.nodes[i] for i in element]).reshape(-1)
+            # global coordinates of element
+            global_element_indices = np.array([(np.arange(node_dof) + node_dof*i)  for i in element]).reshape(-1)
+            self.global_force[global_element_indices] += \
+                self.element_class_dict[self.mesh.elements_type[k]].f_int(X, u[global_element_indices])
+        return self.global_force
 
-    def assemble_k_and_f(self, u):
+    def assemble_k_and_f(self, u=None):
         '''
         Assembles the tangential stiffness matrix and the force matrix in one
         run as it is very often needed by an implicit integration scheme.
@@ -109,7 +170,18 @@ class Assembly():
         Takes the advantage, that some element properties only have to be
         computed once.
         '''
-        pass
+        def decorated_f_and_k_func(X, u_local, k, global_element_indices):
+            element = self.element_class_dict[self.mesh.elements_type[k]]
+            k_local, f_local = element.k_and_f_int(X, u_local)
+            self.global_force[global_element_indices] += f_local
+            if self.save_stresses:
+                pass
+            return k_local
+
+        self.global_force = np.zeros(self.mesh.no_of_dofs)
+        K = self._assemble_matrix(u, decorated_f_and_k_func)
+        return K, self.global_force
+
 
 
 

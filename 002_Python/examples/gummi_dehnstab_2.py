@@ -24,9 +24,6 @@ import amfe
 my_mechanical_system = amfe.MechanicalSystem()
 my_mechanical_system.load_mesh_from_gmsh('../meshes/gmsh/2D_Rectangle_tri6_dehnstab.msh')
 
-# Building the Element and handing it over to the mechanical system
-my_element = amfe.Tri6(E_modul=210E9, poisson_ratio=0.3)
-my_mechanical_system.set_element(my_element)
 
 
 

@@ -16,6 +16,12 @@ from amfe.assembly import *
 from amfe.boundary import *
 
 
+# Default values;
+kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'density' : 1E4}
+element_class_dict = {'Tri3' : Tri3(**kwargs), 'Tri6' : Tri6(**kwargs)}
+
+
+
 class MechanicalSystem():
     '''
     Base-class for the static and dynamic systems; It combines the modules to a black-box scheme for static and dynamic analysis.
@@ -27,6 +33,7 @@ class MechanicalSystem():
         '''
         self.T_output = []
         self.u_output = []
+        self.element_class_dict = element_class_dict
         pass
 
     def load_mesh_from_gmsh(self, msh_file):
@@ -37,6 +44,7 @@ class MechanicalSystem():
         self.element_list = np.array(self.mesh_class.elements)
         self.ndof_global = self.mesh_class.no_of_dofs
         self.node_dof = self.mesh_class.node_dof
+        self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
         pass
 
     def load_mesh_from_csv(self, node_list_csv, element_list_csv, node_dof=2, explicit_node_numbering=False):
@@ -52,6 +60,7 @@ class MechanicalSystem():
         self.node_list = self.mesh_class.nodes.copy()
         self.element_list = self.mesh_class.elements.copy()
         self.ndof_global = self.node_list.size
+        self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
 
 
     def apply_dirichlet_boundaries(self, dirichlet_boundary_list):
@@ -95,10 +104,10 @@ class MechanicalSystem():
         self.neumann_bc_class = NeumannBoundary(self.ndof_global, neumann_boundary_list)
         self._f_ext_without_bc = self.neumann_bc_class.f_ext()
 
-    def set_element(self, element_class):
-        '''Gives the mechanical system routine an element class'''
-        self.element_class = element_class
-        pass
+#    def set_element(self, element_class):
+#        '''Gives the mechanical system routine an element class'''
+#        self.element_class = element_class
+#        pass
 
     def export_paraview(self, filename):
         '''Export the system with the given information to paraview
@@ -117,8 +126,7 @@ class MechanicalSystem():
         Return the global stiffness matrix with dirichlet boundary conditions imposed.
         Computes the Mass-Matrix every time again
         '''
-        self.assembly_class = PrimitiveAssembly(self.node_list, self.element_list, self.element_class.m_int, node_dof=self.node_dof)
-        _M = self.assembly_class.assemble_matrix()
+        _M = self.assembly_class.assemble_m()
         self._M_bc = self.b_constraints.T.dot(_M.dot(self.b_constraints))
         return self._M_bc
 
@@ -126,21 +134,25 @@ class MechanicalSystem():
         '''Return the global tangential stiffness matrix with dirichlet boundary conditions imposed'''
         if u is None:
             u = np.zeros(self.b_constraints.shape[-1])
-        self.assembly_class = PrimitiveAssembly(self.node_list, self.element_list, self.element_class.k_int, node_dof=self.node_dof)
-        _K = self.assembly_class.assemble_matrix(self.b_constraints.dot(u))
+        _K = self.assembly_class.assemble_k(self.b_constraints.dot(u))
         self._K_bc = self.b_constraints.T.dot(_K.dot(self.b_constraints))
         return self._K_bc
 
     def f_int_global(self, u):
         '''Return the global elastic restoring force of the system '''
-        self.assembly_class = PrimitiveAssembly(self.node_list, self.element_list, node_dof=self.node_dof, vector_function=self.element_class.f_int)
-        _f = self.assembly_class.assemble_vector(self.b_constraints.dot(u))
+        _f = self.assembly_class.assemble_f(self.b_constraints.dot(u))
         self._f_bc = self.b_constraints.T.dot(_f)
         return self._f_bc
 
     def f_ext_global(self, u, du, t):
         '''return the global nonlinear external force of the right hand side of the equation, i.e. the excitation'''
         return self.b_constraints.T.dot(self._f_ext_without_bc(t))
+
+    def K_and_f_global(self, u):
+        _K, _f = self.assembly_class.assemble_k_and_f(self.b_constraints.dot(u))
+        self._K_bc = self.b_constraints.T.dot(_K.dot(self.b_constraints))
+        self._f_bc = self.b_constraints.T.dot(_f)
+        return self._K_bc, self._f_bc
 
     def write_timestep(self, t, u):
         '''

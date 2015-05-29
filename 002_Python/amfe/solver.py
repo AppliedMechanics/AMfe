@@ -48,16 +48,17 @@ class NewmarkIntegrator():
         '''
         self.mechanical_system = mechanical_system
         self.M = mechanical_system.M_global()
-        self.K = mechanical_system.K_global
+#        self.K = mechanical_system.K_global
         self.f_non = mechanical_system.f_int_global
         self.f_ext = mechanical_system.f_ext_global
+        self.K_and_f_non = mechanical_system.K_and_f_global
 
 
-    def _residual(self, q, dq, ddq, t):
+    def _residual(self, f_non, q, dq, ddq, t):
         if self.f_ext is not None:
-            res = self.M.dot(ddq) + self.f_non(q) - self.f_ext(q, dq, t)
+            res = self.M.dot(ddq) + f_non - self.f_ext(q, dq, t)
         else:
-            res = self.M.dot(ddq) + self.f_non(q)
+            res = self.M.dot(ddq) + f_non
         return res
 
 
@@ -110,22 +111,22 @@ class NewmarkIntegrator():
             ddq *= 0
 
             # checking residual and convergence
-            f_non = self.f_non(q)
-            res = self._residual(q, dq, ddq, t)
+            K, f_non = self.K_and_f_non(q)
+            res = self._residual(f_non, q, dq, ddq, t)
             res_abs = norm_of_vector(res)
             # Newcton-Correction-loop
 
             n_iter = 0
             while res_abs > self.eps*norm_of_vector(f_non):
-                S = self.K(q) + 1/(self.beta*dt**2)*self.M
+                S = K + 1/(self.beta*dt**2)*self.M
                 delta_q = - linalg.spsolve(S, res)
                 if res_abs > self.residual_threshold:
                     delta_q *= self.newton_damping
                 q   += delta_q
                 dq  += self.gamma/(self.beta*dt)*delta_q
                 ddq += 1/(self.beta*dt**2)*delta_q
-                f_non = self.f_non(q)
-                res = self._residual(q, dq, ddq, t)
+                K, f_non = self.K_and_f_non(q)
+                res = self._residual(f_non, q, dq, ddq, t)
                 res_abs = norm_of_vector(res)
                 n_iter += 1
                 if self.verbose:
@@ -228,17 +229,17 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     abs_f_ext = np.sqrt(f_ext.dot(f_ext))
     for force_factor in np.arange(stepwidth, 1+stepwidth, stepwidth):
         # prediction
-        res = mechanical_system.f_int_global(u) - f_ext*force_factor
+        K, f_int= mechanical_system.K_and_f_global(u)
+        res = f_int - f_ext*force_factor
         abs_res = norm_of_vector(res)
 
         # Newton-Loop
         n_iter = 0
         while (abs_res > eps*abs_f_ext) and (n_max_iter > n_iter):
-            if n_iter%smplfd_nwtn_itr is 0:
-                K = mechanical_system.K_global(u)
             corr = linalg.spsolve(K, res)
             u -= corr*newton_damping
-            res = mechanical_system.f_int_global(u) - f_ext*force_factor
+            K, f_int= mechanical_system.K_and_f_global(u)
+            res = f_int - f_ext * force_factor
             abs_res = norm_of_vector(res)
             n_iter += 1
             if verbose: print('Stufe', force_factor, 'Iteration Nr.', n_iter, \

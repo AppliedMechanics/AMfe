@@ -71,6 +71,7 @@ class Mesh:
     def __init__(self,  node_dof=2):
         self.nodes = []
         self.elements = []
+        self.elements_type = []
         self.elements_properties = []
         self.u = None # the displacements; They are stored as a list of numpy-arrays with shape (ndof, node_dof)
         self.timesteps = []
@@ -112,6 +113,8 @@ class Mesh:
         self.elements = np.genfromtxt(filename, delimiter = ',', dtype = int, skip_header = 1)
         if explicit_node_numbering:
             self.elements = self.elements[:,1:]
+        print("No Element type specified; Guessed from the nodes list, that it's a 'Tri3' Element")
+        self.elements_type = ['Tri3' for i in self.elements]
         self._update_mesh_props()
 
 
@@ -139,15 +142,8 @@ class Mesh:
         self.elements_type = []
         self.elements_properties = []
 
-        # Oeffnen der einzulesenden Datei
-        try:
-            infile = open(filename,  'r')
-        except:
-            print("Fehler beim Einlesen der Daten.")
-            sys.exit(1)
-
-        data_geometry = infile.read().splitlines() # Zeilenweises Einlesen der Geometriedaten
-        infile.close()
+        with open(filename, 'r') as infile:
+            data_geometry = infile.read().splitlines()
 
         # Auslesen der Indizes, bei denen die Formatliste, die Knotenliste und die Elementliste beginnen und enden
         for s in data_geometry:
@@ -192,10 +188,12 @@ class Mesh:
             gmsh_element_key = element[1]
             tag = element[2] # Tag information giving everything where the structure belongs to and so on...
             if gmsh_element_key in gmsh2amfe:
+                # handling of the elements:
                 if gmsh2amfe[gmsh_element_key] in element_set:
                     self.elements_properties.append(element[3:3+tag])
                     self.elements.append(element[3+tag:])
                     self.elements_type.append(gmsh2amfe[gmsh_element_key])
+                # Handling of the lines as they can be needed for the boundary stuff
                 if gmsh2amfe[gmsh_element_key] in line_set:
                     line_number = element[2+tag]
                     if len(boundary_line_list) < line_number: # append line if line was not called
@@ -344,17 +342,6 @@ class Mesh:
                 savefile_vtu.write(vtu_footer)
 
 
-
-
-## test
-#my_mesh = Mesh()
-#my_mesh.read_elements('saved_elements.csv')
-#my_mesh.read_nodes('saved_nodes.csv')
-#my_mesh.provide_assembly_matrix(3).toarray()
-#my_mesh.save_mesh_for_paraview('myfilename')
-
-#%%
-
 class MeshGenerator:
     '''
     Klasse zum Erzeugen von zweidimensionalen Netzen, die Dreieckstruktur haben.
@@ -379,7 +366,7 @@ class MeshGenerator:
             self.flat_mesh = False
         pass
 
-    def curved_mesh_get_phi_r(self, h, l):
+    def _curved_mesh_get_phi_r(self, h, l):
         '''
         wenn ein gekrümmtes Netz vorliegt:
         Bestimmung des Winkels phi und des Radiusses r aus der Höhe und der Länge
@@ -415,11 +402,11 @@ class MeshGenerator:
             r_OO_x = np.array([0, 0, 0])
             r_OO_y = np.array([0, 0, 0])
             if self.x_curve:
-                phi_x, r_x = self.curved_mesh_get_phi_r(self.height, self.x_len)
+                phi_x, r_x = self._curved_mesh_get_phi_r(self.height, self.x_len)
                 delta_phi_x = phi_x/self.x_no_elements
                 r_OO_x = np.array([0, 0, -r_x])
             if self.y_curve:
-                phi_y, r_y = self.curved_mesh_get_phi_r(self.height, self.y_len)
+                phi_y, r_y = self._curved_mesh_get_phi_r(self.height, self.y_len)
                 delta_phi_y = phi_y/self.y_no_elements
                 r_OO_y = np.array([0, 0, -r_y])
             # Einführen von Ortsvektoren, die Vektorkette zum Element geben:
@@ -485,15 +472,3 @@ class MeshGenerator:
             for elements in self.elements:
                 savefile_elements.write(delimiter.join(str(x) for x in elements) + newline)
 
-
-
-#
-## Test
-#my_meshgenerator = MeshGenerator(x_len=3*3, y_len=4*3, x_no_elements=3*3*3, y_no_elements=3*3*3, height = 1.5, x_curve=True, y_curve=False)
-#my_meshgenerator.build_mesh()
-#my_meshgenerator.save_mesh('saved_nodes.csv', 'saved_elements.csv')
-#
-#my_mesh = Mesh()
-#my_mesh.read_elements('saved_elements.csv')
-#my_mesh.read_nodes('saved_nodes.csv', node_dof=3)
-#my_mesh.save_mesh_for_paraview('myfilename')

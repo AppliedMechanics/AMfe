@@ -23,7 +23,7 @@ class Element():
     for the computation of the element stuff...
     '''
 
-    def __init__(self, E_modul=210E9, poisson_ratio=0.3, density=10):
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, density=1E4):
         pass
 
     def _compute_tensors(self, X, u):
@@ -152,7 +152,7 @@ class Tri3(Element):
     '''
     plane_stress = True
 
-    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=10):
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4):
         '''
         Definition der Materialgrößen und Dicke, da es sich um 2D-Elemente handelt
         '''
@@ -259,7 +259,7 @@ class Tri6(Element):
     '''
     plane_stress = True
 
-    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=10):
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4):
         '''
         Definition der Materialgrößen und Dicke, da es sich um 2D-Elemente handelt
         '''
