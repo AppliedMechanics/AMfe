@@ -55,4 +55,5 @@ my_newmark.set_mechanical_system(my_system)
 my_newmark.delta_t = 1E-4
 my_newmark.integrate_nonlinear_system(np.zeros(ndof), np.zeros(ndof), np.arange(0,0.4,1E-4))
 
+
 my_system.export_paraview(paraview_output_file)

@@ -17,9 +17,19 @@ import amfe
 
 
 
+# für den Bogen
 gmsh_input_file = '../meshes/gmsh/bogen_grob.msh'
-paraview_output_file = '../results/gmsh_bogen_grob' + time.strftime("_%Y%m%d_%H%M%S") + '/bogen_grob'
+start_index = amfe.node2total(54, 0)
+end_index = amfe.node2total(55, 1)
 
+# fixation
+bottom_bounds_1 = [None, [0,1,2,3], None]
+bottom_bounds_2 = [None, np.arange(start_index, end_index + 1), None]
+
+# für die Stange
+gmsh_input_file = '../meshes/gmsh/stange_order1.msh'
+
+paraview_output_file = '../results/stange' + time.strftime("_%Y%m%d_%H%M%S") + '/stange'
 
 # Default values;
 kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'density' : 1E4}
@@ -31,14 +41,9 @@ my_system.element_class_dict = element_class_dict
 my_system.load_mesh_from_gmsh(gmsh_input_file)
 # my_system.export_paraview(paraview_output_file)
 
-
-start_index = amfe.node2total(54, 0)
-end_index = amfe.node2total(55, 1)
-
-# fixation
-bottom_bounds_1 = [None, [0,1,2,3], None]
-bottom_bounds_2 = [None, np.arange(start_index, end_index + 1), None]
-
+nodes_to_fix = my_system.mesh_class.boundary_line_list[3]
+bottom_bounds_1 = [None, [amfe.node2total(i, 0) for i in nodes_to_fix], None]
+bottom_bounds_2 = [None, [amfe.node2total(i, 1) for i in nodes_to_fix], None]
 my_dirichlet_bounds = [bottom_bounds_1, bottom_bounds_2]
 my_system.apply_dirichlet_boundaries(my_dirichlet_bounds)
 
@@ -63,8 +68,7 @@ ndof = my_system.ndof_global_constrained
 
 
 
-
-
+# import reduced_system
 
 
 # modal derivatives:
@@ -73,7 +77,7 @@ ndof = my_system.ndof_global_constrained
 
 K = my_system.K_global()
 M = my_system.M_global()
-
+print()
 
 lambda_, V = sp.linalg.eigh(K.toarray(), M.toarray())
 omega = np.sqrt(lambda_)
@@ -106,20 +110,24 @@ def calc_modal_deriv(omega, V, K_func, i, j):
     dK_deta_j = (K_func(eta_j*h) - K)/h
     F_i = (x_i.dot(dK_deta_j.dot(x_i))*M - dK_deta_j).dot(x_i)
     K_dyn_i = K - om**2*M
-    row_index = 0
+    row_index = np.argmax(abs(x_i))
     K_dyn_i[:,row_index], K_dyn_i[row_index,:], K_dyn_i[row_index,row_index] = 0, 0, 1
     F_i[row_index] = 0
     v_i = sp.linalg.solve(K_dyn_i, F_i)
     c_i = -v_i.dot(M.dot(x_i))
     dphi_i_deta_j = v_i + c_i*x_i
-    return dphi_i_deta_j
+
+    # Simplified mds:
+    simplified_md = sp.linalg.solve(K, - dK_deta_j.dot(x_i))
+    return dphi_i_deta_j, simplified_md
 
 
 no_of_mod_devs = 7
 for i in range(no_of_mod_devs):
     for j in range(no_of_mod_devs):
-        dphi_deta = calc_modal_deriv(omega, V, my_K_func, i, j)
-        my_system.write_timestep((i+1)*10+j+1, dphi_deta)
+        dphi_deta, simplified_md = calc_modal_deriv(omega, V, my_K_func, i, j)
+        # my_system.write_timestep((i+1)*10+j+1, dphi_deta)
+        my_system.write_timestep((i+1)*10+j+1, simplified_md)
 
 # my_system.write_timestep(10, dphi_i_deta_j)
 #my_system.write_timestep(11, v_i/amfe.norm_of_vector(v_i))
