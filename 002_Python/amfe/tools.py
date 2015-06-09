@@ -11,17 +11,19 @@ def node2total(node_index, coordinate_index, ndof_node=2):
     Converts the node index and the corresponding coordinate index to the index
     of the total dof.
 
-    Parameters:
+    Parameters
     ----------
-    node_index :        Index of the node as shown in tools like paraview
+    node_index : int
+        Index of the node as shown in tools like paraview
+    coordinate_index: int
+        Index of the coordinate; 0 if it's x, 1 if it's y etc.
+    ndof_node: int, optional
+        Number of degrees of freedom per node
 
-    coordinate_index:   Index of the coordinate; 0 if it's x, 1 if it's y etc.
-
-    ndof_node:          Number of degrees of freedom per node
-
-    Returns:
+    Returns
     -------
-    total_index :       Index of the total dof
+    total_index : int
+        Index of the total dof
 
     '''
     if coordinate_index >= ndof_node:
@@ -33,17 +35,19 @@ def total2node(total_index, ndof_node=2):
     Converts the total index in the global dofs to the coordinate index and the
     index fo the coordinate.
 
-    Parameters:
+    Parameters
     ----------
-    total_index :       Index of the total dof
+    total_index : int
+        Index of the total dof
+    ndof_node: int, optional
+        Number of degrees of freedom per node
 
-    ndof_node:          Number of degrees of freedom per node
-
-    Returns:
+    Returns
     -------
-    node_index :        Index of the node as shown in tools like paraview
-
-    coordinate_index:   Index of the coordinate; 0 if it's x, 1 if it's y etc.
+    node_index : int
+        Index of the node as shown in tools like paraview
+    coordinate_index : int
+        Index of the coordinate; 0 if it's x, 1 if it's y etc.
 
     '''
     return total_index // ndof_node, total_index % ndof_node

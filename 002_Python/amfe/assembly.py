@@ -35,14 +35,19 @@ class Assembly():
         '''
         Parameters:
         ----
+        mesh : instance of the Mesh-class
 
-        mesh :      instance of the Mesh-class or a child of it
+        element_class_dict : dict
+            dict where the official keyword and the the Element-objects are linked
 
-        element_class_dict:    dict where the official keyword and the the Element-objects are linked
-
-        Returns:
-        ---
+        Returns
+        --------
         None
+
+        Examples:
+        ---------
+        TODO
+
         '''
         self.mesh = mesh
         self.element_class_dict = element_class_dict
@@ -54,15 +59,18 @@ class Assembly():
         Assembles the mass matrix of the given mesh and element.
 
         Parameters:
-        ---
+        -----------
+        u : ndarray
+            nodal displacement of the nodes in Voigt-notation
 
-        u :         nodal displacement of the nodes in Voigt-notation
+        Returns
+        --------
+        M : ndarray
+            unconstrained assembled mass matrix in sparse matrix coo-format.
 
-        Returns:
-        ---
-
-        M :         unconstrained assembled mass matrix in sparse matrix coo
-                    format.
+        Examples:
+        ---------
+        TODO
         '''
         def decorated_m_func(X, u_local, k, global_element_indices=None):
             return self.element_class_dict[self.mesh.elements_type[k]].m_int(X, u_local)
@@ -108,18 +116,17 @@ class Assembly():
         Assembles the stiffness matrix of the given mesh and element.
 
         Parameters:
-        ---
+        -----------
+        u : ndarray
+            nodal displacement of the nodes in Voigt-notation
 
-        u :         nodal displacement of the nodes in Voigt-notation
-
-        Returns:
-        ---
-
-        K :         unconstrained assembled stiffness matrix in sparse matrix
-                    coo format.
+        Returns
+        --------
+        K : ndarray
+            unconstrained assembled stiffness matrix in sparse matrix coo-format.
         '''
         if self.save_stresses:
-            # clean up the previous stress stuff...
+            self.stress_list = []
             pass
 
         def decorated_k_func(X, u_local, k, global_element_indices=None):
@@ -131,6 +138,7 @@ class Assembly():
 
         K = self._assemble_matrix(u, decorated_k_func)
         if self.save_stresses:
+            self.stress_list.append(element.S_voigt)
             # compute the stress stuff...
             pass
         return K
@@ -141,15 +149,14 @@ class Assembly():
         Assembles the force vector of the given mesh and element.
 
         Parameters:
-        ---
+        -----------
+        u : ndarray
+            nodal displacement of the nodes in Voigt-notation
 
-        u :         nodal displacement of the nodes in Voigt-notation
-
-        Returns:
-        ---
-
-        f :         unconstrained force vector in numpy.ndarray format of
-                    dimension (ndim, )
+        Returns
+        --------
+        f : ndarray
+            unconstrained force vector
 
         '''
         self.global_force = np.zeros(self.mesh.no_of_dofs)
@@ -169,15 +176,32 @@ class Assembly():
 
         Takes the advantage, that some element properties only have to be
         computed once.
+
+        Parameters:
+        -----------
+        u : ndarray, optional
+            displacement of the unconstrained system in voigt notation
+
+        Returns
+        --------
+        K : ndarray
+            tangential stiffness matrix
+        f : ndarray
+            nonlinear force vector
+
+        Examples:
+        ---------
+        TODO
         '''
         def decorated_f_and_k_func(X, u_local, k, global_element_indices):
             element = self.element_class_dict[self.mesh.elements_type[k]]
             k_local, f_local = element.k_and_f_int(X, u_local)
             self.global_force[global_element_indices] += f_local
             if self.save_stresses:
-                pass
+                self.stress_list.append(element.S_voigt)
             return k_local
 
+        self.stress_list = []
         self.global_force = np.zeros(self.mesh.no_of_dofs)
         K = self._assemble_matrix(u, decorated_f_and_k_func)
         return K, self.global_force
@@ -188,7 +212,9 @@ class Assembly():
 
 class PrimitiveAssembly():
     '''
-    Assemblierungsklasse, die für gegebene Tableaus von Knotenkoordinaten und Assemblierungsknoten eine Matrix assembliert
+    Assembly class working directly on the tables of node coordinates and element nodes
+
+    Came historically before more advanced assembly routines and have the status of being for test cases
     '''
 
     # Hier muessen wir uns mal genau ueberlegen, was alles dem assembly uebergeben werden soll

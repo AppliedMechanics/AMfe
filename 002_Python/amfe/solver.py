@@ -15,7 +15,30 @@ def norm_of_vector(array):
 
 class NewmarkIntegrator():
     '''
-    Newmark-Integrator-Schema zur Bestimmung der dynamischen Antwort...
+    Newmark-integration scheme using generalized alpha routine for nonlinear second order systems
+
+    Parameters
+    -----------
+    alpha : float, optional
+        damping factor of the generalized alpha routine for numerical damping
+    vebose : bool, optional
+        flag for making the integration process verbose, i.e. printing the residual for every correction in the newton iteration
+    n_iter_max : int, optional
+        number of maximum iteration in the newton correction process
+
+    Notes
+    ------
+    This integration scheme is an unconditionally stable implicit nonlinear integration scheme. The unconditional stabiltiy refers to the stability of the solution itself, not on the solutin procedure. With a too tight tolerance (eps > 1E8) the solution might not converge, as the solution procedure can not lower the residual below a threshold that's higher than the eps. In general the solution should converge in less than ten iteration steps.
+
+    Examples
+    ---------
+    TODO
+
+    References:
+    -----------
+    M. Géradin and D. J. Rixen. Mechanical vibrations: theory and application
+    to structural dynamics. John Wiley & Sons, 2014. pp. 564.
+
     '''
 
     def __init__(self, alpha=0, verbose=False, n_iter_max=40):
@@ -32,18 +55,59 @@ class NewmarkIntegrator():
 
     def set_nonlinear_model(self, f_non, K, M, f_ext=None):
         '''
-        Funktion zum Übergeben des nichtlinearen Modells an die Integrationsklasse
+        Sets the nonlinear model with explicit function metioning.
 
-        Idee: K, M, f_non kommen direkt aus der Assembly-Klasse und müssen nicht verändert werden;
+        Parameters
+        -----------
+        f_non : function
+            function of nonlinear force being called with f_non(q) and returning the nonlinear force as ndarray
+        K : function
+            function of tangential stiffness matrix being called with K(q) and returning the nonlinear stiffness matrix as ndarray
+        M : ndarray
+            mass matrix
+        f_ext : function, optional
+            function of external force being called with f_ext(q, dq, t) and returning the external force as ndarray
+
+        Examples
+        ---------
+
+        Notes
+        ------
+        This function serves basically as a test function. For elaborate finite
+        element work the set_mechanical_system interface is more convenient and
+        does everything automatically including the recording of displacements etc.
+
+        See Also:
+        ---------
+        set_mechanical_system
+
         '''
+        # decorator for the efficient computation of the tangential stiffness
+        # matrix and force in one step; Basic intention is to make assembly process only once.
+        def K_and_f_non(q):
+            return K(q), f_non(q)
+        self.K_and_f_non = K_and_f_non
         self.f_non = f_non
-        self.K = K
         self.M = M
         self.f_ext = f_ext
 
     def set_mechanical_system(self, mechanical_system):
         '''
-        hands over the mechanical system as a whole to the integrator. The matrices for the integration routine are then taken right from the mechanical system
+        hands over the mechanical system as a whole to the integrator.
+        The matrices for the integration routine are then taken right from the mechanical system
+
+        Parameters
+        -----------
+        mechanical_system : MechanicalSystem
+            instance of MechanicalSystem which should be integrated
+
+        Returns
+        --------
+        None
+
+        Examples
+        ---------
+        TODO
 
         '''
         self.mechanical_system = mechanical_system
@@ -55,6 +119,7 @@ class NewmarkIntegrator():
 
 
     def _residual(self, f_non, q, dq, ddq, t):
+        '''computes the residual of the system with the given variables'''
         if self.f_ext is not None:
             res = self.M.dot(ddq) + f_non - self.f_ext(q, dq, t)
         else:
@@ -64,9 +129,32 @@ class NewmarkIntegrator():
 
     def integrate_nonlinear_system(self, q_start, dq_start, time_range):
         '''
-        Funktion, die das System nach der generalized-alpha-Methode integriert
+        Integrates the system using generalized alpha method.
+
+        Parameters
+        -----------
+        q_start : ndarray
+            initial displacement of the constrained system in voigt notation
+        dq_start : ndarray
+            initial velocity of the constrained system in voigt notation
+        time_range : ndarray
+            vector containing the time points at which the state is written to the output
+
+        Returns
+        --------
+        q : ndarray
+            displacements of the system with q[:, i] being the
+            displacement of the i-th timestep in voigt notation
+        dq : ndarray
+            velocities of the system with dq[:, i] being the velocity of the
+            i-th timestep in voigt notation
+
+        Examples
+        ---------
+        TODO
+
         '''
-        # Initialisieren der Startvariablen
+        # initialize starting variables
         q = q_start.copy()
         dq = dq_start.copy()
         ddq = np.zeros(len(q_start))
@@ -74,9 +162,9 @@ class NewmarkIntegrator():
         q_global = []
         dq_global = []
         t = 0
-        time_index = 0
+        time_index = 0 # index of the timestep in the time_range array
         write_flag = False
-        # Abfangen, wenn das Ding mit 0 beginnt:
+        # catch start value 0:
         if time_range[0] < 1E-12:
             q_global.append(q)
             dq_global.append(dq)
@@ -84,7 +172,7 @@ class NewmarkIntegrator():
         else:
             time_index = 0
 
-        # Korrekte Startbedingungen ddq:
+        # predict start values for ddq:
         ddq = linalg.spsolve(self.M, self.f_non(q))
         no_newton_convergence_flag = False
         while time_index < len(time_range):
@@ -114,8 +202,8 @@ class NewmarkIntegrator():
             K, f_non = self.K_and_f_non(q)
             res = self._residual(f_non, q, dq, ddq, t)
             res_abs = norm_of_vector(res)
-            # Newcton-Correction-loop
 
+            # Newcton-Correction-loop
             n_iter = 0
             while res_abs > self.eps*norm_of_vector(f_non):
                 S = K + 1/(self.beta*dt**2)*self.M
@@ -158,17 +246,17 @@ class NewmarkIntegrator():
 
 def solve_linear_displacement(mechanical_system, t=0, verbose=True):
     '''
-    Solve the linear static problem of the mechanical system
+    Solve the linear static problem of the mechanical system and print
+    the results directly to the mechanical system
 
-    Prints the results directly to the mechanical system
-
-    Parameters:
+    Parameters
     ----------
     mechanical_system :   Instance of the class MechanicalSystem
 
-    t :                   time for the external force call in MechanicalSystem
+    t : float
+        time for the external force call in MechanicalSystem
 
-    Returns:
+    Returns
     -------
     None
 
@@ -193,31 +281,34 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
 
     Prints the results directly to the mechanical system
 
-    Parameters:
+    Parameters
     ----------
-    mechanical_system :          Instance of the class MechanicalSystem
+    mechanical_system : MechanicalSystem
+        Instance of the class MechanicalSystem
+    no_of_load_steps : int
+        Number of equally spaced load steps which are applied in order to receive the solution
+    t : float, optional
+        time for the external force call in mechanical_system
+    eps : float, optional
+        Epsilon for assessment, when a loadstep has converged
+    newton_damping : float, optional
+        Newton-Damping factor applied in the solution routine; 1 means no damping,
+        0 < newton_damping < 1 means damping
+    n_max_iter : int, optional
+        Maximum number of interations in the Newton-Loop
+    smplfd_nwtn_itr : int, optional
+          Number at which the jacobian is updated; if 1, then a full newton scheme is applied;
+          if very large, it's a fixpoint iteration with constant jacobian
+    verbose : bool, optional
+        print messages if necessary
 
-    no_of_load_steps :          Number of equally spaced load steps which are
-                                applied in order to receive the solution
-
-    t :                         time for the external force call in mechanical_system
-
-    eps :                       Epsilon for assessment, when a loadstep has converged
-
-    newton_damping :            Newton-Damping factor applied in the solution routine
-
-    n_max_iter :                Maximum number of interations in the Newton-Loop
-
-    smplfd_nwtn_itr :           Number at which the jacobian is updated; if 1,
-                                then a full newton scheme is applied;
-                                if very large, it's a fixpoint iteration with
-                                constant jacobian
-
-    verbose :                   print messages if necessary
-
-    Returns:
+    Returns
     -------
     None
+
+    Examples
+    ---------
+    TODO
 
     '''
     stepwidth = 1/no_of_load_steps

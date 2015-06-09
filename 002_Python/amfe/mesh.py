@@ -50,12 +50,8 @@ def check_dir(*filenames):
 
 
 class Mesh:
-    '''Die Netz-Klasse, die für die Verarbeitung des Netzes und die zugehörigen Operationen zuständig ist
-    Features
-    - Import von Netzdaten aus Textdateien
-    - Export von Netzdaten und Verschiebungsvektoren in Textdaten
-    - Zusammenarbeit mit ParaView
-    -
+    '''
+    Class for handling the mesh operations.
 
     Interne Variablen:
     - nodes: Ist eine Liste bzw. ein numpy-Array, welches Angibt, wie die x-y-z-Koordinaten eines Knotens lauten. Es gibt keinen Zählindex.
@@ -95,8 +91,28 @@ class Mesh:
 
     def read_nodes_from_csv(self, filename, node_dof=2, explicit_node_numbering=False):
         '''
-        Liest die Knotenwerte aus der Datei Filename aus
-        updated interne Variablen
+        Imports the nodes list from a csv file.
+
+        Parameters
+        -----------
+        filename : str
+            name of the file containing the nodes in csv-format
+        node_dof : int, optional
+            number of degrees of freedom per node; for 2D-meshes this is 2,
+            for 3D-meshes this is 3
+        explicit_node_numbering : bool, optional
+            Flag stating, if the nodes are explicitly numbered in the csv-file.
+            When set to true, the first column is assumed to have the node numbers
+            and is thus ignored.
+
+        Returns
+        --------
+        None
+
+        Examples
+        ---------
+        TODO
+
         '''
         self.node_dof = node_dof
         try:
@@ -109,7 +125,26 @@ class Mesh:
         # self._update_mesh_props()
 
     def read_elements_from_csv(self, filename, explicit_node_numbering=False):
-        '''Liest die Elementmatrizen aus'''
+        '''Imports the element list from a csv file.
+
+        Parameters
+        -----------
+        filename : str
+            name of the file containing the nodes in csv-format
+        explicit_node_numbering : bool, optional
+            Flag stating, if the nodes are explicitly numbered in the csv-file.
+            When set to true, the first column is assumed to have the node numbers
+            and is thus ignored.
+
+        Returns
+        --------
+        None
+
+        Examples
+        ---------
+        TODO
+
+        '''
         self.elements = np.genfromtxt(filename, delimiter = ',', dtype = int, skip_header = 1)
         if explicit_node_numbering:
             self.elements = self.elements[:,1:]
@@ -120,12 +155,23 @@ class Mesh:
 
     def import_msh(self, filename, flat_mesh=True):
         """
-        Import the mesh file from gmsh
+        Import the mesh file from gmsh.
 
-        Rückgabewerte:
-            nodes:      Liste aller Knoten; Zeile [i] enthaelt die x-, y- und z-Koordinate von Knoten [i]
-            elements:   Liste aller Elemente; Zeile [i] enthaelt die Knotennummern von Element [i}
-            properties: Liste der Elementeigenschaften (noch nicht genauer spezifiziert)
+        Parameters
+        -----------
+        filename : str
+            file name of the msh-file
+        flat_mesh : bool, optional
+            flag for information whether mesh is flat (2D) or not flat (3D)
+
+        Returns
+        --------
+        None
+
+        Examples
+        ---------
+        TODO
+
         """
 
         # Setze die in gmsh verwendeten Tags
@@ -248,6 +294,22 @@ class Mesh:
 
 
     def set_displacement(self, u):
+        '''
+        Sets a displacement to the given mesh.
+
+        Parameters
+        -----------
+        u : ndarray
+            displacement of the unconstrained system in voigt notation
+
+        Returns
+        --------
+        None
+
+        Examples
+        ---------
+        TODO
+        '''
 #        if self.u[0].size != u.size:
 #            print('Die Dimension des Vektors u ist nicht Korrekt. ')
 #            print('Der Vektor muss insgesamt ', self.u.size, 'Einträge enthalten')
@@ -257,10 +319,26 @@ class Mesh:
         self.u = [np.array(u).reshape((-1, self.node_dof))]
 
 
-    def set_displacement_with_time(self, u, timesteps, ):
+    def set_displacement_with_time(self, u, timesteps):
         '''
-        Set the displacement of the mesh with the corresponding timesteps;
+        Set the displacement of the mesh with the corresponding timesteps.
+
         expects for the timesteps a list containing the displacement vector in any shape.
+
+        Parameters
+        -----------
+        u : list of ndarrays
+            list containing the displacements as ndarrays in arbitrary shape
+        timesteps : ndarray
+            vector containing the time corresponding to the displacements in u
+
+        Returns
+        --------
+        None
+
+        Examples
+        ---------
+        TODO
         '''
         self.timesteps = timesteps.copy()
         self.u = []
@@ -270,7 +348,30 @@ class Mesh:
 
     def save_mesh_for_paraview(self, filename):
         '''
-        Speichert das Netz für ParaView ab. Die Idee ist, dass eine Hauptdatei mit Endung .pvd als Hauptdatei für Paraview erstellt wird und anschließend das Netz in .vtu-Dateien entsprechend den Zeitschritten abgespeichert wird.
+        Saves the mesh and the corresponding displacements to a .pvd file and corresponding .vtu-files readable for ParaView.
+
+        In the .pvd file the information of the timesteps are given. For every timestep a .vtu file is created where the displacement and eventually the stress is saved.
+
+        Parameters
+        -----------
+        filename : str
+            name of the file without file endings.
+
+        Returns
+        --------
+        None
+
+        Examples
+        ---------
+        >>> mymesh = Mesh()
+        >>> mymesh.import_msh('../meshes/my_gmsh.msh')
+        >>> mymesh.save_mesh_for_paraview('../results/gmsh/my_simulation')
+
+
+        References:
+        -----------
+        www.vtk.org/VTK/img/file-formats.pdf
+
         '''
         if len(self.timesteps) == 0:
             self.u = [np.zeros((self.no_of_nodes, self.node_dof))]

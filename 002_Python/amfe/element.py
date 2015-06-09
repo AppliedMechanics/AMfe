@@ -54,19 +54,24 @@ class Element():
         Returns the tangential stiffness matrix and the internal nodal force
         of the Element.
 
-        Parameters:
+        Parameters
         -----------
-        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
-                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+        X : ndarray
+            nodal coordinates given in Voigt notation (i.e. a 1-D-Array
+            of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+        u : ndarray
+            nodal displacements given in Voigt notation
 
-        u :         nodal displacements given in Voigt notation
-
-        Returns:
+        Returns
         --------
-        k_int :     The tangential stiffness matrix (numpy.ndarray of
-                    dimension (ndim, ndim))
+        k_int : ndarray
+            The tangential stiffness matrix (ndarray of dimension (ndim, ndim))
+        f_int : ndarray
+            The nodal force vector (ndarray of dimension (ndim,))
 
-        f_int :     The nodal force vector (numpy.ndarray of dimension (ndim,))
+        Examples
+        ---------
+        TODO
 
         '''
         self._compute_tensors(X, u)
@@ -76,14 +81,14 @@ class Element():
         '''
         Returns the tangential stiffness matrix of the Element.
 
-        Parameters:
+        Parameters
         -----------
         X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
                     of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
 
         u :         nodal displacements given in Voigt notation
 
-        Returns:
+        Returns
         --------
         k_int :     The tangential stiffness matrix (numpy.ndarray of
                     type ndim x ndim)
@@ -96,14 +101,14 @@ class Element():
         '''
         Returns the tangential stiffness matrix of the Element.
 
-        Parameters:
+        Parameters
         -----------
         X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
                     of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
 
         u :         nodal displacements given in Voigt notation
 
-        Returns:
+        Returns
         --------
         f_int :     The nodal force vector (numpy.ndarray of dimension (ndim,))
 
@@ -115,14 +120,14 @@ class Element():
         '''
         Returns the tangential stiffness matrix of the Element.
 
-        Parameters:
+        Parameters
         -----------
         X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
                     of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
 
         u :         nodal displacements given in Voigt notation
 
-        Returns:
+        Returns
         --------
         m_int :     The consistent mass matrix of the element
                     (numpy.ndarray of dimension (ndim,ndim))
@@ -288,6 +293,7 @@ class Tri6(Element):
         self.B0 = [[],[],[]]
 
     def _B0_tilde_func(self, X_vec, X, Y):
+        '''computes the B0_tilde matrix for a given X and Y'''
         # maybe this is in the scope here
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X_vec
         det = X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2

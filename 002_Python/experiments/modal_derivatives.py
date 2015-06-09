@@ -36,7 +36,7 @@ kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'de
 element_class_dict = {'Tri3' : amfe.Tri3(**kwargs), 'Tri6' : amfe.Tri6(**kwargs)}
 
 
-my_system = amfe.MechanicalSystem()
+my_system = amfe.ReducedSystem()
 my_system.element_class_dict = element_class_dict
 my_system.load_mesh_from_gmsh(gmsh_input_file)
 # my_system.export_paraview(paraview_output_file)
@@ -56,28 +56,11 @@ my_system.apply_neumann_boundaries(neumann_bounds)
 
 
 ndof = my_system.ndof_global_constrained
-#
-################################################################################
-### time integration
-################################################################################
-#
-#my_newmark = amfe.NewmarkIntegrator()
-#my_newmark.set_mechanical_system(my_system)
-#my_newmark.delta_t = 8E-5
-#my_newmark.integrate_nonlinear_system(np.zeros(ndof), np.zeros(ndof), np.arange(0,0.2,0.00008))
 
 
+K = my_system.K_unreduced()
+M = my_system.M_unreduced()
 
-# import reduced_system
-
-
-# modal derivatives:
-
-
-
-K = my_system.K_global()
-M = my_system.M_global()
-print()
 
 lambda_, V = sp.linalg.eigh(K.toarray(), M.toarray())
 omega = np.sqrt(lambda_)
@@ -91,6 +74,25 @@ h = np.sqrt(np.finfo(float).eps)*100
 # mass normalize V:
 for i in range(V.shape[0]):
     V[:,i] /= np.sqrt(V[:,i].dot(M.dot(V[:,i])))
+
+
+ndof_red = 20
+my_system.V = V[:,:ndof_red]
+
+K_red = my_system.K_global(np.zeros(ndof_red))
+M_red = my_system.M_global()
+
+
+
+################################################################################
+### time integration
+################################################################################
+#
+#my_newmark = amfe.NewmarkIntegrator()
+#my_newmark.set_mechanical_system(my_system)
+#my_newmark.delta_t = 8E-5
+#my_newmark.integrate_nonlinear_system(np.zeros(ndof_red), np.zeros(ndof_red), np.arange(0,0.2,0.00008))
+
 
 #%%
 # d_phi_i / d_phi_j
