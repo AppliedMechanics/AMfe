@@ -88,7 +88,7 @@ class MechanicalSystem():
         todo
 
         '''
-        self.node_dof = node_dof=2
+        self.node_dof = node_dof
         self.mesh_class = Mesh()
         self.mesh_class.read_nodes_from_csv(node_list_csv, node_dof=node_dof, explicit_node_numbering=explicit_node_numbering)
         self.mesh_class.read_elements_from_csv(element_list_csv, explicit_node_numbering=explicit_node_numbering)

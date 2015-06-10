@@ -24,7 +24,7 @@ my_mesh_generator.save_mesh('../meshes/selbstgebaut_quad/nodes.csv',
 
 
 
+# Building the mechanical system
 my_system = amfe.MechanicalSystem()
-
-
-
+my_system.load_mesh_from_csv('../meshes/selbstgebaut_quad/nodes.csv', 
+                             '../meshes/selbstgebaut_quad/elements.csv' )
