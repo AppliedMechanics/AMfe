@@ -3,24 +3,24 @@ How to run the AMfe Code
 
 You need the following stuff installed: 
 
-- Python 3.4 or higher
+- Python 3.4 or higher 
 - numpy, scipy
-- ParaView for Postprocessing
-- gmsh for Preprocessing
+- `ParaView <http://www.paraview.org>`_ for Postprocessing
+- `gmsh <http://geuz.org/gmsh/>`_ for Preprocessing
 - Some Python-Packages in order to build this documentation
 	- sphinx
 	- numpydoc
 
 For Python exist several ways how to install it on your computer. We recommend to install Anaconda. Anaconda is a Package manager and lets you install easily all additional packages and tools related to Python. 
 
-After installing the Anaconda Manager from https://store.continuum.io/cshop/anaconda/ run in your bash-console
+After installing the `Anaconda Manager <https://store.continuum.io/cshop/anaconda/>`_  run in your bash-console
 
 >>> conda install numpy
 >>> conda install scipy
 >>> conda install sphinx
 >>> conda install numpydoc
 
-For a Matlab-like Development center we recommend Spyder. Spyder can also easily be installed via Anaconda:
+For a Matlab-like Development center we recommend `Spyder <http://spyder-ide.blogspot.de>`_. Spyder can also easily be installed via Anaconda:
 
 >>> conda install spyder3
 
@@ -55,7 +55,7 @@ So the rule is, that the system works on indexing 0, and the import data from gm
 Tips & Tricks:
 ====================
 
-How to plot matrices efficiently in matplotlib:
+How to plot matrices in matplotlib:
 
 >>> from matplotlib import pyplot as plt; import scipy as sp
 >>> A = sp.random.rand(10, 10)
@@ -63,5 +63,6 @@ How to plot matrices efficiently in matplotlib:
 >>> plt.colorbar()
 >>> plt.set_cmap('jet') # 'jet' is default; others looking good are 'hot'
 
-Check out more on
-__ http://matplotlib.org/examples/color/colormaps_reference.html
+Check out more on http://matplotlib.org/examples/color/colormaps_reference.html
+
+
