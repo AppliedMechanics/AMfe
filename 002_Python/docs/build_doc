@@ -1,1 +1,2 @@
-sphinx-apidoc -f -o . ../amfe --separate --private && make html
+# sphinx-apidoc -f -o . ../amfe --separate --private && make html
+make html
