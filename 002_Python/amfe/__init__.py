@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Module for advaned nonlinear finite element analysis
+Module for advaned nonlinear finite element analysis developed at the Chair for Applied Mechanics, Technische Universität München.
 
 Authors:
 Johannes Rutzmoser

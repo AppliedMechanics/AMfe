@@ -2,8 +2,6 @@
 """
 Created on Fri May  8 16:58:03 2015
 
-By now it's just a skeleton; Maybe it grows further in the coming days and weeks...
-
 @author: johannesr
 """
 

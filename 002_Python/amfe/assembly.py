@@ -33,7 +33,7 @@ class Assembly():
     '''
     def __init__(self, mesh, element_class_dict):
         '''
-        Parameters:
+        Parameters
         ----
         mesh : instance of the Mesh-class
 
@@ -44,7 +44,7 @@ class Assembly():
         --------
         None
 
-        Examples:
+        Examples
         ---------
         TODO
 
@@ -58,7 +58,7 @@ class Assembly():
         '''
         Assembles the mass matrix of the given mesh and element.
 
-        Parameters:
+        Parameters
         -----------
         u : ndarray
             nodal displacement of the nodes in Voigt-notation
@@ -68,7 +68,7 @@ class Assembly():
         M : ndarray
             unconstrained assembled mass matrix in sparse matrix coo-format.
 
-        Examples:
+        Examples
         ---------
         TODO
         '''
@@ -115,7 +115,7 @@ class Assembly():
         '''
         Assembles the stiffness matrix of the given mesh and element.
 
-        Parameters:
+        Parameters
         -----------
         u : ndarray
             nodal displacement of the nodes in Voigt-notation
@@ -148,7 +148,7 @@ class Assembly():
         '''
         Assembles the force vector of the given mesh and element.
 
-        Parameters:
+        Parameters
         -----------
         u : ndarray
             nodal displacement of the nodes in Voigt-notation
@@ -177,7 +177,7 @@ class Assembly():
         Takes the advantage, that some element properties only have to be
         computed once.
 
-        Parameters:
+        Parameters
         -----------
         u : ndarray, optional
             displacement of the unconstrained system in voigt notation
@@ -189,7 +189,7 @@ class Assembly():
         f : ndarray
             nonlinear force vector
 
-        Examples:
+        Examples
         ---------
         TODO
         '''

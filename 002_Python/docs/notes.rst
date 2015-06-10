@@ -1,3 +1,32 @@
+How to run the AMfe Code
+========================
+
+You need the following stuff installed: 
+
+- Python 3.4 or higher
+- numpy, scipy
+- ParaView for Postprocessing
+- gmsh for Preprocessing
+- Some Python-Packages in order to build this documentation
+	- sphinx
+	- numpydoc
+
+For Python exist several ways how to install it on your computer. We recommend to install Anaconda. Anaconda is a Package manager and lets you install easily all additional packages and tools related to Python. 
+
+After installing the Anaconda Manager from https://store.continuum.io/cshop/anaconda/ run in your bash-console
+
+>>> conda install numpy
+>>> conda install scipy
+>>> conda install sphinx
+>>> conda install numpydoc
+
+For a Matlab-like Development center we recommend Spyder. Spyder can also easily be installed via Anaconda:
+
+>>> conda install spyder3
+
+
+
+
 General Notes on the amfe finite element code
 ===============================================
 
