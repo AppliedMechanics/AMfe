@@ -450,7 +450,9 @@ class MeshGenerator:
 
     '''
 
-    def __init__(self, x_len, y_len, x_no_elements, y_no_elements, height = 0, x_curve = False, y_curve = False, flat_mesh = True, mesh_style = 'tetra'):
+    def __init__(self, x_len, y_len, x_no_elements, y_no_elements, height = 0, 
+                 x_curve = False, y_curve = False, flat_mesh = True, 
+                 mesh_style = 'Tri', pos_x0 = 0, pos_y0 = 0):
         self.x_len = x_len
         self.y_len = y_len
         self.x_no_elements = x_no_elements
@@ -460,6 +462,8 @@ class MeshGenerator:
         self.mesh_style = mesh_style
         self.flat_mesh = flat_mesh
         self.height = height
+        self.pos_x0 = pos_x0
+        self.pos_y0 = pos_y0
         self.nodes = []
         self.elements = []
         # Make mesh 3D, if it is curved in one direction
@@ -488,64 +492,99 @@ class MeshGenerator:
         '''
         Building the mesh by first producing the points, and secondly the elements
         '''
-        # Length of one element
-        l_x = self.x_len / self.x_no_elements
-        l_y = self.y_len / self.y_no_elements
-        # Generating the nodes
-        node_number = 0 # node_number counter; node numbers start with 0
-        if self.flat_mesh == True:
-            for y_counter in range(self.y_no_elements + 1):
-                for x_counter in range(self.x_no_elements + 1):
-                    self.nodes.append([l_x*x_counter, l_y*y_counter])
-                    node_number += 1
-        else:
-            # a 3d-mesh will be generated; the meshing has to be done with a little calculation in andvance
-            r_OO_x = np.array([0, 0, 0])
-            r_OO_y = np.array([0, 0, 0])
-            if self.x_curve:
-                phi_x, r_x = self._curved_mesh_get_phi_r(self.height, self.x_len)
-                delta_phi_x = phi_x/self.x_no_elements
-                r_OO_x = np.array([0, 0, -r_x])
-            if self.y_curve:
-                phi_y, r_y = self._curved_mesh_get_phi_r(self.height, self.y_len)
-                delta_phi_y = phi_y/self.y_no_elements
-                r_OO_y = np.array([0, 0, -r_y])
-            # Einführen von Ortsvektoren, die Vektorkette zum Element geben:
-            r_OP_x = np.array([0, 0, 0])
-            r_OP_y = np.array([0, 0, 0])
-            r_OO   = np.array([self.x_len/2, self.y_len/2, self.height])
-            for y_counter in range(self.y_no_elements + 1):
-                for x_counter in range(self.x_no_elements + 1):
-                    if self.x_curve:
-                        phi = - phi_x/2 + delta_phi_x*x_counter
-                        r_OP_x = np.array([r_x*np.sin(phi), 0, r_x*np.cos(phi)])
-                    else:
-                        r_OP_x = np.array([- self.x_len/2 + l_x*x_counter, 0, 0])
-                    if self.y_curve:
-                        phi = - phi_y/2 + delta_phi_y*y_counter
-                        r_OP_y = np.array([0, r_y*np.sin(phi), r_y*np.cos(phi)])
-                    else:
-                        r_OP_y = np.array([0, - self.y_len/2 + l_y*y_counter, 0])
-                    r_OP = r_OP_x + r_OP_y + r_OO_x + r_OO_y + r_OO
-                    self.nodes.append([x for x in r_OP])
-        # ELEMENTS
-        # Building the elements which have to be tetrahedron
-        element_number = 0 # element_number counter; element numbers start with 0
-        for y_counter in range(self.y_no_elements):
-            for x_counter in range(self.x_no_elements):
-                # first the lower triangulars
-                first_node  = y_counter*(self.x_no_elements + 1) + x_counter + 0
-                second_node = y_counter*(self.x_no_elements + 1) + x_counter + 1
-                third_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
-                self.elements.append([first_node, second_node, third_node])
-                element_number += 1
-                # second the upper triangulars
-                first_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 1
-                second_node = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
-                third_node  = y_counter*(self.x_no_elements + 1) + x_counter + 1
-                self.elements.append([first_node, second_node, third_node])
-                element_number += 1
-        pass
+        
+        def build_tri():
+            '''
+            Builds a triangular mesh
+            '''
+                            
+            # Length of one element
+            l_x = self.x_len / self.x_no_elements
+            l_y = self.y_len / self.y_no_elements
+            # Generating the nodes
+            node_number = 0 # node_number counter; node numbers start with 0
+            if self.flat_mesh == True:
+                for y_counter in range(self.y_no_elements + 1):
+                    for x_counter in range(self.x_no_elements + 1):
+                        self.nodes.append([l_x*x_counter, l_y*y_counter])
+                        node_number += 1
+            else:
+                # a 3d-mesh will be generated; the meshing has to be done with a little calculation in andvance
+                r_OO_x = np.array([0, 0, 0])
+                r_OO_y = np.array([0, 0, 0])
+                if self.x_curve:
+                    phi_x, r_x = self._curved_mesh_get_phi_r(self.height, self.x_len)
+                    delta_phi_x = phi_x/self.x_no_elements
+                    r_OO_x = np.array([0, 0, -r_x])
+                if self.y_curve:
+                    phi_y, r_y = self._curved_mesh_get_phi_r(self.height, self.y_len)
+                    delta_phi_y = phi_y/self.y_no_elements
+                    r_OO_y = np.array([0, 0, -r_y])
+                # Einführen von Ortsvektoren, die Vektorkette zum Element geben:
+                r_OP_x = np.array([0, 0, 0])
+                r_OP_y = np.array([0, 0, 0])
+                r_OO   = np.array([self.x_len/2, self.y_len/2, self.height])
+                for y_counter in range(self.y_no_elements + 1):
+                    for x_counter in range(self.x_no_elements + 1):
+                        if self.x_curve:
+                            phi = - phi_x/2 + delta_phi_x*x_counter
+                            r_OP_x = np.array([r_x*np.sin(phi), 0, r_x*np.cos(phi)])
+                        else:
+                            r_OP_x = np.array([- self.x_len/2 + l_x*x_counter, 0, 0])
+                        if self.y_curve:
+                            phi = - phi_y/2 + delta_phi_y*y_counter
+                            r_OP_y = np.array([0, r_y*np.sin(phi), r_y*np.cos(phi)])
+                        else:
+                            r_OP_y = np.array([0, - self.y_len/2 + l_y*y_counter, 0])
+                        r_OP = r_OP_x + r_OP_y + r_OO_x + r_OO_y + r_OO
+                        self.nodes.append([x for x in r_OP])
+            # ELEMENTS
+            # Building the elements which have to be tetrahedron
+            element_number = 0 # element_number counter; element numbers start with 0
+            for y_counter in range(self.y_no_elements):
+                for x_counter in range(self.x_no_elements):
+                    # first the lower triangulars
+                    first_node  = y_counter*(self.x_no_elements + 1) + x_counter + 0
+                    second_node = y_counter*(self.x_no_elements + 1) + x_counter + 1
+                    third_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
+                    self.elements.append([first_node, second_node, third_node])
+                    element_number += 1
+                    # second the upper triangulars
+                    first_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 1
+                    second_node = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
+                    third_node  = y_counter*(self.x_no_elements + 1) + x_counter + 1
+                    self.elements.append([first_node, second_node, third_node])
+                    element_number += 1
+                
+        def build_quad():
+            '''
+            Builds a rectangular mesh
+            '''
+            delta_x = self.x_len / self.x_no_elements
+            delta_y = self.y_len / self.y_no_elements
+            
+            # nodes coordinates
+            for counter_y in range(self.y_no_elements+1):
+                for counter_x in range(self.x_no_elements+1):
+                    self.nodes.append([delta_x*counter_x + self.pos_x0, delta_y*counter_y + self.pos_y0])
+            
+            # node assignment to quadrilateral elements
+            for counter_y in range(self.y_no_elements):
+                for counter_x in range(self.x_no_elements):
+                    node1 = counter_x     + (counter_y - 0)*(self.x_no_elements + 1)
+                    node2 = counter_x + 1 + (counter_y - 0)*(self.x_no_elements + 1)
+                    node3 = counter_x + 1 + (counter_y + 1)*(self.x_no_elements + 1)
+                    node4 = counter_x     + (counter_y + 1)*(self.x_no_elements + 1)
+                    self.elements.append([node1, node2, node3, node4])
+
+                
+        mesh_type_dict = {"Tri": build_tri, 
+                          "Quad": build_quad}
+                          
+        mesh_type_dict[self.mesh_style]()
+
+
+
 
     def save_mesh(self, filename_nodes, filename_elements):
         '''
@@ -569,7 +608,15 @@ class MeshGenerator:
 
         with open(filename_elements, 'w') as savefile_elements: # Save elements
             # Header for the file:
-            savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
+            number_of_nodes = len(self.elements[0])
+            print("Number of nodes:", number_of_nodes)
+            if number_of_nodes == 3:
+                savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
+            elif number_of_nodes == 4:
+                savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + delimiter + 'node_4' + newline)
+            else:
+                print("Hier lief etwas falsch. Anzahl der Knoten pro Element konnte nicht bestimmt werden.")
+                    
             for elements in self.elements:
                 savefile_elements.write(delimiter.join(str(x) for x in elements) + newline)
 
