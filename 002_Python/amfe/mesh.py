@@ -609,7 +609,6 @@ class MeshGenerator:
         with open(filename_elements, 'w') as savefile_elements: # Save elements
             # Header for the file:
             number_of_nodes = len(self.elements[0])
-            print("Number of nodes:", number_of_nodes)
             if number_of_nodes == 3:
                 savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
             elif number_of_nodes == 4:
