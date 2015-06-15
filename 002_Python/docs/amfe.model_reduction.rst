@@ -1,14 +1,6 @@
 amfe.model_reduction package
 ============================
 
-Modules of the reduction package
---------------------------------
-
-.. automodule:: amfe.model_reduction.modal_derivatives
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------
