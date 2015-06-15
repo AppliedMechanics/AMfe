@@ -1,19 +1,19 @@
 How to run the AMfe Code
 ========================
 
-You need the following stuff installed: 
+You need the following stuff installed:
 
-- Python 3.4 or higher 
+- Python 3.4 or higher
 - numpy, scipy
 - `ParaView <http://www.paraview.org>`_ for Postprocessing
 - `gmsh <http://geuz.org/gmsh/>`_ for Preprocessing
 - Some Python-Packages in order to build this documentation
-	- sphinx
-	- numpydoc
+   - sphinx
+   - numpydoc
 
-For Python exist several ways how to install it on your computer. We recommend to install Anaconda. Anaconda is a Package manager and lets you install easily all additional packages and tools related to Python. 
+For Python exist several ways how to install it on your computer. We recommend to install Anaconda, which is a Package manager and lets you install easily all additional packages and tools related to Python.
 
-After installing the `Anaconda Manager <https://store.continuum.io/cshop/anaconda/>`_  run in your bash-console
+After installing the `Anaconda Manager <https://store.continuum.io/cshop/anaconda/>`_ (make sure, that you install the Python 3 version of it) run in your bash-console
 
 >>> conda install numpy
 >>> conda install scipy
@@ -22,20 +22,21 @@ After installing the `Anaconda Manager <https://store.continuum.io/cshop/anacond
 
 For a Matlab-like Development center we recommend `Spyder <http://spyder-ide.blogspot.de>`_. Spyder can also easily be installed via Anaconda:
 
->>> conda install spyder3
+>>> conda install spyder
 
 
+Getting into the code
+"""""""""""""""""""""
+For getting started and familiar with the code, we recommend to start with the examples. They show some cases that are working and are not too complicated. 
 
 
 General Notes on the amfe finite element code
-===============================================
+=============================================
+The amfe finite element toolbox has the goal to provide a fast to develop, simple and out of the box usable finite element library for use in research. Therefore the focus is on flexibility to adapt the code to new problems and to easily implement a new method and not on runtime performance.
 
-
-Meshing:
-----------
 
 Indexing:
-""""""""""""
+"""""""""
 
 There is a conflict in different ecosystems, which indexing style is better:
 starting a list with index 0 or with index 1. Both sides have different advantages and shortcomings; The main issue is, that the workflow in amfe has canges in indexing incorporated. They show up when the indexing style changes. So there are following indexing-ecosystems:
@@ -62,6 +63,13 @@ How to plot matrices in matplotlib:
 >>> plt.matshow(A)
 >>> plt.colorbar()
 >>> plt.set_cmap('jet') # 'jet' is default; others looking good are 'hot'
+
+Plot on log scales:
+>>> from matplotlib import pyplot as plt; import scipy as sp
+>>> x = np.arange(200)
+>>> plt.semilogy(x)
+>>> plt.semilogx(x)
+>>> plt.loglog(x)
 
 Check out more on http://matplotlib.org/examples/color/colormaps_reference.html
 

@@ -138,7 +138,7 @@ class Assembly():
 
         K = self._assemble_matrix(u, decorated_k_func)
         if self.save_stresses:
-            self.stress_list.append(element.S_voigt)
+            # self.stress_list.append(element.S_voigt)
             # compute the stress stuff...
             pass
         return K

@@ -103,11 +103,15 @@ class MechanicalSystem():
         Applies dirichlet-boundaries to the system.
 
         Parameters
-        -----------
-
+        ----------
         dirichlet_boundary_list : list
             list containing the dirichlet-boundary triples (DBT)
-            [DBT_1, DBT_2, DBT_3, ]
+
+            >>> [DBT_1, DBT_2, DBT_3, ]
+
+        Returns
+        -------
+        None
 
         Notes
         -----

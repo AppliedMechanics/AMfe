@@ -1,8 +1,8 @@
 amfe.model_reduction package
 ============================
 
-Submodules
-----------
+Modules of the reduction package
+--------------------------------
 
 .. automodule:: amfe.model_reduction.modal_derivatives
     :members:
