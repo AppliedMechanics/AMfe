@@ -18,32 +18,36 @@ from amfe import model_reduction as mor
 from model_u import *
 
 #%%
+expliicit_time_integration = False
 export_path = 'results/time_integration_1/time_integration'
 
-# time integration: reference
-my_integrator = amfe.NewmarkIntegrator(verbose=True)
-#my_integrator.delta_t = 0.01
-my_integrator.set_mechanical_system(my_system)
+if expliicit_time_integration:
+    # time integration: reference
+    my_integrator = amfe.NewmarkIntegrator(verbose=True)
+    #my_integrator.delta_t = 0.01
+    my_integrator.set_mechanical_system(my_system)
 
-q0 = sp.zeros(ndof)
-dq0 = sp.zeros(ndof)
-T = sp.arange(0, 3, 0.001)
-my_integrator.integrate_nonlinear_system(q0, dq0, T)
+    q0 = sp.zeros(ndof)
+    dq0 = sp.zeros(ndof)
+    T = sp.arange(0, 0.5, 0.001)
+    my_integrator.integrate_nonlinear_system(q0, dq0, T)
 
-my_system.export_paraview('results/reference_time_integration_2/reference')
+    my_system.export_paraview('results/reference_time_integration_2/reference')
 
 
-# POD
-u_list = []
-for u in my_system.u_output:
-    u_tmp = my_system.b_constraints.T.dot(u)
-    u_list.append(u_tmp.reshape(-1))
+    # POD
+    u_list = []
+    for u in my_system.u_output:
+        u_tmp = my_system.b_constraints.T.dot(u)
+        u_list.append(u_tmp.reshape(-1))
 
-u_list = sp.array(u_list).T
+    u_list = sp.array(u_list).T
+    sp.save('u_reference_2', u_list)
+else:
+    u_list = sp.load('u_reference.npy')
+
 U, sigma, V_pod = sp.linalg.svd(u_list)
 plt.semilogy(sigma)
-sp.save('u_reference_2', u_list)
-
 
 
 # System matrices
@@ -58,7 +62,20 @@ M = M.toarray()
 lambda_, V = sp.linalg.eigh(K, M)
 omega = sp.sqrt(lambda_)
 
-mor.principal_angles(V[:, :10], U[:,:10])
+theta_vm = mor.principal_angles(V[:, :10], U[:,:10])
+
+# krylov subspace
+b_unconstr = my_system.neumann_bc_class.boolean_force_matrix.toarray()
+b = my_system.b_constraints.T.dot(b_unconstr)
+V_kry = mor.krylov_subspace(M, K, b, omega=10*2*np.pi, no_of_moments=5)
+
+theta_kry = mor.principal_angles(V_kry, U[:, :10])
+plt.plot(theta_kry)
+
+# craig-bampton
+V_cb = mor.craig_bampton(M, K, b, no_of_modes=19)
+theta_cb = mor.principal_angles(V_cb, U[:, :20])
+plt.plot(theta_cb)
 
 
 

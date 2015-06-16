@@ -38,17 +38,17 @@ my_system.element_class_dict = element_class_dict
 my_system.load_mesh_from_gmsh(gmsh_input_file)
 # my_system.export_paraview(paraview_output_file)
 
-nodes_to_fix = my_system.mesh_class.boundary_line_list[3]
+nodes_to_fix = my_system.mesh_class.boundary_line_list[4]
 bottom_bounds_1 = [None, [amfe.node2total(i, 0) for i in nodes_to_fix], None]
 bottom_bounds_2 = [None, [amfe.node2total(i, 1) for i in nodes_to_fix], None]
 my_dirichlet_bounds = [bottom_bounds_1, bottom_bounds_2]
 my_system.apply_dirichlet_boundaries(my_dirichlet_bounds)
 
 
-top_bounds= [2, 3, 24, 25]
+top_bounds= my_system.mesh_class.boundary_line_list[1]
 
-neumann_bounds = [  [[amfe.node2total(i,0) for i in top_bounds], 'harmonic', (6E6, 5), None],
-                    [[amfe.node2total(i,1) for i in top_bounds], 'harmonic', (2E6, 10), None]]
+neumann_bounds = [  [[amfe.node2total(i,0) for i in top_bounds], 'harmonic', (6E6, 25), None],
+                    [[amfe.node2total(i,1) for i in top_bounds], 'harmonic', (2E6, 100), None]]
 my_system.apply_neumann_boundaries(neumann_bounds)
 
 

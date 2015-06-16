@@ -282,7 +282,7 @@ def krylov_subspace(M, K, b, omega = 0, no_of_moments=3):
     return V
 
 
-def craig_bampton(M, K, b, no_of_modes=5):
+def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     '''
     Computes the Craig-Bampton basis for the System M and K with the input Matrix b.
 
@@ -299,6 +299,11 @@ def craig_bampton(M, K, b, no_of_modes=5):
 
     Returns
     -------
+    V : array
+        Basis constisting of static displacement modes and internal vibration modes
+
+    if one_basis=True is chosen:
+
     V_static : ndarray
         Static displacement modes corresponding to the input vectors b with
         V_static[:,i] being the corresponding static displacement vector to b[:,i].
@@ -351,7 +356,10 @@ def craig_bampton(M, K, b, no_of_modes=5):
     indexlist = np.nonzero(np.round(omega - 1, 3))[0]
     omega = np.sqrt(omega[indexlist])
     V_dynamic = V_dynamic[:, indexlist]
-    return V_static, V_dynamic[:, :no_of_modes], omega[:no_of_modes]
+    if one_basis:
+        return sp.hstack((V_static, V_dynamic))
+    else:
+        return V_static, V_dynamic[:, :no_of_modes], omega[:no_of_modes]
 
 
 def pod_basis(u_series):
