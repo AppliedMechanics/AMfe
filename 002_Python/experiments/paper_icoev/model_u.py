@@ -47,8 +47,8 @@ my_system.apply_dirichlet_boundaries(my_dirichlet_bounds)
 
 top_bounds= my_system.mesh_class.boundary_line_list[1]
 
-neumann_bounds = [  [[amfe.node2total(i,0) for i in top_bounds], 'harmonic', (6E6, 25), None],
-                    [[amfe.node2total(i,1) for i in top_bounds], 'harmonic', (2E6, 100), None]]
+neumann_bounds = [  [[amfe.node2total(i,0) for i in top_bounds], 'harmonic', (6E6, 3), None],
+                    [[amfe.node2total(i,1) for i in top_bounds], 'harmonic', (2E6, 6), None]]
 my_system.apply_neumann_boundaries(neumann_bounds)
 
 
