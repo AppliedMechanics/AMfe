@@ -16,6 +16,18 @@ sys.path.insert(0,'../..')
 import amfe
 
 
+def save_displacement(mechanical_system, filename):
+    '''
+    Save the displacement of the mechanical system as .npy-file to filename
+    
+    '''
+    u_list = []
+    for u in mechanical_system.u_output:
+        u_tmp = mechanical_system.b_constraints.T.dot(u)
+        u_list.append(u_tmp.reshape(-1))
+    u_list = sp.array(u_list).T
+    sp.save(filename, u_list)
+
 
 
 # für den Bogen
@@ -48,7 +60,7 @@ my_system.apply_dirichlet_boundaries(my_dirichlet_bounds)
 top_bounds= my_system.mesh_class.boundary_line_list[1]
 
 neumann_bounds = [  [[amfe.node2total(i,0) for i in top_bounds], 'harmonic', (6E6, 3), None],
-                    [[amfe.node2total(i,1) for i in top_bounds], 'harmonic', (2E6, 6), None]]
+                    [[amfe.node2total(i,1) for i in top_bounds], 'harmonic', (3E6, 6), None]]
 my_system.apply_neumann_boundaries(neumann_bounds)
 
 

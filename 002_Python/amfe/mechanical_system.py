@@ -307,8 +307,6 @@ class ReducedSystem(MechanicalSystem):
         self.V = V_basis
 
     def K_and_f_global(self, u):
-        if not self.V:
-            raise Exception('No reduction basis provided. Please give the reduced system a basis. ')
         u_full = self.V.dot(u)
         self._K_unreduced, self._f_unreduced = MechanicalSystem.K_and_f_global(self, u_full)
         self._K_reduced = self.V.T.dot(self._K_unreduced.dot(self.V))
@@ -317,28 +315,18 @@ class ReducedSystem(MechanicalSystem):
 
 
     def K_global(self, u):
-        if not self.V:
-            raise Exception('No reduction basis provided. Please give the reduced system a basis. ')
         return self.V.T.dot(MechanicalSystem.K_global(self, self.V.dot(u)).dot(self.V))
 
     def f_ext_global(self, u, du, t):
-        if not self.V:
-            raise Exception('No reduction basis provided. Please give the reduced system a basis. ')
         return self.V.T.dot(MechanicalSystem.f_ext_global(self, self.V.dot(u), du, t))
 
     def f_int_global(self, u):
-        if not self.V:
-            raise Exception('No reduction basis provided. Please give the reduced system a basis. ')
         return self.V.T.dot(MechanicalSystem.f_int_global(self, self.V.dot(u)))
 
     def M_global(self):
-        if not self.V:
-            raise Exception('No reduction basis provided. Please give the reduced system a basis. ')
         return self.V.T.dot(MechanicalSystem.M_global(self).dot(self.V))
 
     def write_timestep(self, t, u):
-        if not self.V:
-            raise Exception('No reduction basis provided. Please give the reduced system a basis. ')
         MechanicalSystem.write_timestep(self, t, self.V.dot(u))
 
     def K_unreduced(self, u=None):

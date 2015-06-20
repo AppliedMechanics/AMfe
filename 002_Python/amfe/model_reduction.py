@@ -357,7 +357,7 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     omega = np.sqrt(omega[indexlist])
     V_dynamic = V_dynamic[:, indexlist]
     if one_basis:
-        return sp.hstack((V_static, V_dynamic))
+        return sp.hstack((V_static, V_dynamic[:, :no_of_modes]))
     else:
         return V_static, V_dynamic[:, :no_of_modes], omega[:no_of_modes]
 
