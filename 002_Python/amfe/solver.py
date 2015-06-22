@@ -234,7 +234,7 @@ class NewmarkIntegrator():
             if write_flag:
                 # writing to the mechanical system, if possible
                 if self.mechanical_system:
-                    self.mechanical_system.write_timestep(time_range[time_index], q)
+                    self.mechanical_system.write_timestep(t, q)
                 else:
                     q_global.append(q.copy())
                     dq_global.append(dq.copy())
