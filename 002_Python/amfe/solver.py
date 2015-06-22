@@ -176,7 +176,8 @@ class NewmarkIntegrator():
         ddq = linalg.spsolve(self.M, self.f_non(q))
         no_newton_convergence_flag = False
         while time_index < len(time_range):
-            if t + self.delta_t >= time_range[time_index]:
+            # time tolerance fitting...
+            if t + self.delta_t + 1E-8 >= time_range[time_index]:
                 dt = time_range[time_index] - t
                 if dt < 1E-8:
                     dt = 1E-7
@@ -233,7 +234,7 @@ class NewmarkIntegrator():
             if write_flag:
                 # writing to the mechanical system, if possible
                 if self.mechanical_system:
-                    self.mechanical_system.write_timestep(t, q)
+                    self.mechanical_system.write_timestep(time_range[time_index], q)
                 else:
                     q_global.append(q.copy())
                     dq_global.append(dq.copy())

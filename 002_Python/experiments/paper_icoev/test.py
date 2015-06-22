@@ -78,6 +78,10 @@ theta_cb = mor.principal_angles(V_cb, U[:, :20])
 plt.plot(theta_cb)
 
 
+#%%
+# Scatter plot 3d
+
+
 
 
 
