@@ -145,12 +145,26 @@ class Mesh:
         TODO
 
         '''
+        mesh_type_dict = {3: "Tri3", 
+                          4: "Quad4"}        
+        
+        
+        print('Reading elements from csv...  ', end="")
         self.elements = np.genfromtxt(filename, delimiter = ',', dtype = int, skip_header = 1)
         if explicit_node_numbering:
             self.elements = self.elements[:,1:]
-        print("No Element type specified; Guessed from the nodes list, that it's a 'Tri3' Element")
-        self.elements_type = ['Tri3' for i in self.elements]
+        (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
+        try:
+            mesh_type = mesh_type_dict[no_of_nodes_per_ele]
+        except:
+            print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
+            raise
+
+        print('Element type is {0}...  '.format(mesh_type), end="")
+        self.elements_type = [mesh_type for i in self.elements]
         self._update_mesh_props()
+        
+        print('Reading elements successful.')
 
 
     def import_msh(self, filename, flat_mesh=True):
@@ -555,6 +569,7 @@ class MeshGenerator:
                     third_node  = y_counter*(self.x_no_elements + 1) + x_counter + 1
                     self.elements.append([first_node, second_node, third_node])
                     element_number += 1
+            
                 
         def build_quad():
             '''
@@ -582,6 +597,7 @@ class MeshGenerator:
                           "Quad": build_quad}
                           
         mesh_type_dict[self.mesh_style]()
+        print('Mesh was generated: mesh_style =', self.mesh_style)
 
 
 
