@@ -18,12 +18,13 @@ element_mapping_list = [
     ['Tri6',            9, 22, 6, 'Quadratic triangle / 6 node second order triangle'],
     ['Tri3',            2,  5, 3, 'Straight triangle / 3 node first order triangle'],
     ['Tri10',           21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
+    ['Quad4',           3, 0, 4, 'Bilinear rectangle / 4 node first order rectangle'],
     ['straight_line',   1,  3, 2, 'Straight line composed of 2 nodes'],
     ['quadratic_line',  8, 21, 3, 'Quadratic edge/line composed of 3 nodes']
 ]
 
 # actual set of implemented elements
-element_set = {'Tri6', 'Tri3'}
+element_set = {'Tri6', 'Tri3', 'Quad4'}
 line_set = {'straight_line', 'quadratic_line'}
 
 #
@@ -152,9 +153,9 @@ class Mesh:
         print('Reading elements from csv...  ', end="")
         self.elements = np.genfromtxt(filename, delimiter = ',', dtype = int, skip_header = 1)
         if explicit_node_numbering:
-            self.elements = self.elements[:,1:]
-        (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
+            self.elements = self.elements[:,1:]       
         try:
+            (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
             mesh_type = mesh_type_dict[no_of_nodes_per_ele]
         except:
             print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
@@ -162,7 +163,7 @@ class Mesh:
 
         print('Element type is {0}...  '.format(mesh_type), end="")
         self.elements_type = [mesh_type for i in self.elements]
-        self._update_mesh_props()
+        self._update_mesh_props() 
         
         print('Reading elements successful.')
 

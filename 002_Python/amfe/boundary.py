@@ -19,7 +19,7 @@ class DirichletBoundary():
     The Master-Slave-List is organized as follows:
 
     '''
-    def __init__(self, ndof_full_system, master_slave_list=None):
+    def __init__(self, ndof_full_system, master_slave_list=[]):
         self.ndof_full_system = ndof_full_system
         self.master_slave_list = master_slave_list
         pass
@@ -53,6 +53,9 @@ class DirichletBoundary():
         Wichtig: Für die Dirichlet-Randbedingungen werden Freiheitsgrade des globalen Systems und nicht die Knotenfreiheitsgrade berücksichtigt. Die Indexwerte der Knoten müssen stets in DOFs des globalen Sytems umgerechnet werden
         '''
         B = sp.sparse.eye(self.ndof_full_system).tocsr()
+        
+        if self.master_slave_list == []:  # no boundary conditions
+            return B
         B_tmp = B*0
         global_slave_node_list = np.array([], dtype=int)
         global_master_node_list = np.array([], dtype=int)

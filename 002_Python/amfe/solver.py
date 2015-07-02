@@ -338,3 +338,10 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
                                 'Residuum:', abs_res)
 
         mechanical_system.write_timestep(force_factor, u)
+        
+        
+        
+def give_mass_and_stiffness(mechanical_system):
+    K = mechanical_system.K_global()
+    return K
+        

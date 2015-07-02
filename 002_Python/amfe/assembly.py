@@ -54,28 +54,7 @@ class Assembly():
         self.save_stresses = False
         pass
 
-    def assemble_m(self, u=None):
-        '''
-        Assembles the mass matrix of the given mesh and element.
 
-        Parameters
-        -----------
-        u : ndarray
-            nodal displacement of the nodes in Voigt-notation
-
-        Returns
-        --------
-        M : ndarray
-            unconstrained assembled mass matrix in sparse matrix coo-format.
-
-        Examples
-        ---------
-        TODO
-        '''
-        def decorated_m_func(X, u_local, k, global_element_indices=None):
-            return self.element_class_dict[self.mesh.elements_type[k]].m_int(X, u_local)
-
-        return self._assemble_matrix(u, decorated_m_func)
 
     def _assemble_matrix(self, u, decorated_matrix_func):
         '''
@@ -93,9 +72,9 @@ class Assembly():
             u = np.zeros(self.mesh.no_of_dofs)
         # loop over all elements
         for k, element in enumerate(self.mesh.elements):
-            # coordinates of element
+            # coordinates of element in 1-D array
             X = np.array([self.mesh.nodes[i] for i in element]).reshape(-1)
-            # global coordinates of element
+            # corresponding global coordinates of element in 1-D array
             global_element_indices = np.array([(np.arange(node_dof) + node_dof*i)  for i in element]).reshape(-1)
             u_local = u[global_element_indices]
             # evaluation of element matrix
@@ -110,6 +89,7 @@ class Assembly():
         vals_global_array = np.array(self.vals_global).reshape(-1)
         Matrix_coo = sp.sparse.coo_matrix((vals_global_array, (row_global_array, col_global_array)), dtype=float)
         return Matrix_coo
+
 
     def assemble_k(self, u=None):
         '''
@@ -142,6 +122,30 @@ class Assembly():
             # compute the stress stuff...
             pass
         return K
+  
+      
+    def assemble_m(self, u=None):
+        '''
+        Assembles the mass matrix of the given mesh and element.
+
+        Parameters
+        -----------
+        u : ndarray
+            nodal displacement of the nodes in Voigt-notation
+
+        Returns
+        --------
+        M : ndarray
+            unconstrained assembled mass matrix in sparse matrix coo-format.
+
+        Examples
+        ---------
+        TODO
+        '''
+        def decorated_m_func(X, u_local, k, global_element_indices=None):
+            return self.element_class_dict[self.mesh.elements_type[k]].m_int(X, u_local)
+
+        return self._assemble_matrix(u, decorated_m_func)        
 
 
     def assemble_f(self, u):

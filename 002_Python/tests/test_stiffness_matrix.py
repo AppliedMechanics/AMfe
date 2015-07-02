@@ -37,7 +37,8 @@ def jacobian(func, X, u):
 
 # This is exactly the element in Felippa's notes
 Tri3 = False
-Tri6 = True
+Tri6 = False
+Quad4 = True
 if Tri3:
     x = np.array([0,0,3,1,2,2.])
     u = np.array([0,0,-0.5,0,0,0.])
@@ -50,6 +51,11 @@ elif Tri6:
     element_tri6 = amfe.Tri6(E_modul=60, poisson_ratio=1/4)
     # u *= 0
     my_element = element_tri6
+elif Quad4:
+    x = np.array([0,0,1,0,1,1,0,1.])
+    u = np.array([0,0,0,0,0,0,0,0.])
+    element_quad4 = amfe.Quad4(E_modul=1, poisson_ratio=0)
+    my_element = element_quad4
 else: print('Kein Element ausgewählt')
 
 K = my_element.k_int(x, u)

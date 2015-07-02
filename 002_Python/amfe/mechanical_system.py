@@ -16,7 +16,7 @@ from amfe.boundary import *
 
 # Default values:
 kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'density' : 1E4}
-element_class_dict = {'Tri3' : Tri3(**kwargs), 'Tri6' : Tri6(**kwargs)}
+element_class_dict = {'Tri3' : Tri3(**kwargs), 'Tri6' : Tri6(**kwargs), 'Quad4': Quad4(**kwargs)}
 
 
 
@@ -100,7 +100,7 @@ class MechanicalSystem():
 
 
 
-    def apply_dirichlet_boundaries(self, dirichlet_boundary_list):
+    def apply_dirichlet_boundaries(self, dirichlet_boundary_list=[]):
         '''
         Applies dirichlet-boundaries to the system.
 
@@ -248,7 +248,8 @@ class MechanicalSystem():
         '''Return the global tangential stiffness matrix with dirichlet boundary conditions imposed'''
         if u is None:
             u = np.zeros(self.b_constraints.shape[-1])
-        _K = self.assembly_class.assemble_k(self.b_constraints.dot(u))
+        temp = self.b_constraints.dot(u)
+        _K = self.assembly_class.assemble_k(temp)
         self._K_bc = self.b_constraints.T.dot(_K.dot(self.b_constraints))
         return self._K_bc
 
