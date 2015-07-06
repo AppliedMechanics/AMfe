@@ -37,9 +37,9 @@ def jacobian(func, X, u):
 
 
 # This is exactly the element in Felippa's notes
-Tri3 = False
+Tri3 = True
 Tri6 = False
-Quad4 = True
+Quad4 = False
 
 
 if Tri3:

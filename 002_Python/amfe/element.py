@@ -435,8 +435,8 @@ class Quad4(Element):
     '''    
     plane_stress = True
  
-    def __init__(self, E_modul=1., poisson_ratio=0., element_thickness=1., 
-                 density=1., plane_stress = True):
+    def __init__(self, E_modul=1.0, poisson_ratio=0., element_thickness=1.0, 
+                 density=1.0, plane_stress = True):
         '''
         Definition der Materialgrößen und Dicke, da es sich um 2D-Elemente handelt
         '''

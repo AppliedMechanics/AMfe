@@ -155,7 +155,7 @@ class Mesh:
         if explicit_node_numbering:
             self.elements = self.elements[:,1:]       
         try:
-            (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
+            (no_of_ele, no_of_nodes_per_ele) = self.elements.shape # Das macht noch Aerger, wenn das System aus nur einem Element besteht
             mesh_type = mesh_type_dict[no_of_nodes_per_ele]
         except:
             print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
@@ -572,7 +572,7 @@ class MeshGenerator:
                     element_number += 1
             
                 
-        def build_quad():
+        def build_quad4():
             '''
             Builds a rectangular mesh
             '''
@@ -595,7 +595,7 @@ class MeshGenerator:
 
                 
         mesh_type_dict = {"Tri": build_tri, 
-                          "Quad": build_quad}
+                          "Quad4": build_quad4}
                           
         mesh_type_dict[self.mesh_style]()
         print('Mesh was generated: mesh_style =', self.mesh_style)
