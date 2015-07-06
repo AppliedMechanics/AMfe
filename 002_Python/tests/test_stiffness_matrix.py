@@ -10,6 +10,7 @@ crosschecked by a finite difference approximation.
 
 import numpy as np
 import scipy as sp
+import time
 
 # make amfe running
 import sys
@@ -39,6 +40,8 @@ def jacobian(func, X, u):
 Tri3 = False
 Tri6 = False
 Quad4 = True
+
+
 if Tri3:
     x = np.array([0,0,3,1,2,2.])
     u = np.array([0,0,-0.5,0,0,0.])
@@ -58,17 +61,22 @@ elif Quad4:
     my_element = element_quad4
 else: print('Kein Element ausgewählt')
 
-K = my_element.k_int(x, u)
-my_element.f_int(x, u)
-el = my_element
 
-K_finite_diff = jacobian(el.f_int, x, u)
+t1 = time.time()
+K = my_element.k_int(x, u)
+t2 = time.time() - t1
+print('Benötigte Zeit zum Aufstellen der Elementsteifigkeitsmatrix: {0}'.format(t2))
+
+if not Quad4:
+    my_element.f_int(x, u)
+    el = my_element
+    K_finite_diff = jacobian(el.f_int, x, u)
 
 #print('Difference between analytical and approximated tangential stiffness matrix')
 #print(K - K_finite_diff)
 
-print('Maximum absolute deviation:', np.max(abs(K - K_finite_diff)))
-print('Maximum relative deviation:', np.max(abs(K - K_finite_diff))/np.max(abs(K)))
+    print('Maximum absolute deviation:', np.max(abs(K - K_finite_diff)))
+    print('Maximum relative deviation:', np.max(abs(K - K_finite_diff))/np.max(abs(K)))
 
 
 M = my_element.m_int(x, u)

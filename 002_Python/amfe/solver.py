@@ -343,5 +343,6 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         
 def give_mass_and_stiffness(mechanical_system):
     K = mechanical_system.K_global()
-    return K
+    M = mechanical_system.M_global()
+    return M, K
         

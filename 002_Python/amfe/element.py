@@ -136,7 +136,26 @@ class Element():
 
         '''
         return self._m_int(X, u)
+        
+        
+    def k_and_m_int(self, X, u):
+        '''
+        Returns the stiffness and mass matrix of the Element.
 
+        Parameters
+        -----------
+        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
+                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+
+        u :         nodal displacements given in Voigt notation
+
+        Returns
+        --------
+        m_int :     The consistent mass matrix of the element
+                    (numpy.ndarray of dimension (ndim,ndim))
+
+        '''
+        return self._k_and_m_int(X, u)
 
 #@autojit
 class Tri3(Element):
@@ -439,7 +458,7 @@ class Quad4(Element):
     def _compute_tensors(self, X, u):
         pass
               
-    def _k_int(self, X, u):
+    def _k_and_m_int(self, X, u):
         
         def gauss_quadrature(option):
             '''    
@@ -528,10 +547,26 @@ class Quad4(Element):
                                     gauss_weights[i_gp]*np.linalg.det(jac))
             self.m_el = self.m_el + (self.t*self.rho*N.T.dot(N)*
                                     gauss_weights[i_gp]*np.linalg.det(jac))
+
+        # Make symmetric (because of round-off errors)      
+        self.k_el = 1/2*(self.k_el+self.k_el.T)
+        self.m_el = 1/2*(self.m_el+self.m_el.T)       
+        return self.k_el, self.m_el
+
+    def _k_int(self, X, u):
+        k_el, m_el = self._k_and_m_int(X, u)     
+        return k_el
+
+    def _m_int(self, X, u):
+        k_el, m_el = self._k_and_m_int(X, u)     
+        return m_el
+
+
         
-        return self.k_el
-        
-        
+    def _f_int(self, X, u):
+        print('The function is not implemented yet...')        
+        pass
+
         
         
         
