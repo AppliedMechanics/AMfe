@@ -31,7 +31,7 @@ class NewmarkIntegrator():
     This integration scheme is an unconditionally stable implicit nonlinear integration scheme. The unconditional stabiltiy refers to the stability of the solution itself, not on the solutin procedure. With a too tight tolerance (eps > 1E8) the solution might not converge, as the solution procedure can not lower the residual below a threshold that's higher than the eps. In general the solution should converge in less than ten iteration steps.
 
     Examples
-    ---------
+    --------
     TODO
 
     References:

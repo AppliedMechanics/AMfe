@@ -17,7 +17,9 @@ from amfe.boundary import *
 # Default values:
 #kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'density' : 1E4}
 kwargs = {}
-element_class_dict = {'Tri3' : Tri3(**kwargs), 'Tri6' : Tri6(**kwargs), 'Quad4': Quad4(**kwargs)}
+element_class_dict = {'Tri3' : Tri3(**kwargs),
+                      'Tri6' : Tri6(**kwargs),
+                      'Quad4': Quad4(**kwargs)}
 
 
 
@@ -41,7 +43,7 @@ class MechanicalSystem():
     The element_class_dict is the key for using multiple elements in one mesh.
     '''
 
-    def __init__(self):
+    def __init__(self, element_class_dict=element_class_dict):
         self.T_output = []
         self.u_output = []
         self.element_class_dict = element_class_dict
@@ -97,7 +99,7 @@ class MechanicalSystem():
         self.element_list = self.mesh_class.elements.copy()
         self.ndof_global = self.node_list.size
         self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
-        
+
 
 
 

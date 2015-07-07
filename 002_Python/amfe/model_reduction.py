@@ -294,9 +294,12 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
         Stiffness matrix of the system.
     b : ndarray
         Input vector of the system
-    no_of_modes : int
-        number of internal vibration modes for the reduction of the system
-
+    no_of_modes : int, optional
+        Number of internal vibration modes for the reduction of the system.
+        Default is 5.
+    one_basis : bool, optional
+        Flag for setting, if one Craig-Bampton basis should be returned or if
+        the static and the dynamic basis is chosen separately
     Returns
     -------
     V : array
@@ -366,6 +369,7 @@ def pod_basis(u_series):
     '''
     Compute the pod basis for the series of displacements u.
 
+    Attention! this method is not implemented yet!
     '''
     pass
 

@@ -12,7 +12,7 @@ except ImportError:
 
 config = {
     'description': 'Finite Element Code for simple cases',
-    'author': 'My Name',
+    'author': 'Johannes Rutzmoser',
     'url': 'No URL provided yet',
     'download_url': 'Where to download it.',
     'author_email': 'johannes.rutzmoser@tum.de',
