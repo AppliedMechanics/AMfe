@@ -89,6 +89,7 @@ class Mesh:
         # element stuff
         self.no_of_elements = len(self.elements)
         self.no_of_element_nodes = len(self.elements[0])
+        self.list_dof = np.arange(self.no_of_dofs).reshape((self.no_of_dofs,-1))
 
     def read_nodes_from_csv(self, filename, node_dof=2, explicit_node_numbering=False):
         '''
@@ -124,6 +125,7 @@ class Mesh:
         if explicit_node_numbering:
             self.nodes = self.nodes[:,1:]
         # self._update_mesh_props()
+            
 
     def read_elements_from_csv(self, filename, explicit_node_numbering=False):
         '''Imports the element list from a csv file.
@@ -152,14 +154,12 @@ class Mesh:
         
         print('Reading elements from csv...  ', end="")
         self.elements = np.genfromtxt(filename, delimiter = ',', dtype = int, skip_header = 1)
+        if self.elements.ndim == 1: # Wenn nur genau ein Element vorliegt
+            self.elements = np.array([self.elements])
         if explicit_node_numbering:
             self.elements = self.elements[:,1:]       
         try:
-            if self.elements.ndim == 1: # Wenn nur genau ein Element vorliegt
-                no_of_ele = 1
-                no_of_nodes_per_ele = len(self.elements)
-            else:
-                (no_of_ele, no_of_nodes_per_ele) = self.elements.shape 
+            (no_of_ele, no_of_nodes_per_ele) = self.elements.shape 
             mesh_type = mesh_type_dict[no_of_nodes_per_ele]
         except:
             print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
