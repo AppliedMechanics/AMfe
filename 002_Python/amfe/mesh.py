@@ -18,7 +18,7 @@ element_mapping_list = [
     ['Tri6',            9, 22, 6, 'Quadratic triangle / 6 node second order triangle'],
     ['Tri3',            2,  5, 3, 'Straight triangle / 3 node first order triangle'],
     ['Tri10',           21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
-    ['Quad4',           3, 0, 4, 'Bilinear rectangle / 4 node first order rectangle'],
+    ['Quad4',           3, 0, 4, 'Bilinear rectangle / 4 node first order rectangle'], # hier noch vtk-Key heraussuchen
     ['straight_line',   1,  3, 2, 'Straight line composed of 2 nodes'],
     ['quadratic_line',  8, 21, 3, 'Quadratic edge/line composed of 3 nodes']
 ]
@@ -155,7 +155,11 @@ class Mesh:
         if explicit_node_numbering:
             self.elements = self.elements[:,1:]       
         try:
-            (no_of_ele, no_of_nodes_per_ele) = self.elements.shape # Das macht noch Aerger, wenn das System aus nur einem Element besteht
+            if self.elements.ndim == 1: # Wenn nur genau ein Element vorliegt
+                no_of_ele = 1
+                no_of_nodes_per_ele = len(self.elements)
+            else:
+                (no_of_ele, no_of_nodes_per_ele) = self.elements.shape 
             mesh_type = mesh_type_dict[no_of_nodes_per_ele]
         except:
             print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
