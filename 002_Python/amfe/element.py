@@ -451,7 +451,7 @@ class Quad4(Element):
             self.C = E_modul/(1-poisson_ratio**2)*np.array(
                              [[1, poisson_ratio, 0],
                               [poisson_ratio, 1, 0],
-                              [0, 0, (1-poisson_ratio) / 2]])
+                              [0, 0, (1-poisson_ratio)/2]])
         else: # Ebene Dehnung
             print('Ebene Dehnung noch nicht implementiert')
 

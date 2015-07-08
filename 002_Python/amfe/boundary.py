@@ -20,8 +20,8 @@ class DirichletBoundary():
 
     '''
     def __init__(self, ndof_full_system, master_slave_list=[]):
-        self.ndof_full_system = ndof_full_system
-        self.master_slave_list = master_slave_list
+        self.ndof_full_system = ndof_full_system    # number of all dofs of the full system without boundary conditions
+        self.master_slave_list = master_slave_list  # boundary list
         pass
 
 
