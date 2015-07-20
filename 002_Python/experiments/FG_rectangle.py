@@ -27,8 +27,8 @@ my_mesh_generator = amfe.MeshGenerator(x_len=x_len, y_len=y_len,
                                        pos_x0=pos_x0, pos_y0=pos_y0,
                                        mesh_style='Quad4')
 my_mesh_generator.build_mesh()
-my_mesh_generator.save_mesh('../meshes/selbstgebaut_quad/nodes.csv',
-                            '../meshes/selbstgebaut_quad/elements.csv')
+my_mesh_generator.save_mesh('./meshes/selbstgebaut_quad/nodes.csv',
+                            './meshes/selbstgebaut_quad/elements.csv')
 
 
 #%% Building the mechanical system
@@ -37,8 +37,8 @@ my_mesh_generator.save_mesh('../meshes/selbstgebaut_quad/nodes.csv',
 my_system = amfe.MechanicalSystem()
 
 # Load mesh
-my_system.load_mesh_from_csv('../meshes/selbstgebaut_quad/nodes.csv',
-                             '../meshes/selbstgebaut_quad/elements.csv')
+my_system.load_mesh_from_csv('./meshes/selbstgebaut_quad/nodes.csv',
+                             './meshes/selbstgebaut_quad/elements.csv')
 
 
 #dirichlet_boundary conditions
@@ -110,9 +110,9 @@ def plot_mesh_Quad4(elements, coord, plot_no_of_ele=False, plot_nodes=False,
     for i_ele in range(len(elements)):
 
         nodes = ele_list_plot[i_ele, :]  # Node number of one element
-        plt.plot(coord[nodes*2], coord[nodes*2+1], color=p_col)
+        plt.plot(coord[nodes*2], coord[nodes*2+1], color=p_col) # Plot elements
 
-        # Plot number of element in each element if plot_no_of_ele = True
+        # Plot number of element in each element if plot_no_of_ele == True
         if plot_no_of_ele:
             dof1 = nodes[0]*2+np.array([0, 1])
             dof2 = nodes[2]*2+np.array([0, 1])
@@ -120,10 +120,11 @@ def plot_mesh_Quad4(elements, coord, plot_no_of_ele=False, plot_nodes=False,
             plt.text(pos_of_text[0], pos_of_text[1], i_ele, color=p_col,
                      horizontalalignment='center', verticalalignment='center')
 
+    # Plot the nodes of the mesh if plot_nodes == True
     if plot_nodes:
         plot_nodes_Quad4(coord, no_of_fig=no_of_fig, p_title=p_title)
 
-    # Plot properties
+    # Further properties of plot
     plt.axis('equal')
     plt.title(p_title)
     plt.hold(True)

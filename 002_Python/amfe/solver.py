@@ -337,12 +337,26 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
             if verbose: print('Stufe', force_factor, 'Iteration Nr.', n_iter, \
                                 'Residuum:', abs_res)
 
-        mechanical_system.write_timestep(force_factor, u)
-        
-        
-        
+        mechanical_system.write_timestep(force_factor, u)     
+
+
 def give_mass_and_stiffness(mechanical_system):
+    '''
+    Determine mass and stiffness matrix of a mechanical system
+
+    Parameters
+    ----------
+    mechanical_system : MechanicalSystem
+        Instance of the class MechanicalSystem
+
+    Returns
+    -------
+    M : ndarray
+        Mass matrix of the mechanical system
+    K : ndarray
+        Stiffness matrix of the mechanical system
+    '''
+
     K = mechanical_system.K_global()
     M = mechanical_system.M_global()
     return M, K
-        
