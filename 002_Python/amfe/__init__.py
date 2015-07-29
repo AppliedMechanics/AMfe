@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Module for advaned nonlinear finite element analysis developed at the Chair for Applied Mechanics, Technische Universität München.
+Module for advanced nonlinear finite element analysis. This software is developed and maintained at the Chair for Applied Mechanics, Technische Universität München.
 
 Authors:
-Johannes Rutzmoser
-Fabian Gruber
-
+Johannes Rutzmoser, Fabian Gruber
 """
 
 import pyximport

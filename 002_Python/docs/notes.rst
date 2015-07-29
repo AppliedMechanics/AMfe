@@ -3,13 +3,13 @@ How to run the AMfe Code
 
 You need the following stuff installed:
 
-- Python 3.4 or higher
-- numpy, scipy
+- `Python 3.4 <http://www.python.org>`_ or higher
+- `numpy, scipy <http://www.scipy.org>`_
 - `ParaView <http://www.paraview.org>`_ for Postprocessing
 - `gmsh <http://geuz.org/gmsh/>`_ for Preprocessing
 - Some Python-Packages in order to build this documentation
-   - sphinx
-   - numpydoc
+   - `sphinx <http://www.sphinx-doc.org/>`_
+   - `numpydoc <https://pypi.python.org/pypi/numpydoc>`_
 
 For Python exist several ways how to install it on your computer. We recommend to install Anaconda, which is a Package manager and lets you install easily all additional packages and tools related to Python.
 
@@ -32,14 +32,14 @@ For getting started and familiar with the code, we recommend to start with the e
 
 General Notes on the amfe finite element code
 =============================================
-The amfe finite element toolbox has the goal to provide a fast to develop, simple and out of the box usable finite element library for use in research. Therefore the focus is on flexibility to adapt the code to new problems and to easily implement a new method and not on runtime performance.
+The amfe finite element toolbox has the goal to provide a fast to develop, simple and out of the box usable finite element library for use in research. Therefore the focus is on flexibility to adapt the code to new problems and to easily implement a new method and not on runtime performance. In the future, maybe some element formulations should be implemented in a fast, compiled language as `Cython <http://www.cython.org>`_, FORTRAN or C. By now, the amfe code is fully written in Python. 
 
 
 Indexing:
 """""""""
 
 There is a conflict in different ecosystems, which indexing style is better:
-starting a list with index 0 or with index 1. Both sides have different advantages and shortcomings; The main issue is, that the workflow in amfe has canges in indexing incorporated. They show up when the indexing style changes. So there are following indexing-ecosystems:
+starting a list with index 0 or with index 1. Both sides have different advantages and shortcomings; The main issue is, that the workflow in amfe has changes in indexing incorporated. They show up when the indexing style changes. So there are following indexing-ecosystems:
 
 Index starts with 0:
 
@@ -65,10 +65,14 @@ How to plot matrices in matplotlib:
 >>> plt.set_cmap('jet') # 'jet' is default; others looking good are 'hot'
 
 Plot on log scales:
+
 >>> from matplotlib import pyplot as plt; import scipy as sp
 >>> x = np.arange(200)
+>>> # plot y with logscale
 >>> plt.semilogy(x)
+>>> # plot x with logscale
 >>> plt.semilogx(x)
+>>> # plot x and y in logscale
 >>> plt.loglog(x)
 
 Check out more on http://matplotlib.org/examples/color/colormaps_reference.html

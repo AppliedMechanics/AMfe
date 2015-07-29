@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Mar 24 11:13:52 2015
+Element Module in which the Finite Elements are described on Element level.
 
-Element-Modul, in der die Elementformulierungen enthalten sind.
-
+This Module is arbitrarily extensible. The idea is to use the basis class Element which provides the functionality for an efficient solution of a time integration by only once calling the internal tensor computation and then extracting the tangential stiffness matrix and the internal force vector in one run.
 
 Beobachtungen aus dem Profiler:
 Die Meiste Zeit im Assembly-Prozess wird mit der kron-Funktion und der
@@ -136,8 +135,8 @@ class Element():
 
         '''
         return self._m_int(X, u)
-        
-        
+
+
     def k_and_m_int(self, X, u):
         '''
         Returns the stiffness and mass matrix of the Element.
@@ -164,13 +163,13 @@ class Tri3(Element):
     The displacements are given in x- and y-coordinates;
 
     Element-properties:
-    -----------
+    -------------------
     The Element assumes constant strain and stress over the whole element.
     Thus the approximation quality is very moderate.
 
 
     References:
-    ------------
+    -----------
     Basis for this implementation is the Monograph of Ted Belytschko:
     Nonlinear Finite Elements for Continua and Structures.
     pp. 201 and 207.
@@ -428,14 +427,14 @@ class Tri6(Element):
 
 #@autojit
 class Quad4(Element):
-    
+
     '''
     Element Klasse fuer ebenes, viereckiges Element (Quad4)
     Verschiebungen in x- und y-Richtungen.
-    '''    
+    '''
     plane_stress = True
- 
-    def __init__(self, E_modul=1.0, poisson_ratio=0., element_thickness=1.0, 
+
+    def __init__(self, E_modul=1.0, poisson_ratio=0., element_thickness=1.0,
                  density=1.0, plane_stress = True):
         '''
         Definition der Materialgrößen und Dicke, da es sich um 2D-Elemente handelt
@@ -443,9 +442,9 @@ class Quad4(Element):
         self.poisson_ratio = poisson_ratio
         self.e_modul = E_modul
         self.t = element_thickness
-        self.rho = density     
+        self.rho = density
         self.plane_stress = plane_stress
-        
+
         # Ebene Spannung
         if self.plane_stress:
             self.C = E_modul/(1-poisson_ratio**2)*np.array(
@@ -457,24 +456,24 @@ class Quad4(Element):
 
     def _compute_tensors(self, X, u):
         pass
-              
+
     def _k_and_m_int(self, X, u):
-        
+
         def gauss_quadrature(option):
-            '''    
+            '''
             Gauss quadrature for Q4 elements
             option 'complete' (2x2)
             option 'reduced'  (1x1)
             locations: Gauss point locations
             weights: Gauss point weights
-            '''      
+            '''
             def complete():
                 locations = np.array(
                     [[-0.577350269189626, -0.577350269189626],
                     [0.577350269189626, -0.577350269189626],
                     [0.577350269189626,  0.577350269189626],
                     [-0.577350269189626,  0.577350269189626]])
-                weights = np.array([1,1,1,1]) 
+                weights = np.array([1,1,1,1])
                 return locations, weights
             def reduced():
                 locations = np.array([0, 0])
@@ -482,26 +481,26 @@ class Quad4(Element):
                 return locations, weights
             integration = {'reduced': reduced,
                            'complete': complete}
-            locations, weights = integration[option]()               
+            locations, weights = integration[option]()
             return weights, locations
-        
+
         def f_shape_Q4(xi, eta):
             '''
             shape function and derivatives for Q4 elements
             shape : Shape functions
-            d_shape: derivatives w.r.t. xi and eta 
+            d_shape: derivatives w.r.t. xi and eta
             xi, eta: natural coordinates (-1 ... +1)
-            '''            
-            shape = 1/4*np.array([(1-xi)*(1-eta),     # N1         
+            '''
+            shape = 1/4*np.array([(1-xi)*(1-eta),     # N1
                                   (1+xi)*(1-eta),     # N2
                                   (1+xi)*(1+eta),     # N3
                                   (1-xi)*(1+eta)])    # N4
             d_shape=1/4*np.array([[-(1-eta), -(1-xi)],      # dN1/dxi, dN1/deta
                                   [1-eta, -(1+xi)],         # dN2/dxi, dN2/deta
                                   [1+eta, 1+xi],            # dN3/dxi, dN3/deta
-                                  [-(1+eta), 1-xi]])        # dN4/dxi, dN4/deta                                 
+                                  [-(1+eta), 1-xi]])        # dN4/dxi, dN4/deta
             return shape, d_shape
-        
+
         def jacobi(X,d_shape):
             '''
             jac: Jacobian matrix
@@ -512,65 +511,65 @@ class Quad4(Element):
             '''
             jac = X.T.dot(d_shape)
             invjac = np.linalg.inv(jac)
-            d_shape_XY = d_shape.dot(invjac)            
+            d_shape_XY = d_shape.dot(invjac)
             return jac, d_shape_XY
-        
-        
+
+
         self.k_el = np.zeros((8, 8))
         self.m_el = np.zeros((8, 8))
         gauss_weights, gauss_loc = gauss_quadrature('complete')
         no_gp = len(gauss_weights)
-        
+
         # Loop over Gauss points
         for i_gp in range(no_gp):
-            # Get Gauss locations            
+            # Get Gauss locations
             xi, eta = gauss_loc[i_gp,:]
             # Get shape functions and derivatives with respect to xi, eta
             shape, d_shape = f_shape_Q4(xi,eta)
             # Get Jacobi and derivatives with respect to x,y
             jac, d_shape_XY = jacobi(X.reshape(4,2),d_shape)
-            
-            # Build B-matrix            
+
+            # Build B-matrix
             B = np.zeros((3, 8))
             B[0, [0, 2, 4, 6]] = d_shape_XY[:,0]
             B[1, [1, 3, 5, 7]] = d_shape_XY[:,1]
             B[2, [0, 2, 4, 6]] = d_shape_XY[:,1]
             B[2, [1, 3, 5, 7]] = d_shape_XY[:,0]
-        
-            # Build N-matrix  
+
+            # Build N-matrix
             N = np.zeros((2, 8))
             N[0, [0, 2, 4, 6]]  = shape
-            N[1, [1, 3, 5, 7]]  = shape   
+            N[1, [1, 3, 5, 7]]  = shape
 
-            # Add stiffness part from Gauss point                
+            # Add stiffness part from Gauss point
             self.k_el = self.k_el + (self.t*B.T.dot(self.C.dot(B))*
                                     gauss_weights[i_gp]*np.linalg.det(jac))
             self.m_el = self.m_el + (self.t*self.rho*N.T.dot(N)*
                                     gauss_weights[i_gp]*np.linalg.det(jac))
 
-        # Make symmetric (because of round-off errors)      
+        # Make symmetric (because of round-off errors)
         self.k_el = 1/2*(self.k_el+self.k_el.T)
-        self.m_el = 1/2*(self.m_el+self.m_el.T)       
+        self.m_el = 1/2*(self.m_el+self.m_el.T)
         return self.k_el, self.m_el
 
     def _k_int(self, X, u):
-        k_el, m_el = self._k_and_m_int(X, u)     
+        k_el, m_el = self._k_and_m_int(X, u)
         return k_el
 
     def _m_int(self, X, u):
-        k_el, m_el = self._k_and_m_int(X, u)     
+        k_el, m_el = self._k_and_m_int(X, u)
         return m_el
 
 
-        
+
     def _f_int(self, X, u):
-        print('The function is not implemented yet...')        
+        print('The function is not implemented yet...')
         pass
 
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+

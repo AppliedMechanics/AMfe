@@ -1,15 +1,8 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
 """
+Basic assembly module for the finite element code. Assumes to have all elements in the inertial frame.
 Created on Tue Apr 21 11:13:52 2015
-
-Löschen aller Variablen in IPython:
-%reset
-
-Darstellung von Matrizen:
-pylab.matshow(A)
-
-
 
 @author: Johannes Rutzmoser
 """
@@ -122,8 +115,8 @@ class Assembly():
             # compute the stress stuff...
             pass
         return K
-  
-      
+
+
     def assemble_m(self, u=None):
         '''
         Assembles the mass matrix of the given mesh and element.
@@ -145,7 +138,7 @@ class Assembly():
         def decorated_m_func(X, u_local, k, global_element_indices=None):
             return self.element_class_dict[self.mesh.elements_type[k]].m_int(X, u_local)
 
-        return self._assemble_matrix(u, decorated_m_func)        
+        return self._assemble_matrix(u, decorated_m_func)
 
 
     def assemble_f(self, u):
