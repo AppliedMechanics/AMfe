@@ -346,3 +346,162 @@ class ReducedSystem(MechanicalSystem):
 
     def M_unreduced(self):
         return MechanicalSystem.M_global(self)
+
+
+
+class ConstrainedMechanicalSystem():
+    '''
+    Mechanical System with constraints providing the interface for solvers.
+
+    This is an anonymous class providing all interface functions with zero-outputs. For practical use, inherit this class and overwrite the functions needed.
+
+    '''
+
+    def __init__(self):
+        self.ndof = 0
+        self.ndof_const = 0
+        pass
+
+    def M(self, q, dq):
+        '''
+        Return the mass matrix.
+
+        Parameters
+        ----------
+        q : ndarray
+            generalized position
+        dq : ndarray
+            generalized velocity
+
+        Returns
+        -------
+        M : ndarray
+            mass matrix of the system
+        '''
+        return np.zeros((self.ndof, self.ndof))
+
+    def D(self, q, dq):
+        '''
+        Return the tangential damping matrix.
+
+        The tangential damping matrix is the jacobian matrix of the nonlinear forces with respect to the generalized velocities q.
+        Parameters
+        ----------
+        q : ndarray
+            generalized position
+        dq : ndarray
+            generalized velocity
+
+        Returns
+        -------
+        D : ndarray
+            tangential damping matrix of the system
+
+        '''
+        return np.zeros((self.ndof, self.ndof))
+
+    def K(self, q, dq):
+        '''
+        Return the tangential stiffness matrix
+
+        Parameters
+        ----------
+        q : ndarray
+            generalized position
+        dq : ndarray
+            generalized velocity
+
+        Returns
+        -------
+        K : ndarray
+            tangential stiffness matrix of the system
+
+        '''
+        return np.zeros((self.ndof, self.ndof))
+
+    def C(self, q, dq, t):
+        '''
+        Return the residual of the constraints.
+
+        The constraints are given in the canonical form C=0. This function returns the residual of the constraints, i.e. C=res.
+
+        Parameters
+        ----------
+        q : ndarray
+            generalized position
+        dq : ndarray
+            generalized velocity
+        t : float
+            current time
+
+        Returns
+        -------
+        C : ndarray
+            residual vector of the constraints
+
+        '''
+        return np.zeros(self.ndof_const)
+
+    def B(self, q, dq, t):
+        '''
+        Return the Jacobian B of the constraints.
+
+        The Jacobian matrix of the constraints B is the partial derivative of the constraint vector C with respect to the generalized coordinates q, i.e. B = dC/dq
+
+        Parameters
+        ----------
+        q : ndarray
+            generalized position
+        dq : ndarray
+            generalized velocity
+        t : float
+            current time
+
+        Returns
+        -------
+        B : ndarray
+            Jacobian of the constraint vector with respect to the generalized coordinates
+        '''
+        return np.zeros((self.ndof_const, self.ndof))
+
+    def f_non(self, q, dq):
+        '''
+        Nonlinear internal forces of the mechanical system.
+
+        Parameters
+        ----------
+        q : ndarray
+            generalized position
+        dq : ndarray
+            generalized velocity
+
+        Returns
+        -------
+        f_non : ndarray
+            Nonlinear internal force of the mechanical system
+
+        '''
+        return np.zeros(self.ndof)
+
+    def f_ext(self, q, dq, t):
+        '''
+        External force of the mechanical system.
+
+        This is the right hand side of the canonical dynamic equation giving the external forcing.
+
+        Parameters
+        ----------
+        q : ndarray
+            generalized position
+        dq : ndarray
+            generalized velocity
+        t : float
+            current time
+
+        Returns
+        -------
+        f_ext : ndarray
+            External force of the mechanical system
+
+        '''
+        return np.zeros(self.ndof)
