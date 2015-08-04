@@ -30,14 +30,16 @@ line_set = {'straight_line', 'quadratic_line'}
 #
 # Starting from here everything's working automatically
 #
-gmsh2amfe = dict([])
-amfe2gmsh = dict([])
-amfe2vtk = dict([])
+gmsh2amfe        = dict([])
+amfe2gmsh        = dict([])
+amfe2vtk         = dict([])
 amfe2no_of_nodes = dict([])
+
+
 for element in element_mapping_list:
     gmsh2amfe.update({element[1] : element[0]})
     amfe2gmsh.update({element[0] : element[1]})
-    amfe2vtk.update({element[0] : element[2]})
+    amfe2vtk.update( {element[0] : element[2]})
     amfe2no_of_nodes.update({element[0] : element[3]})
 
 
@@ -66,13 +68,14 @@ class Mesh:
     '''
 
     def __init__(self,  node_dof=2):
-        self.nodes = []
-        self.elements = []
-        self.elements_type = []
+        self.nodes               = []
+        self.elements            = []
+        self.elements_type       = []
         self.elements_properties = []
-        self.u = None # the displacements; They are stored as a list of numpy-arrays with shape (ndof, node_dof)
-        self.timesteps = []
-        self.node_dof = node_dof
+        # the displacements; They are stored as a list of numpy-arrays with shape (ndof, node_dof):
+        self.u                   = None 
+        self.timesteps           = []
+        self.node_dof            = node_dof
 
 
 
@@ -89,7 +92,6 @@ class Mesh:
         # element stuff
         self.no_of_elements = len(self.elements)
         self.no_of_element_nodes = len(self.elements[0])
-        self.list_dof = np.arange(self.no_of_dofs).reshape((self.no_of_dofs,-1))
 
     def read_nodes_from_csv(self, filename, node_dof=2, explicit_node_numbering=False):
         '''
@@ -124,8 +126,7 @@ class Mesh:
         # when line numbers are erased if they are content of the csv
         if explicit_node_numbering:
             self.nodes = self.nodes[:,1:]
-        # self._update_mesh_props()
-            
+
 
     def read_elements_from_csv(self, filename, explicit_node_numbering=False):
         '''Imports the element list from a csv file.
@@ -148,18 +149,18 @@ class Mesh:
         TODO
 
         '''
-        mesh_type_dict = {3: "Tri3", 
-                          4: "Quad4"}        
-        
-        
+        mesh_type_dict = {3: "Tri3",
+                          4: "Quad4"}
+
+
         print('Reading elements from csv...  ', end="")
         self.elements = np.genfromtxt(filename, delimiter = ',', dtype = int, skip_header = 1)
         if self.elements.ndim == 1: # Wenn nur genau ein Element vorliegt
             self.elements = np.array([self.elements])
         if explicit_node_numbering:
-            self.elements = self.elements[:,1:]       
+            self.elements = self.elements[:,1:]
         try:
-            (no_of_ele, no_of_nodes_per_ele) = self.elements.shape 
+            (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
             mesh_type = mesh_type_dict[no_of_nodes_per_ele]
         except:
             print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
@@ -167,8 +168,8 @@ class Mesh:
 
         print('Element type is {0}...  '.format(mesh_type), end="")
         self.elements_type = [mesh_type for i in self.elements]
-        self._update_mesh_props() 
-        
+        self._update_mesh_props()
+
         print('Reading elements successful.')
 
 
@@ -202,9 +203,9 @@ class Mesh:
         tag_elements_end   = "$EndElements"
 
 
-        self.nodes = []
-        self.elements = []
-        self.elements_type = []
+        self.nodes               = []
+        self.elements            = []
+        self.elements_type       = []
         self.elements_properties = []
 
         with open(filename, 'r') as infile:
@@ -232,9 +233,9 @@ class Mesh:
             raise ValueError("Fehler beim Weiterverarbeiten der eingelesenen Daten! Dimensionen nicht konsistent!")
 
         # Extrahiere Daten aus dem eingelesen msh-File
-        list_imported_mesh_format = data_geometry[i_format_start:i_format_end]
-        list_imported_nodes = data_geometry[i_nodes_start:i_nodes_end]
-        list_imported_elements = data_geometry[i_elements_start:i_elements_end]
+        list_imported_mesh_format = data_geometry[i_format_start   : i_format_end]
+        list_imported_nodes       = data_geometry[i_nodes_start    : i_nodes_end]
+        list_imported_elements    = data_geometry[i_elements_start : i_elements_end]
 
         # Konvertiere die in den Listen gespeicherten Strings in Integer/Float
         for j in range(len(list_imported_mesh_format)):
@@ -287,7 +288,7 @@ class Mesh:
         #
         # The Idea here is to make a mapping of all used nodes and the full
         # nodes and map the elements and the nodes with this mapping dict
-        # called new_old_mapping_dict.
+        # called new_old_node_mapping_dict.
         used_node_set = set(self.elements.reshape(-1))
         no_of_used_nodes = len(used_node_set)
         new_old_node_mapping_dict = dict(zip(used_node_set, np.arange(no_of_used_nodes)))
@@ -329,11 +330,6 @@ class Mesh:
         ---------
         TODO
         '''
-#        if self.u[0].size != u.size:
-#            print('Die Dimension des Vektors u ist nicht Korrekt. ')
-#            print('Der Vektor muss insgesamt ', self.u.size, 'Einträge enthalten')
-#            print('Übergeben wurde aber ein Vektor mit ', u.size, 'Einträgen')
-#        else:
         self.timesteps.append(1)
         self.u = [np.array(u).reshape((-1, self.node_dof))]
 
@@ -364,6 +360,19 @@ class Mesh:
         for i, timestep in enumerate(self.timesteps):
             self.u.append(np.array(u[i]).reshape((-1, self.node_dof)))
 
+    def set_nodal_variable_with_time(self, variable_array, variable_name, timesteps):
+        '''
+        Sets the nodal variables with the time history
+        '''
+        # TODO
+        pass
+
+    def set_element_variable_with_time(self, variable_array, variable_name, timesteps):
+        '''
+        Sets the element variables with the time history
+        '''
+        # TODO
+        pass
 
     def save_mesh_for_paraview(self, filename):
         '''
@@ -453,7 +462,8 @@ class Mesh:
                 savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
                 savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) for el_ty in self.elements_type)) # Elementtyp ueber Zahl gesetzt
                 savefile_vtu.write('\n</DataArray>\n')
-                savefile_vtu.write('</Cells> \n<PointData>\n')
+                savefile_vtu.write('</Cells> \n')
+                savefile_vtu.write('<PointData Vectors="displacement">\n')
                 savefile_vtu.write('<DataArray type="Float64" Name="displacement" NumberOfComponents="3" format="ascii">\n')
                 # pick the i-th timestep
                 for j in self.u[i]:
@@ -469,8 +479,8 @@ class MeshGenerator:
 
     '''
 
-    def __init__(self, x_len, y_len, x_no_elements, y_no_elements, height = 0, 
-                 x_curve = False, y_curve = False, flat_mesh = True, 
+    def __init__(self, x_len, y_len, x_no_elements, y_no_elements, height = 0,
+                 x_curve = False, y_curve = False, flat_mesh = True,
                  mesh_style = 'Tri', pos_x0 = 0, pos_y0 = 0):
         self.x_len = x_len
         self.y_len = y_len
@@ -511,12 +521,12 @@ class MeshGenerator:
         '''
         Building the mesh by first producing the points, and secondly the elements
         '''
-        
+
         def build_tri():
             '''
             Builds a triangular mesh
             '''
-                            
+
             # Length of one element
             l_x = self.x_len / self.x_no_elements
             l_y = self.y_len / self.y_no_elements
@@ -574,20 +584,20 @@ class MeshGenerator:
                     third_node  = y_counter*(self.x_no_elements + 1) + x_counter + 1
                     self.elements.append([first_node, second_node, third_node])
                     element_number += 1
-            
-                
+
+
         def build_quad4():
             '''
             Builds a rectangular mesh
             '''
             delta_x = self.x_len / self.x_no_elements
             delta_y = self.y_len / self.y_no_elements
-            
+
             # nodes coordinates
             for counter_y in range(self.y_no_elements+1):
                 for counter_x in range(self.x_no_elements+1):
                     self.nodes.append([delta_x*counter_x + self.pos_x0, delta_y*counter_y + self.pos_y0])
-            
+
             # node assignment to quadrilateral elements
             for counter_y in range(self.y_no_elements):
                 for counter_x in range(self.x_no_elements):
@@ -597,10 +607,10 @@ class MeshGenerator:
                     node4 = counter_x     + (counter_y + 1)*(self.x_no_elements + 1)
                     self.elements.append([node1, node2, node3, node4])
 
-                
-        mesh_type_dict = {"Tri": build_tri, 
+
+        mesh_type_dict = {"Tri": build_tri,
                           "Quad4": build_quad4}
-                          
+
         mesh_type_dict[self.mesh_style]()
         print('Mesh was generated: mesh_style =', self.mesh_style)
 
@@ -636,7 +646,7 @@ class MeshGenerator:
                 savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + delimiter + 'node_4' + newline)
             else:
                 print("Hier lief etwas falsch. Anzahl der Knoten pro Element konnte nicht bestimmt werden.")
-                    
+
             for elements in self.elements:
                 savefile_elements.write(delimiter.join(str(x) for x in elements) + newline)
 

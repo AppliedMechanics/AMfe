@@ -60,6 +60,7 @@ class Assembly():
         self.row_global = []
         self.col_global = []
         self.vals_global = []
+        self.element_props_global = []
         node_dof = self.mesh.node_dof
         if u is None:
             u = np.zeros(self.mesh.no_of_dofs)
@@ -71,17 +72,18 @@ class Assembly():
             global_element_indices = np.array([(np.arange(node_dof) + node_dof*i)  for i in element]).reshape(-1)
             u_local = u[global_element_indices]
             # evaluation of element matrix
-            element_matrix = decorated_matrix_func(X, u_local, k, global_element_indices)
+            element_matrix, element_props = decorated_matrix_func(X, u_local, k, global_element_indices)
             self.row = np.zeros(element_matrix.shape)
             self.row[:,:] = global_element_indices
             self.row_global.append(self.row.reshape(-1))
             self.col_global.append((self.row.T).reshape(-1))
             self.vals_global.append(element_matrix.reshape(-1))
+            self.element_props_global.append(element_props)
         row_global_array = np.array(self.row_global).reshape(-1)
         col_global_array = np.array(self.col_global).reshape(-1)
         vals_global_array = np.array(self.vals_global).reshape(-1)
         Matrix_coo = sp.sparse.coo_matrix((vals_global_array, (row_global_array, col_global_array)), dtype=float)
-        return Matrix_coo
+        return Matrix_coo, self.element_props_global
 
 
     def assemble_k(self, u=None):
@@ -98,23 +100,21 @@ class Assembly():
         K : ndarray
             unconstrained assembled stiffness matrix in sparse matrix coo-format.
         '''
-        if self.save_stresses:
-            self.stress_list = []
-            pass
 
         def decorated_k_func(X, u_local, k, global_element_indices=None):
             element = self.element_class_dict[self.mesh.elements_type[k]]
             k_local = element.k_int(X, u_local)
             if self.save_stresses:
-                pass
-            return k_local
+                stresses = element.S_voigt
+            else:
+                stresses = ()
+            return k_local, stresses
 
-        K = self._assemble_matrix(u, decorated_k_func)
+        K, stress_list = self._assemble_matrix(u, decorated_k_func)
         if self.save_stresses:
-            # self.stress_list.append(element.S_voigt)
-            # compute the stress stuff...
-            pass
-        return K
+            return K, stress_list
+        else:
+            return K
 
 
     def assemble_m(self, u=None):
@@ -136,9 +136,10 @@ class Assembly():
         TODO
         '''
         def decorated_m_func(X, u_local, k, global_element_indices=None):
-            return self.element_class_dict[self.mesh.elements_type[k]].m_int(X, u_local)
+            return self.element_class_dict[self.mesh.elements_type[k]].m_int(X, u_local), ()
 
-        return self._assemble_matrix(u, decorated_m_func)
+        M, _ = self._assemble_matrix(u, decorated_m_func)
+        return M
 
 
     def assemble_f(self, u):

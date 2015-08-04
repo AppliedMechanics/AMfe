@@ -251,8 +251,7 @@ class MechanicalSystem():
         '''Return the global tangential stiffness matrix with dirichlet boundary conditions imposed'''
         if u is None:
             u = np.zeros(self.b_constraints.shape[-1])
-        temp = self.b_constraints.dot(u)
-        _K = self.assembly_class.assemble_k(temp) # Assembled stiffness matrix without dirichlet boundary conditions imposed
+        _K = self.assembly_class.assemble_k(self.b_constraints.dot(u)) # Assembled stiffness matrix without dirichlet boundary conditions imposed
         self._K_bc = self.b_constraints.T.dot(_K.dot(self.b_constraints)) # Apply dirichlet boundary conditions by matrix product (B^T * K * B)
         return self._K_bc
 

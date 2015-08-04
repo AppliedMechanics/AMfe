@@ -551,7 +551,7 @@ class HHTConstrained():
 
                 n_iter += 1
                 if self.verbose:
-                    print('Iteration', n_iter, 'Residuum:', res_abs, 'Cond-Nr of S:', np.linalg.cond(S))
+                    print('Iteration', n_iter, 'Residual:', res_abs, 'Cond-Nr of S:', np.linalg.cond(S))
                 if n_iter > self.n_iter_max:
                     raise Exception('Maximum number of iterations reached. The process will be aborted. Current time step:', t)
                 pass
@@ -560,6 +560,7 @@ class HHTConstrained():
             # Writing if necessary:
             if write_flag:
                 # writing to the mechanical system, if possible
+                # TODO: the functionality for the mechanical system to read and write timesteps is not implemented yet.
                 if False:# self.mechanical_system:
                     self.mechanical_system.write_timestep(t, q)
                 else:
