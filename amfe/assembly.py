@@ -51,10 +51,36 @@ class Assembly():
 
     def _assemble_matrix(self, u, decorated_matrix_func):
         '''
-        Matrix assembly routine where the matrix function is stored in the
-        decorated_matrix_func; it is called with
-        decorated_matrix_func(X, u_local, k)
-        where k is the index of the called element.
+        Assembly routine for any matrices.
+
+        Parameters
+        ----------
+        u : ndarray
+            global displacement vector; if set to None, u will be assumed to be zero displacement
+        decorated_matrix_func : function
+            function with input variables (X, u_local, k, global_element_indices)
+            the input variables are
+            -----------------------
+            X : ndarray
+                local coordinates in the reference configuration
+            u_local : ndarray
+                local displacements
+            k : int
+                global index of the element (is needed in order to find the element type out of a global list)
+            global_element_indices : ndarray
+                global indices of the element (is needed for the force assembly)
+
+
+        Returns
+        -------
+        Matrix : coo sparse array
+            sparse assembled array in coo format
+        element_props : list
+            list of all saved element props that are pumped out of the decorated matrix func
+
+        Note
+        ----
+
 
         '''
         self.row_global = []
@@ -74,6 +100,7 @@ class Assembly():
             # evaluation of element matrix
             element_matrix, element_props = decorated_matrix_func(X, u_local, k, global_element_indices)
             self.row = np.zeros(element_matrix.shape)
+            # build a matrix with constant columns and the rows representing the global_element_indices
             self.row[:,:] = global_element_indices
             self.row_global.append(self.row.reshape(-1))
             self.col_global.append((self.row.T).reshape(-1))
@@ -110,11 +137,8 @@ class Assembly():
                 stresses = ()
             return k_local, stresses
 
-        K, stress_list = self._assemble_matrix(u, decorated_k_func)
-        if self.save_stresses:
-            return K, stress_list
-        else:
-            return K
+        K, self.stress_list = self._assemble_matrix(u, decorated_k_func)
+        return K
 
 
     def assemble_m(self, u=None):
@@ -196,12 +220,14 @@ class Assembly():
             k_local, f_local = element.k_and_f_int(X, u_local)
             self.global_force[global_element_indices] += f_local
             if self.save_stresses:
-                self.stress_list.append(element.S_voigt)
-            return k_local
+                stresses = element.S_voigt
+            else:
+                stresses = ()
+            return k_local, stresses
 
         self.stress_list = []
         self.global_force = np.zeros(self.mesh.no_of_dofs)
-        K = self._assemble_matrix(u, decorated_f_and_k_func)
+        K, _ = self._assemble_matrix(u, decorated_f_and_k_func)
         return K, self.global_force
 
 
