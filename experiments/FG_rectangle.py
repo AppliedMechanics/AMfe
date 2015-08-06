@@ -110,7 +110,7 @@ def plot_mesh_Quad4(elements, coord, plot_no_of_ele=False, plot_nodes=False,
     for i_ele in range(len(elements)):
 
         nodes = ele_list_plot[i_ele, :]  # Node number of one element
-        plt.plot(coord[nodes*2], coord[nodes*2+1], color=p_col) # Plot elements
+        plt.plot(coord[nodes*2], coord[nodes*2+1], color=p_col)  # Plot ele
 
         # Plot number of element in each element if plot_no_of_ele == True
         if plot_no_of_ele:
