@@ -4,18 +4,45 @@ Element Module in which the Finite Elements are described on Element level.
 
 This Module is arbitrarily extensible. The idea is to use the basis class Element which provides the functionality for an efficient solution of a time integration by only once calling the internal tensor computation and then extracting the tangential stiffness matrix and the internal force vector in one run.
 
-Beobachtungen aus dem Profiler:
-Die Meiste Zeit im Assembly-Prozess wird mit der kron-Funktion und der
-trace-funktion verbraucht; Es lohnt sich sicherlich, diese Funktionen
-geschickter zu implementieren!
+Some remarks resulting in the observations of the profiler:
+Most of the time is spent with pyhton-functions, when they are used. For instance the kron-function in order to build the scattered geometric stiffness matrix or the trace function are very inefficient. They can be done better when using direct functions.
 
-@author: johannesr
 """
 
 
 import numpy as np
 #from numpy.linalg import inv
 #from numba import jit, autojit
+
+def scatter_geometric_matrix(Mat, ndim):
+    '''
+    Scatter the symmetric geometric stiffness matrix to all dofs.
+
+    What is basically done is to perform the kron(Mat, eye(ndof))
+
+    Parameters
+    ----------
+    Mat : ndarray
+        Matrix that should be scattered
+    ndim : int
+        number of dimensions of finite element. If it's a 2D element, ndim=2,
+        if 3D, ndim=3
+
+    Returns
+    -------
+    Mat_scattered : ndarray
+        scattered matrix
+
+    '''
+    dof_small_row = Mat.shape[0]
+    dof_small_col = Mat.shape[1]
+    Mat_scattered = np.zeros((dof_small_row*ndim, dof_small_col*ndim))
+    for i in range(dof_small_row):
+        for j in range(dof_small_col):
+            for k in range(ndim):
+                Mat_scattered[ndim*i+k,ndim*j+k] = Mat[i,j]
+    return Mat_scattered
+
 
 #@autojit
 class Element():
@@ -180,13 +207,13 @@ class Tri3(Element):
 #    @jit
     def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4):
         '''
-        Definition der Materialgrößen und Dicke, da es sich um 2D-Elemente handelt
+        Definition of material properties and thickness as they are 2D-Elements.
         '''
         self.poisson_ratio = poisson_ratio
         self.e_modul = E_modul
         self.lame_mu = E_modul / (2*(1+poisson_ratio))
         self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
-        # Achtung: hier gibt's ebene Dehnung
+        # ATTENTION: here the switch between plane stress and plane strain makes sense.
         if self.plane_stress:
             self.C_SE = E_modul/(1 - poisson_ratio**2)*np.array([[1, poisson_ratio, 0],
                               [poisson_ratio, 1, 0],
@@ -205,17 +232,17 @@ class Tri3(Element):
 #    @jit
     def _compute_tensors(self, X, u):
         '''
-        Bestimmung der tensoriellen Größen des Elements für eine Total Lagrange Betrachtungsweise. Die Tensoren werden als Objektvariablen abgespeichert, daher hat diese Funktion keine Rückgabewerte.
+        Compute the tensors B0_tilde, B0, F, E and S at the Gauss Points.
 
-        Die bestimmten Größen sind:
+        The tensors are:
             B0_tilde:   Die Ableitung der Ansatzfunktionen nach den x- und y-Koordinaten (2x3-Matrix)
                         In den Zeilein stehen die Koordinatenrichtungen, in den Spalten die Ansatzfunktionen
-            F:          Der Deformationsgradient (2x2-Matrix)
-            E:          Der Green-Lagrange Dehnungstensor (2x2-Matrix)
-            S:          Der 2. Piola-Kirchhoff-Spannungstensor, berechnet auf Basis des Kirchhoff'schen Materialmodells (2x2-Matrix)
+            B0:         The mapping matrix of delta E = B0 * u^e
+            F:          Deformation gradient (2x2-Matrix)
+            E:          Der Green-Lagrange strain tensor (2x2-Matrix)
+            S:          2. Piola-Kirchhoff stress tensor, using Kirchhoff material (2x2-Matrix)
 
-        In allen Tensorberechnungen werden nur ebene Größen betrachtet.
-        Die Dickeninformation (self.t) kommt dann erst später bei der Bestimmung der internen Kräfte f_int bzw. der Massen- und Steifigkeitsmatrizen zustande.
+        The thickness information is used later for the internal forces, the mass and the stiffness matrix.
         '''
         X1, Y1, X2, Y2, X3, Y3 = X
         self.u = u.reshape((-1,2))
@@ -253,12 +280,7 @@ class Tri3(Element):
         # as the kronecker product is very expensive, the stuff is done explicitly
         # self.K_geo = np.kron(self.K_geo_small, self.I)
         self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0*self.t
-        self.K_geo = np.array([[self.K_geo_small[0,0], 0, self.K_geo_small[0,1], 0, self.K_geo_small[0,2], 0],
-                           [0, self.K_geo_small[0,0], 0, self.K_geo_small[0,1], 0, self.K_geo_small[0,2]],
-                           [self.K_geo_small[1,0], 0, self.K_geo_small[1,1], 0, self.K_geo_small[1,2], 0],
-                           [0, self.K_geo_small[1,0], 0, self.K_geo_small[1,1], 0, self.K_geo_small[1,2]],
-                           [self.K_geo_small[2,0], 0, self.K_geo_small[2,1], 0, self.K_geo_small[2,2], 0],
-                           [0, self.K_geo_small[2,0], 0, self.K_geo_small[2,1], 0, self.K_geo_small[2,2]]])
+        self.K_geo = scatter_geometric_matrix(self.K_geo_small, 2)
         self.K_mat = self.B0.T.dot(self.C_SE.dot(self.B0))*self.A0*self.t
         return self.K_mat + self.K_geo
 
@@ -317,7 +339,20 @@ class Tri6(Element):
         self.B0 = [[],[],[]]
 
     def _B0_tilde_func(self, X_vec, X, Y):
-        '''computes the B0_tilde matrix for a given X and Y'''
+        '''
+        compute the B0_tilde matrix for a given X and Y
+
+        Parameters
+        ----------
+        X_vec : ndarray
+            Array giving the positions in the reference configuration
+        X : float
+            x-position of the quadrature point given in the reference coordinate system
+        Y : float
+            y-position of the quadrature point given in the reference coordinate system
+        Returns
+        -------
+        '''
         # maybe this is in the scope here
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X_vec
         det = X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2
@@ -384,21 +419,7 @@ class Tri6(Element):
         self.K_mat = np.zeros((12, 12))
         for i in range(3):
             self.K_geo_small = self.B0_tilde[i].T.dot(self.S[i].dot(self.B0_tilde[i]))*self.A0*self.t*1/3
-            k = self.K_geo_small
-            self.K_geo += np.array([
-                [k[0,0], 0, k[0,1], 0, k[0,2], 0, k[0,3], 0, k[0,4], 0, k[0,5], 0],
-                [0, k[0,0], 0, k[0,1], 0, k[0,2], 0, k[0,3], 0, k[0,4], 0, k[0,5]],
-                [k[1,0], 0, k[1,1], 0, k[1,2], 0, k[1,3], 0, k[1,4], 0, k[1,5], 0],
-                [0, k[1,0], 0, k[1,1], 0, k[1,2], 0, k[1,3], 0, k[1,4], 0, k[1,5]],
-                [k[2,0], 0, k[2,1], 0, k[2,2], 0, k[2,3], 0, k[2,4], 0, k[2,5], 0],
-                [0, k[2,0], 0, k[2,1], 0, k[2,2], 0, k[2,3], 0, k[2,4], 0, k[2,5]],
-                [k[3,0], 0, k[3,1], 0, k[3,2], 0, k[3,3], 0, k[3,4], 0, k[3,5], 0],
-                [0, k[3,0], 0, k[3,1], 0, k[3,2], 0, k[3,3], 0, k[3,4], 0, k[3,5]],
-                [k[4,0], 0, k[4,1], 0, k[4,2], 0, k[4,3], 0, k[4,4], 0, k[4,5], 0],
-                [0, k[4,0], 0, k[4,1], 0, k[4,2], 0, k[4,3], 0, k[4,4], 0, k[4,5]],
-                [k[5,0], 0, k[5,1], 0, k[5,2], 0, k[5,3], 0, k[5,4], 0, k[5,5], 0],
-                [0, k[5,0], 0, k[5,1], 0, k[5,2], 0, k[5,3], 0, k[5,4], 0, k[5,5]]])
-
+            self.K_geo += scatter_geometric_matrix(self.K_geo_small, 2)
             self.K_mat += self.B0[i].T.dot(self.C_SE.dot(self.B0[i]))*self.A0*self.t*1/3
         return self.K_mat + self.K_geo
 
