@@ -250,7 +250,7 @@ class Tri3(Element):
         self.B0_tilde = 1/(2*self.A0)*np.array([[Y2-Y3, X3-X2], [Y3-Y1, X1-X3], [Y1-Y2, X2-X1]]).T
         self.H = self.u.T.dot(self.B0_tilde.T)
         self.F = self.H + self.I
-        self.E = 1/2*(self.H + self.H.T + self.H.T.dot(self.H))
+        self.E = 1./2.*(self.H + self.H.T + self.H.T.dot(self.H))
         ## Trace is very slow; use a direct sum instead...
         # self.S = self.lame_lambda*np.trace(self.E)*self.I + 2*self.lame_mu*self.E
 

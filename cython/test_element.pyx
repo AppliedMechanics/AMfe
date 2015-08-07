@@ -113,24 +113,24 @@ cpdef voigtize(Mat, kinematic=False):
     Parameters
     ----------
 
+
     Returns
     -------
     '''
     cdef int ndim = Mat.shape[0]
-    print('Dimension of the Matrix to be voigtized:', ndim)
-    print('The Matrix is', Mat)
     cdef cnp.ndarray[double, ndim=1] Mat_v = np.zeros(voigt_dof_dict[ndim])
     cdef:
         int i
         int j
         int k
     for i, j, k in voigtize_index_pairs[ndim]:
-        print('Indices:', i, j, k)
         Mat_v[i] = Mat[j, k]
     if kinematic:
         for i in range(voigt_dof_dict[ndim] - ndim):
-            Mat_v[-i+1] *=2
+            i += 1 # correct indexing as the index is negative; the last element is -1, the one before -2 etc.
+            Mat_v[-i] *= 2.
     return Mat_v
+
 
 cpdef unvoigtize(Mat_v, kinematic=False):
     '''
@@ -147,14 +147,19 @@ cpdef unvoigtize(Mat_v, kinematic=False):
         int i
         int j
         int k
+
     cdef cnp.ndarray[double, ndim=2] Mat = np.zeros((ndim, ndim))
 
     if kinematic:
         for i in range(voigt_dof_dict[ndim] - ndim):
-            Mat_v[-i+1] /= 2
+            i += 1
+            Mat_v[-i] /= 2
 
     for i, j, k in voigtize_index_pairs[ndim]:
         Mat[j, k] = Mat_v[i]
+        # consider the antisymmetric part:
+        if j != k:
+            Mat[k, j] = Mat_v[i]
 
     return Mat
 
@@ -423,15 +428,21 @@ cdef class Tri3(Element):
 #        B0_tilde[0][:] = [Y2-Y3, Y3-Y1, Y1-Y2]
 #        B0_tilde[1][:] = [X3-X2, X1-X3, X2-X1]
         B0_tilde /= 2*A0
+        print('B0_tilde', B0_tilde)
         H = np.dot(u_mat.T, B0_tilde.T)
+        print('H', H)
         E = 0.5*(H + H.T + np.dot(H.T, H))
-        print('E ist', E)
+        print('E', E)
         E_v = voigtize(E, kinematic=True)
-        F = E
+        print('E', E)
+        F = H.copy()
         F[0,0] += 1.
-        F[0,1] += 1.
+        F[1,1] += 1.
+        print('F ist', F)
+        print('E_v', E_v)
         S_v = np.dot(self.C_SE, E_v)
         S = unvoigtize(S_v)
+        print('S', S)
         B0 = compute_B_matrix(F, B0_tilde)
         K_mat = np.dot(B0.T, np.dot(self.C_SE, B0)) * A0 * self.t
         K_geo_small = np.dot(B0_tilde.T, np.dot(S, B0_tilde)) * A0 * self.t
