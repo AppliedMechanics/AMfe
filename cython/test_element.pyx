@@ -9,10 +9,8 @@ import numpy as np
 cimport numpy as cnp
 cimport cython
 
-# decorator for the function
-# @cython.boundscheck(False)
+from cython.view cimport array as cvarray
 
-cnp.ndarray[double, ndim=1] X, cnp.ndarray[double, ndim=1] u):
 cpdef scatter_geometric_matrix(cnp.ndarray[double, ndim=2] Mat, int ndim):
 
     '''
@@ -47,7 +45,131 @@ cpdef scatter_geometric_matrix(cnp.ndarray[double, ndim=2] Mat, int ndim):
                 Mat_scattered[ndim*i+k,ndim*j+k] = Mat[i, j]
     return Mat_scattered
 
-class Element:
+# giving how many voigt-dofs do you have given a dof.
+voigt_dof_dict = {1: 1, 2: 3, 3: 6}
+
+cpdef compute_B_matrix(F, B_tilde):
+    '''
+    Compute the B-matrix used in Total Lagrangian Finite Elements.
+
+    Parameters
+    ----------
+    F : ndarray
+        deformation gradient
+    B_tilde : ndarray
+        Matrix of the spatial derivative of the shape functions
+
+    Returns
+    -------
+    B : ndarray
+        B matrix such that {dE} = B @ {u^e}
+
+    Notes
+    -----
+    When the Voigt notation is used in this Reference, the variables are denoted with curly brackets.
+    '''
+    no_of_nodes = B_tilde.shape[1]
+    no_of_dims = B_tilde.shape[0] # spatial dofs per node, i.e. 2 for 2D or 3 for 3D
+    print('no of nodes: ', no_of_nodes, 'no_of_dims', no_of_dims)
+    b = B_tilde
+    B = np.zeros((voigt_dof_dict[no_of_dims], no_of_nodes*no_of_dims))
+    F11 = F[0,0]
+    F12 = F[0,1]
+    F21 = F[1,0]
+    F22 = F[1,1]
+    if no_of_dims == 3:
+        F13 = F[0,2]
+        F31 = F[2,0]
+        F23 = F[1,2]
+        F32 = F[2,1]
+        F33 = F[2,2]
+    for i in range(no_of_nodes):
+        if no_of_dims == 2:
+            B[:, i*no_of_dims : (i+1)*no_of_dims] = [
+            [F11*b[0,i], F21*b[0,i]],
+            [F12*b[1,i], F22*b[1,i]],
+            [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i]]]
+        else:
+            B[:, i*no_of_dims : (i+1)*no_of_dims] = [
+            [F11*b[0,i], F21*b[0,i], F31*b[0,i]],
+            [F12*b[1,i], F22*b[1,i], F32*b[1,i]],
+            [F13*b[2,i], F23*b[2,i], F33*b[2,i]],
+            [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i]], F31*b[1,i]+F32*b[0,i],
+            [F12*b[2,i] + F13*b[1,i], F22*b[2,i] + F23*b[1,i]], F32*b[2,i]+F33*b[1,i],
+            [F13*b[0,i] + F11*b[2,i], F23*b[0,i] + F21*b[2,i]], F33*b[0,i]+F31*b[2,i]]
+    return B
+
+# this dict contains a list with the voigtize index triples. Giving the indices
+# i, j, k, i is the index of the voigt vector whereas j, k are the indices of the full matrix.
+voigtize_index_pairs = {
+2 : ((0, 0,0), (1, 1,1), (2, 0,1)),
+3 : ((0, 0,0), (1, 1,1), (2, 2,2), (3, 1, 2), (4, 0, 2), (5, 0, 1)),
+}
+
+cpdef voigtize(Mat, kinematic=False):
+    '''
+    Voigtize a symmetric matrix.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    '''
+    cdef int ndim = Mat.shape[0]
+    print('Dimension of the Matrix to be voigtized:', ndim)
+    print('The Matrix is', Mat)
+    cdef cnp.ndarray[double, ndim=1] Mat_v = np.zeros(voigt_dof_dict[ndim])
+    cdef:
+        int i
+        int j
+        int k
+    for i, j, k in voigtize_index_pairs[ndim]:
+        print('Indices:', i, j, k)
+        Mat_v[i] = Mat[j, k]
+    if kinematic:
+        for i in range(voigt_dof_dict[ndim] - ndim):
+            Mat_v[-i+1] *=2
+    return Mat_v
+
+cpdef unvoigtize(Mat_v, kinematic=False):
+    '''
+    Make a proper symmetric array from the voigt array given.
+    '''
+    if Mat_v.shape[0] == 3:
+        ndim = 2
+    elif Mat_v.shape[0] == 6:
+        ndim = 3
+    else:
+        raise Exception('The given matrix is no voigt array!')
+
+    cdef:
+        int i
+        int j
+        int k
+    cdef cnp.ndarray[double, ndim=2] Mat = np.zeros((ndim, ndim))
+
+    if kinematic:
+        for i in range(voigt_dof_dict[ndim] - ndim):
+            Mat_v[-i+1] /= 2
+
+    for i, j, k in voigtize_index_pairs[ndim]:
+        Mat[j, k] = Mat_v[i]
+
+    return Mat
+
+#cpdef mydot(A, B):
+#    cdef int ndim_A = len(A.shape)
+#    cdef int ndim_B = len(B.shape)
+#    cdef double[][] C
+#    # check, if dimensions are okay:
+#    if not A.shape[-1] == B.shape[0]:
+#        raise Exception('The dimensions of the two matrices do not match!')
+#
+#    pass
+
+
+cdef class Element:
     '''
     this is the baseclass for all elements. It contains the methods needed
     for the computation of the element stuff...
@@ -185,7 +307,7 @@ class Element:
         '''
         return self._k_and_m_int(X, u)
 
-class Tri3(Element):
+cdef class Tri3(Element):
     '''
     Element class for a plane triangle element in Total Lagrangian formulation.
     The displacements are given in x- and y-coordinates;
@@ -203,32 +325,49 @@ class Tri3(Element):
     pp. 201 and 207.
 
     '''
-    cdef bool plane_stress = True
+    plane_stress = True
+    cdef:
+        double poisson_ratio
+        double e_modul
+        double lame_mu
+        double lame_lambda
+        double t
+        double rho
+        double A0
+
+        object C_SE
+        object S
+        object S_voigt
+        object E
+
 
 #    @jit
     def __init__(self, double E_modul=210E9, double poisson_ratio=0.3, double element_thickness=1., double density=1E4):
         '''
         Definition of material properties and thickness as they are 2D-Elements.
         '''
-        cdef double self.poisson_ratio = poisson_ratio
-        cdef double self.e_modul = E_modul
-        cdef double self.lame_mu = E_modul / (2*(1+poisson_ratio))
-        cdef double self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
+        self.poisson_ratio = poisson_ratio
+        self.e_modul = E_modul
+        self.lame_mu = E_modul / (2*(1+poisson_ratio))
+        self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
+        self.t = element_thickness
+        self.rho = density
+
         # ATTENTION: here the switch between plane stress and plane strain makes sense.
         if self.plane_stress:
             self.C_SE = E_modul/(1 - poisson_ratio**2)*np.array([[1, poisson_ratio, 0],
                               [poisson_ratio, 1, 0],
                               [0, 0, (1-poisson_ratio) / 2]])
         else: # hier gibt's ebene Dehnung
-            cdef cnp.ndarray[double, ndim=2] self.C_SE = np.array([
+            self.C_SE = np.array([
                          [self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
                          [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, 0],
                          [0, 0, self.lame_mu]])
-        cdef double self.t = element_thickness
-        cdef double self.rho = density
 
-#    @jit
-    def _compute_tensors(self, ndarray[double, ndim=1] X, ndarray[double, ndim=1] u):
+    def _compute_tensors(self, cnp.ndarray[double, ndim=1] X, cnp.ndarray[double, ndim=1] u):
+        pass
+
+    def _compute_everything(self, cnp.ndarray[double, ndim=1] X, cnp.ndarray[double, ndim=1] u):
         '''
         Compute the tensors B0_tilde, B0, F, E and S at the Gauss Points.
 
@@ -243,66 +382,101 @@ class Tri3(Element):
         The thickness information is used later for the internal forces, the mass and the stiffness matrix.
         '''
         cdef:
-            double X1
-            double Y1
-            double X2
-            double Y2
-            double X3
-            double Y3
+            double X1, Y1, X2, Y2, X3, Y3
+#            double Y1
+#            double X2
+#            double Y2
+#            double X3
+#            double Y3
+
+            double A0
+
+            # the matrices involved using memory view types
+#            double u_mat[3][2]
+#            double B0_tilde[2][3]
+#            double H[2][2]
+#            double F[2][2]
+#            double E[2][2]
+#            double E_v[3]
+#            double S[2][2]
+#            double S_v[3]
+#            double B0[3][6]
+
+            cnp.ndarray[double, ndim=2] B0_tilde
+            cnp.ndarray[double, ndim=2] H
+            cnp.ndarray[double, ndim=2] F
+            cnp.ndarray[double, ndim=2] E
+            cnp.ndarray[double, ndim=2] S
+            cnp.ndarray[double, ndim=2] B0
+            cnp.ndarray[double, ndim=1] E_v
+            cnp.ndarray[double, ndim=1] S_v
+
+
         X1, Y1, X2, Y2, X3, Y3 = X
-        self.u = u.reshape((-1,2))
-        self.A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
-        self.B0_tilde = 1/(2*self.A0)*np.array([[Y2-Y3, X3-X2], [Y3-Y1, X1-X3], [Y1-Y2, X2-X1]]).T
-        self.H = self.u.T.dot(self.B0_tilde.T)
-        self.F = self.H + self.I
-        self.E = 1/2*(self.H + self.H.T + self.H.T.dot(self.H))
-        ## Trace is very slow; use a direct sum instead...
-        # self.S = self.lame_lambda*np.trace(self.E)*self.I + 2*self.lame_mu*self.E
+        A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
+        print('A0 ist', A0)
+        u_mat = u.reshape(-1, 2)
+#        u_mat[0][:] = [u[0], u[1]]
+#        u_mat[1][:] = [u[2], u[3]]
+#        u_mat[2][:] = [u[4], u[5]]
+        B0_tilde = np.array([[Y2-Y3, Y3-Y1, Y1-Y2], [X3-X2, X1-X3, X2-X1]])
+#        B0_tilde[0][:] = [Y2-Y3, Y3-Y1, Y1-Y2]
+#        B0_tilde[1][:] = [X3-X2, X1-X3, X2-X1]
+        B0_tilde /= 2*A0
+        H = np.dot(u_mat.T, B0_tilde.T)
+        E = 0.5*(H + H.T + np.dot(H.T, H))
+        print('E ist', E)
+        E_v = voigtize(E, kinematic=True)
+        F = E
+        F[0,0] += 1.
+        F[0,1] += 1.
+        S_v = np.dot(self.C_SE, E_v)
+        S = unvoigtize(S_v)
+        B0 = compute_B_matrix(F, B0_tilde)
+        K_mat = np.dot(B0.T, np.dot(self.C_SE, B0)) * A0 * self.t
+        K_geo_small = np.dot(B0_tilde.T, np.dot(S, B0_tilde)) * A0 * self.t
+        K = K_mat + scatter_geometric_matrix(K_geo_small, ndim=2)
+        f_int = np.dot(B0.T, S_v) * A0 * self.t
 
-        # This is sick but it improves the stuff...
-        self.S_voigt = self.C_SE.dot([self.E[0,0], self.E[1,1], 2*self.E[0,1]])
-        self.S[0,0] , self.S[1,1], self.S[1,0], self.S[0,1] = self.S_voigt[0], self.S_voigt[1], self.S_voigt[2], self.S_voigt[2]
+#        cdef cnp.ndarray[double, ndim=2] B0_tilde = 1/(2*A0)*[, ]
+#        cdef cnp.ndarray[double, ndim=2] H        = u_mat.T.dot(B0_tilde.T)
+#        cdef cnp.ndarray[double, ndim=2] F        = H + [[1., 0], [0, 1.]]
+#        cdef cnp.ndarray[double, ndim=2] E        = 0.5*(H + H.T + H.T.dot(H))
+#        cdef cnp.ndarray[double, ndim=1] E_v      = [E[0,0], E[1,1], 2*E[0,1]]
+#        cdef cnp.ndarray[double, ndim=1] S_v      = self.C_SE.dot(E_v)
+#        cdef cnp.ndarray[double, ndim=2] S        = [[S_v[0], S_[2]], [S_v[2], S_v[1]]]
+#        cdef cnp.ndarray[double, ndim=2] B0       = compute_B_matrix(F, B0_tilde)
+#        cdef cnp.ndarray[double, ndim=1] f_int    = B0.T.dot(S_v)*A0*self.t
+#        cdef cnp.ndarray[double, ndim=2] K_mat    = B0.T.dot(self.C_SE.dot(B0))*A0*self.t
+#        cdef cnp.ndarray[double, ndim=2] K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*A0*self.t
+#        cdef cnp.ndarray[double, ndim=2] K        = K_mat + scatter_geometric_matrix(K_geo_small, ndim=2)
+        return np.asarray(K), np.asarray(f_int)
 
-        # Building B0 with the product of the deformation gradient
-        self.B0 = np.zeros((3, 6))
-        for i in range(3):
-            self.B0[:,2*i:2*i+2] = np.array([[self.B0_tilde[0,i], 0], [0, self.B0_tilde[1,i]], [self.B0_tilde[1,i], self.B0_tilde[0,i]]]).dot(self.F.T)
-
-#    @jit
-    def _f_int(self, X, u):
+    def _f_int(self, cnp.ndarray[double, ndim=1] X, cnp.ndarray[double, ndim=1] u):
         '''
         Private method for the computation of the internal nodal forces without computation of the relevant tensors
         '''
-        f_int = self.B0.T.dot(self.S_voigt)*self.A0*self.t
-        return f_int
+        K, f = self._compute_everything(X, u)
+        return f
 
-#    @jit
-    def _k_int(self, X, u):
+    def _k_int(self, cnp.ndarray[double, ndim=1] X, cnp.ndarray[double, ndim=1] u):
         '''
         Private method for computation of internal tangential stiffness matrix without an update of the internal tensors
 
         '''
-        # as the kronecker product is very expensive, the stuff is done explicitly
-        # self.K_geo = np.kron(self.K_geo_small, self.I)
-        self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0*self.t
-        self.K_geo = scatter_geometric_matrix(self.K_geo_small, 2)
-        self.K_mat = self.B0.T.dot(self.C_SE.dot(self.B0))*self.A0*self.t
-        return self.K_mat + self.K_geo
+        K, f = self._compute_everything(X, u)
+        return K
 
-#    @jit
     def _m_int(self, X, u):
         '''
         Bestimmt die Massenmatrix. Erstellt die Massenmatrix durch die fest einprogrammierte Darstellung aus dem Lehrbuch.
         '''
         X1, Y1, X2, Y2, X3, Y3 = X
-        self.A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
+        A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
         self.M = np.array([[2, 0, 1, 0, 1, 0],
                            [0, 2, 0, 1, 0, 1],
                            [1, 0, 2, 0, 1, 0],
                            [0, 1, 0, 2, 0, 1],
                            [1, 0, 1, 0, 2, 0],
-                           [0, 1, 0, 1, 0, 2]])*self.A0/12*self.t*self.rho
-        # Dauert ewig mit der kron-Funktion; Viel einfacher scheint die direkte Berechnungsmethode zu sein...
-#        self.M_small = np.array([[2, 1, 1], [1, 2, 1,], [1, 1, 2]])*self.A0/12*self.t*self.rho
-#        self.M = np.kron(self.M_small, self.I)
+                           [0, 1, 0, 1, 0, 2]])*A0/12*self.t*self.rho
         return self.M
