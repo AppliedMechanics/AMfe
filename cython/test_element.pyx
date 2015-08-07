@@ -10,6 +10,7 @@ cimport numpy as cnp
 cimport cython
 
 from cython.view cimport array as cvarray
+from cpython cimport bool
 
 cpdef scatter_geometric_matrix(cnp.ndarray[double, ndim=2] Mat, int ndim):
 
@@ -111,7 +112,7 @@ voigtize_index_pairs = {
 3 : ((0, 0,0), (1, 1,1), (2, 2,2), (3, 1, 2), (4, 0, 2), (5, 0, 1)),
 }
 
-cpdef voigtize(Mat, kinematic=False):
+cpdef voigtize(cnp.ndarray[double, ndim=2] Mat, bool kinematic=False):
     '''
     Voigtize a symmetric matrix.
 
@@ -137,7 +138,7 @@ cpdef voigtize(Mat, kinematic=False):
     return Mat_v
 
 
-cpdef unvoigtize(Mat_v, kinematic=False):
+cpdef unvoigtize(cnp.ndarray[double, ndim=2] Mat_v, bool kinematic=False):
     '''
     Make a proper symmetric array from the voigt array given.
     '''
@@ -346,9 +347,6 @@ cdef class Tri3(Element):
         double A0
 
         object C_SE
-        object S
-        object S_voigt
-        object E
 
 
 #    @jit
@@ -393,12 +391,6 @@ cdef class Tri3(Element):
         '''
         cdef:
             double X1, Y1, X2, Y2, X3, Y3
-#            double Y1
-#            double X2
-#            double Y2
-#            double X3
-#            double Y3
-
             double A0
 
             # the matrices involved using memory view types
@@ -418,6 +410,11 @@ cdef class Tri3(Element):
             cnp.ndarray[double, ndim=2] E
             cnp.ndarray[double, ndim=2] S
             cnp.ndarray[double, ndim=2] B0
+            cnp.ndarray[double, ndim=2] K_mat
+            cnp.ndarray[double, ndim=2] K_geo_small
+            cnp.ndarray[double, ndim=2] K
+
+            cnp.ndarray[double, ndim=1] f_int
             cnp.ndarray[double, ndim=1] E_v
             cnp.ndarray[double, ndim=1] S_v
 
@@ -460,7 +457,7 @@ cdef class Tri3(Element):
 #        cdef cnp.ndarray[double, ndim=2] K_mat    = B0.T.dot(self.C_SE.dot(B0))*A0*self.t
 #        cdef cnp.ndarray[double, ndim=2] K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*A0*self.t
 #        cdef cnp.ndarray[double, ndim=2] K        = K_mat + scatter_geometric_matrix(K_geo_small, ndim=2)
-        return np.asarray(K), np.asarray(f_int)
+        return K, f_int
 
     def _f_int(self, cnp.ndarray[double, ndim=1] X, cnp.ndarray[double, ndim=1] u):
         '''
