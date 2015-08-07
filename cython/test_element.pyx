@@ -48,7 +48,7 @@ cpdef scatter_geometric_matrix(cnp.ndarray[double, ndim=2] Mat, int ndim):
 # giving how many voigt-dofs do you have given a dof.
 voigt_dof_dict = {1: 1, 2: 3, 3: 6}
 
-cpdef compute_B_matrix(F, B_tilde):
+cpdef compute_B_matrix(cnp.ndarray[double, ndim=2] F, cnp.ndarray[double, ndim=2] B_tilde):
     '''
     Compute the B-matrix used in Total Lagrangian Finite Elements.
 
@@ -68,9 +68,13 @@ cpdef compute_B_matrix(F, B_tilde):
     -----
     When the Voigt notation is used in this Reference, the variables are denoted with curly brackets.
     '''
+    cdef:
+        int no_of_nodes, no_of_dims, i
+        double F11, F12, F21, F22, F13, F31, F23, F32, F33
+        cnp.ndarray[double, ndim=2] b, B
+
     no_of_nodes = B_tilde.shape[1]
     no_of_dims = B_tilde.shape[0] # spatial dofs per node, i.e. 2 for 2D or 3 for 3D
-    print('no of nodes: ', no_of_nodes, 'no_of_dims', no_of_dims)
     b = B_tilde
     B = np.zeros((voigt_dof_dict[no_of_dims], no_of_nodes*no_of_dims))
     F11 = F[0,0]
@@ -78,6 +82,7 @@ cpdef compute_B_matrix(F, B_tilde):
     F21 = F[1,0]
     F22 = F[1,1]
     if no_of_dims == 3:
+
         F13 = F[0,2]
         F31 = F[2,0]
         F23 = F[1,2]
@@ -419,7 +424,6 @@ cdef class Tri3(Element):
 
         X1, Y1, X2, Y2, X3, Y3 = X
         A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
-        print('A0 ist', A0)
         u_mat = u.reshape(-1, 2)
 #        u_mat[0][:] = [u[0], u[1]]
 #        u_mat[1][:] = [u[2], u[3]]
@@ -428,21 +432,16 @@ cdef class Tri3(Element):
 #        B0_tilde[0][:] = [Y2-Y3, Y3-Y1, Y1-Y2]
 #        B0_tilde[1][:] = [X3-X2, X1-X3, X2-X1]
         B0_tilde /= 2*A0
-        print('B0_tilde', B0_tilde)
         H = np.dot(u_mat.T, B0_tilde.T)
-        print('H', H)
         E = 0.5*(H + H.T + np.dot(H.T, H))
-        print('E', E)
-        E_v = voigtize(E, kinematic=True)
-        print('E', E)
+        E_v = np.array([E[0,0], E[1,1], 2*E[0,1]])
+#        E_v = voigtize(E, kinematic=True)
         F = H.copy()
         F[0,0] += 1.
         F[1,1] += 1.
-        print('F ist', F)
-        print('E_v', E_v)
         S_v = np.dot(self.C_SE, E_v)
-        S = unvoigtize(S_v)
-        print('S', S)
+#        S = unvoigtize(S_v)
+        S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
         B0 = compute_B_matrix(F, B0_tilde)
         K_mat = np.dot(B0.T, np.dot(self.C_SE, B0)) * A0 * self.t
         K_geo_small = np.dot(B0_tilde.T, np.dot(S, B0_tilde)) * A0 * self.t
@@ -477,6 +476,13 @@ cdef class Tri3(Element):
         '''
         K, f = self._compute_everything(X, u)
         return K
+
+    def k_and_f_int(self, cnp.ndarray[double, ndim=1] X, cnp.ndarray[double, ndim=1] u):
+        '''
+
+        '''
+        return self._compute_everything(X, u)
+
 
     def _m_int(self, X, u):
         '''
