@@ -2,7 +2,11 @@
 """
 Created on Mon Aug 10 17:25:07 2015
 
-@author: johannesr
+
+
+Compile the module:
+f2py3 -c  --fcompiler=gnu95 -m element element.f90
+
 """
 
 import scipy as sp
@@ -41,7 +45,7 @@ N = int(1E7)
 
 t1 = time.time()
 for i in range(N):
-    K, f = element.tri3_element(x, u, C_SE, t)
+    K, f = element.tri3_k_and_f(x, u, C_SE, t)
 t2 = time.time()
 
 #for i in range(N):
