@@ -37,11 +37,65 @@ def scatter_geometric_matrix(Mat, ndim):
     dof_small_row = Mat.shape[0]
     dof_small_col = Mat.shape[1]
     Mat_scattered = np.zeros((dof_small_row*ndim, dof_small_col*ndim))
+
     for i in range(dof_small_row):
         for j in range(dof_small_col):
             for k in range(ndim):
                 Mat_scattered[ndim*i+k,ndim*j+k] = Mat[i,j]
     return Mat_scattered
+
+
+def compute_B_matrix(B_tilde, F):
+    '''
+    Compute the B-matrix used in Total Lagrangian Finite Elements.
+
+    Parameters
+    ----------
+    F : ndarray
+        deformation gradient
+    B_tilde : ndarray
+        Matrix of the spatial derivative of the shape functions
+
+    Returns
+    -------
+    B : ndarray
+        B matrix such that {dE} = B @ {u^e}
+
+    Notes
+    -----
+    When the Voigt notation is used in this Reference, the variables are denoted with curly brackets.
+    '''
+
+    no_of_nodes = B_tilde.shape[1]
+    no_of_dims = B_tilde.shape[0] # spatial dofs per node, i.e. 2 for 2D or 3 for 3D
+    b = B_tilde
+    B = np.zeros((no_of_dims*(no_of_dims+1)/2, no_of_nodes*no_of_dims))
+    F11 = F[0,0]
+    F12 = F[0,1]
+    F21 = F[1,0]
+    F22 = F[1,1]
+    if no_of_dims == 3:
+
+        F13 = F[0,2]
+        F31 = F[2,0]
+        F23 = F[1,2]
+        F32 = F[2,1]
+        F33 = F[2,2]
+    for i in range(no_of_nodes):
+        if no_of_dims == 2:
+            B[:, i*no_of_dims : (i+1)*no_of_dims] = [
+            [F11*b[0,i], F21*b[0,i]],
+            [F12*b[1,i], F22*b[1,i]],
+            [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i]]]
+        else:
+            B[:, i*no_of_dims : (i+1)*no_of_dims] = [
+            [F11*b[0,i], F21*b[0,i], F31*b[0,i]],
+            [F12*b[1,i], F22*b[1,i], F32*b[1,i]],
+            [F13*b[2,i], F23*b[2,i], F33*b[2,i]],
+            [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i]], F31*b[1,i]+F32*b[0,i],
+            [F12*b[2,i] + F13*b[1,i], F22*b[2,i] + F23*b[1,i]], F32*b[2,i]+F33*b[1,i],
+            [F13*b[0,i] + F11*b[2,i], F23*b[0,i] + F21*b[2,i]], F33*b[0,i]+F31*b[2,i]]
+    return B
 
 
 class Element():
@@ -207,9 +261,9 @@ class Tri3(Element):
         Definition of material properties and thickness as they are 2D-Elements.
         '''
         self.poisson_ratio = poisson_ratio
-        self.e_modul = E_modul
-        self.lame_mu = E_modul / (2*(1+poisson_ratio))
-        self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
+        self.e_modul       = E_modul
+        self.lame_mu       = E_modul / (2*(1+poisson_ratio))
+        self.lame_lambda   = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
         # ATTENTION: here the switch between plane stress and plane strain makes sense.
         if self.plane_stress:
             self.C_SE = E_modul/(1 - poisson_ratio**2)*np.array([[1, poisson_ratio, 0],
@@ -219,10 +273,10 @@ class Tri3(Element):
             self.C_SE = np.array([[self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
                          [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, 0],
                          [0, 0, self.lame_mu]])
-        self.t = element_thickness
-        self.rho = density
-        self.I = np.eye(2)
-        self.S = np.zeros((2,2))
+        self.t     = element_thickness
+        self.rho   = density
+        self.I     = np.eye(2)
+        self.S     = np.zeros((2,2))
         self.K_geo = np.zeros((6,6))
         pass
 
@@ -241,16 +295,13 @@ class Tri3(Element):
         The thickness information is used later for the internal forces, the mass and the stiffness matrix.
         '''
         X1, Y1, X2, Y2, X3, Y3 = X
-        self.u = u.reshape((-1,2))
-        self.A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
+        self.u        = u.reshape((-1,2))
+        self.A0       = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
         self.B0_tilde = 1/(2*self.A0)*np.array([[Y2-Y3, X3-X2], [Y3-Y1, X1-X3], [Y1-Y2, X2-X1]]).T
-        self.H = self.u.T.dot(self.B0_tilde.T)
-        self.F = self.H + self.I
-        self.E = 1./2.*(self.H + self.H.T + self.H.T.dot(self.H))
-        ## Trace is very slow; use a direct sum instead...
-        # self.S = self.lame_lambda*np.trace(self.E)*self.I + 2*self.lame_mu*self.E
+        self.H        = self.u.T.dot(self.B0_tilde.T)
+        self.F        = self.H + self.I
+        self.E        = 1./2.*(self.H + self.H.T + self.H.T.dot(self.H))
 
-        # This is sick but it improves the stuff...
         self.S_voigt = self.C_SE.dot([self.E[0,0], self.E[1,1], 2*self.E[0,1]])
         self.S[0,0] , self.S[1,1], self.S[1,0], self.S[0,1] = self.S_voigt[0], self.S_voigt[1], self.S_voigt[2], self.S_voigt[2]
 
@@ -272,8 +323,6 @@ class Tri3(Element):
         Private method for computation of internal tangential stiffness matrix without an update of the internal tensors
 
         '''
-        # as the kronecker product is very expensive, the stuff is done explicitly
-        # self.K_geo = np.kron(self.K_geo_small, self.I)
         self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0*self.t
         self.K_geo = scatter_geometric_matrix(self.K_geo_small, 2)
         self.K_mat = self.B0.T.dot(self.C_SE.dot(self.B0))*self.A0*self.t
@@ -291,9 +340,6 @@ class Tri3(Element):
                            [0, 1, 0, 2, 0, 1],
                            [1, 0, 1, 0, 2, 0],
                            [0, 1, 0, 1, 0, 2]])*self.A0/12*self.t*self.rho
-        # Dauert ewig mit der kron-Funktion; Viel einfacher scheint die direkte Berechnungsmethode zu sein...
-#        self.M_small = np.array([[2, 1, 1], [1, 2, 1,], [1, 1, 2]])*self.A0/12*self.t*self.rho
-#        self.M = np.kron(self.M_small, self.I)
         return self.M
 
 
@@ -437,8 +483,104 @@ class Tri6(Element):
         return self.M
 
 
+class Quad4_nonlinear(Element):
+    '''
+    Elementklasse für viereckiges ebenes Element mit linearen Ansatzfunktionen.
+    '''
+    plane_stress = True
 
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4):
+        '''
+        Definition of material properties and thickness as they are 2D-Elements.
+        '''
+        self.poisson_ratio = poisson_ratio
+        self.e_modul       = E_modul
+        self.lame_mu       = E_modul / (2*(1+poisson_ratio))
+        self.lame_lambda   = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
+        self.t             = element_thickness
+        self.rho           = density
+        # ATTENTION: here the switch between plane stress and plane strain makes sense.
+        if self.plane_stress:
+            self.C_SE = E_modul/(1 - poisson_ratio**2)*np.array([[1, poisson_ratio, 0],
+                              [poisson_ratio, 1, 0],
+                              [0, 0, (1-poisson_ratio) / 2]])
+        else: # hier gibt's ebene Dehnung
+            self.C_SE = np.array([[self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
+                         [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, 0],
+                         [0, 0, self.lame_mu]])
+        self.K = np.zeros((8,8))
+        self.f_int = np.zeros(8)
 
+    def _compute_tensors(self, X, u):
+        '''
+        Compute the tensors.
+        '''
+        X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
+        X_mat = X.reshape(-1, 2)
+        u_e = u.reshape(-1, 2)
+
+        # Gauss-Point-Handling:
+        g1 = 0.577350269189626
+        gauss_points = ((-g1, -g1, 1.), (g1, -g1, 1.), (-g1, g1, 1.), (g1, g1, 1.))
+
+        for xi, eta, w in gauss_points:
+
+            dN_dxi = np.array([ [ eta/4 - 1/4,  xi/4 - 1/4],
+                                [-eta/4 + 1/4, -xi/4 - 1/4],
+                                [ eta/4 + 1/4,  xi/4 + 1/4],
+                                [-eta/4 - 1/4, -xi/4 + 1/4]])
+
+            dX_dxi = X_mat.T.dot(dN_dxi)
+            det = dX_dxi[0,0]*dX_dxi[1,1] - dX_dxi[1,0]*dX_dxi[0,1]
+            dxi_dX = 1/det*np.array([[ dX_dxi[1,1], -dX_dxi[0,1]],
+                                     [-dX_dxi[1,0],  dX_dxi[0,0]]])
+
+            B0_tilde = np.transpose(dN_dxi.dot(dxi_dX))
+            print(B0_tilde)
+            H = u_e.T.dot(B0_tilde.T)
+            F = H + np.eye(2)
+            E = 1/2*(H + H.T + H.T.dot(H))
+            E_v = np.array([E[0,0], E[1,1], 2*E[0,1]])
+            S_v = self.C_SE.dot(E_v)
+            S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
+            B0 = compute_B_matrix(B0_tilde, F)
+            K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det*self.t
+            K_geo = scatter_geometric_matrix(K_geo_small, 2)
+            K_mat = B0.T.dot(self.C_SE.dot(B0))*det*self.t
+            self.K += w*(K_geo + K_mat)
+            self.f_int += B0.T.dot(S_v)*det*self.t
+
+    def _f_int(self, X, u):
+        return self.f_int
+
+    def _k_int(self, X, u):
+        return self.K
+
+    def _m_int(self, X, u):
+        X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
+        det = 1/8*(X1*Y2 - X1*Y4 - X2*Y1 + X2*Y3 - X3*Y2 + X3*Y4 + X4*Y1 - X4*Y3)
+        print(det)
+        self.M = det/9 * self.rho * self.t * np.array([
+                 [ 4.,  0.,  2.,  0.,  1.,  0.,  2.,  0.],
+                 [ 0.,  4.,  0.,  2.,  0.,  1.,  0.,  2.],
+                 [ 2.,  0.,  4.,  0.,  2.,  0.,  1.,  0.],
+                 [ 0.,  2.,  0.,  4.,  0.,  2.,  0.,  1.],
+                 [ 1.,  0.,  2.,  0.,  4.,  0.,  2.,  0.],
+                 [ 0.,  1.,  0.,  2.,  0.,  4.,  0.,  2.],
+                 [ 2.,  0.,  1.,  0.,  2.,  0.,  4.,  0.],
+                 [ 0.,  2.,  0.,  1.,  0.,  2.,  0.,  4.]])
+        return self.M
+
+#
+#class Quad8(Element):
+#    pass
+#
+#class Tetra4(Element):
+#    pass
+#
+#class Tetra10(Element):
+#    pass
+#
 
 class Quad4(Element):
 
