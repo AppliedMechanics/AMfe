@@ -79,12 +79,7 @@ subroutine tri3_k_and_f(X, u, C_SE, K, f_int, t)
     X3 = X(5)
     Y3 = X(6)
 
-    u_e(1,1) = u(1)
-    u_e(1,2) = u(2)
-    u_e(2,1) = u(3)
-    u_e(2,2) = u(4)
-    u_e(3,1) = u(5)
-    u_e(3,2) = u(6)
+    u_e = reshape(u, (/3,2/))
 
     A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
 

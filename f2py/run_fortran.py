@@ -41,7 +41,7 @@ C_SE = sp.array([[ 64.,  16.,   0.],
 my_amfe_element = amfe.Tri3()
 my_amfe_element.C_SE = C_SE
 
-N = int(1E7)
+N = int(1E6)
 
 t1 = time.time()
 for i in range(N):

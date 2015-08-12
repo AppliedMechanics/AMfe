@@ -11,8 +11,8 @@ Most of the time is spent with pyhton-functions, when they are used. For instanc
 
 
 import numpy as np
-#from numpy.linalg import inv
-#from numba import jit, autojit
+
+
 
 def scatter_geometric_matrix(Mat, ndim):
     '''
@@ -44,7 +44,6 @@ def scatter_geometric_matrix(Mat, ndim):
     return Mat_scattered
 
 
-#@autojit
 class Element():
     '''
     this is the baseclass for all elements. It contains the methods needed
@@ -183,7 +182,6 @@ class Element():
         '''
         return self._k_and_m_int(X, u)
 
-#@autojit
 class Tri3(Element):
     '''
     Element class for a plane triangle element in Total Lagrangian formulation.
@@ -204,7 +202,6 @@ class Tri3(Element):
     '''
     plane_stress = True
 
-#    @jit
     def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4):
         '''
         Definition of material properties and thickness as they are 2D-Elements.
@@ -229,7 +226,6 @@ class Tri3(Element):
         self.K_geo = np.zeros((6,6))
         pass
 
-#    @jit
     def _compute_tensors(self, X, u):
         '''
         Compute the tensors B0_tilde, B0, F, E and S at the Gauss Points.
@@ -263,7 +259,7 @@ class Tri3(Element):
         for i in range(3):
             self.B0[:,2*i:2*i+2] = np.array([[self.B0_tilde[0,i], 0], [0, self.B0_tilde[1,i]], [self.B0_tilde[1,i], self.B0_tilde[0,i]]]).dot(self.F.T)
 
-#    @jit
+
     def _f_int(self, X, u):
         '''
         Private method for the computation of the internal nodal forces without computation of the relevant tensors
@@ -271,7 +267,6 @@ class Tri3(Element):
         f_int = self.B0.T.dot(self.S_voigt)*self.A0*self.t
         return f_int
 
-#    @jit
     def _k_int(self, X, u):
         '''
         Private method for computation of internal tangential stiffness matrix without an update of the internal tensors
@@ -284,7 +279,6 @@ class Tri3(Element):
         self.K_mat = self.B0.T.dot(self.C_SE.dot(self.B0))*self.A0*self.t
         return self.K_mat + self.K_geo
 
-#    @jit
     def _m_int(self, X, u):
         '''
         Bestimmt die Massenmatrix. Erstellt die Massenmatrix durch die fest einprogrammierte Darstellung aus dem Lehrbuch.
@@ -302,7 +296,7 @@ class Tri3(Element):
 #        self.M = np.kron(self.M_small, self.I)
         return self.M
 
-#@autojit
+
 class Tri6(Element):
     '''
     6 node second order triangle
@@ -446,7 +440,6 @@ class Tri6(Element):
 
 
 
-#@autojit
 class Quad4(Element):
 
     '''
