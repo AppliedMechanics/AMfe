@@ -54,7 +54,7 @@ So the rule is, that the system works on indexing 0, and the import data from gm
 
 
 Tips & Tricks:
-====================
+==============
 
 How to plot matrices in matplotlib:
 
@@ -78,3 +78,9 @@ Plot on log scales:
 Check out more on http://matplotlib.org/examples/color/colormaps_reference.html
 
 
+FORTRAN
+=======
+
+It seems that FORTRAN is a very good companion to Python in order to speed the time critical things up. It is possible to write functions in fortran that are executed at lightspeed, especially when loops or matrix-vector-multiplications are heavily involved. 
+
+As wrapper the tool `f2py` can be used. It is included in numpy and gives the full support for numpy-Arrays. 
