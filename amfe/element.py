@@ -552,7 +552,7 @@ class Quad4(Element):
             K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det*self.t
             K_geo = scatter_geometric_matrix(K_geo_small, 2)
             K_mat = B0.T.dot(self.C_SE.dot(B0))*det*self.t
-            self.K += w*(K_geo + K_mat)
+            self.K += (K_geo + K_mat)*w
             self.f += B0.T.dot(S_v)*det*self.t*w
 
     def _f_int(self, X, u):
@@ -564,7 +564,7 @@ class Quad4(Element):
     def _m_int(self, X, u):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
         det = 1/8*(X1*Y2 - X1*Y4 - X2*Y1 + X2*Y3 - X3*Y2 + X3*Y4 + X4*Y1 - X4*Y3)
-        self.M = det/9 * self.rho * self.t * np.array([
+        self.M = det / 9 * self.rho * self.t * np.array([
                  [ 4.,  0.,  2.,  0.,  1.,  0.,  2.,  0.],
                  [ 0.,  4.,  0.,  2.,  0.,  1.,  0.,  2.],
                  [ 2.,  0.,  4.,  0.,  2.,  0.,  1.,  0.],
