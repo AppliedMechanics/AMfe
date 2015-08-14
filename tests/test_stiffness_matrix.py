@@ -25,15 +25,15 @@ def jacobian(func, X, u):
     Die Funktion func(vec, X) wird nach dem Vektor vec abgeleitet, also d func / d vec an der Stelle X
     '''
     ndof = X.shape[0]
-    jacobian = np.zeros((ndof, ndof))
+    jac = np.zeros((ndof, ndof))
     h = np.sqrt(np.finfo(float).eps)
     f = func(X, u)
     for i in range(ndof):
         u_tmp = u.copy()
         u_tmp[i] += h
         f_tmp = func(X, u_tmp)
-        jacobian[:,i] = (f_tmp - f) / h
-    return jacobian
+        jac[:,i] = (f_tmp - f) / h
+    return jac
 
 
 # This is exactly the element in Felippa's notes
@@ -97,20 +97,20 @@ my_quad_element = amfe.Quad4(E_modul=60, poisson_ratio=1/4, density=1.)
 K = my_quad_element.k_int(x, u)
 M = my_quad_element.m_int(x, u)
 
-my_second_quad = amfe.Quad4_FG(E_modul=60, poisson_ratio=1/4, density=1.)
-K_ref = my_second_quad.k_int(x, u)
-M_ref = my_second_quad.m_int(x, u)
+el = my_quad_element
+K_finite_diff = jacobian(el.f_int, x, u)
 
-np.max(abs(K - K_ref))
-np.max(abs(M - M_ref))
 
-##Quad8:
-#x = np.array([1.,1,2,1,2,2,1,2, 1.5, 1, 2, 1.5, 1.5, 2, 1, 1.5])
-#u = np.array([0., 0, 0, 0, 0, 0, 0, 0, 0., 0, 0, 0, 0, 0, 0, 0])
-#my_quad_element = amfe.Quad8(E_modul=60, poisson_ratio=1/4, density=1.)
-#K, f = my_quad_element.k_and_f_int(x, u)
-#M = my_quad_element.m_int(x, u)
 
+#Quad8:
+x = np.array([1.,1,2,1,2,2,1,2, 1.5, 1, 2, 1.5, 1.5, 2, 1, 1.5])
+u = np.array([0., 0, 0, 0, 0, 0, 0, 0, 0., 0, 0, 0, 0, 0, 0, 0])
+my_quad_element = amfe.Quad8(E_modul=60, poisson_ratio=1/4, density=1.)
+K, f = my_quad_element.k_and_f_int(x, u)
+M = my_quad_element.m_int(x, u)
+
+el = my_quad_element
+K_finite_diff = jacobian(el.f_int, x, u)
 
 #%%
 

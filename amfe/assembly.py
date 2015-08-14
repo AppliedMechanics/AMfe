@@ -104,7 +104,9 @@ class Assembly():
             self.row[:,:] = global_element_indices
             self.row_global.append(self.row.reshape(-1))
             self.col_global.append((self.row.T).reshape(-1))
-            self.vals_global.append(element_matrix.copy().reshape(-1))
+            # Attention! Here, the matrix is not copied! Make sure that the
+            # element matrix is an object of its own
+            self.vals_global.append(element_matrix.reshape(-1))
             self.element_props_global.append(element_props)
         row_global_array = np.array(self.row_global).reshape(-1)
         col_global_array = np.array(self.col_global).reshape(-1)

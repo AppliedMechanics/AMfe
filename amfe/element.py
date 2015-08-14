@@ -315,8 +315,8 @@ class Tri3(Element):
         '''
         Private method for the computation of the internal nodal forces without computation of the relevant tensors
         '''
-        f_int = self.B0.T.dot(self.S_voigt)*self.A0*self.t
-        return f_int
+        f = self.B0.T.dot(self.S_voigt)*self.A0*self.t
+        return f
 
     def _k_int(self, X, u):
         '''
@@ -449,10 +449,10 @@ class Tri6(Element):
                          self.B0_tilde[i][0,j]]]).dot(self.F[i].T)
 
     def _f_int(self, X, u):
-        f_int = np.zeros(12)
+        f = np.zeros(12)
         for i in range(3):
-            f_int += self.B0[i].T.dot(self.S_voigt[i])*self.A0*self.t*1/3
-        return f_int
+            f += self.B0[i].T.dot(self.S_voigt[i])*self.A0*self.t*1/3
+        return f
 
     def _k_int(self, X, u):
         self.K_geo = np.zeros((12, 12))
@@ -510,7 +510,7 @@ class Quad4(Element):
                          [0, 0, self.lame_mu]])
 
         self.K = np.zeros((8,8))
-        self.f_int = np.zeros(8)
+        self.f = np.zeros(8)
 
         # Gauss-Point-Handling:
         g1 = 0.577350269189626
@@ -527,7 +527,7 @@ class Quad4(Element):
         u_e = u.reshape(-1, 2)
 
         self.K *= 0
-        self.f_int *= 0
+        self.f *= 0
 
         for xi, eta, w in self.gauss_points:
 
@@ -553,13 +553,13 @@ class Quad4(Element):
             K_geo = scatter_geometric_matrix(K_geo_small, 2)
             K_mat = B0.T.dot(self.C_SE.dot(B0))*det*self.t
             self.K += w*(K_geo + K_mat)
-            self.f_int += B0.T.dot(S_v)*det*self.t
+            self.f += B0.T.dot(S_v)*det*self.t*w
 
     def _f_int(self, X, u):
-        return self.f_int
+        return self.f.copy()
 
     def _k_int(self, X, u):
-        return self.K
+        return self.K.copy()
 
     def _m_int(self, X, u):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
@@ -573,7 +573,7 @@ class Quad4(Element):
                  [ 0.,  1.,  0.,  2.,  0.,  4.,  0.,  2.],
                  [ 2.,  0.,  1.,  0.,  2.,  0.,  4.,  0.],
                  [ 0.,  2.,  0.,  1.,  0.,  2.,  0.,  4.]])
-        return self.M
+        return self.M.copy()
 
 
 class Quad8(Element):
@@ -604,7 +604,7 @@ class Quad8(Element):
                          [0, 0, self.lame_mu]])
 
         self.K = np.zeros((16,16))
-        self.f_int = np.zeros(16)
+        self.f = np.zeros(16)
 
         # Gauss-Point-Handling
         g3 = 0.861136311594053
@@ -624,7 +624,7 @@ class Quad8(Element):
         u_e = u.reshape(-1, 2)
 
         self.K *= 0
-        self.f_int *= 0
+        self.f *= 0
 
         for xi, eta, w in self.gauss_points:
             # this is now the standard procedure for Total Lagrangian behavior
@@ -654,13 +654,13 @@ class Quad8(Element):
             K_geo = scatter_geometric_matrix(K_geo_small, 2)
             K_mat = B0.T.dot(self.C_SE.dot(B0))*det*self.t
             self.K += w*(K_geo + K_mat)
-            self.f_int += B0.T.dot(S_v)*det*self.t
+            self.f += B0.T.dot(S_v)*det*self.t*w
 
     def _f_int(self, X, u):
-        return self.f_int
+        return self.f.copy()
 
     def _k_int(self, X, u):
-        return self.K
+        return self.K.copy()
 
     def _m_int(self, X, u):
         '''
@@ -690,7 +690,7 @@ class Quad8(Element):
         [  0., -8.,  0., -8.,  0., -6.,  0., -6.,  0., 16.,  0., 20.,  0., 32.,  0., 20.],
         [ -6.,  0., -8.,  0., -8.,  0., -6.,  0., 20.,  0., 16.,  0., 20.,  0., 32.,  0.],
         [  0., -6.,  0., -8.,  0., -8.,  0., -6.,  0., 20.,  0., 16.,  0., 20.,  0., 32.]])
-        return self.M
+        return self.M.copy()
 
 
 #
@@ -701,7 +701,7 @@ class Quad8(Element):
 #    pass
 #
 
-class Quad4(Element):
+class Quad4_FG(Element):
 
     '''
     Element Klasse fuer ebenes, viereckiges Element (Quad4)

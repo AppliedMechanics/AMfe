@@ -42,7 +42,7 @@ my_mechanical_system.apply_dirichlet_boundaries(dirichlet_boundary_list)
 
 
 # static force in y-direction
-my_neumann_boundary_list = [[[amfe.node2total(top_line_indices[0], 0),], 'static', (2E9, ), None]]
+my_neumann_boundary_list = [[[amfe.node2total(top_line_indices[0], 0),], 'static', (2E11, ), None]]
 my_mechanical_system.apply_neumann_boundaries(my_neumann_boundary_list)
 
 
