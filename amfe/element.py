@@ -508,8 +508,14 @@ class Quad4_nonlinear(Element):
             self.C_SE = np.array([[self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
                          [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, 0],
                          [0, 0, self.lame_mu]])
+
         self.K = np.zeros((8,8))
         self.f_int = np.zeros(8)
+
+        # Gauss-Point-Handling:
+        g1 = 0.577350269189626
+        self.gauss_points = ((-g1, -g1, 1.), (g1, -g1, 1.), (-g1, g1, 1.), (g1, g1, 1.))
+
 
     def _compute_tensors(self, X, u):
         '''
@@ -519,11 +525,9 @@ class Quad4_nonlinear(Element):
         X_mat = X.reshape(-1, 2)
         u_e = u.reshape(-1, 2)
 
-        # Gauss-Point-Handling:
-        g1 = 0.577350269189626
-        gauss_points = ((-g1, -g1, 1.), (g1, -g1, 1.), (-g1, g1, 1.), (g1, g1, 1.))
-
-        for xi, eta, w in gauss_points:
+        self.K *= 0
+        self.f_int *= 0
+        for xi, eta, w in self.gauss_points:
 
             dN_dxi = np.array([ [ eta/4 - 1/4,  xi/4 - 1/4],
                                 [-eta/4 + 1/4, -xi/4 - 1/4],
@@ -536,7 +540,6 @@ class Quad4_nonlinear(Element):
                                      [-dX_dxi[1,0],  dX_dxi[0,0]]])
 
             B0_tilde = np.transpose(dN_dxi.dot(dxi_dX))
-            print(B0_tilde)
             H = u_e.T.dot(B0_tilde.T)
             F = H + np.eye(2)
             E = 1/2*(H + H.T + H.T.dot(H))
@@ -559,7 +562,6 @@ class Quad4_nonlinear(Element):
     def _m_int(self, X, u):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
         det = 1/8*(X1*Y2 - X1*Y4 - X2*Y1 + X2*Y3 - X3*Y2 + X3*Y4 + X4*Y1 - X4*Y3)
-        print(det)
         self.M = det/9 * self.rho * self.t * np.array([
                  [ 4.,  0.,  2.,  0.,  1.,  0.,  2.,  0.],
                  [ 0.,  4.,  0.,  2.,  0.,  1.,  0.,  2.],
@@ -571,9 +573,119 @@ class Quad4_nonlinear(Element):
                  [ 0.,  2.,  0.,  1.,  0.,  2.,  0.,  4.]])
         return self.M
 
-#
-#class Quad8(Element):
-#    pass
+
+class Quad8(Element):
+    '''
+    Elementklasse für viereckiges ebenes Element mit quadratischen Ansatzfunktionen.
+    '''
+    plane_stress = True
+
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4):
+        '''
+        Definition of material properties and thickness as they are 2D-Elements.
+        '''
+        self.poisson_ratio = poisson_ratio
+        self.e_modul       = E_modul
+        self.lame_mu       = E_modul / (2*(1+poisson_ratio))
+        self.lame_lambda   = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
+        self.t             = element_thickness
+        self.rho           = density
+
+        # ATTENTION: here the switch between plane stress and plane strain makes sense.
+        if self.plane_stress:
+            self.C_SE = E_modul/(1 - poisson_ratio**2)*np.array([[1, poisson_ratio, 0],
+                              [poisson_ratio, 1, 0],
+                              [0, 0, (1-poisson_ratio) / 2]])
+        else: # hier gibt's ebene Dehnung
+            self.C_SE = np.array([[self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
+                         [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, 0],
+                         [0, 0, self.lame_mu]])
+
+        self.K = np.zeros((16,16))
+        self.f_int = np.zeros(16)
+
+        # Gauss-Point-Handling
+        g3 = 0.861136311594053
+        w3 = 0.347854845137454
+        g4 = 0.339981043584856
+        w4 = 0.652145154862546
+        self.gauss_points = (
+                 (-g3, -g3, w3*w3), (-g4, -g3, w4*w3), ( g3,-g3, w3*w3), ( g4,-g3, w4*w3),
+                 (-g3, -g4, w3*w4), (-g4, -g4, w4*w4), ( g3,-g4, w3*w4), ( g4,-g4, w4*w4),
+                 (-g3,  g3, w3*w3), (-g4,  g3, w4*w3), ( g3, g3, w3*w3), ( g4, g3, w4*w3),
+                 (-g3,  g4, w3*w4), (-g4,  g4, w4*w4), ( g3, g4, w3*w4), ( g4, g4, w4*w4))
+
+
+    def _compute_tensors(self, X, u):
+        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
+        X_mat = X.reshape(-1, 2)
+        u_e = u.reshape(-1, 2)
+
+        self.K *= 0
+        self.f_int *= 0
+
+        for xi, eta, w in self.gauss_points:
+            # this is now the standard procedure for Total Lagrangian behavior
+            dN_dxi = np.array([
+                            [-(eta - 1)*(eta + 2*xi)/4, -(2*eta + xi)*(xi - 1)/4],
+                            [ (eta - 1)*(eta - 2*xi)/4,  (2*eta - xi)*(xi + 1)/4],
+                            [ (eta + 1)*(eta + 2*xi)/4,  (2*eta + xi)*(xi + 1)/4],
+                            [-(eta + 1)*(eta - 2*xi)/4, -(2*eta - xi)*(xi - 1)/4],
+                            [             xi*(eta - 1),            xi**2/2 - 1/2],
+                            [          -eta**2/2 + 1/2,            -eta*(xi + 1)],
+                            [            -xi*(eta + 1),           -xi**2/2 + 1/2],
+                            [           eta**2/2 - 1/2,             eta*(xi - 1)]])
+            dX_dxi = X_mat.T.dot(dN_dxi)
+            det = dX_dxi[0,0]*dX_dxi[1,1] - dX_dxi[1,0]*dX_dxi[0,1]
+            dxi_dX = 1/det*np.array([[ dX_dxi[1,1], -dX_dxi[0,1]],
+                                     [-dX_dxi[1,0],  dX_dxi[0,0]]])
+
+            B0_tilde = np.transpose(dN_dxi.dot(dxi_dX))
+            H = u_e.T.dot(B0_tilde.T)
+            F = H + np.eye(2)
+            E = 1/2*(H + H.T + H.T.dot(H))
+            E_v = np.array([E[0,0], E[1,1], 2*E[0,1]])
+            S_v = self.C_SE.dot(E_v)
+            S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
+            B0 = compute_B_matrix(B0_tilde, F)
+            K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det*self.t
+            K_geo = scatter_geometric_matrix(K_geo_small, 2)
+            K_mat = B0.T.dot(self.C_SE.dot(B0))*det*self.t
+            self.K += w*(K_geo + K_mat)
+            self.f_int += B0.T.dot(S_v)*det*self.t
+
+
+    def _m_int(self, X, u):
+        '''
+        Mass matrix using CAS-System
+        '''
+        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
+
+        det = ( -X1*Y2 + X1*Y4 + 4*X1*Y5 - 4*X1*Y8 + X2*Y1 - X2*Y3 - 4*X2*Y5
+                + 4*X2*Y6 + X3*Y2 - X3*Y4 - 4*X3*Y6 + 4*X3*Y7 - X4*Y1 + X4*Y3
+                - 4*X4*Y7 + 4*X4*Y8 - 4*X5*Y1 + 4*X5*Y2 - 4*X6*Y2 + 4*X6*Y3
+                - 4*X7*Y3 + 4*X7*Y4 + 4*X8*Y1 - 4*X8*Y4)/24
+
+        self.M = det/45 * self.rho * self.t * np.array([
+        [  6.,  0.,  2.,  0.,  3.,  0.,  2.,  0., -6.,  0., -8.,  0., -8.,  0., -6.,  0.],
+        [  0.,  6.,  0.,  2.,  0.,  3.,  0.,  2.,  0., -6.,  0., -8.,  0., -8.,  0., -6.],
+        [  2.,  0.,  6.,  0.,  2.,  0.,  3.,  0., -6.,  0., -6.,  0., -8.,  0., -8.,  0.],
+        [  0.,  2.,  0.,  6.,  0.,  2.,  0.,  3.,  0., -6.,  0., -6.,  0., -8.,  0., -8.],
+        [  3.,  0.,  2.,  0.,  6.,  0.,  2.,  0., -8.,  0., -6.,  0., -6.,  0., -8.,  0.],
+        [  0.,  3.,  0.,  2.,  0.,  6.,  0.,  2.,  0., -8.,  0., -6.,  0., -6.,  0., -8.],
+        [  2.,  0.,  3.,  0.,  2.,  0.,  6.,  0., -8.,  0., -8.,  0., -6.,  0., -6.,  0.],
+        [  0.,  2.,  0.,  3.,  0.,  2.,  0.,  6.,  0., -8.,  0., -8.,  0., -6.,  0., -6.],
+        [ -6.,  0., -6.,  0., -8.,  0., -8.,  0., 32.,  0., 20.,  0., 16.,  0., 20.,  0.],
+        [  0., -6.,  0., -6.,  0., -8.,  0., -8.,  0., 32.,  0., 20.,  0., 16.,  0., 20.],
+        [ -8.,  0., -6.,  0., -6.,  0., -8.,  0., 20.,  0., 32.,  0., 20.,  0., 16.,  0.],
+        [  0., -8.,  0., -6.,  0., -6.,  0., -8.,  0., 20.,  0., 32.,  0., 20.,  0., 16.],
+        [ -8.,  0., -8.,  0., -6.,  0., -6.,  0., 16.,  0., 20.,  0., 32.,  0., 20.,  0.],
+        [  0., -8.,  0., -8.,  0., -6.,  0., -6.,  0., 16.,  0., 20.,  0., 32.,  0., 20.],
+        [ -6.,  0., -8.,  0., -8.,  0., -6.,  0., 20.,  0., 16.,  0., 20.,  0., 32.,  0.],
+        [  0., -6.,  0., -8.,  0., -8.,  0., -6.,  0., 20.,  0., 16.,  0., 20.,  0., 32.]])
+        return self.M
+
+
 #
 #class Tetra4(Element):
 #    pass
