@@ -19,7 +19,7 @@ element_mapping_list = [
     ['Tri3',            2,  5, 3, 'Straight triangle / 3 node first order triangle'],
     ['Tri10',           21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
     ['Quad4',           3, 9, 4, 'Bilinear rectangle / 4 node first order rectangle'],
-    ['Quad8',           10, 23, 8, 'Biquadratic rectangle / 8 node second order rectangle'],
+    ['Quad8',           16, 23, 8, 'Biquadratic rectangle / 8 node second order rectangle'],
     ['straight_line',   1,  3, 2, 'Straight line composed of 2 nodes'],
     ['quadratic_line',  8, 21, 3, 'Quadratic edge/line composed of 3 nodes']
 ]
