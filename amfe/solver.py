@@ -272,7 +272,6 @@ def solve_linear_displacement(mechanical_system, t=0, verbose=True):
 
     if verbose: print('Static problem solved')
 
-    pass
 
 def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
                                  t=0, eps=1E-12, newton_damping=1,

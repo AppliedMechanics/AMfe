@@ -85,16 +85,31 @@ lambda_k = sp.linalg.eigvalsh(K)
 
 
 
-# own shit for Quad4:
+# Quad4:
+rand = sp.rand(8)*1.5
+x = np.array([1.,1,2,1,2,2,1,2])
+u = np.array([0., 0, 0, 0, 0, 0, 0, 0])
+#distort the Element
+x += rand
 
-x = np.array([1,1,2,1,2,2,1,2])
-u = np.array([0, 0, 0, 0, 0, 0, 0, 0])
-my_quad_element = amfe.Quad4_nonlinear(E_modul=60, poisson_ratio=1/4)
-my_quad_element.k_and_f_int(x, u)
-my_quad_element.m_int(x, u)
 
-my_second_quad = amfe.Quad4(E_modul=60, poisson_ratio=1/4)
-K, f = my_second_quad.k_and_f_int(x, u)
+my_quad_element = amfe.Quad4(E_modul=60, poisson_ratio=1/4, density=1.)
+K = my_quad_element.k_int(x, u)
+M = my_quad_element.m_int(x, u)
+
+my_second_quad = amfe.Quad4_FG(E_modul=60, poisson_ratio=1/4, density=1.)
+K_ref = my_second_quad.k_int(x, u)
+M_ref = my_second_quad.m_int(x, u)
+
+np.max(abs(K - K_ref))
+np.max(abs(M - M_ref))
+
+##Quad8:
+#x = np.array([1.,1,2,1,2,2,1,2, 1.5, 1, 2, 1.5, 1.5, 2, 1, 1.5])
+#u = np.array([0., 0, 0, 0, 0, 0, 0, 0, 0., 0, 0, 0, 0, 0, 0, 0])
+#my_quad_element = amfe.Quad8(E_modul=60, poisson_ratio=1/4, density=1.)
+#K, f = my_quad_element.k_and_f_int(x, u)
+#M = my_quad_element.m_int(x, u)
 
 
 #%%

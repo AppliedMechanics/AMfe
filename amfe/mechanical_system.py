@@ -15,11 +15,13 @@ from amfe.boundary import *
 
 
 # Default values:
-#kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'density' : 1E4}
-kwargs = {}
+kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'density' : 1E4}
+#kwargs = {}
+
 element_class_dict = {'Tri3' : Tri3(**kwargs),
                       'Tri6' : Tri6(**kwargs),
-                      'Quad4': Quad4(**kwargs)}
+                      'Quad4': Quad4(**kwargs),
+                      'Quad8': Quad8(**kwargs)}
 
 
 

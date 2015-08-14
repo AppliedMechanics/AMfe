@@ -483,7 +483,7 @@ class Tri6(Element):
         return self.M
 
 
-class Quad4_nonlinear(Element):
+class Quad4(Element):
     '''
     Elementklasse für viereckiges ebenes Element mit linearen Ansatzfunktionen.
     '''
@@ -514,6 +514,7 @@ class Quad4_nonlinear(Element):
 
         # Gauss-Point-Handling:
         g1 = 0.577350269189626
+
         self.gauss_points = ((-g1, -g1, 1.), (g1, -g1, 1.), (-g1, g1, 1.), (g1, g1, 1.))
 
 
@@ -527,6 +528,7 @@ class Quad4_nonlinear(Element):
 
         self.K *= 0
         self.f_int *= 0
+
         for xi, eta, w in self.gauss_points:
 
             dN_dxi = np.array([ [ eta/4 - 1/4,  xi/4 - 1/4],
@@ -654,6 +656,11 @@ class Quad8(Element):
             self.K += w*(K_geo + K_mat)
             self.f_int += B0.T.dot(S_v)*det*self.t
 
+    def _f_int(self, X, u):
+        return self.f_int
+
+    def _k_int(self, X, u):
+        return self.K
 
     def _m_int(self, X, u):
         '''
