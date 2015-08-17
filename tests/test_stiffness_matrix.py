@@ -101,16 +101,25 @@ el = my_quad_element
 K_finite_diff = jacobian(el.f_int, x, u)
 
 
+#
+##Quad8:
+#x = np.array([1.,1,2,1,2,2,1,2, 1.5, 1, 2, 1.5, 1.5, 2, 1, 1.5])
+#u = np.array([0., 0, 0, 0, 0, 0, 0, 0, 0., 0, 0, 0, 0, 0, 0, 0])
+#my_quad_element = amfe.Quad8(E_modul=60, poisson_ratio=1/4, density=1.)
+#K, f = my_quad_element.k_and_f_int(x, u)
+#M = my_quad_element.m_int(x, u)
+#
+#el = my_quad_element
+#K_finite_diff = jacobian(el.f_int, x, u)
 
-#Quad8:
-x = np.array([1.,1,2,1,2,2,1,2, 1.5, 1, 2, 1.5, 1.5, 2, 1, 1.5])
-u = np.array([0., 0, 0, 0, 0, 0, 0, 0, 0., 0, 0, 0, 0, 0, 0, 0])
-my_quad_element = amfe.Quad8(E_modul=60, poisson_ratio=1/4, density=1.)
-K, f = my_quad_element.k_and_f_int(x, u)
-M = my_quad_element.m_int(x, u)
 
-el = my_quad_element
-K_finite_diff = jacobian(el.f_int, x, u)
+#Tetra4
+x = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1.])
+u = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+my_tetra_element = amfe.Tetra4(E_modul=60, poisson_ratio=1/4, density=1.)
+K, f = my_tetra_element.k_and_f_int(x, u)
+M = my_tetra_element.m_int(x, u)
+
 
 #%%
 

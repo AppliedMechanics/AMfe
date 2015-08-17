@@ -92,9 +92,9 @@ def compute_B_matrix(B_tilde, F):
             [F11*b[0,i], F21*b[0,i], F31*b[0,i]],
             [F12*b[1,i], F22*b[1,i], F32*b[1,i]],
             [F13*b[2,i], F23*b[2,i], F33*b[2,i]],
-            [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i]], F31*b[1,i]+F32*b[0,i],
-            [F12*b[2,i] + F13*b[1,i], F22*b[2,i] + F23*b[1,i]], F32*b[2,i]+F33*b[1,i],
-            [F13*b[0,i] + F11*b[2,i], F23*b[0,i] + F21*b[2,i]], F33*b[0,i]+F31*b[2,i]]
+            [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i], F31*b[1,i]+F32*b[0,i]],
+            [F12*b[2,i] + F13*b[1,i], F22*b[2,i] + F23*b[1,i], F32*b[2,i]+F33*b[1,i]],
+            [F13*b[0,i] + F11*b[2,i], F23*b[0,i] + F21*b[2,i], F33*b[0,i]+F31*b[2,i]]]
     return B
 
 
@@ -480,7 +480,7 @@ class Tri6(Element):
         [ -0.,  -4.,   0.,   0.,   0.,   0.,   0.,  16.,   0.,  32.,   0., 16.],
         [  0.,   0.,  -4.,  -0.,   0.,   0.,  16.,   0.,  16.,   0.,  32.,  0.],
         [  0.,   0.,  -0.,  -4.,   0.,   0.,   0.,  16.,   0.,  16.,   0., 32.]])
-        return self.M
+        return self.M.copy()
 
 
 class Quad4(Element):
@@ -693,13 +693,106 @@ class Quad8(Element):
         return self.M.copy()
 
 
-#
-#class Tetra4(Element):
-#    pass
+
+class Tetra4(Element):
+    '''
+    Tetraeder-Element with 4 nodes
+    '''
+    def __init__(self,  E_modul=210E9, poisson_ratio=0.3, density=1E4):
+        self.poisson_ratio = poisson_ratio
+        self.e_modul       = E_modul
+        self.lame_mu       = E_modul / (2*(1+poisson_ratio))
+        self.lame_lambda   = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
+        self.rho           = density
+        self.C_SE = np.array([
+                [self.lame_lambda + 2*self.lame_mu, self.lame_lambda, self.lame_lambda, 0, 0, 0],
+                [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0, 0, 0],
+                [self.lame_lambda , self.lame_lambda, self.lame_lambda + 2*self.lame_mu, 0, 0, 0],
+                [0, 0, 0, self.lame_mu, 0, 0],
+                [0, 0, 0, 0, self.lame_mu, 0],
+                [0, 0, 0, 0, 0, self.lame_mu] ])
+
+        self.K = np.zeros((16,16))
+        self.f = np.zeros(16)
+
+    def _compute_tensors(self, X, u):
+        X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4 = X
+        u_e = u.reshape(-1, 3)
+        # not sure yet if the determinant is correct when doing the integration
+        det =   X1*Y2*Z3 - X1*Y2*Z4 - X1*Y3*Z2 + X1*Y3*Z4 + X1*Y4*Z2 - X1*Y4*Z3 \
+              - X2*Y1*Z3 + X2*Y1*Z4 + X2*Y3*Z1 - X2*Y3*Z4 - X2*Y4*Z1 + X2*Y4*Z3 \
+              + X3*Y1*Z2 - X3*Y1*Z4 - X3*Y2*Z1 + X3*Y2*Z4 + X3*Y4*Z1 - X3*Y4*Z2 \
+              - X4*Y1*Z2 + X4*Y1*Z3 + X4*Y2*Z1 - X4*Y2*Z3 - X4*Y3*Z1 + X4*Y3*Z2
+        det *= -1 # account here for the strange order of the node numbering...
+
+        B0_tilde = 1/det*np.transpose(np.array([
+                [ Y2*Z3 - Y2*Z4 - Y3*Z2 + Y3*Z4 + Y4*Z2 - Y4*Z3,
+                 -X2*Z3 + X2*Z4 + X3*Z2 - X3*Z4 - X4*Z2 + X4*Z3,
+                  X2*Y3 - X2*Y4 - X3*Y2 + X3*Y4 + X4*Y2 - X4*Y3],
+                [-Y1*Z3 + Y1*Z4 + Y3*Z1 - Y3*Z4 - Y4*Z1 + Y4*Z3,
+                  X1*Z3 - X1*Z4 - X3*Z1 + X3*Z4 + X4*Z1 - X4*Z3,
+                 -X1*Y3 + X1*Y4 + X3*Y1 - X3*Y4 - X4*Y1 + X4*Y3],
+                [ Y1*Z2 - Y1*Z4 - Y2*Z1 + Y2*Z4 + Y4*Z1 - Y4*Z2,
+                 -X1*Z2 + X1*Z4 + X2*Z1 - X2*Z4 - X4*Z1 + X4*Z2,
+                  X1*Y2 - X1*Y4 - X2*Y1 + X2*Y4 + X4*Y1 - X4*Y2],
+                [-Y1*Z2 + Y1*Z3 + Y2*Z1 - Y2*Z3 - Y3*Z1 + Y3*Z2,
+                  X1*Z2 - X1*Z3 - X2*Z1 + X2*Z3 + X3*Z1 - X3*Z2,
+                 -X1*Y2 + X1*Y3 + X2*Y1 - X2*Y3 - X3*Y1 + X3*Y2]]))
+
+        print('Determinante: ', det)
+        H = u_e.T.dot(B0_tilde.T)
+        F = H + np.eye(3)
+        E = 1/2*(H + H.T + H.T.dot(H))
+        E_v = np.array([  E[0,0],   E[1,1],   E[2,2],
+                        2*E[1,2], 2*E[0,2], 2*E[0,1]])
+
+        S_v = self.C_SE.dot(E_v)
+        S = np.array([[S_v[0], S_v[5], S_v[4]],
+                      [S_v[5], S_v[1], S_v[3]],
+                      [S_v[4], S_v[3], S_v[2]]])
+        B0 = compute_B_matrix(B0_tilde, F)
+        K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det/6
+        K_geo = scatter_geometric_matrix(K_geo_small, 3)
+        K_mat = B0.T.dot(self.C_SE.dot(B0))*det/6
+        self.K = K_geo + K_mat
+        self.f = B0.T.dot(S_v)*det/6
+
+    def _f_int(self, X, u):
+        return self.f.copy()
+
+    def _k_int(self, X, u):
+        return self.K.copy()
+
+    def _m_int(self, X, u):
+        '''
+        Mass matrix using CAS-System
+        '''
+        X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4 = X
+        det =   X1*Y2*Z3 - X1*Y2*Z4 - X1*Y3*Z2 + X1*Y3*Z4 + X1*Y4*Z2 - X1*Y4*Z3 \
+              - X2*Y1*Z3 + X2*Y1*Z4 + X2*Y3*Z1 - X2*Y3*Z4 - X2*Y4*Z1 + X2*Y4*Z3 \
+              + X3*Y1*Z2 - X3*Y1*Z4 - X3*Y2*Z1 + X3*Y2*Z4 + X3*Y4*Z1 - X3*Y4*Z2 \
+              - X4*Y1*Z2 + X4*Y1*Z3 + X4*Y2*Z1 - X4*Y2*Z3 - X4*Y3*Z1 + X4*Y3*Z2
+        det *= -1 # same thing as above - it's not clear yet how the node numbering is done.
+        self.V = det/6
+        self.M = self.V / 20 * self.rho * np.array([
+            [ 2.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.],
+            [ 0.,  2.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.],
+            [ 0.,  0.,  2.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.],
+            [ 1.,  0.,  0.,  2.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.],
+            [ 0.,  1.,  0.,  0.,  2.,  0.,  0.,  1.,  0.,  0.,  1.,  0.],
+            [ 0.,  0.,  1.,  0.,  0.,  2.,  0.,  0.,  1.,  0.,  0.,  1.],
+            [ 1.,  0.,  0.,  1.,  0.,  0.,  2.,  0.,  0.,  1.,  0.,  0.],
+            [ 0.,  1.,  0.,  0.,  1.,  0.,  0.,  2.,  0.,  0.,  1.,  0.],
+            [ 0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  2.,  0.,  0.,  1.],
+            [ 1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  2.,  0.,  0.],
+            [ 0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  2.,  0.],
+            [ 0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  2.]])
+        return self.M.copy()
 #
 #class Tetra10(Element):
 #    pass
 #
+
 
 class Quad4_FG(Element):
 

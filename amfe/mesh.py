@@ -15,13 +15,15 @@ import sys
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
     # internal Name,    gmsh-Key, vtk/ParaView-Key, no_of_nodes, description
-    ['Tri6',            9, 22, 6, 'Quadratic triangle / 6 node second order triangle'],
-    ['Tri3',            2,  5, 3, 'Straight triangle / 3 node first order triangle'],
+    ['Tetra4',           4, 10,  4, 'Linear Tetraeder / nodes on every corner'],
+    ['Tetra10',         11, 24, 10, 'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
+    ['Tri6',             9, 22,  6, 'Quadratic triangle / 6 node second order triangle'],
+    ['Tri3',             2,  5,  3, 'Straight triangle / 3 node first order triangle'],
     ['Tri10',           21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
-    ['Quad4',           3, 9, 4, 'Bilinear rectangle / 4 node first order rectangle'],
-    ['Quad8',           16, 23, 8, 'Biquadratic rectangle / 8 node second order rectangle'],
-    ['straight_line',   1,  3, 2, 'Straight line composed of 2 nodes'],
-    ['quadratic_line',  8, 21, 3, 'Quadratic edge/line composed of 3 nodes']
+    ['Quad4',            3,  9,  4, 'Bilinear rectangle / 4 node first order rectangle'],
+    ['Quad8',           16, 23,  8, 'Biquadratic rectangle / 8 node second order rectangle'],
+    ['straight_line',    1,  3,  2, 'Straight line composed of 2 nodes'],
+    ['quadratic_line',   8, 21,  3, 'Quadratic edge/line composed of 3 nodes']
 ]
 
 # actual set of implemented elements

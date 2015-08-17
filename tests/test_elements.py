@@ -42,7 +42,7 @@ my_mechanical_system.apply_dirichlet_boundaries(dirichlet_boundary_list)
 
 
 # static force in y-direction
-my_neumann_boundary_list = [[[amfe.node2total(top_line_indices[0], 0),], 'static', (2E11, ), None]]
+my_neumann_boundary_list = [[[amfe.node2total(top_line_indices[0], 0),], 'static', (5E11, ), None]]
 my_mechanical_system.apply_neumann_boundaries(my_neumann_boundary_list)
 
 
@@ -55,8 +55,8 @@ K = my_mechanical_system.K_global()
 #%%
 
 # static solution
-#amfe.solve_nonlinear_displacement(my_mechanical_system, 40, smplfd_nwtn_itr=1)
-amfe.solve_linear_displacement(my_mechanical_system)
+amfe.solve_nonlinear_displacement(my_mechanical_system, 40, smplfd_nwtn_itr=1)
+#amfe.solve_linear_displacement(my_mechanical_system)
 export_path = '../results/tests/bar_Quad4' + time.strftime("_%Y%m%d_%H%M%S") + '/bar_Quad4'
 my_mechanical_system.export_paraview(export_path)
 
