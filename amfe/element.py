@@ -117,9 +117,11 @@ class Element():
         pass
 
     def _k_int(self, X, u):
+        print('The function is not implemented yet...')
         pass
 
     def _f_int(self, X, u):
+        print('The function is not implemented yet...')
         pass
 
     def _m_int(self, X, u):
@@ -235,6 +237,8 @@ class Element():
 
         '''
         return self._k_and_m_int(X, u)
+
+
 
 class Tri3(Element):
     '''
@@ -578,7 +582,8 @@ class Quad4(Element):
 
 class Quad8(Element):
     '''
-    Elementklasse für viereckiges ebenes Element mit quadratischen Ansatzfunktionen.
+    Plane Quadrangle with quadratic shape functions and 8 nodes. 4 nodes are
+    at every corner, 4 nodes on every face.
     '''
     plane_stress = True
 

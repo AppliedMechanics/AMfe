@@ -27,7 +27,7 @@ element_mapping_list = [
 ]
 
 # actual set of implemented elements
-element_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8'}
+element_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', 'Tetra4'}
 line_set = {'straight_line', 'quadratic_line'}
 
 #
@@ -76,7 +76,7 @@ class Mesh:
         self.elements_type       = []
         self.elements_properties = []
         # the displacements; They are stored as a list of numpy-arrays with shape (ndof, node_dof):
-        self.u                   = None 
+        self.u                   = None
         self.timesteps           = []
         self.node_dof            = node_dof
 
