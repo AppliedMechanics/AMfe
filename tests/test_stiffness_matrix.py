@@ -65,7 +65,7 @@ else: print('Kein Element ausgewählt')
 t1 = time.time()
 K = my_element.k_int(x, u)
 t2 = time.time() - t1
-print('Benötigte Zeit zum Aufstellen der Elementsteifigkeitsmatrix: {0}'.format(t2))
+print('Benoetigte Zeit zum Aufstellen der Elementsteifigkeitsmatrix: {0}'.format(t2))
 
 if not Quad4:
     my_element.f_int(x, u)
@@ -86,7 +86,7 @@ lambda_k = sp.linalg.eigvalsh(K)
 
 
 # Quad4:
-rand = sp.rand(8)*1.5
+rand = sp.rand(8)*0.5
 x = np.array([1.,1,2,1,2,2,1,2])
 u = np.array([0., 0, 0, 0, 0, 0, 0, 0])
 #distort the Element
@@ -97,8 +97,27 @@ my_quad_element = amfe.Quad4(E_modul=60, poisson_ratio=1/4, density=1.)
 K = my_quad_element.k_int(x, u)
 M = my_quad_element.m_int(x, u)
 
-el = my_quad_element
-K_finite_diff = jacobian(el.f_int, x, u)
+fg_quad_element = amfe.Quad4_FG(E_modul=60, poisson_ratio=1/4, density=1.)
+K_fg = fg_quad_element.k_int(x, u)
+M_fg = fg_quad_element.m_int(x, u)
+
+
+# Test of the mass matrices in the different procedures
+print('Massen-Matrix nach JR')
+print(M/M[0,0]*4)
+print('Massen-Matrix nach FG')
+print(M_fg/M_fg[0,0]*4)
+
+print('Vergleich der gesamten Masse des Elements')
+print('Gesamtmasse JR:', np.sum(M), 'Gesamtmasse FG:', np.sum(M_fg))
+
+
+import matplotlib.pyplot as plt
+x_plot = x.reshape(-1, 2)
+
+plt.plot(x_plot[:,0], x_plot[:,1])
+#el = my_quad_element
+#K_finite_diff = jacobian(el.f_int, x, u)
 
 
 #
@@ -112,14 +131,14 @@ K_finite_diff = jacobian(el.f_int, x, u)
 #el = my_quad_element
 #K_finite_diff = jacobian(el.f_int, x, u)
 
-
-#Tetra4
-x = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1.])
-u = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-my_tetra_element = amfe.Tetra4(E_modul=60, poisson_ratio=1/4, density=1.)
-K, f = my_tetra_element.k_and_f_int(x, u)
-M = my_tetra_element.m_int(x, u)
-
+#
+##Tetra4
+#x = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1.])
+#u = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+#my_tetra_element = amfe.Tetra4(E_modul=60, poisson_ratio=1/4, density=1.)
+#K, f = my_tetra_element.k_and_f_int(x, u)
+#M = my_tetra_element.m_int(x, u)
+#
 
 #%%
 
