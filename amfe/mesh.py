@@ -339,6 +339,17 @@ class Mesh:
 
         self._update_mesh_props()
 
+    def boundary_information(self):
+        '''
+        Print the information of the boundary stuff
+        '''
+        print('List boundary nodes sorted by the boundary number. \n\
+                Take care: The lines start indexing with 0, gmsh does this with 1.\n')
+        for i, line in enumerate(self.boundary_list):
+            print('Boundary', i,
+                  '\n(gmsh-Key:', self.amfe2gmsh_boundary_dict[i],
+                  '/ index in boundary_list:', i, ')')
+            print(line, '\n')
 
     def set_displacement(self, u):
         '''
