@@ -26,9 +26,14 @@ element_mapping_list = [
     ['quadratic_line',   8, 21,  3, 'Quadratic edge/line composed of 3 nodes']
 ]
 
+
 # actual set of implemented elements
-element_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', 'Tetra4'}
-line_set = {'straight_line', 'quadratic_line'}
+element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
+element_3d_set = {'Tetra4', 'Tetra10'}
+
+boundary_2d_set = {'straight_line', 'quadratic_line'}
+boundary_3d_set = {'straight_line', 'quadratic_line',
+                   'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8'}
 
 #
 # Starting from here everything's working automatically
@@ -84,15 +89,10 @@ class Mesh:
 
     def _update_mesh_props(self):
         '''
-        Just purely updates the elements props when the nodes and elements have changed
+        Update the number properties of nodes and elements when the mesh has changed
         '''
-        # elements should be given as arrays; Thus this is not necessary
-        if False:
-            self.nodes = np.array(self.nodes)
-            self.elements = np.array(self.elements)
         self.no_of_nodes = len(self.nodes)
         self.no_of_dofs = self.no_of_nodes*self.node_dof
-        # element stuff
         self.no_of_elements = len(self.elements)
         self.no_of_element_nodes = len(self.elements[0])
 
@@ -176,7 +176,7 @@ class Mesh:
         print('Reading elements successful.')
 
 
-    def import_msh(self, filename, flat_mesh=True):
+    def import_msh(self, filename, mesh_3d=False):
         """
         Import the mesh file from gmsh.
 
@@ -184,8 +184,8 @@ class Mesh:
         -----------
         filename : str
             file name of the msh-file
-        flat_mesh : bool, optional
-            flag for information whether mesh is flat (2D) or not flat (3D)
+        mesh_3d : bool, optional
+            flag for information whether mesh is 2D (False) or 3D (True)
 
         Returns
         --------
@@ -251,33 +251,54 @@ class Mesh:
         # Zeile [i] von [nodes] beinhaltet die X-, Y-, Z-Koordinate von Knoten [i+1]
         self.nodes = [list_imported_nodes[j][1:] for j in range(len(list_imported_nodes))]
 
-        boundary_line_list = [] # The nodes of a line are stored here in a unordered way
+        # set correct sets to distinguish, what is a boundary and what is an element
+        if mesh_3d:
+            element_set  = element_3d_set
+            boundary_set = boundary_3d_set
+        else:
+            element_set  = element_2d_set
+            boundary_set = boundary_2d_set
+
+        gmsh2amfe_boundary_dict= {}
+        boundary_list = [] # The nodes of a boundary are stored here in a unordered way
         # Zeile [i] von [elements] beinhaltet die Knotennummern von Element [i+1]
+
+        ############################
+        # Loop over all elements ###
+        ############################
         for element in list_imported_elements:
             gmsh_element_key = element[1]
             tag = element[2] # Tag information giving everything where the structure belongs to and so on...
             if gmsh_element_key in gmsh2amfe:
+
                 # handling of the elements:
                 if gmsh2amfe[gmsh_element_key] in element_set:
                     self.elements_properties.append(element[3:3+tag])
                     self.elements.append(element[3+tag:])
                     self.elements_type.append(gmsh2amfe[gmsh_element_key])
-                # Handling of the lines as they can be needed for the boundary stuff
-                if gmsh2amfe[gmsh_element_key] in line_set:
-                    line_number = element[2+tag]
-                    if len(boundary_line_list) < line_number: # append line if line was not called
-                        boundary_line_list.append([])
-                    boundary_line_list[line_number - 1].append(element[3+tag:])
+
+                # Handling of the boundaries
+                if gmsh2amfe[gmsh_element_key] in boundary_set:
+                    gmsh_boundary_number = element[2+tag]
+
+                    if gmsh_boundary_number not in gmsh2amfe_boundary_dict:
+                        nbounds = len(gmsh2amfe_boundary_dict)
+                        gmsh2amfe_boundary_dict.update({gmsh_boundary_number : nbounds})
+                        boundary_list.append([])
+
+                    boundary_index = gmsh2amfe_boundary_dict[gmsh_boundary_number]
+                    boundary_list[boundary_index].append(element[3+tag:])
 
         # even if the nodes are heterogeneous, it should work out...
         self.nodes = np.array(self.nodes)
         self.elements = np.array(self.elements)
         # Node handling in order to make 2D-meshes flat by removing z-coordinate:
-        if flat_mesh:
+        if mesh_3d:
+            self.node_dof = 3
+        else:
             self.nodes = self.nodes[:,:-1]
             self.node_dof = 2
-        else:
-            self.node_dof = 3
+
         # Take care here!!! gmsh starts indexing with 1,
         # paraview with 0!
         self.elements = np.array(self.elements) - 1
@@ -305,13 +326,16 @@ class Mesh:
         ########
         # Postprocessing of the line_sets
         ########
-        self.boundary_line_list = []
-        for set_ in boundary_line_list:
+        self.gmsh2amfe_boundary_dict = gmsh2amfe_boundary_dict
+        self.amfe2gmsh_boundary_dict = \
+            dict(zip(gmsh2amfe_boundary_dict.values(), gmsh2amfe_boundary_dict.keys()))
+        self.boundary_list = []
+        for set_ in boundary_list:
             set_ = np.array(set_).reshape(-1)
             set_ = np.array(list(set(set_))) # remove the duplicates
             set_ -= 1 # consider node indexing change of gmsh
             set_ = [new_old_node_mapping_dict[node] for node in set_ if node in new_old_node_mapping_dict]
-            self.boundary_line_list.append(np.array(set_))
+            self.boundary_list.append(np.array(set_))
 
         self._update_mesh_props()
 

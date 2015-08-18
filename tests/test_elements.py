@@ -28,9 +28,8 @@ my_mechanical_system.load_mesh_from_gmsh('../meshes/test_meshes/bar_Quad4_simple
 
 #%%
 
-
 # Boundary handling
-bottom_line_indices = my_mechanical_system.mesh_class.boundary_line_list[3]
+bottom_line_indices = my_mechanical_system.mesh_class.boundary_list[3]
 top_line_indices = my_mechanical_system.mesh_class.boundary_line_list[1]
 bottom_fixation_x = [None, [amfe.node2total(i, 0) for i in bottom_line_indices], None]
 bottom_fixation_y = [None, [amfe.node2total(i, 1) for i in bottom_line_indices], None]
