@@ -727,26 +727,24 @@ class Tetra4(Element):
         X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4 = X
         u_e = u.reshape(-1, 3)
         # not sure yet if the determinant is correct when doing the integration
-        det =   X1*Y2*Z3 - X1*Y2*Z4 - X1*Y3*Z2 + X1*Y3*Z4 + X1*Y4*Z2 - X1*Y4*Z3 \
-              - X2*Y1*Z3 + X2*Y1*Z4 + X2*Y3*Z1 - X2*Y3*Z4 - X2*Y4*Z1 + X2*Y4*Z3 \
-              + X3*Y1*Z2 - X3*Y1*Z4 - X3*Y2*Z1 + X3*Y2*Z4 + X3*Y4*Z1 - X3*Y4*Z2 \
-              - X4*Y1*Z2 + X4*Y1*Z3 + X4*Y2*Z1 - X4*Y2*Z3 - X4*Y3*Z1 + X4*Y3*Z2
+        det = -X1*Y2*Z3 + X1*Y2*Z4 + X1*Y3*Z2 - X1*Y3*Z4 - X1*Y4*Z2 + X1*Y4*Z3 \
+             + X2*Y1*Z3 - X2*Y1*Z4 - X2*Y3*Z1 + X2*Y3*Z4 + X2*Y4*Z1 - X2*Y4*Z3 \
+             - X3*Y1*Z2 + X3*Y1*Z4 + X3*Y2*Z1 - X3*Y2*Z4 - X3*Y4*Z1 + X3*Y4*Z2 \
+             + X4*Y1*Z2 - X4*Y1*Z3 - X4*Y2*Z1 + X4*Y2*Z3 + X4*Y3*Z1 - X4*Y3*Z2
 
-        B0_tilde = 1/det*np.transpose(np.array([
-                [ Y2*Z3 - Y2*Z4 - Y3*Z2 + Y3*Z4 + Y4*Z2 - Y4*Z3,
-                 -X2*Z3 + X2*Z4 + X3*Z2 - X3*Z4 - X4*Z2 + X4*Z3,
-                  X2*Y3 - X2*Y4 - X3*Y2 + X3*Y4 + X4*Y2 - X4*Y3],
-                [-Y1*Z3 + Y1*Z4 + Y3*Z1 - Y3*Z4 - Y4*Z1 + Y4*Z3,
-                  X1*Z3 - X1*Z4 - X3*Z1 + X3*Z4 + X4*Z1 - X4*Z3,
-                 -X1*Y3 + X1*Y4 + X3*Y1 - X3*Y4 - X4*Y1 + X4*Y3],
-                [ Y1*Z2 - Y1*Z4 - Y2*Z1 + Y2*Z4 + Y4*Z1 - Y4*Z2,
-                 -X1*Z2 + X1*Z4 + X2*Z1 - X2*Z4 - X4*Z1 + X4*Z2,
-                  X1*Y2 - X1*Y4 - X2*Y1 + X2*Y4 + X4*Y1 - X4*Y2],
-                [-Y1*Z2 + Y1*Z3 + Y2*Z1 - Y2*Z3 - Y3*Z1 + Y3*Z2,
-                  X1*Z2 - X1*Z3 - X2*Z1 + X2*Z3 + X3*Z1 - X3*Z2,
-                 -X1*Y2 + X1*Y3 + X2*Y1 - X2*Y3 - X3*Y1 + X3*Y2]]))
-
-        det *= -1 # account here for the strange order of the node numbering...
+        B0_tilde = 1/det*np.array([
+                [-Y2*Z3 + Y2*Z4 + Y3*Z2 - Y3*Z4 - Y4*Z2 + Y4*Z3,
+                  X2*Z3 - X2*Z4 - X3*Z2 + X3*Z4 + X4*Z2 - X4*Z3,
+                 -X2*Y3 + X2*Y4 + X3*Y2 - X3*Y4 - X4*Y2 + X4*Y3],
+                [ Y1*Z3 - Y1*Z4 - Y3*Z1 + Y3*Z4 + Y4*Z1 - Y4*Z3,
+                 -X1*Z3 + X1*Z4 + X3*Z1 - X3*Z4 - X4*Z1 + X4*Z3,
+                  X1*Y3 - X1*Y4 - X3*Y1 + X3*Y4 + X4*Y1 - X4*Y3],
+                [-Y1*Z2 + Y1*Z4 + Y2*Z1 - Y2*Z4 - Y4*Z1 + Y4*Z2,
+                  X1*Z2 - X1*Z4 - X2*Z1 + X2*Z4 + X4*Z1 - X4*Z2,
+                 -X1*Y2 + X1*Y4 + X2*Y1 - X2*Y4 - X4*Y1 + X4*Y2],
+                [ Y1*Z2 - Y1*Z3 - Y2*Z1 + Y2*Z3 + Y3*Z1 - Y3*Z2,
+                 -X1*Z2 + X1*Z3 + X2*Z1 - X2*Z3 - X3*Z1 + X3*Z2,
+                  X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2]]).T
 
         H = u_e.T.dot(B0_tilde.T)
         F = H + np.eye(3)
