@@ -12,6 +12,16 @@ Most of the time is spent with pyhton-functions, when they are used. For instanc
 
 import numpy as np
 
+try:
+    import amfe.f90_element
+    fortran_use = True
+except:
+    print('''
+Python was not able to load the fast fortran routines.
+run TODO in order to get the full speed!
+''')
+
+#fortran_use = False
 
 
 def scatter_geometric_matrix(Mat, ndim):
@@ -97,6 +107,11 @@ def compute_B_matrix(B_tilde, F):
             [F13*b[0,i] + F11*b[2,i], F23*b[0,i] + F21*b[2,i], F33*b[0,i] + F31*b[2,i]],
             [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i], F31*b[1,i] + F32*b[0,i]]]
     return B
+
+
+if fortran_use:
+    compute_B_matrix = amfe.f90_element.compute_b_matrix
+    scatter_geometric_matrix = amfe.f90_element.scatter_matrix
 
 
 class Element():
@@ -220,24 +235,24 @@ class Element():
         return self._m_int(X, u)
 
 
-    def k_and_m_int(self, X, u):
-        '''
-        Returns the stiffness and mass matrix of the Element.
-
-        Parameters
-        -----------
-        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
-                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
-
-        u :         nodal displacements given in Voigt notation
-
-        Returns
-        --------
-        m_int :     The consistent mass matrix of the element
-                    (numpy.ndarray of dimension (ndim,ndim))
-
-        '''
-        return self._k_and_m_int(X, u)
+#    def k_and_m_int(self, X, u):
+#        '''
+#        Returns the stiffness and mass matrix of the Element.
+#
+#        Parameters
+#        -----------
+#        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
+#                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+#
+#        u :         nodal displacements given in Voigt notation
+#
+#        Returns
+#        --------
+#        m_int :     The consistent mass matrix of the element
+#                    (numpy.ndarray of dimension (ndim,ndim))
+#
+#        '''
+#        return self._k_and_m_int(X, u)
 
 
 
@@ -300,38 +315,38 @@ class Tri3(Element):
         The thickness information is used later for the internal forces, the mass and the stiffness matrix.
         '''
         X1, Y1, X2, Y2, X3, Y3 = X
-        self.u        = u.reshape((-1,2))
-        self.A0       = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
-        self.B0_tilde = 1/(2*self.A0)*np.array([[Y2-Y3, X3-X2], [Y3-Y1, X1-X3], [Y1-Y2, X2-X1]]).T
-        self.H        = self.u.T.dot(self.B0_tilde.T)
-        self.F        = self.H + self.I
-        self.E        = 1./2.*(self.H + self.H.T + self.H.T.dot(self.H))
-
-        self.S_voigt = self.C_SE.dot([self.E[0,0], self.E[1,1], 2*self.E[0,1]])
-        self.S[0,0] , self.S[1,1], self.S[1,0], self.S[0,1] = self.S_voigt[0], self.S_voigt[1], self.S_voigt[2], self.S_voigt[2]
-
-        # Building B0 with the product of the deformation gradient
-        self.B0 = np.zeros((3, 6))
-        for i in range(3):
-            self.B0[:,2*i:2*i+2] = np.array([[self.B0_tilde[0,i], 0], [0, self.B0_tilde[1,i]], [self.B0_tilde[1,i], self.B0_tilde[0,i]]]).dot(self.F.T)
+        u_mat = u.reshape((-1,2))
+        det = (X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2)
+        A0       = 0.5*det
+        B0_tilde = 1/det*np.array([[Y2-Y3, X3-X2], [Y3-Y1, X1-X3], [Y1-Y2, X2-X1]]).T
+        H        = u_mat.T.dot(B0_tilde.T)
+        F = H + np.eye(2)
+        E = 1/2*(H + H.T + H.T.dot(H))
+        E_v = np.array([E[0,0], E[1,1], 2*E[0,1]])
+        S_v = self.C_SE.dot(E_v)
+        S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
+        B0 = compute_B_matrix(B0_tilde, F)
+        K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det/2*self.t
+        K_geo = scatter_geometric_matrix(K_geo_small, 2)
+        K_mat = B0.T.dot(self.C_SE.dot(B0))*det/2*self.t
+        self.K = (K_geo + K_mat)
+        self.f = B0.T.dot(S_v)*det/2*self.t
 
 
     def _f_int(self, X, u):
         '''
         Private method for the computation of the internal nodal forces without computation of the relevant tensors
         '''
-        f = self.B0.T.dot(self.S_voigt)*self.A0*self.t
-        return f
+        return self.f.copy()
+
 
     def _k_int(self, X, u):
         '''
         Private method for computation of internal tangential stiffness matrix without an update of the internal tensors
 
         '''
-        self.K_geo_small = self.B0_tilde.T.dot(self.S.dot(self.B0_tilde))*self.A0*self.t
-        self.K_geo = scatter_geometric_matrix(self.K_geo_small, 2)
-        self.K_mat = self.B0.T.dot(self.C_SE.dot(self.B0))*self.A0*self.t
-        return self.K_mat + self.K_geo
+        return self.K.copy()
+
 
     def _m_int(self, X, u):
         '''
@@ -363,6 +378,9 @@ class Tri6(Element):
         self.e_modul = E_modul
         self.lame_mu = E_modul / (2*(1+poisson_ratio))
         self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
+        self.t = element_thickness
+        self.rho = density
+
         # Achtung: hier gibt's ebene Dehnung
         if self.plane_stress:
             self.C_SE = E_modul/(1 - poisson_ratio**2)*np.array([[1, poisson_ratio, 0],
@@ -372,16 +390,7 @@ class Tri6(Element):
             self.C_SE = np.array([[self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0],
                          [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, 0],
                          [0, 0, self.lame_mu]])
-        self.t = element_thickness
-        self.rho = density
-        self.I = np.eye(2)
-        self.B0_tilde = [[],[],[]]
-        self.H = [[],[],[]]
-        self.F = [[],[],[]]
-        self.E = [[],[],[]]
-        self.S_voigt = [[],[],[]]
-        self.S = [np.zeros((2,2)),np.zeros((2,2)),np.zeros((2,2))]
-        self.B0 = [[],[],[]]
+
 
     def _B0_tilde_func(self, X_vec, X, Y):
         '''
@@ -402,32 +411,7 @@ class Tri6(Element):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X_vec
         det = X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2
         # linear coordinates
-        L1 = (X*(Y2 - Y3) + X2*Y3 - X3*Y2 + Y*(-X2 + X3))/det
-        L2 = (X*(-Y1 + Y3) - X1*Y3 + X3*Y1 + Y*(X1 - X3))/det
-        L3 = (X*(Y1 - Y2) + X1*Y2 - X2*Y1 + Y*(-X1 + X2))/det
-        # diff of coordinates with respect to X and Y
-        L1_X = (Y2-Y3)/det
-        L1_Y = (X3-X2)/det
-        L2_X = (-Y1+Y3)/det
-        L2_Y = (X1-X3)/det
-        L3_X = (Y1-Y2)/det
-        L3_Y = (-X1+X2)/det
-        # Full diff of coordinates
-        N1_X = (4*L1 - 1)*L1_X
-        N1_Y = (4*L1 - 1)*L1_Y
-        N2_X = (4*L2 - 1)*L2_X
-        N2_Y = (4*L2 - 1)*L2_Y
-        N3_X = (4*L3 - 1)*L3_X
-        N3_Y = (4*L3 - 1)*L3_Y
 
-        N4_X = 4*(L1*L2_X + L1_X*L2)
-        N4_Y = 4*(L1*L2_Y + L1_Y*L2)
-        N5_X = 4*(L2*L3_X + L2_X*L3)
-        N5_Y = 4*(L2*L3_Y + L2_Y*L3)
-        N6_X = 4*(L1*L3_X + L1_X*L3)
-        N6_Y = 4*(L1*L3_Y + L1_Y*L3)
-
-        B0_tilde = np.array([[N1_X, N2_X, N3_X, N4_X, N5_X, N6_X], [N1_Y, N2_Y, N3_Y, N4_Y, N5_Y, N6_Y]])
         return B0_tilde
 
     def _compute_tensors(self, X, u):
@@ -435,38 +419,63 @@ class Tri6(Element):
         Tensor computation the same way as in the Tri3 element
         '''
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
-        self.u = u.reshape((-1,2))
+        u_mat = u.reshape((-1,2))
         det = X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2
         self.A0 = det/2
-        quadrature_points = np.array([[X4, Y4], [X5, Y5], [X6, Y6]])
-        for i, quadrature_coord in enumerate(quadrature_points):
-            self.B0_tilde[i] = self._B0_tilde_func(X, *quadrature_coord)
-            self.H[i] = self.u.T.dot(self.B0_tilde[i].T)
-            self.F[i] = self.H[i] + self.I
-            self.E[i] = 1/2*(self.H[i] + self.H[i].T + self.H[i].T.dot(self.H[i]))
-            self.S_voigt[i] = self.C_SE.dot([self.E[i][0,0], self.E[i][1,1], 2*self.E[i][0,1]])
-            self.S[i][0,0] , self.S[i][1,1], self.S[i][1,0], self.S[i][0,1] = \
-                self.S_voigt[i][0], self.S_voigt[i][1], self.S_voigt[i][2], self.S_voigt[i][2]
-            self.B0[i] = np.zeros((3, 12))
-            for j in range(6):
-                self.B0[i][:,2*j:2*j+2] = np.array([[self.B0_tilde[i][0,j], 0],
-                        [0, self.B0_tilde[i][1,j]], [self.B0_tilde[i][1,j],
-                         self.B0_tilde[i][0,j]]]).dot(self.F[i].T)
+
+        gauss_points = ((X4, Y4, 1/3), (X5, Y5, 1/3), (X6, Y6, 1/3))
+
+        self.K = np.zeros((12, 12))
+        self.f = np.zeros(12)
+
+        for X, Y, w in gauss_points:
+            L1 = (X*(Y2 - Y3) + X2*Y3 - X3*Y2 + Y*(-X2 + X3))/det
+            L2 = (X*(-Y1 + Y3) - X1*Y3 + X3*Y1 + Y*(X1 - X3))/det
+            L3 = (X*(Y1 - Y2) + X1*Y2 - X2*Y1 + Y*(-X1 + X2))/det
+            # diff of coordinates with respect to X and Y
+            L1_X = (Y2-Y3)/det
+            L1_Y = (X3-X2)/det
+            L2_X = (-Y1+Y3)/det
+            L2_Y = (X1-X3)/det
+            L3_X = (Y1-Y2)/det
+            L3_Y = (-X1+X2)/det
+            # Full diff of coordinates
+            N1_X = (4*L1 - 1)*L1_X
+            N1_Y = (4*L1 - 1)*L1_Y
+            N2_X = (4*L2 - 1)*L2_X
+            N2_Y = (4*L2 - 1)*L2_Y
+            N3_X = (4*L3 - 1)*L3_X
+            N3_Y = (4*L3 - 1)*L3_Y
+
+            N4_X = 4*(L1*L2_X + L1_X*L2)
+            N4_Y = 4*(L1*L2_Y + L1_Y*L2)
+            N5_X = 4*(L2*L3_X + L2_X*L3)
+            N5_Y = 4*(L2*L3_Y + L2_Y*L3)
+            N6_X = 4*(L1*L3_X + L1_X*L3)
+            N6_Y = 4*(L1*L3_Y + L1_Y*L3)
+
+            B0_tilde = np.array([[N1_X, N2_X, N3_X, N4_X, N5_X, N6_X],
+                                 [N1_Y, N2_Y, N3_Y, N4_Y, N5_Y, N6_Y]])
+
+            H = u_mat.T.dot(B0_tilde.T)
+            F = H + np.eye(2)
+            E = 1/2*(H + H.T + H.T.dot(H))
+            E_v = np.array([E[0,0], E[1,1], 2*E[0,1]])
+            S_v = self.C_SE.dot(E_v)
+            S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
+            B0 = compute_B_matrix(B0_tilde, F)
+            K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det/2*self.t
+            K_geo = scatter_geometric_matrix(K_geo_small, 2)
+            K_mat = B0.T.dot(self.C_SE.dot(B0))*det/2*self.t
+            self.K += (K_geo + K_mat)*w
+            self.f += B0.T.dot(S_v)*det/2*self.t*w
+
 
     def _f_int(self, X, u):
-        f = np.zeros(12)
-        for i in range(3):
-            f += self.B0[i].T.dot(self.S_voigt[i])*self.A0*self.t*1/3
-        return f
+        return self.f.copy()
 
     def _k_int(self, X, u):
-        self.K_geo = np.zeros((12, 12))
-        self.K_mat = np.zeros((12, 12))
-        for i in range(3):
-            self.K_geo_small = self.B0_tilde[i].T.dot(self.S[i].dot(self.B0_tilde[i]))*self.A0*self.t*1/3
-            self.K_geo += scatter_geometric_matrix(self.K_geo_small, 2)
-            self.K_mat += self.B0[i].T.dot(self.C_SE.dot(self.B0[i]))*self.A0*self.t*1/3
-        return self.K_mat + self.K_geo
+        return self.K.copy()
 
     def _m_int(self, X, u):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
@@ -795,6 +804,7 @@ class Tetra4(Element):
             [ 0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  2.,  0.],
             [ 0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  2.]])
         return self.M.copy()
+
 #
 #class Tetra10(Element):
 #    pass
@@ -941,6 +951,17 @@ class Quad4_FG(Element):
         print('The function is not implemented yet...')
         pass
 
+
+if fortran_use:
+    def compute_tri3_tensors(self, X, u):
+        self.K, self.f = amfe.f90_element.tri3_k_and_f(X, u, self.C_SE, self.t)
+
+    Tri3._compute_tensors = compute_tri3_tensors
+
+    def compute_tri6_tensors(self, X, u):
+        self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.C_SE, self.t)
+
+    Tri6._compute_tensors = compute_tri6_tensors
 
 
 
