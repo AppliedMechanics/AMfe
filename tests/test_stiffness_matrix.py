@@ -131,19 +131,44 @@ plt.plot(x_plot[:,0], x_plot[:,1])
 #el = my_quad_element
 #K_finite_diff = jacobian(el.f_int, x, u)
 
+#%%
 #
-##Tetra4
-#x = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1.])
-#u = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-#my_tetra_element = amfe.Tetra4(E_modul=60, poisson_ratio=1/4, density=1.)
-#K, f = my_tetra_element.k_and_f_int(x, u)
-#M = my_tetra_element.m_int(x, u)
-#
+#Tetra4
+x = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1.])
+u = np.array([0, 0, 0,  1, 0, 0,  0, 0, 0,  0, 0, 0.])
+my_tetra_element = amfe.Tetra4(E_modul=60, poisson_ratio=1/4, density=1.)
+#x += sp.rand(12)*0.5
+#u += sp.rand(4*3)*0.5
+
+K, f = my_tetra_element.k_and_f_int(x, u)
+M = my_tetra_element.m_int(x, u)
+el = my_tetra_element
+u_tmp = u.copy()
+u_tmp[0] += 0.2
+el.f_int(x, u_tmp)
+K_finite_diff = jacobian(el.f_int, x, u)
 
 #%%
 
+if False:
+    # Try it the hard way:
+    ndim = 2
+    B_tilde = sp.rand(ndim,4)
+    F = sp.rand(ndim, ndim)
+    S_v = sp.rand(ndim*(ndim+1)/2)
 
+    if ndim == 2:
+        S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
+    else:
+        S = np.array([[S_v[0], S_v[5], S_v[4]],
+                      [S_v[5], S_v[1], S_v[3]],
+                      [S_v[4], S_v[3], S_v[2]]])
 
+    B = amfe.compute_B_matrix(B_tilde, F)
+    res1 = B.T.dot(S_v)
+    res2 = B_tilde.T.dot(S.dot(F.T))
+    print(res1 - res2.reshape(-1))
 
+#%%
 
 

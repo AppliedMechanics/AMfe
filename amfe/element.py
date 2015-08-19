@@ -74,13 +74,14 @@ def compute_B_matrix(B_tilde, F):
     F12 = F[0,1]
     F21 = F[1,0]
     F22 = F[1,1]
-    if no_of_dims == 3:
 
+    if no_of_dims == 3:
         F13 = F[0,2]
         F31 = F[2,0]
         F23 = F[1,2]
         F32 = F[2,1]
         F33 = F[2,2]
+
     for i in range(no_of_nodes):
         if no_of_dims == 2:
             B[:, i*no_of_dims : (i+1)*no_of_dims] = [
@@ -92,9 +93,9 @@ def compute_B_matrix(B_tilde, F):
             [F11*b[0,i], F21*b[0,i], F31*b[0,i]],
             [F12*b[1,i], F22*b[1,i], F32*b[1,i]],
             [F13*b[2,i], F23*b[2,i], F33*b[2,i]],
-            [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i], F31*b[1,i]+F32*b[0,i]],
-            [F12*b[2,i] + F13*b[1,i], F22*b[2,i] + F23*b[1,i], F32*b[2,i]+F33*b[1,i]],
-            [F13*b[0,i] + F11*b[2,i], F23*b[0,i] + F21*b[2,i], F33*b[0,i]+F31*b[2,i]]]
+            [F12*b[2,i] + F13*b[1,i], F22*b[2,i] + F23*b[1,i], F32*b[2,i] + F33*b[1,i]],
+            [F13*b[0,i] + F11*b[2,i], F23*b[0,i] + F21*b[2,i], F33*b[0,i] + F31*b[2,i]],
+            [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i], F31*b[1,i] + F32*b[0,i]]]
     return B
 
 
@@ -704,11 +705,13 @@ class Tetra4(Element):
     Tetraeder-Element with 4 nodes
     '''
     def __init__(self,  E_modul=210E9, poisson_ratio=0.3, density=1E4):
+
         self.poisson_ratio = poisson_ratio
         self.e_modul       = E_modul
         self.lame_mu       = E_modul / (2*(1+poisson_ratio))
         self.lame_lambda   = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
         self.rho           = density
+
         self.C_SE = np.array([
                 [self.lame_lambda + 2*self.lame_mu, self.lame_lambda, self.lame_lambda, 0, 0, 0],
                 [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0, 0, 0],
@@ -728,7 +731,6 @@ class Tetra4(Element):
               - X2*Y1*Z3 + X2*Y1*Z4 + X2*Y3*Z1 - X2*Y3*Z4 - X2*Y4*Z1 + X2*Y4*Z3 \
               + X3*Y1*Z2 - X3*Y1*Z4 - X3*Y2*Z1 + X3*Y2*Z4 + X3*Y4*Z1 - X3*Y4*Z2 \
               - X4*Y1*Z2 + X4*Y1*Z3 + X4*Y2*Z1 - X4*Y2*Z3 - X4*Y3*Z1 + X4*Y3*Z2
-        det *= -1 # account here for the strange order of the node numbering...
 
         B0_tilde = 1/det*np.transpose(np.array([
                 [ Y2*Z3 - Y2*Z4 - Y3*Z2 + Y3*Z4 + Y4*Z2 - Y4*Z3,
@@ -744,7 +746,8 @@ class Tetra4(Element):
                   X1*Z2 - X1*Z3 - X2*Z1 + X2*Z3 + X3*Z1 - X3*Z2,
                  -X1*Y2 + X1*Y3 + X2*Y1 - X2*Y3 - X3*Y1 + X3*Y2]]))
 
-        print('Determinante: ', det)
+        det *= -1 # account here for the strange order of the node numbering...
+
         H = u_e.T.dot(B0_tilde.T)
         F = H + np.eye(3)
         E = 1/2*(H + H.T + H.T.dot(H))
@@ -755,6 +758,7 @@ class Tetra4(Element):
         S = np.array([[S_v[0], S_v[5], S_v[4]],
                       [S_v[5], S_v[1], S_v[3]],
                       [S_v[4], S_v[3], S_v[2]]])
+
         B0 = compute_B_matrix(B0_tilde, F)
         K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det/6
         K_geo = scatter_geometric_matrix(K_geo_small, 3)
