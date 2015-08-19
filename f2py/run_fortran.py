@@ -47,21 +47,21 @@ C_SE = sp.array([[ 64.,  16.,   0.],
 my_amfe_element = amfe.Tri6()
 my_amfe_element.C_SE = C_SE
 
-N = int(1E4)
+N = int(1E1)
 
 t1 = time.time()
 for i in range(N):
     K_f, f_f = element.tri6_k_and_f(x, u, C_SE, t)
 
 t2 = time.time()
+a = 0
 for i in range(N):
-    K, f = my_amfe_element.k_and_f_int(x, u)
+    # K, f = my_amfe_element.k_and_f_int(x, u)
+    a += 1
 t3 = time.time()
 
-np.max(abs(K - K_f))
+#np.max(abs(K - K_f))
 
 print('Kurzes Profiling:\nZeit für Fortran:', t2-t1, 'Zeit für Python:', t3-t2)
 print('Performance-Gewinn: Faktor', (t3-t2)/(t2-t1) )
-
-
 

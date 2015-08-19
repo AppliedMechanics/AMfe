@@ -18,7 +18,11 @@ try:
 except:
     print('''
 Python was not able to load the fast fortran routines.
-run TODO in order to get the full speed!
+run
+
+(TODO)
+
+in order to get the full speed!
 ''')
 
 #fortran_use = False
@@ -956,13 +960,13 @@ if fortran_use:
     def compute_tri3_tensors(self, X, u):
         self.K, self.f = amfe.f90_element.tri3_k_and_f(X, u, self.C_SE, self.t)
 
-    Tri3._compute_tensors = compute_tri3_tensors
 
     def compute_tri6_tensors(self, X, u):
         self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.C_SE, self.t)
 
+    # overloading the routines with fortran routines
+    Tri3._compute_tensors = compute_tri3_tensors
     Tri6._compute_tensors = compute_tri6_tensors
-
 
 
 

@@ -84,3 +84,9 @@ FORTRAN
 It seems that FORTRAN is a very good companion to Python in order to speed the time critical things up. It is possible to write functions in fortran that are executed at lightspeed, especially when loops or matrix-vector-multiplications are heavily involved. 
 
 As wrapper the tool `f2py` can be used. It is included in numpy and gives the full support for numpy-Arrays. 
+
+
+gmsh
+====
+
+Some information on gmsh would be cool here; how to use it in an efficient way... 

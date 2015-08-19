@@ -8,19 +8,6 @@ Authors:
 Johannes Rutzmoser, Fabian Gruber
 """
 
-#import pyximport
-#pyximport.install()
-
-
-#try:
-#    from amfe.f90_element import *
-#    fortran_use = True
-#except:
-#    print('''
-#Python was not able to load the fast fortran routines.
-#run TODO in order to get the full speed!
-#''')
-
 
 from amfe.assembly import *
 from amfe.boundary import *

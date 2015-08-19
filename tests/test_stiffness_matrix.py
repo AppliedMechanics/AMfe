@@ -151,6 +151,7 @@ K_finite_diff = jacobian(el.f_int, x, u)
 #%%
 
 if False:
+    # Routine for testing the compute_B_matrix_routine
     # Try it the hard way:
     ndim = 2
     B_tilde = sp.rand(ndim,4)
