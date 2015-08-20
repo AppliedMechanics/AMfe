@@ -236,7 +236,7 @@ class Element():
                     (numpy.ndarray of dimension (ndim,ndim))
 
         '''
-        return self._m_int(X, u)
+        return self._m_int(X, u), np.zeros_like(X)
 
 
 #    def k_and_m_int(self, X, u):
@@ -341,7 +341,7 @@ class Tri3(Element):
         '''
         Private method for the computation of the internal nodal forces without computation of the relevant tensors
         '''
-        return self.f.copy()
+        return self.f
 
 
     def _k_int(self, X, u):
@@ -349,7 +349,7 @@ class Tri3(Element):
         Private method for computation of internal tangential stiffness matrix without an update of the internal tensors
 
         '''
-        return self.K.copy()
+        return self.K
 
 
     def _m_int(self, X, u):
@@ -395,28 +395,6 @@ class Tri6(Element):
                          [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, 0],
                          [0, 0, self.lame_mu]])
 
-
-    def _B0_tilde_func(self, X_vec, X, Y):
-        '''
-        compute the B0_tilde matrix for a given X and Y
-
-        Parameters
-        ----------
-        X_vec : ndarray
-            Array giving the positions in the reference configuration
-        X : float
-            x-position of the quadrature point given in the reference coordinate system
-        Y : float
-            y-position of the quadrature point given in the reference coordinate system
-        Returns
-        -------
-        '''
-        # maybe this is in the scope here
-        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X_vec
-        det = X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2
-        # linear coordinates
-
-        return B0_tilde
 
     def _compute_tensors(self, X, u):
         '''
@@ -476,10 +454,10 @@ class Tri6(Element):
 
 
     def _f_int(self, X, u):
-        return self.f.copy()
+        return self.f
 
     def _k_int(self, X, u):
-        return self.K.copy()
+        return self.K
 
     def _m_int(self, X, u):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
@@ -498,7 +476,7 @@ class Tri6(Element):
         [ -0.,  -4.,   0.,   0.,   0.,   0.,   0.,  16.,   0.,  32.,   0., 16.],
         [  0.,   0.,  -4.,  -0.,   0.,   0.,  16.,   0.,  16.,   0.,  32.,  0.],
         [  0.,   0.,  -0.,  -4.,   0.,   0.,   0.,  16.,   0.,  16.,   0., 32.]])
-        return self.M.copy()
+        return self.M
 
 
 class Quad4(Element):
@@ -574,10 +552,10 @@ class Quad4(Element):
             self.f += B0.T.dot(S_v)*det*self.t*w
 
     def _f_int(self, X, u):
-        return self.f.copy()
+        return self.f
 
     def _k_int(self, X, u):
-        return self.K.copy()
+        return self.K
 
     def _m_int(self, X, u):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
@@ -591,7 +569,7 @@ class Quad4(Element):
                  [ 0.,  1.,  0.,  2.,  0.,  4.,  0.,  2.],
                  [ 2.,  0.,  1.,  0.,  2.,  0.,  4.,  0.],
                  [ 0.,  2.,  0.,  1.,  0.,  2.,  0.,  4.]])
-        return self.M.copy()
+        return self.M
 
 
 class Quad8(Element):
@@ -676,10 +654,10 @@ class Quad8(Element):
             self.f += B0.T.dot(S_v)*det*self.t*w
 
     def _f_int(self, X, u):
-        return self.f.copy()
+        return self.f
 
     def _k_int(self, X, u):
-        return self.K.copy()
+        return self.K
 
     def _m_int(self, X, u):
         '''
@@ -709,7 +687,7 @@ class Quad8(Element):
         [  0., -8.,  0., -8.,  0., -6.,  0., -6.,  0., 16.,  0., 20.,  0., 32.,  0., 20.],
         [ -6.,  0., -8.,  0., -8.,  0., -6.,  0., 20.,  0., 16.,  0., 20.,  0., 32.,  0.],
         [  0., -6.,  0., -8.,  0., -8.,  0., -6.,  0., 20.,  0., 16.,  0., 20.,  0., 32.]])
-        return self.M.copy()
+        return self.M
 
 
 
@@ -778,10 +756,10 @@ class Tetra4(Element):
         self.f = B0.T.dot(S_v)*det/6
 
     def _f_int(self, X, u):
-        return self.f.copy()
+        return self.f
 
     def _k_int(self, X, u):
-        return self.K.copy()
+        return self.K
 
     def _m_int(self, X, u):
         '''
@@ -807,7 +785,7 @@ class Tetra4(Element):
             [ 1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  2.,  0.,  0.],
             [ 0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  2.,  0.],
             [ 0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  2.]])
-        return self.M.copy()
+        return self.M
 
 #
 #class Tetra10(Element):

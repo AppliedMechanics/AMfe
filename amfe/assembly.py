@@ -60,7 +60,11 @@ def fill_csr_matrix(indptr, indices, vals, K, k_indices):
 
 def compute_csr_assembly_indices(global_element_indices, indptr, indices):
     '''
+    Computes the assembly-indices for matrices in andvance.
 
+    This function is deprecated. It is not clear, if the function will be used
+    in the future, but it seems that it could make sense for small systems
+    when FORTRAN is not aviailible.
 
     '''
     no_of_elements, dofs_per_element = global_element_indices.shape
@@ -164,11 +168,7 @@ class Assembly():
         self.C_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
                                           shape=(dofs_total, dofs_total))
 
-#        Stuff to be done online
 
-#        indptr = self.C_csr.indptr
-#        indices = self.C_csr.indices
-#        self.csr_assembly_indices = compute_csr_assembly_indices(self.global_element_indices, indptr, indices)
 
     def assemble_matrix_and_vector(self, u, decorated_matrix_func):
         '''
@@ -178,7 +178,19 @@ class Assembly():
         ----------
 
         u : ndarray
+            displacement array
+        decorated_matrix_func : function
+            function which works like
 
+            K, f = func(X_local, u_local)
+
+        Returns
+        -------
+
+        K_csr : sp.sparse.csr_matrix
+            Assembled matrix in csr-format (Compressed sparse row)
+        f : ndarray
+            array of the assembled vector
         '''
         K_csr = self.C_csr.copy()
         f_glob = np.zeros_like(self.node_coords)
@@ -187,14 +199,61 @@ class Assembly():
             X = self.node_coords[indices]
             u_local = u[indices]
             K, f = decorated_matrix_func(X, u_local)
-            f_glob[indices] = f
+            f_glob[indices] += f
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
 
         return K_csr, f_glob
 
+    def assemble_k_and_f(self, u):
+        '''
+        Assembles the stiffness matrix of the given mesh and element.
+
+        Parameters
+        -----------
+        u : ndarray
+            nodal displacement of the nodes in Voigt-notation
+
+        Returns
+        --------
+        K : sparse.csr_matrix
+            unconstrained assembled stiffness matrix in sparse matrix csr format.
+        f : ndarray
+            unconstrained assembled force vector
+        '''
+        # This is only working for one element type!
+        element = self.element_class_dict[self.mesh.elements_type[0]]
+        return self.assemble_matrix_and_vector(u, element.k_and_f_int)
+
+    def assemble_m(self, u=None):
+        '''
+        Assembles the mass matrix of the given mesh and element.
+
+        Parameters
+        -----------
+        u : ndarray
+            nodal displacement of the nodes in Voigt-notation
+
+        Returns
+        --------
+        M : ndarray
+            unconstrained assembled mass matrix in sparse matrix csr-format.
+
+        Examples
+        ---------
+        TODO
+        '''
+
+        if u == None:
+            u = np.zeros_like(self.node_coords)
+        element = self.element_class_dict[self.mesh.elements_type[0]]
+        M, _ = self.assemble_matrix_and_vector(u, element.m_int)
+        return M
 
     def _assemble_matrix(self, u, decorated_matrix_func):
         '''
+        This is an old function!!!
+
+
         Assembly routine for any matrices.
 
         Parameters
@@ -287,7 +346,7 @@ class Assembly():
         return K
 
 
-    def assemble_m(self, u=None):
+    def old_assemble_m(self, u=None):
         '''
         Assembles the mass matrix of the given mesh and element.
 
@@ -337,7 +396,7 @@ class Assembly():
                 self.element_class_dict[self.mesh.elements_type[k]].f_int(X, u[global_element_indices])
         return self.global_force
 
-    def assemble_k_and_f(self, u=None):
+    def assemble_k_and_f_old(self, u=None):
         '''
         Assembles the tangential stiffness matrix and the force matrix in one
         run as it is very often needed by an implicit integration scheme.

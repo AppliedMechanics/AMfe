@@ -6,6 +6,7 @@ Created on Mon Aug 10 17:25:07 2015
 
 Compile the module:
 f2py3 -c  --fcompiler=gnu95 -m element element.f90
+f2py3 -c  --fcompiler=gnu95 -m f90_assembly assembly.f90
 
 """
 
@@ -64,4 +65,12 @@ t3 = time.time()
 
 print('Kurzes Profiling:\nZeit für Fortran:', t2-t1, 'Zeit für Python:', t3-t2)
 print('Performance-Gewinn: Faktor', (t3-t2)/(t2-t1) )
+
+
+
+
+
+
+
+
 

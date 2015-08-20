@@ -69,6 +69,7 @@ class MechanicalSystem():
         self.ndof_global = self.mesh_class.no_of_dofs
         self.node_dof = self.mesh_class.node_dof
         self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
+        self.assembly_class.preallocate_csr()
 
     def load_mesh_from_csv(self, node_list_csv, element_list_csv, node_dof=2, explicit_node_numbering=False):
         '''
