@@ -91,6 +91,8 @@ x = np.array([1.,1,2,1,2,2,1,2])
 u = np.array([0., 0, 0, 0, 0, 0, 0, 0])
 #distort the Element
 x += rand
+x = np.array([1.44168672, 1.06087965, 2.3436172, 1.15760643, 2.23802741, 
+              2.06747207,1.13364969,  2.44723469])
 
 
 my_quad_element = amfe.Quad4(E_modul=60, poisson_ratio=1/4, density=1.)
