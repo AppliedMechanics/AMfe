@@ -103,7 +103,7 @@ class MechanicalSystem():
         self.element_list = self.mesh_class.elements.copy()
         self.ndof_global = self.node_list.size
         self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
-
+        self.assembly_class.preallocate_csr()
 
 
 

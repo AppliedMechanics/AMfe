@@ -178,7 +178,7 @@ class Element():
 
         '''
         self._compute_tensors(X, u)
-        return self._k_int(X, u), self._f_int(X, u)
+        return self.K, self.f
 
     def k_int(self, X, u):
         '''
@@ -198,7 +198,7 @@ class Element():
 
         '''
         self._compute_tensors(X, u)
-        return self._k_int(X, u)
+        return self.K
 
     def f_int(self, X, u):
         '''
@@ -217,7 +217,7 @@ class Element():
 
         '''
         self._compute_tensors(X, u)
-        return self._f_int(X, u)
+        return self.f
 
     def m_int(self, X, u):
         '''

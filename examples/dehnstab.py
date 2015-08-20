@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Beispiel Dehnstab
+This file is deprecated!!! It's too old!
 """
 
 # Standard-Module
