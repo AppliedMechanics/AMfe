@@ -16,13 +16,73 @@ from scipy import linalg
 import multiprocessing as mp
 from multiprocessing import Pool
 
+try:
+    import amfe.f90_assembly
+    fortran_use = True
+except:
+    print('''
+Python was not able to load the fast fortran routines.
+run
 
-#import mesh
-#mesh.Mesh.no_of_dofs
+(TODO)
+
+in order to get the full speed!
+''')
+
+
+
+def get_index_of_csr_data(i,j, indptr, indices):
+    '''Get the value index of the i,j element in the csr format.
+
+    indptr, indices are the vectors of a preallocated CSR-matrix.
+    '''
+
+    k = indptr[i]
+    while j != indices[k]:
+        k += 1
+        if k > indptr[i+1]:
+            print('ERROR! The index in the csr matrix is not preallocated!')
+            break
+    return k
+
+def fill_csr_matrix(indptr, indices, vals, K, k_indices):
+    '''
+    Fill the values of K into the vals-array of a sparse CSR Matrix given the k_indices array
+    '''
+    ndof_l = K.shape[0]
+    for i in range(ndof_l):
+        for j in range(ndof_l):
+            l = get_index_of_csr_data(k_indices[i], k_indices[j], indptr, indices)
+            vals[l] += K[i,j]
+
+    pass
+
+
+def compute_csr_assembly_indices(global_element_indices, indptr, indices):
+    '''
+
+
+    '''
+    no_of_elements, dofs_per_element = global_element_indices.shape
+    matrix_assembly_indices = np.zeros((no_of_elements, dofs_per_element, dofs_per_element))
+    for i in range(no_of_elements):
+        for j in range(dofs_per_element):
+            for k in range(dofs_per_element):
+                row_idx = global_element_indices[i,j]
+                col_idx = global_element_indices[i,k]
+                matrix_assembly_indices[i, j, k] = get_index_of_csr_data(row_idx, col_idx, indptr, indices)
+    return matrix_assembly_indices
+
+
+if fortran_use:
+    get_index_of_csr_data = amfe.f90_assembly.get_index_of_csr_data
+    fill_csr_matrix = amfe.f90_assembly.fill_csr_matrix
+    pass
+
 
 class Assembly():
     '''
-    Class for the more fancy assembly of meshes with heterogeneous elements.
+    Class for the more fancy assembly of meshes with non-heterogeneous elements.
     '''
     def __init__(self, mesh, element_class_dict):
         '''
@@ -47,6 +107,90 @@ class Assembly():
         self.save_stresses = False
         pass
 
+    def preallocate_csr(self):
+        '''
+        Precompute the values and allocate the matrices for efficient assembly.
+
+        Internal variables computed:
+        ----------------------------
+
+        C_csr : scipy.sparse.csr.csr_matrix
+            Matrix containing the sparsity pattern of the problem
+        csr_assembly_indices : np.ndarray
+            Array containing the indices for the csr matrix assembly routine.
+            The entry [i,j,k] contains the index of the csr-value-matrix
+            for the i-th element and the j-th row and the k-th column
+            of the local stiffness matrix of the i-th element.
+            The dimension is (n_elements, ndof_element, ndof_element).
+        global_element_indices : np.ndarray
+            Array containing the global indices for the local variables of an element.
+            The entry [i,j] gives the index in the global vector of element i with dof j
+        node_coords : np.ndarray
+            vector of all nodal coordinates. Dimension is (ndofs_total, )
+
+        '''
+        # computation of all necessary variables:
+        dofs_per_node = self.mesh.node_dof
+        self.node_coords = self.mesh.nodes.reshape(-1)
+        elements = self.mesh.elements
+        nodes_per_element = elements.shape[-1]
+        dofs_per_element = nodes_per_element*dofs_per_node
+        no_of_elements = len(elements)
+        dofs_total = self.node_coords.shape[0]
+        no_of_local_matrix_entries = dofs_per_element**2
+
+        # compute the global element indices
+        self.global_element_indices = np.zeros((no_of_elements, dofs_per_element), dtype=int)
+        for i, element in enumerate(elements):
+            self.global_element_indices[i,:] = np.array(
+                [(np.arange(dofs_per_node) + dofs_per_node*i)  for i in element]).reshape(-1)
+
+
+        # Auxiliary Help-Matrix H
+        H = np.zeros((dofs_per_element, dofs_per_element))
+
+        # preallocate the CSR-matrix
+        row_global = np.zeros(no_of_elements*dofs_per_element**2, dtype=int)
+        col_global = row_global.copy()
+        vals_global = np.zeros(no_of_elements*dofs_per_element**2)
+
+        for i, element_indices in enumerate(self.global_element_indices):
+            H[:,:] = element_indices
+            row_global[i*no_of_local_matrix_entries:(i+1)*no_of_local_matrix_entries] = \
+                H.reshape(-1)
+            col_global[i*no_of_local_matrix_entries:(i+1)*no_of_local_matrix_entries] = \
+                H.T.reshape(-1)
+
+        self.C_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
+                                          shape=(dofs_total, dofs_total))
+
+#        Stuff to be done online
+
+#        indptr = self.C_csr.indptr
+#        indices = self.C_csr.indices
+#        self.csr_assembly_indices = compute_csr_assembly_indices(self.global_element_indices, indptr, indices)
+
+    def assemble_matrix_and_vector(self, u, decorated_matrix_func):
+        '''
+        Assembles the matrix and the vector of the decorated matrix func.
+
+        Parameters
+        ----------
+
+        u : ndarray
+
+        '''
+        K_csr = self.C_csr.copy()
+        f_glob = np.zeros_like(self.node_coords)
+
+        for i, indices in enumerate(self.global_element_indices):
+            X = self.node_coords[indices]
+            u_local = u[indices]
+            K, f = decorated_matrix_func(X, u_local)
+            f_glob[indices] = f
+            fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
+
+        return K_csr, f_glob
 
 
     def _assemble_matrix(self, u, decorated_matrix_func):
