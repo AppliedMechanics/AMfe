@@ -12,6 +12,8 @@ Most of the time is spent with pyhton-functions, when they are used. For instanc
 
 import numpy as np
 
+fortran_use = False
+
 try:
     import amfe.f90_element
     fortran_use = True

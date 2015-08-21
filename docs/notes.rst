@@ -48,6 +48,7 @@ Index starts with 0:
 
 Index stars with 1:
 
+- FORTRAN
 - gmsh node-, line-, and element-numbering
 
 So the rule is, that the system works on indexing 0, and the import data from gmsh are changed. So should be done when importing ANSYS-files as well.
@@ -64,9 +65,11 @@ How to plot matrices in matplotlib:
 >>> plt.colorbar()
 >>> plt.set_cmap('jet') # 'jet' is default; others looking good are 'hot'
 
-How to show the sparsity pattern of a sparse matrix `A_csr`:
+How to show the sparsity pattern of a sparse matrix :code:`A_csr`:
 
 >>> plt.spy(A_csr, marker=',')
+
+You can use different markers, as :code:`','` are pixels and very small, they make sense when large matrices are involved. However, for small matrices, :code:`'.'` gives a good picture. 
 
 Plot on log scales:
 

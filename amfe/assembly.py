@@ -16,6 +16,7 @@ from scipy import linalg
 import multiprocessing as mp
 from multiprocessing import Pool
 
+fortran_use = False
 try:
     import amfe.f90_assembly
     fortran_use = True
