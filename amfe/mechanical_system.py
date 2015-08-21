@@ -49,7 +49,7 @@ class MechanicalSystem():
     def __init__(self, element_class_dict=element_class_dict):
         self.T_output = []
         self.u_output = []
-        self.element_class_dict = element_class_dict
+        self.element_class_dict = element_class_dict 
         pass
 
     def load_mesh_from_gmsh(self, msh_file, mesh_3d=False):

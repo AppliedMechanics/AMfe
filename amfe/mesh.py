@@ -152,25 +152,27 @@ class Mesh:
         TODO
 
         '''
+        # Dictionary um an Hand der Anzahl der Knoten des Elements auf den Typ 
+        # des Elements zu schließen
         mesh_type_dict = {3: "Tri3",
-                          4: "Quad4"}
+                          4: "Quad4"} # Bislang nur 2D-Element aus csv auslesbar
 
 
         print('Reading elements from csv...  ', end="")
         self.elements = np.genfromtxt(filename, delimiter = ',', dtype = int, skip_header = 1)
         if self.elements.ndim == 1: # Wenn nur genau ein Element vorliegt
             self.elements = np.array([self.elements])
-        if explicit_node_numbering:
+        if explicit_node_numbering: # Falls erste Spalte die Elementnummer angibt, wird diese hier abgeschnitten, um nur die Knoten des Elements zu erhalten
             self.elements = self.elements[:,1:]
-        try:
+        try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
             (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
-            mesh_type = mesh_type_dict[no_of_nodes_per_ele]
+            mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
         except:
             print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
             raise
 
         print('Element type is {0}...  '.format(mesh_type), end="")
-        self.elements_type = [mesh_type for i in self.elements]
+        self.elements_type = [mesh_type for i in self.elements] # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
         self._update_mesh_props()
 
         print('Reading elements successful.')
