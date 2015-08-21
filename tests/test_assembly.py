@@ -27,7 +27,7 @@ my_mesh = amfe.Mesh()
 my_mesh.import_msh(gmsh_input_file, mesh_3d=False)
 
 element_class_dict = {'Quad4' : amfe.Quad4(),
-                      'Tetra4' : amfe.Tetra4()}
+                      'Tet4' : amfe.Tet4()}
 
 my_assembly = amfe.Assembly(my_mesh, element_class_dict)
 

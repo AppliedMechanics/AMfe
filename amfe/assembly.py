@@ -33,9 +33,31 @@ in order to get the full speed!
 
 
 def get_index_of_csr_data(i,j, indptr, indices):
-    '''Get the value index of the i,j element in the csr format.
+    '''Get the value index of the i,j element of a matrix in CSR format.
 
-    indptr, indices are the vectors of a preallocated CSR-matrix.
+    Parameters
+    ----------
+
+    i : int
+        row index of the CSR-matrix
+    j : int
+        column index of the CSR-Matrix
+    indptr : ndarray
+        index-ptr-Array of the CSR-Matrix.
+    indices : ndarray
+        indices of the row entries to the given value matrix.
+
+    Returns
+    -------
+
+    k : int
+        index of the value array of the CSR-matrix, in which value [i,j] is stored.
+
+    Note
+    ----
+
+    This routine works only, if the tuple i,j is acutally a real entry of the Matrix.
+    Otherwise the value k=0 will be returned and an Error Message will be provided.
     '''
 
     k = indptr[i]
@@ -43,19 +65,42 @@ def get_index_of_csr_data(i,j, indptr, indices):
         k += 1
         if k > indptr[i+1]:
             print('ERROR! The index in the csr matrix is not preallocated!')
+            k = 0
             break
     return k
 
 def fill_csr_matrix(indptr, indices, vals, K, k_indices):
     '''
-    Fill the values of K into the vals-array of a sparse CSR Matrix given the k_indices array
+    Fill the values of K into the vals-array of a sparse CSR Matrix given the k_indices array.
+
+    Parameters
+    ----------
+
+    indptr : ndarray
+        indptr-array of a preallocated CSR-Matrix
+    indices : ndarray
+        indices-array of a preallocated CSR-Matrix
+    vals : ndarray
+        vals-array of a preallocated CSR-Marix
+    K : ndarray
+        'small' sqare array which values will be distributed into the CSR-Matrix
+        Shape is (n,n)
+    k_indices : ndarray
+        mapping array of the global indices for the 'small' K array.
+        The (i,j) entry of K has the global indices (k_indices[i], k_indices[j])
+        Shape is (n,)
+
+    Returns
+    -------
+
+    None
+
     '''
     ndof_l = K.shape[0]
     for i in range(ndof_l):
         for j in range(ndof_l):
             l = get_index_of_csr_data(k_indices[i], k_indices[j], indptr, indices)
             vals[l] += K[i,j]
-
     pass
 
 
@@ -80,6 +125,9 @@ def compute_csr_assembly_indices(global_element_indices, indptr, indices):
 
 
 if fortran_use:
+    '''
+    Fortran routine that will override the functions above for massive speedup.
+    '''
     get_index_of_csr_data = amfe.f90_assembly.get_index_of_csr_data
     fill_csr_matrix = amfe.f90_assembly.fill_csr_matrix
     pass
@@ -132,6 +180,10 @@ class Assembly():
             The entry [i,j] gives the index in the global vector of element i with dof j
         node_coords : np.ndarray
             vector of all nodal coordinates. Dimension is (ndofs_total, )
+
+        Notes
+        -----
+        This preallocation routine can take some while for small matrices.
 
         '''
         # computation of all necessary variables:
@@ -247,7 +299,7 @@ class Assembly():
         if u == None:
             u = np.zeros_like(self.node_coords)
         element = self.element_class_dict[self.mesh.elements_type[0]]
-        M, _ = self.assemble_matrix_and_vector(u, element.m_int)
+        M, _ = self.assemble_matrix_and_vector(u, element.m_and_vec_int)
         return M
 
     def _assemble_matrix(self, u, decorated_matrix_func):

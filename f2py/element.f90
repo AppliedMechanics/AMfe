@@ -124,16 +124,15 @@ subroutine tri6_k_and_f(X, u, C_SE, K, f_int, t)
     integer :: i
     real(8), intent(in) :: X(12), u(12), C_SE(3,3), t
     real(8), intent(out) :: K(12, 12), f_int(12)
-    real(8) :: Xq, Yq, X1, X2, X3, Y1, Y2, Y3, X4, Y4, X5, Y5, X6, Y6, A0
+    real(8) :: X1, X2, X3, Y1, Y2, Y3, X4, Y4, X5, Y5, X6, Y6, A0
+    real(8) :: Jx1 ,Jx2 ,Jx3 ,Jy1 ,Jy2 ,Jy3, w
     real(8) :: u_e(6,2)
     real(8) :: K_geo_sm(6,6), K_mat(12,12), K_geo(12,12)
     real(8) :: B0_tilde(2,6), B0(3,12)
     real(8) :: E(2,2), H(2,2), F(2,2), EYE(2,2), S(2,2), S_v(3), E_v(3)
 
-    real(8) :: det, quad_points(3,2), weights(3)
-
-    real(8) :: L1, L2, L3, L1_X, L1_Y, L2_X, L2_Y, L3_X, L3_Y
-    real(8) :: N1_X, N1_Y, N2_X, N2_Y, N3_X, N3_Y, N4_X, N4_Y, N5_X, N5_Y, N6_X, N6_Y
+    real(8) :: gauss_points(4,3), weights(4)
+    real(8) :: L1, L2, L3, det
 
 !   External functions that will be used afterwards
     external :: scatter_matrix
@@ -156,9 +155,12 @@ subroutine tri6_k_and_f(X, u, C_SE, K, f_int, t)
     ! take care of the fortran matrix order (columns first!): 
     u_e = transpose(reshape(u, (/2, 6/)))
 
-    quad_points(1,:) = (/X4, Y4/)
-    quad_points(2,:) = (/X5, Y5/)
-    quad_points(3,:) = (/X6, Y6/)
+    ! take care of a precise description of 1/3 in order to avoid errors!
+    weights = (/ -27./48.0D0, 25./48.0D0, 25./48.0D0, 25./48.0D0 /)
+    gauss_points(1,:) = (/ 1/3.0D0, 1/3.0D0, 1/3.0D0 /)
+    gauss_points(2,:) = (/0.6D0, 0.2D0, 0.2D0 /)
+    gauss_points(3,:) = (/0.2D0, 0.6D0, 0.2D0 /)
+    gauss_points(4,:) = (/0.2D0, 0.2D0, 0.6D0 /)
 
     det = X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2
     A0 = det/2
@@ -166,40 +168,37 @@ subroutine tri6_k_and_f(X, u, C_SE, K, f_int, t)
 
     K = 0.0
     f_int = 0.0
-    ! take care of a precise description of 1/3 in order to avoid errors!
-    weights = (/ 1./3.0D0, 1./3.0D0, 1./3.0D0 /)
+
     ! loop over all quadrature points
-    do i=1,3
-       Xq = quad_points(i,1)
-       Yq = quad_points(i,2)
-       ! linear coordinate values
-       L1 = (Xq*( Y2 - Y3) + X2*Y3 - X3*Y2 + Yq*(-X2 + X3)) / det
-       L2 = (Xq*(-Y1 + Y3) - X1*Y3 + X3*Y1 + Yq*( X1 - X3)) / det
-       L3 = (Xq*( Y1 - Y2) + X1*Y2 - X2*Y1 + Yq*(-X1 + X2)) / det
-       ! derivative of the coordinates with respect to X and Y
-       L1_X = (Y2-Y3)/det
-       L1_Y = (X3-X2)/det
-       L2_X = (-Y1+Y3)/det
-       L2_Y = (X1-X3)/det
-       L3_X = (Y1-Y2)/det
-       L3_Y = (-X1+X2)/det
-       ! Full derivative of shape functions with respect to X and Y
-       N1_X = (4*L1 - 1)*L1_X
-       N1_Y = (4*L1 - 1)*L1_Y
-       N2_X = (4*L2 - 1)*L2_X
-       N2_Y = (4*L2 - 1)*L2_Y
-       N3_X = (4*L3 - 1)*L3_X
-       N3_Y = (4*L3 - 1)*L3_Y
+    do i=1,4
+       L1 = gauss_points(i, 1)
+       L2 = gauss_points(i, 2)
+       L3 = gauss_points(i, 3)
+       w  = weights(i)
 
-       N4_X = 4*(L1*L2_X + L1_X*L2)
-       N4_Y = 4*(L1*L2_Y + L1_Y*L2)
-       N5_X = 4*(L2*L3_X + L2_X*L3)
-       N5_Y = 4*(L2*L3_Y + L2_Y*L3)
-       N6_X = 4*(L1*L3_X + L1_X*L3)
-       N6_Y = 4*(L1*L3_Y + L1_Y*L3)
+       ! the entries in the jacobian dX_dL
+       Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
+       Jx2 = 4*L1*X4 + 4*L3*X5 + X2*(4*L2 - 1)
+       Jx3 = 4*L1*X6 + 4*L2*X5 + X3*(4*L3 - 1)
+       Jy1 = 4*L2*Y4 + 4*L3*Y6 + Y1*(4*L1 - 1)
+       Jy2 = 4*L1*Y4 + 4*L3*Y5 + Y2*(4*L2 - 1)
+       Jy3 = 4*L1*Y6 + 4*L2*Y5 + Y3*(4*L3 - 1)
 
-       B0_tilde(1,:) = (/ N1_X, N2_X, N3_X, N4_X, N5_X, N6_X /)
-       B0_tilde(2,:) = (/ N1_Y, N2_Y, N3_Y, N4_Y, N5_Y, N6_Y /)
+       det = Jx1*Jy2 - Jx1*Jy3 - Jx2*Jy1 + Jx2*Jy3 + Jx3*Jy1 - Jx3*Jy2
+       
+       B0_tilde(1,:) = (/            (Jy2 - Jy3)*(4*L1 - 1), &
+                                    (-Jy1 + Jy3)*(4*L2 - 1), &
+                                     (Jy1 - Jy2)*(4*L3 - 1), &
+                       4*L1*(-Jy1 + Jy3) + 4*L2*(Jy2 - Jy3), &
+                       4*L2*(Jy1 - Jy2) + 4*L3*(-Jy1 + Jy3), &
+                        4*L1*(Jy1 - Jy2) + 4*L3*(Jy2 - Jy3) /)
+        
+       B0_tilde(2,:) = (/           (-Jx2 + Jx3)*(4*L1 - 1), &
+                                     (Jx1 - Jx3)*(4*L2 - 1), &
+                                    (-Jx1 + Jx2)*(4*L3 - 1), &
+                       4*L1*(Jx1 - Jx3) + 4*L2*(-Jx2 + Jx3), &
+                       4*L2*(-Jx1 + Jx2) + 4*L3*(Jx1 - Jx3), &
+                      4*L1*(-Jx1 + Jx2) + 4*L3*(-Jx2 + Jx3) /)
 
        H = matmul(transpose(u_e), transpose(B0_tilde))
        F = H + EYE

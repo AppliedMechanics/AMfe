@@ -91,7 +91,7 @@ x = np.array([1.,1,2,1,2,2,1,2])
 u = np.array([0., 0, 0, 0, 0, 0, 0, 0])
 #distort the Element
 x += rand
-x = np.array([1.44168672, 1.06087965, 2.3436172, 1.15760643, 2.23802741, 
+x = np.array([1.44168672, 1.06087965, 2.3436172, 1.15760643, 2.23802741,
               2.06747207,1.13364969,  2.44723469])
 
 
@@ -106,9 +106,9 @@ M_fg = fg_quad_element.m_int(x, u)
 
 # Test of the mass matrices in the different procedures
 print('Massen-Matrix nach JR')
-print(M/M[0,0]*4)
+print(M/M[0,0])
 print('Massen-Matrix nach FG')
-print(M_fg/M_fg[0,0]*4)
+print(M_fg/M_fg[0,0])
 
 print('Vergleich der gesamten Masse des Elements')
 print('Gesamtmasse JR:', np.sum(M), 'Gesamtmasse FG:', np.sum(M_fg))
@@ -135,10 +135,10 @@ plt.plot(x_plot[:,0], x_plot[:,1])
 
 #%%
 #
-#Tetra4
+#Tet4
 x = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1.])
 u = np.array([0, 0, 0,  1, 0, 0,  0, 0, 0,  0, 0, 0.])
-my_tetra_element = amfe.Tetra4(E_modul=60, poisson_ratio=1/4, density=1.)
+my_tetra_element = amfe.Tet4(E_modul=60, poisson_ratio=1/4, density=1.)
 #x += sp.rand(12)*0.5
 #u += sp.rand(4*3)*0.5
 

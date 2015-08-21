@@ -15,8 +15,8 @@ import sys
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
     # internal Name,    gmsh-Key, vtk/ParaView-Key, no_of_nodes, description
-    ['Tetra4',           4, 10,  4, 'Linear Tetraeder / nodes on every corner'],
-    ['Tetra10',         11, 24, 10, 'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
+    ['Tet4',           4, 10,  4, 'Linear Tetraeder / nodes on every corner'],
+    ['Tet10',         11, 24, 10, 'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
     ['Tri6',             9, 22,  6, 'Quadratic triangle / 6 node second order triangle'],
     ['Tri3',             2,  5,  3, 'Straight triangle / 3 node first order triangle'],
     ['Tri10',           21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
@@ -29,7 +29,7 @@ element_mapping_list = [
 
 # actual set of implemented elements
 element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
-element_3d_set = {'Tetra4', 'Tetra10'}
+element_3d_set = {'Tet4', 'Tet10'}
 
 boundary_2d_set = {'straight_line', 'quadratic_line'}
 boundary_3d_set = {'straight_line', 'quadratic_line',

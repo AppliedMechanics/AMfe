@@ -30,9 +30,9 @@ in order to get the full speed!
 #fortran_use = False
 
 
-def scatter_geometric_matrix(Mat, ndim):
+def scatter_matrix(Mat, ndim):
     '''
-    Scatter the symmetric geometric stiffness matrix to all dofs.
+    Scatter the symmetric (geometric stiffness) matrix to all dofs.
 
     What is basically done is to perform the kron(Mat, eye(ndof))
 
@@ -117,7 +117,7 @@ def compute_B_matrix(B_tilde, F):
 
 if fortran_use:
     compute_B_matrix = amfe.f90_element.compute_b_matrix
-    scatter_geometric_matrix = amfe.f90_element.scatter_matrix
+    scatter_matrix = amfe.f90_element.scatter_matrix
 
 
 class Element():
@@ -136,14 +136,6 @@ class Element():
         will be called. For many computations the tensors need to be computed
         the same way.
         '''
-        pass
-
-    def _k_int(self, X, u):
-        print('The function is not implemented yet...')
-        pass
-
-    def _f_int(self, X, u):
-        print('The function is not implemented yet...')
         pass
 
     def _m_int(self, X, u):
@@ -221,7 +213,7 @@ class Element():
         self._compute_tensors(X, u)
         return self.f
 
-    def m_int(self, X, u):
+    def m_and_vec_int(self, X, u):
         '''
         Returns the tangential stiffness matrix of the Element.
 
@@ -240,25 +232,8 @@ class Element():
         '''
         return self._m_int(X, u), np.zeros_like(X)
 
-
-#    def k_and_m_int(self, X, u):
-#        '''
-#        Returns the stiffness and mass matrix of the Element.
-#
-#        Parameters
-#        -----------
-#        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
-#                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
-#
-#        u :         nodal displacements given in Voigt notation
-#
-#        Returns
-#        --------
-#        m_int :     The consistent mass matrix of the element
-#                    (numpy.ndarray of dimension (ndim,ndim))
-#
-#        '''
-#        return self._k_and_m_int(X, u)
+    def m_int(self, X, u):
+        return self._m_int(X, u)
 
 
 
@@ -333,30 +308,30 @@ class Tri3(Element):
         S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
         B0 = compute_B_matrix(B0_tilde, F)
         K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det/2*self.t
-        K_geo = scatter_geometric_matrix(K_geo_small, 2)
+        K_geo = scatter_matrix(K_geo_small, 2)
         K_mat = B0.T.dot(self.C_SE.dot(B0))*det/2*self.t
         self.K = (K_geo + K_mat)
         self.f = B0.T.dot(S_v)*det/2*self.t
 
 
-    def _f_int(self, X, u):
-        '''
-        Private method for the computation of the internal nodal forces without computation of the relevant tensors
-        '''
-        return self.f
-
-
-    def _k_int(self, X, u):
-        '''
-        Private method for computation of internal tangential stiffness matrix without an update of the internal tensors
-
-        '''
-        return self.K
-
-
     def _m_int(self, X, u):
         '''
-        Bestimmt die Massenmatrix. Erstellt die Massenmatrix durch die fest einprogrammierte Darstellung aus dem Lehrbuch.
+        Compute the mass matrix.
+
+        Parameters
+        ----------
+
+        X : ndarray
+            Position of the nodal coordinates in undeformed configuration
+            using voigt notation X = (X1, Y1, X2, Y2, X3, Y3)
+        u : ndarray
+            Displacement of the element using same voigt notation as for X
+
+        Returns
+        -------
+
+        M : ndarray
+            Mass matrix of the given element
         '''
         X1, Y1, X2, Y2, X3, Y3 = X
         self.A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
@@ -386,6 +361,15 @@ class Tri6(Element):
         self.lame_lambda = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
         self.t = element_thickness
         self.rho = density
+        self.M_small = np.zeros((6,6))
+        self.gauss_points2 = ((1/2, 1/2, 0, 1/3),
+                             (1/2, 0, 1/2, 1/3),
+                             (0, 1/2, 1/2, 1/3))
+
+        self.gauss_points3 = ((1/3, 1/3, 1/3, -27/48),
+                             (0.6, 0.2, 0.2, 25/48),
+                             (0.2, 0.6, 0.2, 25/48),
+                             (0.2, 0.2, 0.6, 25/48))
 
         # Achtung: hier gibt's ebene Dehnung
         if self.plane_stress:
@@ -398,48 +382,41 @@ class Tri6(Element):
                          [0, 0, self.lame_mu]])
 
 
+
     def _compute_tensors(self, X, u):
         '''
         Tensor computation the same way as in the Tri3 element
         '''
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
         u_mat = u.reshape((-1,2))
-        det = X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2
-        self.A0 = det/2
-
-        gauss_points = ((X4, Y4, 1/3), (X5, Y5, 1/3), (X6, Y6, 1/3))
-
         self.K = np.zeros((12, 12))
         self.f = np.zeros(12)
 
-        for X, Y, w in gauss_points:
-            L1 = (X*(Y2 - Y3) + X2*Y3 - X3*Y2 + Y*(-X2 + X3))/det
-            L2 = (X*(-Y1 + Y3) - X1*Y3 + X3*Y1 + Y*(X1 - X3))/det
-            L3 = (X*(Y1 - Y2) + X1*Y2 - X2*Y1 + Y*(-X1 + X2))/det
-            # diff of coordinates with respect to X and Y
-            L1_X = (Y2-Y3)/det
-            L1_Y = (X3-X2)/det
-            L2_X = (-Y1+Y3)/det
-            L2_Y = (X1-X3)/det
-            L3_X = (Y1-Y2)/det
-            L3_Y = (-X1+X2)/det
-            # Full diff of coordinates
-            N1_X = (4*L1 - 1)*L1_X
-            N1_Y = (4*L1 - 1)*L1_Y
-            N2_X = (4*L2 - 1)*L2_X
-            N2_Y = (4*L2 - 1)*L2_Y
-            N3_X = (4*L3 - 1)*L3_X
-            N3_Y = (4*L3 - 1)*L3_Y
+        for L1, L2, L3, w in self.gauss_points3:
 
-            N4_X = 4*(L1*L2_X + L1_X*L2)
-            N4_Y = 4*(L1*L2_Y + L1_Y*L2)
-            N5_X = 4*(L2*L3_X + L2_X*L3)
-            N5_Y = 4*(L2*L3_Y + L2_Y*L3)
-            N6_X = 4*(L1*L3_X + L1_X*L3)
-            N6_Y = 4*(L1*L3_Y + L1_Y*L3)
+            dN_dL = np.array([  [4*L1 - 1,        0,        0],
+                                [       0, 4*L2 - 1,        0],
+                                [       0,        0, 4*L3 - 1],
+                                [    4*L2,     4*L1,        0],
+                                [       0,     4*L3,     4*L2],
+                                [    4*L3,        0,     4*L1]])
 
-            B0_tilde = np.array([[N1_X, N2_X, N3_X, N4_X, N5_X, N6_X],
-                                 [N1_Y, N2_Y, N3_Y, N4_Y, N5_Y, N6_Y]])
+            # the entries in the jacobian dX_dL
+            Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
+            Jx2 = 4*L1*X4 + 4*L3*X5 + X2*(4*L2 - 1)
+            Jx3 = 4*L1*X6 + 4*L2*X5 + X3*(4*L3 - 1)
+            Jy1 = 4*L2*Y4 + 4*L3*Y6 + Y1*(4*L1 - 1)
+            Jy2 = 4*L1*Y4 + 4*L3*Y5 + Y2*(4*L2 - 1)
+            Jy3 = 4*L1*Y6 + 4*L2*Y5 + Y3*(4*L3 - 1)
+
+            det = Jx1*Jy2 - Jx1*Jy3 - Jx2*Jy1 + Jx2*Jy3 + Jx3*Jy1 - Jx3*Jy2
+
+
+            dL_dX = 1/det*np.array([[ Jy2 - Jy3, -Jx2 + Jx3],
+                                    [-Jy1 + Jy3,  Jx1 - Jx3],
+                                    [ Jy1 - Jy2, -Jx1 + Jx2]])
+
+            B0_tilde = np.transpose(dN_dL.dot(dL_dX))
 
             H = u_mat.T.dot(B0_tilde.T)
             F = H + np.eye(2)
@@ -449,11 +426,11 @@ class Tri6(Element):
             S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
             B0 = compute_B_matrix(B0_tilde, F)
             K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det/2*self.t
-            K_geo = scatter_geometric_matrix(K_geo_small, 2)
+            K_geo = scatter_matrix(K_geo_small, 2)
             K_mat = B0.T.dot(self.C_SE.dot(B0))*det/2*self.t
             self.K += (K_geo + K_mat)*w
             self.f += B0.T.dot(S_v)*det/2*self.t*w
-
+        pass
 
     def _f_int(self, X, u):
         return self.f
@@ -463,21 +440,30 @@ class Tri6(Element):
 
     def _m_int(self, X, u):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
-        det = X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2
-        self.A0 = det/2
-        self.M = self.A0 / 180 * self.t * self.rho * np.array([
-        [  6.,   0.,  -1.,  -0.,  -1.,  -0.,   0.,   0.,  -4.,  -0.,   0.,  0.],
-        [  0.,   6.,  -0.,  -1.,  -0.,  -1.,   0.,   0.,  -0.,  -4.,   0.,  0.],
-        [ -1.,  -0.,   6.,   0.,  -1.,  -0.,   0.,   0.,   0.,   0.,  -4., -0.],
-        [ -0.,  -1.,   0.,   6.,  -0.,  -1.,   0.,   0.,   0.,   0.,  -0., -4.],
-        [ -1.,  -0.,  -1.,  -0.,   6.,   0.,  -4.,  -0.,   0.,   0.,   0.,  0.],
-        [ -0.,  -1.,  -0.,  -1.,   0.,   6.,  -0.,  -4.,   0.,   0.,   0.,  0.],
-        [  0.,   0.,   0.,   0.,  -4.,  -0.,  32.,   0.,  16.,   0.,  16.,  0.],
-        [  0.,   0.,   0.,   0.,  -0.,  -4.,   0.,  32.,   0.,  16.,   0., 16.],
-        [ -4.,  -0.,   0.,   0.,   0.,   0.,  16.,   0.,  32.,   0.,  16.,  0.],
-        [ -0.,  -4.,   0.,   0.,   0.,   0.,   0.,  16.,   0.,  32.,   0., 16.],
-        [  0.,   0.,  -4.,  -0.,   0.,   0.,  16.,   0.,  16.,   0.,  32.,  0.],
-        [  0.,   0.,  -0.,  -4.,   0.,   0.,   0.,  16.,   0.,  16.,   0., 32.]])
+
+        self.M_small *= 0
+        for L1, L2, L3, w in self.gauss_points3:
+
+            # the entries in the jacobian dX_dL
+            Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
+            Jx2 = 4*L1*X4 + 4*L3*X5 + X2*(4*L2 - 1)
+            Jx3 = 4*L1*X6 + 4*L2*X5 + X3*(4*L3 - 1)
+            Jy1 = 4*L2*Y4 + 4*L3*Y6 + Y1*(4*L1 - 1)
+            Jy2 = 4*L1*Y4 + 4*L3*Y5 + Y2*(4*L2 - 1)
+            Jy3 = 4*L1*Y6 + 4*L2*Y5 + Y3*(4*L3 - 1)
+
+            det = Jx1*Jy2 - Jx1*Jy3 - Jx2*Jy1 + Jx2*Jy3 + Jx3*Jy1 - Jx3*Jy2
+
+            N = np.array([  [L1*(2*L1 - 1)],
+                            [L2*(2*L2 - 1)],
+                            [L3*(2*L3 - 1)],
+                            [      4*L1*L2],
+                            [      4*L2*L3],
+                            [      4*L1*L3]])
+
+            self.M_small += N.dot(N.T) * det/2 * self.rho * self.t * w
+
+        self.M = scatter_matrix(self.M_small, 2)
         return self.M
 
 
@@ -509,7 +495,7 @@ class Quad4(Element):
 
         self.K = np.zeros((8,8))
         self.f = np.zeros(8)
-
+        self.M_small = np.zeros((4,4))
         # Gauss-Point-Handling:
         g1 = 0.577350269189626
 
@@ -548,7 +534,7 @@ class Quad4(Element):
             S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
             B0 = compute_B_matrix(B0_tilde, F)
             K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det*self.t
-            K_geo = scatter_geometric_matrix(K_geo_small, 2)
+            K_geo = scatter_matrix(K_geo_small, 2)
             K_mat = B0.T.dot(self.C_SE.dot(B0))*det*self.t
             self.K += (K_geo + K_mat)*w
             self.f += B0.T.dot(S_v)*det*self.t*w
@@ -561,16 +547,21 @@ class Quad4(Element):
 
     def _m_int(self, X, u):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
-        det = 1/8*(X1*Y2 - X1*Y4 - X2*Y1 + X2*Y3 - X3*Y2 + X3*Y4 + X4*Y1 - X4*Y3)
-        self.M = det / 9 * self.rho * self.t * np.array([
-                 [ 4.,  0.,  2.,  0.,  1.,  0.,  2.,  0.],
-                 [ 0.,  4.,  0.,  2.,  0.,  1.,  0.,  2.],
-                 [ 2.,  0.,  4.,  0.,  2.,  0.,  1.,  0.],
-                 [ 0.,  2.,  0.,  4.,  0.,  2.,  0.,  1.],
-                 [ 1.,  0.,  2.,  0.,  4.,  0.,  2.,  0.],
-                 [ 0.,  1.,  0.,  2.,  0.,  4.,  0.,  2.],
-                 [ 2.,  0.,  1.,  0.,  2.,  0.,  4.,  0.],
-                 [ 0.,  2.,  0.,  1.,  0.,  2.,  0.,  4.]])
+        self.M_small *= 0
+
+        for xi, eta, w in self.gauss_points:
+            det = 1/8*(-X1*Y2*eta + X1*Y2 + X1*Y3*eta - X1*Y3*xi + X1*Y4*xi
+                        - X1*Y4 + X2*Y1*eta - X2*Y1 + X2*Y3*xi + X2*Y3
+                        - X2*Y4*eta - X2*Y4*xi - X3*Y1*eta + X3*Y1*xi
+                        - X3*Y2*xi - X3*Y2 + X3*Y4*eta + X3*Y4 - X4*Y1*xi
+                        + X4*Y1 + X4*Y2*eta + X4*Y2*xi - X4*Y3*eta - X4*Y3)
+            N = np.array([  [(-eta + 1)*(-xi + 1)/4],
+                            [ (-eta + 1)*(xi + 1)/4],
+                            [  (eta + 1)*(xi + 1)/4],
+                            [ (eta + 1)*(-xi + 1)/4]])
+            self.M_small += N.dot(N.T) * det * self.rho * self.t * w
+
+        self.M = scatter_matrix(self.M_small, 2)
         return self.M
 
 
@@ -604,6 +595,8 @@ class Quad8(Element):
 
         self.K = np.zeros((16,16))
         self.f = np.zeros(16)
+        self.M_small = np.zeros((8,8))
+        self.M = np.zeros((16,16))
 
         # Gauss-Point-Handling
         g3 = 0.861136311594053
@@ -650,7 +643,7 @@ class Quad8(Element):
             S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
             B0 = compute_B_matrix(B0_tilde, F)
             K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det*self.t
-            K_geo = scatter_geometric_matrix(K_geo_small, 2)
+            K_geo = scatter_matrix(K_geo_small, 2)
             K_mat = B0.T.dot(self.C_SE.dot(B0))*det*self.t
             self.K += w*(K_geo + K_mat)
             self.f += B0.T.dot(S_v)*det*self.t*w
@@ -666,34 +659,37 @@ class Quad8(Element):
         Mass matrix using CAS-System
         '''
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
+        X_mat = X.reshape(-1, 2)
 
-        det = ( -X1*Y2 + X1*Y4 + 4*X1*Y5 - 4*X1*Y8 + X2*Y1 - X2*Y3 - 4*X2*Y5
-                + 4*X2*Y6 + X3*Y2 - X3*Y4 - 4*X3*Y6 + 4*X3*Y7 - X4*Y1 + X4*Y3
-                - 4*X4*Y7 + 4*X4*Y8 - 4*X5*Y1 + 4*X5*Y2 - 4*X6*Y2 + 4*X6*Y3
-                - 4*X7*Y3 + 4*X7*Y4 + 4*X8*Y1 - 4*X8*Y4)/24
+        for xi, eta, w in self.gauss_points:
+            N = np.array([  [(-eta + 1)*(-xi + 1)*(-eta - xi - 1)/4],
+                            [ (-eta + 1)*(xi + 1)*(-eta + xi - 1)/4],
+                            [   (eta + 1)*(xi + 1)*(eta + xi - 1)/4],
+                            [  (eta + 1)*(-xi + 1)*(eta - xi - 1)/4],
+                            [             (-eta + 1)*(-xi**2 + 1)/2],
+                            [              (-eta**2 + 1)*(xi + 1)/2],
+                            [              (eta + 1)*(-xi**2 + 1)/2],
+                            [             (-eta**2 + 1)*(-xi + 1)/2]])
 
-        self.M = det/45 * self.rho * self.t * np.array([
-        [  6.,  0.,  2.,  0.,  3.,  0.,  2.,  0., -6.,  0., -8.,  0., -8.,  0., -6.,  0.],
-        [  0.,  6.,  0.,  2.,  0.,  3.,  0.,  2.,  0., -6.,  0., -8.,  0., -8.,  0., -6.],
-        [  2.,  0.,  6.,  0.,  2.,  0.,  3.,  0., -6.,  0., -6.,  0., -8.,  0., -8.,  0.],
-        [  0.,  2.,  0.,  6.,  0.,  2.,  0.,  3.,  0., -6.,  0., -6.,  0., -8.,  0., -8.],
-        [  3.,  0.,  2.,  0.,  6.,  0.,  2.,  0., -8.,  0., -6.,  0., -6.,  0., -8.,  0.],
-        [  0.,  3.,  0.,  2.,  0.,  6.,  0.,  2.,  0., -8.,  0., -6.,  0., -6.,  0., -8.],
-        [  2.,  0.,  3.,  0.,  2.,  0.,  6.,  0., -8.,  0., -8.,  0., -6.,  0., -6.,  0.],
-        [  0.,  2.,  0.,  3.,  0.,  2.,  0.,  6.,  0., -8.,  0., -8.,  0., -6.,  0., -6.],
-        [ -6.,  0., -6.,  0., -8.,  0., -8.,  0., 32.,  0., 20.,  0., 16.,  0., 20.,  0.],
-        [  0., -6.,  0., -6.,  0., -8.,  0., -8.,  0., 32.,  0., 20.,  0., 16.,  0., 20.],
-        [ -8.,  0., -6.,  0., -6.,  0., -8.,  0., 20.,  0., 32.,  0., 20.,  0., 16.,  0.],
-        [  0., -8.,  0., -6.,  0., -6.,  0., -8.,  0., 20.,  0., 32.,  0., 20.,  0., 16.],
-        [ -8.,  0., -8.,  0., -6.,  0., -6.,  0., 16.,  0., 20.,  0., 32.,  0., 20.,  0.],
-        [  0., -8.,  0., -8.,  0., -6.,  0., -6.,  0., 16.,  0., 20.,  0., 32.,  0., 20.],
-        [ -6.,  0., -8.,  0., -8.,  0., -6.,  0., 20.,  0., 16.,  0., 20.,  0., 32.,  0.],
-        [  0., -6.,  0., -8.,  0., -8.,  0., -6.,  0., 20.,  0., 16.,  0., 20.,  0., 32.]])
+            dN_dxi = np.array([
+                        [-(eta - 1)*(eta + 2*xi)/4, -(2*eta + xi)*(xi - 1)/4],
+                        [ (eta - 1)*(eta - 2*xi)/4,  (2*eta - xi)*(xi + 1)/4],
+                        [ (eta + 1)*(eta + 2*xi)/4,  (2*eta + xi)*(xi + 1)/4],
+                        [-(eta + 1)*(eta - 2*xi)/4, -(2*eta - xi)*(xi - 1)/4],
+                        [             xi*(eta - 1),            xi**2/2 - 1/2],
+                        [          -eta**2/2 + 1/2,            -eta*(xi + 1)],
+                        [            -xi*(eta + 1),           -xi**2/2 + 1/2],
+                        [           eta**2/2 - 1/2,             eta*(xi - 1)]])
+            dX_dxi = X_mat.T.dot(dN_dxi)
+            det = dX_dxi[0,0]*dX_dxi[1,1] - dX_dxi[1,0]*dX_dxi[0,1]
+            self.M_small += N.dot(N.T) * det * self.rho * self.t * w
+
+        self.M = scatter_matrix(self.M_small, 2)
         return self.M
 
 
 
-class Tetra4(Element):
+class Tet4(Element):
     '''
     Tetraeder-Element with 4 nodes
     '''
@@ -752,7 +748,7 @@ class Tetra4(Element):
 
         B0 = compute_B_matrix(B0_tilde, F)
         K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde))*det/6
-        K_geo = scatter_geometric_matrix(K_geo_small, 3)
+        K_geo = scatter_matrix(K_geo_small, 3)
         K_mat = B0.T.dot(self.C_SE.dot(B0))*det/6
         self.K = K_geo + K_mat
         self.f = B0.T.dot(S_v)*det/6
@@ -789,8 +785,9 @@ class Tetra4(Element):
             [ 0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  2.]])
         return self.M
 
+
 #
-#class Tetra10(Element):
+#class Tet10(Element):
 #    pass
 #
 
@@ -824,6 +821,7 @@ class Quad4_FG(Element):
             print('Ebene Dehnung noch nicht implementiert')
 
     def _compute_tensors(self, X, u):
+        self._k_and_m_int(X, u)
         pass
 
     def _k_and_m_int(self, X, u):
@@ -919,6 +917,8 @@ class Quad4_FG(Element):
         # Make symmetric (because of round-off errors)
         self.k_el = 1/2*(self.k_el+self.k_el.T)
         self.m_el = 1/2*(self.m_el+self.m_el.T)
+        self.K = self.k_el
+        self.M = self.m_el
         return self.k_el, self.m_el
 
     def _k_int(self, X, u):

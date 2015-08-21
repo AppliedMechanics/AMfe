@@ -18,7 +18,7 @@ from amfe.boundary import *
 # kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'density' : 1E4}
 kwargs = {}
 
-element_class_dict = {'Tetra4'  : Tetra4(**kwargs),
+element_class_dict = {'Tet4'  : Tet4(**kwargs),
                       'Tri3'    : Tri3(**kwargs),
                       'Tri6'    : Tri6(**kwargs),
                       'Quad4'   : Quad4(**kwargs),

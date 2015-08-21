@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 
 # Building the mechanical system
 my_mechanical_system = amfe.MechanicalSystem()
-my_mechanical_system.load_mesh_from_gmsh('../meshes/test_meshes/bar_Quad4_simple.msh')
+my_mechanical_system.load_mesh_from_gmsh('../meshes/test_meshes/bar_Tri6.msh')
 
 
 #%%
@@ -49,6 +49,7 @@ my_mechanical_system.apply_neumann_boundaries(my_neumann_boundary_list)
 ## Investigation on the solution stuff...
 #
 K = my_mechanical_system.K_global()
+M = K = my_mechanical_system.M_global()
 
 
 #%%
@@ -56,7 +57,7 @@ K = my_mechanical_system.K_global()
 # static solution
 amfe.solve_nonlinear_displacement(my_mechanical_system, 40, smplfd_nwtn_itr=1)
 #amfe.solve_linear_displacement(my_mechanical_system)
-export_path = '../results/tests/bar_Quad4' + time.strftime("_%Y%m%d_%H%M%S") + '/bar_Quad4'
+export_path = '../results/tests/bar_Tri6' + time.strftime("_%Y%m%d_%H%M%S") + '/bar_Tri6'
 my_mechanical_system.export_paraview(export_path)
 
 
