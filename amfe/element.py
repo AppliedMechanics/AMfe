@@ -19,7 +19,7 @@ try:
     fortran_use = True
 except:
     print('''
-Python was not able to load the fast fortran routines.
+Python was not able to load the fast fortran routines (element).
 run
 
 (TODO)
@@ -467,7 +467,7 @@ class Tri6(Element):
         return self.M
 
 
-class Quad4(Element):
+class Quad4_JR(Element):
     '''
     Elementklasse für viereckiges ebenes Element mit linearen Ansatzfunktionen.
     '''
@@ -792,7 +792,7 @@ class Tet4(Element):
 #
 
 
-class Quad4_FG(Element):
+class Quad4(Element):
 
     '''
     Element Klasse fuer ebenes, viereckiges Element (Quad4)

@@ -22,7 +22,7 @@ try:
     fortran_use = True
 except:
     print('''
-Python was not able to load the fast fortran routines.
+Python was not able to load the fast fortran routines (assembly).
 run
 
 (TODO)
