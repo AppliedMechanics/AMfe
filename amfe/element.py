@@ -610,6 +610,7 @@ class Quad8(Element):
                  (-g3,  g4, w3*w4), (-g4,  g4, w4*w4), ( g3, g4, w3*w4), ( g4, g4, w4*w4))
 
 
+
     def _compute_tensors(self, X, u):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
         X_mat = X.reshape(-1, 2)
@@ -682,6 +683,7 @@ class Quad8(Element):
                         [           eta**2/2 - 1/2,             eta*(xi - 1)]])
             dX_dxi = X_mat.T.dot(dN_dxi)
             det = dX_dxi[0,0]*dX_dxi[1,1] - dX_dxi[1,0]*dX_dxi[0,1]
+            print(det)
             self.M_small += N.dot(N.T) * det * self.rho * self.t * w
 
         self.M = scatter_matrix(self.M_small, 2)

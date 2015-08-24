@@ -121,17 +121,38 @@ plt.plot(x_plot[:,0], x_plot[:,1])
 #el = my_quad_element
 #K_finite_diff = jacobian(el.f_int, x, u)
 
+#%%
 
-#
-##Quad8:
-#x = np.array([1.,1,2,1,2,2,1,2, 1.5, 1, 2, 1.5, 1.5, 2, 1, 1.5])
-#u = np.array([0., 0, 0, 0, 0, 0, 0, 0, 0., 0, 0, 0, 0, 0, 0, 0])
-#my_quad_element = amfe.Quad8(E_modul=60, poisson_ratio=1/4, density=1.)
-#K, f = my_quad_element.k_and_f_int(x, u)
-#M = my_quad_element.m_int(x, u)
-#
-#el = my_quad_element
-#K_finite_diff = jacobian(el.f_int, x, u)
+#Quad8:
+x = np.array([1.,1,2,1,2,2,1,2, 1.5, 1, 2, 1.5, 1.5, 2, 1, 1.5])
+u = np.array([0., 0, 0, 0, 0, 0, 0, 0, 0., 0, 0, 0, 0, 0, 0, 0])
+my_quad_element = amfe.Quad8(E_modul=60, poisson_ratio=1/4, density=1.)
+
+#x += sp.rand(16)*0.4
+
+#%%
+K, f = my_quad_element.k_and_f_int(x, u)
+M_4 = my_quad_element.m_int(x, u)
+
+g = np.sqrt(3/5)
+w = 5/9
+g0 = 0
+w0 = 8/9
+
+my_quad_element.gauss_points = ((-g, -g, w*w), (-g, 0, w*w0), (-g,  g, w*w),
+                                ( 0, -g, w0*w), ( 0, 0, w0*w0), ( 0,  g, w0*w),
+                                ( g, -g, w*w), ( g, 0, w*w0), ( g,  g, w*w),)
+
+M_3 = my_quad_element.m_int(x, u)
+
+x_plot = x.reshape((-1, 2))
+plt.plot(x_plot[:,0], x_plot[:,1], 'o')
+
+
+M_4 - M_3
+
+el = my_quad_element
+K_finite_diff = jacobian(el.f_int, x, u)
 
 #%%
 #
