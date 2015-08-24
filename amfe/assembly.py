@@ -353,7 +353,7 @@ class Assembly():
             # corresponding global coordinates of element in 1-D array
             global_element_indices = np.array([(np.arange(node_dof) + node_dof*i)  for i in element]).reshape(-1)
             u_local = u[global_element_indices]
-            # evaluation of element matrix
+            # evaluation of element matrix (k_local, stresses)
             element_matrix, element_props = decorated_matrix_func(X, u_local, k, global_element_indices)
             self.row = np.zeros(element_matrix.shape)
             # build a matrix with constant columns and the rows representing the global_element_indices
@@ -387,6 +387,28 @@ class Assembly():
         '''
 
         def decorated_k_func(X, u_local, k, global_element_indices=None):
+            '''
+        Assembles the stiffness matrix of the given mesh and element.
+
+            Parameters
+            -----------
+            X : ndarray
+                local coordinates in the reference configuration
+            u_local : ndarray
+                local displacements
+            k : int
+                global index of the element
+            global_element_indices : ndarray
+                global dofs (corresponding to the dofs of X)                
+
+            Returns
+            --------
+            k_local : TODO
+                TODO
+            stresses: TODO
+                TODO
+            '''
+            # self.mesh.elements_type[k] gives type of element, e.g. 'Tri3'            
             element = self.element_class_dict[self.mesh.elements_type[k]]
             k_local = element.k_int(X, u_local)
             if self.save_stresses:

@@ -95,11 +95,11 @@ x = np.array([1.44168672, 1.06087965, 2.3436172, 1.15760643, 2.23802741,
               2.06747207,1.13364969,  2.44723469])
 
 
-my_quad_element = amfe.Quad4(E_modul=60, poisson_ratio=1/4, density=1.)
+my_quad_element = amfe.Quad4_JR(E_modul=60, poisson_ratio=1/4, density=1.)
 K = my_quad_element.k_int(x, u)
 M = my_quad_element.m_int(x, u)
 
-fg_quad_element = amfe.Quad4_FG(E_modul=60, poisson_ratio=1/4, density=1.)
+fg_quad_element = amfe.Quad4(E_modul=60, poisson_ratio=1/4, density=1.)
 K_fg = fg_quad_element.k_int(x, u)
 M_fg = fg_quad_element.m_int(x, u)
 
