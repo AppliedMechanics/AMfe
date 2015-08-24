@@ -350,7 +350,7 @@ subroutine tet4_k_and_f(X, u, C_SE, K, f_int)
     EYE(2,2) = 1
     EYE(3,3) = 1
 
-    u_e = reshape(u, (/ 4, 3 /))
+    u_e = transpose(reshape(u, (/ 3, 4 /)))
     det = -X1*Y2*Z3 + X1*Y2*Z4 + X1*Y3*Z2 - X1*Y3*Z4 - X1*Y4*Z2 + X1*Y4*Z3 &
          + X2*Y1*Z3 - X2*Y1*Z4 - X2*Y3*Z1 + X2*Y3*Z4 + X2*Y4*Z1 - X2*Y4*Z3 &
          - X3*Y1*Z2 + X3*Y1*Z4 + X3*Y2*Z1 - X3*Y2*Z4 - X3*Y4*Z1 + X3*Y4*Z2 &
