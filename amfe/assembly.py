@@ -22,7 +22,7 @@ try:
     fortran_use = True
 except:
     print('''
-Python was not able to load the fast fortran routines.
+Python was not able to load the fast fortran routines (assembly).
 run
 
 (TODO)
@@ -137,7 +137,7 @@ class Assembly():
     '''
     Class for the more fancy assembly of meshes with non-heterogeneous elements.
     '''
-    def __init__(self, mesh, element_class_dict):
+    def __init__(self, mesh, element_class_dict): # element_class_dict enthaelt die Elementtypen, welche im Modul 'mechanical_system' definiert werden
         '''
         Parameters
         ----
@@ -298,8 +298,8 @@ class Assembly():
 
         if u == None:
             u = np.zeros_like(self.node_coords)
-        element = self.element_class_dict[self.mesh.elements_type[0]]
-        M, _ = self.assemble_matrix_and_vector(u, element.m_and_vec_int)
+        element = self.element_class_dict[self.mesh.elements_type[0]] # Zuweisen der Elementklasse
+        M, _ = self.assemble_matrix_and_vector(u, element.m_and_vec_int) # element.m_and_vec_in
         return M
 
     def _assemble_matrix(self, u, decorated_matrix_func):
