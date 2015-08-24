@@ -211,6 +211,9 @@ K0 = element_tet4.k_int(x, np.zeros_like(x))
 
 print('The total mass of the element (in one direction) is', np.sum(M)/3 )
 
+
+# np.save('element_matrices/K_tet4', K)
+a = np.load('element_matrices/K_tet4.npy')
 ##
 ## load references from ANSYS
 ##
