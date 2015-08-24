@@ -956,9 +956,12 @@ if fortran_use:
     def compute_tri3_tensors(self, X, u):
         self.K, self.f = amfe.f90_element.tri3_k_and_f(X, u, self.C_SE, self.t)
 
-
     def compute_tri6_tensors(self, X, u):
         self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.C_SE, self.t)
+
+    def compute_tet4_tensors(self, X, u):
+        self.K, self.f = amfe.f90_element.tet4_k_and_f(X, u, self.C_SE)
+
 
     def compute_tri6_mass(self, X, u):
         self.M = amfe.f90_element.tri6_m(X, self.rho, self.t)
@@ -967,7 +970,7 @@ if fortran_use:
     # overloading the routines with fortran routines
     Tri3._compute_tensors = compute_tri3_tensors
     Tri6._compute_tensors = compute_tri6_tensors
-    Tri6._compute_tensors = compute_tri6_tensors
+    Tet4._compute_tensors = compute_tet4_tensors
     Tri6._m_int = compute_tri6_mass
 
 
