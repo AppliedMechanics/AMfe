@@ -70,5 +70,5 @@ my_mechanical_system.element_class_dict['Tet4'] = my_tetra_element
 # static solution
 amfe.solve_nonlinear_displacement(my_mechanical_system, 10, smplfd_nwtn_itr=1)
 #amfe.solve_linear_displacement(my_mechanical_system)
-export_path = '../results/tests/bar_tetra4' + time.strftime("_%Y%m%d_%H%M%S") + '/bar_tetra4'
+export_path = '../results/bar_tetra4' + time.strftime("_%Y%m%d_%H%M%S") + '/bar_tetra4'
 my_mechanical_system.export_paraview(export_path)
