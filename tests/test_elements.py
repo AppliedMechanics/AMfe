@@ -48,8 +48,9 @@ my_mechanical_system.apply_neumann_boundaries(my_neumann_boundary_list)
 ##%%
 ## Investigation on the solution stuff...
 #
+
 K = my_mechanical_system.K_global()
-M = K = my_mechanical_system.M_global()
+M = my_mechanical_system.M_global()
 
 
 #%%

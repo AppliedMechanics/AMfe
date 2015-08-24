@@ -5,6 +5,7 @@ Created on Thu Aug 20 08:44:57 2015
 @author: johannesr
 f2py3 -c  --fcompiler=gnu95 -m f90_assembly assembly.f90 && cp f90_assembly.so ../amfe
 
+This is a test routine for the assembly process performed in python or in FORTRAN.
 
 """
 

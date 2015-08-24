@@ -362,6 +362,7 @@ class Tri6(Element):
         self.t = element_thickness
         self.rho = density
         self.M_small = np.zeros((6,6))
+
         self.gauss_points2 = ((1/2, 1/2, 0, 1/3),
                              (1/2, 0, 1/2, 1/3),
                              (0, 1/2, 1/2, 1/3))
@@ -370,6 +371,20 @@ class Tri6(Element):
                              (0.6, 0.2, 0.2, 25/48),
                              (0.2, 0.6, 0.2, 25/48),
                              (0.2, 0.2, 0.6, 25/48))
+
+        alpha1 = 0.0597158717
+        beta1 = 0.4701420641 # 1/(np.sqrt(15)-6)
+        w1 = 0.1323941527
+
+        alpha2 = 0.7974269853 #
+        beta2 = 0.1012865073 # 1/(np.sqrt(15)+6)
+        w2 = 0.1259391805
+
+        self.gauss_points5 = ((1/3, 1/3, 1/3, 0.225),
+              (alpha1, beta1, beta1, w1), (beta1, alpha1, beta1, w1), (beta1, beta1, alpha1, w1),
+              (alpha2, beta2, beta2, w2), (beta2, alpha2, beta2, w2), (beta2, beta2, alpha2, w2))
+
+
 
         # Achtung: hier gibt's ebene Dehnung
         if self.plane_stress:
@@ -392,7 +407,7 @@ class Tri6(Element):
         self.K = np.zeros((12, 12))
         self.f = np.zeros(12)
 
-        for L1, L2, L3, w in self.gauss_points3:
+        for L1, L2, L3, w in self.gauss_points5:
 
             dN_dL = np.array([  [4*L1 - 1,        0,        0],
                                 [       0, 4*L2 - 1,        0],
@@ -442,7 +457,7 @@ class Tri6(Element):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
 
         self.M_small *= 0
-        for L1, L2, L3, w in self.gauss_points3:
+        for L1, L2, L3, w in self.gauss_points5:
 
             # the entries in the jacobian dX_dL
             Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
@@ -467,7 +482,7 @@ class Tri6(Element):
         return self.M
 
 
-class Quad4_JR(Element):
+class Quad4(Element):
     '''
     Elementklasse für viereckiges ebenes Element mit linearen Ansatzfunktionen.
     '''
@@ -610,6 +625,7 @@ class Quad8(Element):
                  (-g3,  g4, w3*w4), (-g4,  g4, w4*w4), ( g3, g4, w3*w4), ( g4, g4, w4*w4))
 
 
+
     def _compute_tensors(self, X, u):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
         X_mat = X.reshape(-1, 2)
@@ -660,6 +676,7 @@ class Quad8(Element):
         '''
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
         X_mat = X.reshape(-1, 2)
+        self.M_small *= 0
 
         for xi, eta, w in self.gauss_points:
             N = np.array([  [(-eta + 1)*(-xi + 1)*(-eta - xi - 1)/4],
@@ -686,7 +703,6 @@ class Quad8(Element):
 
         self.M = scatter_matrix(self.M_small, 2)
         return self.M
-
 
 
 class Tet4(Element):
@@ -792,7 +808,7 @@ class Tet4(Element):
 #
 
 
-class Quad4(Element):
+class Quad4_FG(Element):
 
     '''
     Element Klasse fuer ebenes, viereckiges Element (Quad4)
@@ -944,9 +960,15 @@ if fortran_use:
     def compute_tri6_tensors(self, X, u):
         self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.C_SE, self.t)
 
+    def compute_tri6_mass(self, X, u):
+        self.M = amfe.f90_element.tri6_m(X, self.rho, self.t)
+        return self.M
+
     # overloading the routines with fortran routines
     Tri3._compute_tensors = compute_tri3_tensors
     Tri6._compute_tensors = compute_tri6_tensors
+    Tri6._compute_tensors = compute_tri6_tensors
+    Tri6._m_int = compute_tri6_mass
 
 
 

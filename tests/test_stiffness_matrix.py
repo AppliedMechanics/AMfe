@@ -11,6 +11,7 @@ crosschecked by a finite difference approximation.
 import numpy as np
 import scipy as sp
 import time
+import matplotlib.pyplot as plt
 
 # make amfe running
 import sys
@@ -27,7 +28,7 @@ def jacobian(func, X, u):
     ndof = X.shape[0]
     jac = np.zeros((ndof, ndof))
     h = np.sqrt(np.finfo(float).eps)
-    f = func(X, u)
+    f = func(X, u).copy()
     for i in range(ndof):
         u_tmp = u.copy()
         u_tmp[i] += h
@@ -36,119 +37,243 @@ def jacobian(func, X, u):
     return jac
 
 
-# This is exactly the element in Felippa's notes
-Tri3 = False
-Tri6 = True
-Quad4 = False
+def plot_element(x, u=None, title=None, three_d=False, element_loop=None):
+    '''
+
+    '''
+    ndim = 2
+    if three_d:
+        ndim = 3
+    x_mat = x.reshape((-1, ndim))
+    if not element_loop is None:
+        indices = np.array(element_loop)
+        x_mat = x_mat[indices]
+    no_of_nodes = x_mat.shape[0]
+
+    x1 = np.zeros(no_of_nodes + 1)
+    x2 = np.zeros(no_of_nodes + 1)
+
+    x1[:-1] = x_mat[:,0]
+    x1[-1] = x_mat[0,0]
+    x2[:-1] = x_mat[:,1]
+    x2[-1] = x_mat[0,1]
+    plt.fill(x1, x2, 'g-', label='undeformed', alpha=0.5)
+
+    if not u is None:
+        u_mat = u.reshape((-1, ndim))
+        if not element_loop is None:
+            u_mat = u_mat[indices]
+        u1 = np.zeros(no_of_nodes + 1)
+        u2 = np.zeros(no_of_nodes + 1)
+        u1[:-1] = u_mat[:,0]
+        u1[-1] = u_mat[0,0]
+        u2[:-1] = u_mat[:,1]
+        u2[-1] = u_mat[0,1]
+        plt.fill(x1 + u1, x2+u2, 'r-', label='deformed', alpha=0.5)
+        for i in range(no_of_nodes):
+            plt.text(x_mat[i,0] + u_mat[i,0], x_mat[i,1] + u_mat[i,1], str(i), color='r')
+
+    plt.gca().set_aspect('equal', adjustable='box')
+    for i in range(no_of_nodes):
+        plt.text(x_mat[i,0], x_mat[i,1], str(i), color='g')
+    plt.xlim(np.min(x1)-1, np.max(x1)+1)
+    plt.ylim(np.min(x2)-1, np.max(x2)+1)
+    plt.grid(True)
+    plt.legend()
+    plt.title(title)
 
 
-if Tri3:
-    x = np.array([0,0,3,1,2,2.])
-    u = np.array([0,0,-0.5,0,0,0.])
-    # u *= 0
-    element_tri3 = amfe.Tri3(E_modul=60, poisson_ratio=1/4)
-    my_element = element_tri3
-elif Tri6:
-    x = np.array([0,0, 3,1, 2,2, 1.5,0.5, 2.5,1.5, 1,1])
-    u = np.array([0,0, -0.5,0, 0,0, -0.25,0, -0.25,0, 0,0])
-    element_tri6 = amfe.Tri6(E_modul=60, poisson_ratio=1/4)
-    # u *= 0
-    my_element = element_tri6
-elif Quad4:
-    x = np.array([0,0,1,0,1,1,0,1.])
-    u = np.array([0,0,0,0,0,0,0,0.])
-    element_quad4 = amfe.Quad4(E_modul=1, poisson_ratio=0)
-    my_element = element_quad4
-else: print('Kein Element ausgewählt')
+def force_test(element, x, u=None):
+    if u == None:
+        u = np.zeros_like(x)
+    K = element.k_int(x, u)
+    K_finite_diff = jacobian(element.f_int, x, u)
+    print('Maximum deviation between directly integrated stiffness matrix')
+    print('and stiffness matrix from finite differences:', np.max(abs(K - K_finite_diff)))
+    print('Maximum value in the integrated stiffness matrix:', np.max(abs(K)))
+    return K, K_finite_diff
+
+#%%
+
+# Test of the different elements:
+
+# Tri3
+print('''
+###############################################################################
+######  Testing Tri3 Element
+###############################################################################
+''')
+x = np.array([0,0,3,1,2,2.])
+u = sp.rand(2*3)
+plot_element(x, u, title='Tri3')
+element_tri3 = amfe.Tri3(E_modul=60, poisson_ratio=1/4, density=1., element_thickness=1.)
+force_test(element_tri3, x, u)
+
+M = element_tri3.m_int(x, u)
+K0 = element_tri3.k_int(x, np.zeros_like(x))
+K = element_tri3.k_int(x, u)
+print('The total mass of the element (in one direction) is', np.sum(M)/2 )
+
+##
+## load references from ANSYS
+##
+
+#%%
+
+print('''
+###############################################################################
+######  Testing Tri6 Element
+###############################################################################
+''')
+x = np.array([0,0, 3,1, 2,2, 1.5,0.5, 2.5,1.5, 1,1])
+u = np.array([0,0, -0.5,0, 0,0, -0.25,0, -0.25,0, 0,0])
+element_tri6 = amfe.Tri6(E_modul=60, poisson_ratio=1/4, density=1., element_thickness=1.)
+plot_element(x, u, title='Tri6', element_loop=(0, 3, 1, 4, 2, 5))
+
+force_test(element_tri6, x, u)
+
+M = element_tri6.m_int(x, u)
+K0 = element_tri6.k_int(x, np.zeros_like(x))
+K = element_tri6.k_int(x, u)
+print('The total mass of the element (in one direction) is', np.sum(M)/2 )
+
+##
+## load references from ANSYS
+##
 
 
-t1 = time.time()
-K = my_element.k_int(x, u)
-t2 = time.time() - t1
-print('Benoetigte Zeit zum Aufstellen der Elementsteifigkeitsmatrix: {0}'.format(t2))
-
-if not Quad4:
-    my_element.f_int(x, u)
-    el = my_element
-    K_finite_diff = jacobian(el.f_int, x, u)
-
-#print('Difference between analytical and approximated tangential stiffness matrix')
-#print(K - K_finite_diff)
-
-    print('Maximum absolute deviation:', np.max(abs(K - K_finite_diff)))
-    print('Maximum relative deviation:', np.max(abs(K - K_finite_diff))/np.max(abs(K)))
+#%%
 
 
-M = my_element.m_int(x, u)
-lambda_m = sp.linalg.eigvalsh(M)
-lambda_k = sp.linalg.eigvalsh(K)
+print('''
+###############################################################################
+######  Testing Quad4 Element
+###############################################################################
+''')
+x = np.array([0,0,1,0,1,1,0,1.])
+u = np.array([0,0,0,0,0,0,0,0.])
+element_quad4 = amfe.Quad4(E_modul=60, poisson_ratio=1/4, density=1., element_thickness=1.)
+plot_element(x, u, title='Quad4')
+
+force_test(element_quad4, x, u)
+
+
+M = element_quad4.m_int(x, u)
+K0 = element_quad4.k_int(x, np.zeros_like(x))
+print('The total mass of the element (in one direction) is', np.sum(M)/2 )
+
+##
+## load references from ANSYS and compare
+##
+
+
+#%%
+
+print('''
+###############################################################################
+######  Testing Quad8 Element
+###############################################################################
+''')
+
+x = np.array([1.,1,2,1,2,2,1,2, 1.5, 1, 2, 1.5, 1.5, 2, 1, 1.5])
+u = sp.rand(16)*0.4
+element_quad8 = amfe.Quad8(E_modul=60, poisson_ratio=1/4, density=1., element_thickness=1.)
+plot_element(x, u, title='Quad8', element_loop=(0,4,1,5,2,6,3,7))
+
+K, K_finite_diff = force_test(element_quad8, x, u)
+
+M = element_quad8.m_int(x, u)
+K0 = element_quad8.k_int(x, np.zeros_like(x))
+
+print('The total mass of the element (in one direction) is', np.sum(M)/2 )
+
+##
+## load references from ANSYS
+##
+
+
+#%%
+
+print('''
+###############################################################################
+######  Testing Tet4 Element
+###############################################################################
+''')
+
+x = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1.])
+u = np.array([0, 0, 0,  1, 0, 0,  0, 0, 0,  0, 0, 0.])
+
+element_tet4 = amfe.Tet4(E_modul=60, poisson_ratio=1/4, density=1.)
+plot_element(x, u, title='Tet4', three_d=True)
+
+K, K_finite_diff = force_test(element_tet4, x, u)
+
+M = element_tet4.m_int(x, u)
+K0 = element_tet4.k_int(x, np.zeros_like(x))
+
+print('The total mass of the element (in one direction) is', np.sum(M)/3 )
+
+##
+## load references from ANSYS
+##
 
 
 
-# Quad4:
-rand = sp.rand(8)*0.5
-x = np.array([1.,1,2,1,2,2,1,2])
-u = np.array([0., 0, 0, 0, 0, 0, 0, 0])
-#distort the Element
-x += rand
-x = np.array([1.44168672, 1.06087965, 2.3436172, 1.15760643, 2.23802741,
-              2.06747207,1.13364969,  2.44723469])
 
-
-my_quad_element = amfe.Quad4_JR(E_modul=60, poisson_ratio=1/4, density=1.)
-K = my_quad_element.k_int(x, u)
-M = my_quad_element.m_int(x, u)
-
-fg_quad_element = amfe.Quad4(E_modul=60, poisson_ratio=1/4, density=1.)
-K_fg = fg_quad_element.k_int(x, u)
-M_fg = fg_quad_element.m_int(x, u)
-
-
-# Test of the mass matrices in the different procedures
-print('Massen-Matrix nach JR')
-print(M/M[0,0])
-print('Massen-Matrix nach FG')
-print(M_fg/M_fg[0,0])
-
-print('Vergleich der gesamten Masse des Elements')
-print('Gesamtmasse JR:', np.sum(M), 'Gesamtmasse FG:', np.sum(M_fg))
-
-
-import matplotlib.pyplot as plt
-x_plot = x.reshape(-1, 2)
-
-plt.plot(x_plot[:,0], x_plot[:,1])
-#el = my_quad_element
-#K_finite_diff = jacobian(el.f_int, x, u)
-
+#%%
 
 #
-##Quad8:
-#x = np.array([1.,1,2,1,2,2,1,2, 1.5, 1, 2, 1.5, 1.5, 2, 1, 1.5])
-#u = np.array([0., 0, 0, 0, 0, 0, 0, 0, 0., 0, 0, 0, 0, 0, 0, 0])
-#my_quad_element = amfe.Quad8(E_modul=60, poisson_ratio=1/4, density=1.)
-#K, f = my_quad_element.k_and_f_int(x, u)
-#M = my_quad_element.m_int(x, u)
+# Some Gauss-Point stuff...
 #
-#el = my_quad_element
-#K_finite_diff = jacobian(el.f_int, x, u)
+
+
+g2 = 1/3*np.sqrt(5 + 2*np.sqrt(10/7))
+g1 = 1/3*np.sqrt(5 - 2*np.sqrt(10/7))
+g0 = 0.0
+
+w2 = (322 - 13*np.sqrt(70))/900
+w1 = (322 + 13*np.sqrt(70))/900
+w0 = 128/225
+
+gauss_points = (
+                (-g2, -g2, w2*w2), (-g2, -g1, w2*w1), (-g2,  g0, w2*w0), (-g2,  g1, w2*w1), (-g2,  g2, w2*w2),
+                (-g1, -g2, w1*w2), (-g1, -g1, w1*w1), (-g1,  g0, w1*w0), (-g1,  g1, w1*w1), (-g1,  g2, w1*w2),
+                ( g0, -g2, w0*w2), ( g0, -g1, w0*w1), ( g0,  g0, w0*w0), ( g0,  g1, w0*w1), ( g0,  g2, w0*w2),
+                ( g1, -g2, w1*w2), ( g1, -g1, w1*w1), ( g1,  g0, w1*w0), ( g1,  g1, w1*w1), ( g1,  g2, w1*w2),
+                ( g2, -g2, w2*w2), ( g2, -g1, w2*w1), ( g2,  g0, w2*w0), ( g2,  g1, w2*w1), ( g2,  g2, w2*w2))
+
 
 #%%
 #
-#Tet4
-x = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1.])
-u = np.array([0, 0, 0,  1, 0, 0,  0, 0, 0,  0, 0, 0.])
-my_tetra_element = amfe.Tet4(E_modul=60, poisson_ratio=1/4, density=1.)
-#x += sp.rand(12)*0.5
-#u += sp.rand(4*3)*0.5
+# Tri6
+#
 
-K, f = my_tetra_element.k_and_f_int(x, u)
-M = my_tetra_element.m_int(x, u)
-el = my_tetra_element
-u_tmp = u.copy()
-u_tmp[0] += 0.2
-el.f_int(x, u_tmp)
-K_finite_diff = jacobian(el.f_int, x, u)
+x = np.array([0,0, 3,1, 2,2, 1.5,0.5, 2.5,1.5, 1,1])
+x += sp.rand(12)*0.4
+u = np.zeros(12)
+u += sp.rand(12)*0.4
+
+
+
+element_tri6 = amfe.Tri6(E_modul=60, poisson_ratio=1/4, density=1.)
+
+M_1 = element_tri6.m_int(x, u)
+K_1, _ = element_tri6.k_and_f_int(x, u)
+
+# Integration Ordnung 5:
+
+alpha1 = 0.0597158717
+beta1 = 0.4701420641 # 1/(np.sqrt(15)-6)
+w1 = 0.1323941527
+
+alpha2 = 0.7974269853 #
+beta2 = 0.1012865073 # 1/(6+np.sqrt(15))
+w2 = 0.1259391805
+
+element_tri6.gauss_points3 = ((1/3, 1/3, 1/3, 0.225),
+                              (alpha1, beta1, beta1, w1), (beta1, alpha1, beta1, w1), (beta1, beta1, alpha1, w1),
+                              (alpha2, beta2, beta2, w2), (beta2, alpha2, beta2, w2), (beta2, beta2, alpha2, w2))
+
 
 #%%
 
