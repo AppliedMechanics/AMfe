@@ -48,13 +48,14 @@ Index starts with 0:
 
 Index stars with 1:
 
+- FORTRAN
 - gmsh node-, line-, and element-numbering
 
 So the rule is, that the system works on indexing 0, and the import data from gmsh are changed. So should be done when importing ANSYS-files as well.
 
 
 Tips & Tricks:
-====================
+==============
 
 How to plot matrices in matplotlib:
 
@@ -63,6 +64,12 @@ How to plot matrices in matplotlib:
 >>> plt.matshow(A)
 >>> plt.colorbar()
 >>> plt.set_cmap('jet') # 'jet' is default; others looking good are 'hot'
+
+How to show the sparsity pattern of a sparse matrix :code:`A_csr`:
+
+>>> plt.spy(A_csr, marker=',')
+
+You can use different markers, as :code:`','` are pixels and very small, they make sense when large matrices are involved. However, for small matrices, :code:`'.'` gives a good picture. 
 
 Plot on log scales:
 
@@ -78,3 +85,15 @@ Plot on log scales:
 Check out more on http://matplotlib.org/examples/color/colormaps_reference.html
 
 
+FORTRAN
+=======
+
+It seems that FORTRAN is a very good companion to Python in order to speed the time critical things up. It is possible to write functions in fortran that are executed at lightspeed, especially when loops or matrix-vector-multiplications are heavily involved. 
+
+As wrapper the tool `f2py` can be used. It is included in numpy and gives the full support for numpy-arrays. 
+
+
+gmsh
+====
+
+Some information on gmsh would be cool here; how to use it in an efficient way... 

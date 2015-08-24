@@ -15,17 +15,25 @@ import sys
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
     # internal Name,    gmsh-Key, vtk/ParaView-Key, no_of_nodes, description
-    ['Tri6',            9, 22, 6, 'Quadratic triangle / 6 node second order triangle'],
-    ['Tri3',            2,  5, 3, 'Straight triangle / 3 node first order triangle'],
+    ['Tet4',           4, 10,  4, 'Linear Tetraeder / nodes on every corner'],
+    ['Tet10',         11, 24, 10, 'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
+    ['Tri6',             9, 22,  6, 'Quadratic triangle / 6 node second order triangle'],
+    ['Tri3',             2,  5,  3, 'Straight triangle / 3 node first order triangle'],
     ['Tri10',           21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
-    ['Quad4',           3, 0, 4, 'Bilinear rectangle / 4 node first order rectangle'], # hier noch vtk-Key heraussuchen
-    ['straight_line',   1,  3, 2, 'Straight line composed of 2 nodes'],
-    ['quadratic_line',  8, 21, 3, 'Quadratic edge/line composed of 3 nodes']
+    ['Quad4',            3,  9,  4, 'Bilinear rectangle / 4 node first order rectangle'],
+    ['Quad8',           16, 23,  8, 'Biquadratic rectangle / 8 node second order rectangle'],
+    ['straight_line',    1,  3,  2, 'Straight line composed of 2 nodes'],
+    ['quadratic_line',   8, 21,  3, 'Quadratic edge/line composed of 3 nodes']
 ]
 
+
 # actual set of implemented elements
-element_set = {'Tri6', 'Tri3', 'Quad4'}
-line_set = {'straight_line', 'quadratic_line'}
+element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
+element_3d_set = {'Tet4', 'Tet10'}
+
+boundary_2d_set = {'straight_line', 'quadratic_line'}
+boundary_3d_set = {'straight_line', 'quadratic_line',
+                   'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8'}
 
 #
 # Starting from here everything's working automatically
@@ -73,7 +81,7 @@ class Mesh:
         self.elements_type       = []
         self.elements_properties = []
         # the displacements; They are stored as a list of numpy-arrays with shape (ndof, node_dof):
-        self.u                   = None 
+        self.u                   = None
         self.timesteps           = []
         self.node_dof            = node_dof
 
@@ -81,15 +89,10 @@ class Mesh:
 
     def _update_mesh_props(self):
         '''
-        Just purely updates the elements props when the nodes and elements have changed
+        Update the number properties of nodes and elements when the mesh has changed
         '''
-        # elements should be given as arrays; Thus this is not necessary
-        if False:
-            self.nodes = np.array(self.nodes)
-            self.elements = np.array(self.elements)
         self.no_of_nodes = len(self.nodes)
         self.no_of_dofs = self.no_of_nodes*self.node_dof
-        # element stuff
         self.no_of_elements = len(self.elements)
         self.no_of_element_nodes = len(self.elements[0])
 
@@ -149,31 +152,33 @@ class Mesh:
         TODO
 
         '''
+        # Dictionary um an Hand der Anzahl der Knoten des Elements auf den Typ 
+        # des Elements zu schließen
         mesh_type_dict = {3: "Tri3",
-                          4: "Quad4"}
+                          4: "Quad4"} # Bislang nur 2D-Element aus csv auslesbar
 
 
         print('Reading elements from csv...  ', end="")
         self.elements = np.genfromtxt(filename, delimiter = ',', dtype = int, skip_header = 1)
         if self.elements.ndim == 1: # Wenn nur genau ein Element vorliegt
             self.elements = np.array([self.elements])
-        if explicit_node_numbering:
+        if explicit_node_numbering: # Falls erste Spalte die Elementnummer angibt, wird diese hier abgeschnitten, um nur die Knoten des Elements zu erhalten
             self.elements = self.elements[:,1:]
-        try:
+        try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
             (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
-            mesh_type = mesh_type_dict[no_of_nodes_per_ele]
+            mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
         except:
             print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
             raise
 
         print('Element type is {0}...  '.format(mesh_type), end="")
-        self.elements_type = [mesh_type for i in self.elements]
+        self.elements_type = [mesh_type for i in self.elements] # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
         self._update_mesh_props()
 
         print('Reading elements successful.')
 
 
-    def import_msh(self, filename, flat_mesh=True):
+    def import_msh(self, filename, mesh_3d=False):
         """
         Import the mesh file from gmsh.
 
@@ -181,8 +186,8 @@ class Mesh:
         -----------
         filename : str
             file name of the msh-file
-        flat_mesh : bool, optional
-            flag for information whether mesh is flat (2D) or not flat (3D)
+        mesh_3d : bool, optional
+            flag for information whether mesh is 2D (False) or 3D (True)
 
         Returns
         --------
@@ -248,33 +253,54 @@ class Mesh:
         # Zeile [i] von [nodes] beinhaltet die X-, Y-, Z-Koordinate von Knoten [i+1]
         self.nodes = [list_imported_nodes[j][1:] for j in range(len(list_imported_nodes))]
 
-        boundary_line_list = [] # The nodes of a line are stored here in a unordered way
+        # set correct sets to distinguish, what is a boundary and what is an element
+        if mesh_3d:
+            element_set  = element_3d_set
+            boundary_set = boundary_3d_set
+        else:
+            element_set  = element_2d_set
+            boundary_set = boundary_2d_set
+
+        gmsh2amfe_boundary_dict= {}
+        boundary_list = [] # The nodes of a boundary are stored here in a unordered way
         # Zeile [i] von [elements] beinhaltet die Knotennummern von Element [i+1]
+
+        ############################
+        # Loop over all elements ###
+        ############################
         for element in list_imported_elements:
             gmsh_element_key = element[1]
             tag = element[2] # Tag information giving everything where the structure belongs to and so on...
             if gmsh_element_key in gmsh2amfe:
+
                 # handling of the elements:
                 if gmsh2amfe[gmsh_element_key] in element_set:
                     self.elements_properties.append(element[3:3+tag])
                     self.elements.append(element[3+tag:])
                     self.elements_type.append(gmsh2amfe[gmsh_element_key])
-                # Handling of the lines as they can be needed for the boundary stuff
-                if gmsh2amfe[gmsh_element_key] in line_set:
-                    line_number = element[2+tag]
-                    if len(boundary_line_list) < line_number: # append line if line was not called
-                        boundary_line_list.append([])
-                    boundary_line_list[line_number - 1].append(element[3+tag:])
+
+                # Handling of the boundaries
+                if gmsh2amfe[gmsh_element_key] in boundary_set:
+                    gmsh_boundary_number = element[2+tag]
+
+                    if gmsh_boundary_number not in gmsh2amfe_boundary_dict:
+                        nbounds = len(gmsh2amfe_boundary_dict)
+                        gmsh2amfe_boundary_dict.update({gmsh_boundary_number : nbounds})
+                        boundary_list.append([])
+
+                    boundary_index = gmsh2amfe_boundary_dict[gmsh_boundary_number]
+                    boundary_list[boundary_index].append(element[3+tag:])
 
         # even if the nodes are heterogeneous, it should work out...
         self.nodes = np.array(self.nodes)
         self.elements = np.array(self.elements)
         # Node handling in order to make 2D-meshes flat by removing z-coordinate:
-        if flat_mesh:
+        if mesh_3d:
+            self.node_dof = 3
+        else:
             self.nodes = self.nodes[:,:-1]
             self.node_dof = 2
-        else:
-            self.node_dof = 3
+
         # Take care here!!! gmsh starts indexing with 1,
         # paraview with 0!
         self.elements = np.array(self.elements) - 1
@@ -302,16 +328,30 @@ class Mesh:
         ########
         # Postprocessing of the line_sets
         ########
-        self.boundary_line_list = []
-        for set_ in boundary_line_list:
+        self.gmsh2amfe_boundary_dict = gmsh2amfe_boundary_dict
+        self.amfe2gmsh_boundary_dict = \
+            dict(zip(gmsh2amfe_boundary_dict.values(), gmsh2amfe_boundary_dict.keys()))
+        self.boundary_list = []
+        for set_ in boundary_list:
             set_ = np.array(set_).reshape(-1)
             set_ = np.array(list(set(set_))) # remove the duplicates
             set_ -= 1 # consider node indexing change of gmsh
             set_ = [new_old_node_mapping_dict[node] for node in set_ if node in new_old_node_mapping_dict]
-            self.boundary_line_list.append(np.array(set_))
+            self.boundary_list.append(np.array(set_))
 
         self._update_mesh_props()
 
+    def boundary_information(self):
+        '''
+        Print the information of the boundary stuff
+        '''
+        print('List boundary nodes sorted by the boundary number. \n\
+                Take care: The lines start indexing with 0, gmsh does this with 1.\n')
+        for i, line in enumerate(self.boundary_list):
+            print('Boundary', i,
+                  '\n(gmsh-Key:', self.amfe2gmsh_boundary_dict[i],
+                  '/ index in boundary_list:', i, ')')
+            print(line, '\n')
 
     def set_displacement(self, u):
         '''

@@ -50,7 +50,7 @@ my_mechanical_system.apply_neumann_boundaries(my_neumann_boundary_list)
 
 ndof = my_mechanical_system.f_ext_global(None, None, 0).shape[0]
 
-my_integrator = amfe.NewmarkIntegrator(verbose=True)
+my_integrator = amfe.NewmarkIntegrator(verbose=False)
 my_integrator.set_mechanical_system(my_mechanical_system)
 my_integrator.integrate_nonlinear_system(np.zeros(ndof), np.zeros(ndof), np.arange(0,0.1,0.01))
 
