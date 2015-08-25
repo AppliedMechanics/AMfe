@@ -157,6 +157,7 @@ plot_element(x, u, title='Quad4')
 
 force_test(element_quad4, x, u)
 
+
 M = element_quad4.m_int(x, u)
 K0 = element_quad4.k_int(x, np.zeros_like(x))
 print('The total mass of the element (in one direction) is', np.sum(M)/2 )
@@ -164,6 +165,7 @@ print('The total mass of the element (in one direction) is', np.sum(M)/2 )
 ##
 ## load references from ANSYS and compare
 ##
+
 
 #%%
 

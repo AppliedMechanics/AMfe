@@ -17,12 +17,21 @@ from amfe.boundary import *
 # Default values:
 # kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'density' : 1E4}
 kwargs = {}
-
+# **kwargs in function definitions is used to pass a variable number of 
+# arguments to a function; the double asterisk form ** is used to pass a 
+# keyworded, variable-length argument list
 element_class_dict = {'Tet4'  : Tet4(**kwargs),
                       'Tri3'    : Tri3(**kwargs),
                       'Tri6'    : Tri6(**kwargs),
                       'Quad4'   : Quad4(**kwargs),
                       'Quad8'   : Quad8(**kwargs)}
+
+
+# Anmerkungen (Fabian):
+# - 'element_class_dict' wird in __init__ dem Attribut 
+#   'self.element_class_dict', welches spaeter an assembly uebergeben wird
+# - die Assembly-Klasse wird nach dem Einlesen des Netzes in der jeweiligen 
+#   Methode instanziert
 
 
 
@@ -49,7 +58,7 @@ class MechanicalSystem():
     def __init__(self, element_class_dict=element_class_dict):
         self.T_output = []
         self.u_output = []
-        self.element_class_dict = element_class_dict 
+        self.element_class_dict = element_class_dict    
         pass
 
     def load_mesh_from_gmsh(self, msh_file, mesh_3d=False):
