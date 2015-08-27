@@ -35,6 +35,8 @@ my_mesh_generator.save_mesh('./meshes/selbstgebaut_quad/nodes.csv',
 
 # Initialize system
 my_system = amfe.MechanicalSystem()
+my_system = amfe.MechanicalSystem(E_modul=1.0, poisson_ratio=0., 
+                                  element_thickness=1.0, density=1.0)
 
 # Load mesh
 my_system.load_mesh_from_csv('./meshes/selbstgebaut_quad/nodes.csv',

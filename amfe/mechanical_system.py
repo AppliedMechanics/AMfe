@@ -3,6 +3,12 @@
 Created on Fri May  8 16:58:03 2015
 
 @author: johannesr
+
+Create mechanical system with default material parameters by:
+my_system = amfe.MechanicalSystem()
+If you want to use special material parameter, create mechanical system by e.g:
+my_system = amfe.MechanicalSystem(E_modul=1000.0, poisson_ratio=0.15, 
+                                  element_thickness=1.0, density=1.0)
 """
 
 import numpy as np
@@ -14,27 +20,14 @@ from amfe.assembly import *
 from amfe.boundary import *
 
 
-# Default values:
-# kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'density' : 1E4}
-#kwargs = {}
-#kwargs = {'E_modul': 210E9, 'poisson_ratio':0.3, 'element_thickness':1., 'density':1E4}
-#kwargs = {'E_modul': 1.0, 'poisson_ratio':0., 'element_thickness':1.0, 'density':1.0}
-
-# **kwargs in function definitions is used to pass a variable number of 
-# arguments to a function; the double asterisk form ** is used to pass a 
-# keyworded, variable-length argument list
-#element_class_dict = {'Tet4'  : Tet4(**kwargs),
-#                      'Tri3'    : Tri3(**kwargs),
-#                      'Tri6'    : Tri6(**kwargs),
-#                      'Quad4'   : Quad4(**kwargs),
-#                      'Quad8'   : Quad8(**kwargs)}
-
 
 # Anmerkungen (Fabian):
 # - 'element_class_dict' wird in __init__ dem Attribut 
-#   'self.element_class_dict', welches spaeter an assembly uebergeben wird
+#   'self.element_class_dict' zugewiesen, sodass in jedem mechanischen System
+#   von jedem Elementtyp ein Element geladen wird, welches spaeter an assembly 
+#   uebergeben wird
 # - die Assembly-Klasse wird nach dem Einlesen des Netzes in der jeweiligen 
-#   Methode instanziert
+#   Netz-Einlese-Methode instanziert
 
 
 
