@@ -53,7 +53,7 @@ class MechanicalSystem():
 
     def __init__(self, **kwargs):
         '''
-        Initialize MechanicalSystem-object
+        Constructor to create instance of class MechanicalSystem
 
         Parameters
         ----------
@@ -74,6 +74,18 @@ class MechanicalSystem():
         self.u_output = []
         self.element_class_dict = element_class_dict    
         pass
+    
+    
+    def load_mesh(self, *args, **kwargs):
+        '''
+        Load different kind of meshes
+        TODO
+        '''
+        
+        # This method shall replace/unify 'load_mesh_from_gmsh' and 
+        # 'load_mesh_from_csv' eventually
+        pass
+
 
     def load_mesh_from_gmsh(self, msh_file, mesh_3d=False):
         '''
@@ -87,12 +99,15 @@ class MechanicalSystem():
         '''
         self.mesh_class = Mesh()
         self.mesh_class.import_msh(msh_file, mesh_3d=mesh_3d)
+        
         self.node_list = np.array(self.mesh_class.nodes)
         self.element_list = np.array(self.mesh_class.elements)
         self.ndof_global = self.mesh_class.no_of_dofs
         self.node_dof = self.mesh_class.node_dof
+        
         self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
         self.assembly_class.preallocate_csr()
+
 
     def load_mesh_from_csv(self, node_list_csv, element_list_csv, node_dof=2, explicit_node_numbering=False):
         '''
@@ -118,13 +133,14 @@ class MechanicalSystem():
         todo
 
         '''
-        self.node_dof = node_dof
-        self.mesh_class = Mesh()
-        self.mesh_class.read_nodes_from_csv(node_list_csv, node_dof=node_dof, explicit_node_numbering=explicit_node_numbering)
-        self.mesh_class.read_elements_from_csv(element_list_csv, explicit_node_numbering=explicit_node_numbering)
+        self.mesh_class = Mesh(node_dof=node_dof)
+        self.mesh_class.import_csv(node_list_csv, element_list_csv, explicit_node_numbering=explicit_node_numbering)
+        
         self.node_list = self.mesh_class.nodes.copy()
         self.element_list = self.mesh_class.elements.copy()
         self.ndof_global = self.node_list.size
+        self.node_dof = node_dof
+        
         self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
         self.assembly_class.preallocate_csr()
 

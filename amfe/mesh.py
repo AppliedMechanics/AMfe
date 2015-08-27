@@ -15,8 +15,8 @@ import sys
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
     # internal Name,    gmsh-Key, vtk/ParaView-Key, no_of_nodes, description
-    ['Tet4',           4, 10,  4, 'Linear Tetraeder / nodes on every corner'],
-    ['Tet10',         11, 24, 10, 'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
+    ['Tet4',             4, 10,  4, 'Linear Tetraeder / nodes on every corner'],
+    ['Tet10',           11, 24, 10, 'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
     ['Tri6',             9, 22,  6, 'Quadratic triangle / 6 node second order triangle'],
     ['Tri3',             2,  5,  3, 'Straight triangle / 3 node first order triangle'],
     ['Tri10',           21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
@@ -86,7 +86,6 @@ class Mesh:
         self.node_dof            = node_dof
 
 
-
     def _update_mesh_props(self):
         '''
         Update the number properties of nodes and elements when the mesh has changed
@@ -96,17 +95,16 @@ class Mesh:
         self.no_of_elements = len(self.elements)
         self.no_of_element_nodes = len(self.elements[0])
 
-    def read_nodes_from_csv(self, filename, node_dof=2, explicit_node_numbering=False):
+
+    def import_csv(self, filename_nodes, filename_elements,
+                   explicit_node_numbering=False):
         '''
-        Imports the nodes list from a csv file.
+        Imports the nodes list and elements list from 2 different csv files.
 
         Parameters
         -----------
-        filename : str
+        filename_nodes : str
             name of the file containing the nodes in csv-format
-        node_dof : int, optional
-            number of degrees of freedom per node; for 2D-meshes this is 2,
-            for 3D-meshes this is 3
         explicit_node_numbering : bool, optional
             Flag stating, if the nodes are explicitly numbered in the csv-file.
             When set to true, the first column is assumed to have the node numbers
@@ -121,49 +119,34 @@ class Mesh:
         TODO
 
         '''
-        self.node_dof = node_dof
+        #######################################################################
+        # NODES
+        #######################################################################
         try:
-            self.nodes = np.genfromtxt(filename, delimiter = ',', skip_header = 1)
+            self.nodes = np.genfromtxt(filename_nodes, delimiter = ',', skip_header = 1)
         except:
-            print('FEHLER beim lesen der Datei', filename, '\n Vermutlich stimmt die erwartete Dimension der Knotenfreiheitsgrade', node_dof, 'nicht mit der Dimension in der Datei zusammen.')
+            print('FEHLER beim lesen der Datei', filename_nodes, 
+                  '\nVermutlich stimmt die erwartete Dimension der Knotenfreiheitsgrade', 
+                  self.node_dof, 'nicht mit der Dimension in der Datei zusammen.')
         # when line numbers are erased if they are content of the csv
         if explicit_node_numbering:
             self.nodes = self.nodes[:,1:]
 
-
-    def read_elements_from_csv(self, filename, explicit_node_numbering=False):
-        '''Imports the element list from a csv file.
-
-        Parameters
-        -----------
-        filename : str
-            name of the file containing the nodes in csv-format
-        explicit_node_numbering : bool, optional
-            Flag stating, if the nodes are explicitly numbered in the csv-file.
-            When set to true, the first column is assumed to have the node numbers
-            and is thus ignored.
-
-        Returns
-        --------
-        None
-
-        Examples
-        ---------
-        TODO
-
-        '''
+        #######################################################################
+        # ELEMENTS
+        #######################################################################
         # Dictionary um an Hand der Anzahl der Knoten des Elements auf den Typ 
         # des Elements zu schließen
         mesh_type_dict = {3: "Tri3",
                           4: "Quad4"} # Bislang nur 2D-Element aus csv auslesbar
 
-
         print('Reading elements from csv...  ', end="")
-        self.elements = np.genfromtxt(filename, delimiter = ',', dtype = int, skip_header = 1)
+        self.elements = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
         if self.elements.ndim == 1: # Wenn nur genau ein Element vorliegt
             self.elements = np.array([self.elements])
         if explicit_node_numbering: # Falls erste Spalte die Elementnummer angibt, wird diese hier abgeschnitten, um nur die Knoten des Elements zu erhalten
             self.elements = self.elements[:,1:]
+        
         try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
             (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
             mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
@@ -174,7 +157,6 @@ class Mesh:
         print('Element type is {0}...  '.format(mesh_type), end="")
         self.elements_type = [mesh_type for i in self.elements] # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
         self._update_mesh_props()
-
         print('Reading elements successful.')
 
 
@@ -198,6 +180,8 @@ class Mesh:
         TODO
 
         """
+        # Wichtige Konvention: Wird 2D-Netz gerechnet, wird die Z-Koordinate
+        # gelöscht, d.h. in gmsh muss Netz in der X-Y-Ebene liegen!!!!
 
         # Setze die in gmsh verwendeten Tags
         tag_format_start   = "$MeshFormat"
@@ -297,9 +281,9 @@ class Mesh:
         # Node handling in order to make 2D-meshes flat by removing z-coordinate:
         if mesh_3d:
             self.node_dof = 3
-        else:
+        else: 
             self.nodes = self.nodes[:,:-1]
-            self.node_dof = 2
+            self.node_dof = 2 # überflüssig, da in __init__ als default gesetzt
 
         # Take care here!!! gmsh starts indexing with 1,
         # paraview with 0!
