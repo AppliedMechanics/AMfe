@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-This file is deprecated!!! It's too old!
+This file is deprecated!!! It's too old and fails at the moment!
+Used element types are not defined anymore!
 """
+
 
 # Standard-Module
 import numpy as np

@@ -3,6 +3,10 @@
 Created on Wed Jul  8 18:24:13 2015
 
 @author: johannesr
+
+This file does not run at the moment!
+Line 83 is causing an error! 
+Something about a tuple out of range given to linalg.spsolve
 """
 
 import numpy as np
@@ -50,7 +54,7 @@ my_constrained_solver.set_constrained_system(my_pendulum)
 
 q0 = np.array([l, 0.])
 dq0 = np.array([0, 0.])
-T = sp.arange(0, 30, 0.01)
+T = sp.arange(0, 1, 0.01)
 q, dq, lambda_ = my_constrained_solver.integrate_nonlinear_system(q0, dq0, T)
 
 #plt.plot(q)
