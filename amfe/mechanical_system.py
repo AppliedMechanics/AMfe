@@ -16,15 +16,18 @@ from amfe.boundary import *
 
 # Default values:
 # kwargs = {'E_modul' : 210E9, 'poisson_ratio' : 0.3, 'element_thickness' : 1, 'density' : 1E4}
-kwargs = {}
+#kwargs = {}
+#kwargs = {'E_modul': 210E9, 'poisson_ratio':0.3, 'element_thickness':1., 'density':1E4}
+#kwargs = {'E_modul': 1.0, 'poisson_ratio':0., 'element_thickness':1.0, 'density':1.0}
+
 # **kwargs in function definitions is used to pass a variable number of 
 # arguments to a function; the double asterisk form ** is used to pass a 
 # keyworded, variable-length argument list
-element_class_dict = {'Tet4'  : Tet4(**kwargs),
-                      'Tri3'    : Tri3(**kwargs),
-                      'Tri6'    : Tri6(**kwargs),
-                      'Quad4'   : Quad4(**kwargs),
-                      'Quad8'   : Quad8(**kwargs)}
+#element_class_dict = {'Tet4'  : Tet4(**kwargs),
+#                      'Tri3'    : Tri3(**kwargs),
+#                      'Tri6'    : Tri6(**kwargs),
+#                      'Quad4'   : Quad4(**kwargs),
+#                      'Quad8'   : Quad8(**kwargs)}
 
 
 # Anmerkungen (Fabian):
@@ -55,7 +58,25 @@ class MechanicalSystem():
     The element_class_dict is the key for using multiple elements in one mesh.
     '''
 
-    def __init__(self, element_class_dict=element_class_dict):
+    def __init__(self, **kwargs):
+        '''
+        Initialize MechanicalSystem-object
+
+        Parameters
+        ----------
+        **kwargs: dict
+            Dictionary for variable number of keyword arguments:
+            Arbitrary material parameters ('E_Modul', 'poisson_ration', 
+            'density', 'element_thickness', can be given, which are directly 
+            passed through to the elements via 'element_class_dict').
+            Each element can handle a varible number of keyword arguments, so
+            e.g. the keyword 'element_thickness is not used by 3D elements.                   
+        '''
+        element_class_dict = {'Tet4'  : Tet4(**kwargs),
+                              'Tri3'  : Tri3(**kwargs),
+                              'Tri6'  : Tri6(**kwargs),
+                              'Quad4' : Quad4(**kwargs),
+                              'Quad8' : Quad8(**kwargs)}        
         self.T_output = []
         self.u_output = []
         self.element_class_dict = element_class_dict    

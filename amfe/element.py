@@ -351,7 +351,7 @@ class Tri6(Element):
     '''
     plane_stress = True
 
-    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4):
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4, **kwargs):
         '''
         Definition der Materialgrößen und Dicke, da es sich um 2D-Elemente handelt
         '''
@@ -488,7 +488,7 @@ class Quad4(Element):
     '''
     plane_stress = True
 
-    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4):
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4, **kwargs):
         '''
         Definition of material properties and thickness as they are 2D-Elements.
         '''
@@ -587,7 +587,7 @@ class Quad8(Element):
     '''
     plane_stress = True
 
-    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4):
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4, **kwargs):
         '''
         Definition of material properties and thickness as they are 2D-Elements.
         '''
@@ -709,7 +709,7 @@ class Tet4(Element):
     '''
     Tetraeder-Element with 4 nodes
     '''
-    def __init__(self,  E_modul=210E9, poisson_ratio=0.3, density=1E4):
+    def __init__(self,  E_modul=210E9, poisson_ratio=0.3, density=1E4, **kwargs):
 
         self.poisson_ratio = poisson_ratio
         self.e_modul       = E_modul
@@ -814,7 +814,6 @@ class Quad4_FG(Element):
     Element Klasse fuer ebenes, viereckiges Element (Quad4)
     Verschiebungen in x- und y-Richtungen.
     '''
-    plane_stress = True
 
     def __init__(self, E_modul=1.0, poisson_ratio=0., element_thickness=1.0,
                  density=1.0, plane_stress = True):
