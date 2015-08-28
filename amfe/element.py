@@ -19,12 +19,12 @@ try:
     fortran_use = True
 except:
     print('''
-Python was not able to load the fast fortran routines (element).
-run
+Python was not able to load the fast fortran element routines.
+run the script 
 
-(TODO)
+f2py/install_fortran_routines.sh 
 
-in order to get the full speed!
+in order to get the full speed! 
 ''')
 
 #fortran_use = False

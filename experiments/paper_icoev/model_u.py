@@ -19,7 +19,7 @@ import amfe
 def save_displacement(mechanical_system, filename):
     '''
     Save the displacement of the mechanical system as .npy-file to filename
-    
+
     '''
     u_list = []
     for u in mechanical_system.u_output:
@@ -50,14 +50,14 @@ my_system.element_class_dict = element_class_dict
 my_system.load_mesh_from_gmsh(gmsh_input_file)
 # my_system.export_paraview(paraview_output_file)
 
-nodes_to_fix = my_system.mesh_class.boundary_line_list[4]
+nodes_to_fix = my_system.mesh_class.boundary_list[4]
 bottom_bounds_1 = [None, [amfe.node2total(i, 0) for i in nodes_to_fix], None]
 bottom_bounds_2 = [None, [amfe.node2total(i, 1) for i in nodes_to_fix], None]
 my_dirichlet_bounds = [bottom_bounds_1, bottom_bounds_2]
 my_system.apply_dirichlet_boundaries(my_dirichlet_bounds)
 
 
-top_bounds= my_system.mesh_class.boundary_line_list[1]
+top_bounds= my_system.mesh_class.boundary_list[1]
 
 neumann_bounds = [  [[amfe.node2total(i,0) for i in top_bounds], 'harmonic', (6E6, 3), None],
                     [[amfe.node2total(i,1) for i in top_bounds], 'harmonic', (3E6, 6), None]]

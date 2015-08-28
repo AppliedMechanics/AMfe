@@ -365,16 +365,6 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
         return V_static, V_dynamic[:, :no_of_modes], omega[:no_of_modes]
 
 
-def pod_basis(u_series):
-    '''
-    Compute the pod basis for the series of displacements u.
-
-    Attention! this method is not implemented yet!
-    '''
-    pass
-
-
-
 
 
 

@@ -13,7 +13,7 @@ import time
 from matplotlib import pyplot as plt
 # make amfe running
 import sys
-sys.path.insert(0,'..')
+sys.path.insert(0, '..')
 import amfe
 
 
