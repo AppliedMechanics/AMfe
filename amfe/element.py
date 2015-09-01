@@ -802,11 +802,211 @@ class Tet4(Element):
         return self.M
 
 
-#
-#class Tet10(Element):
-#    pass
-#
 
+class Tet10(Element):
+    '''
+    Tet10 solid element 
+    
+    '''
+    
+    def __init__(self,  E_modul=210E9, poisson_ratio=0.3, density=1E4, **kwargs):
+
+        self.poisson_ratio = poisson_ratio
+        self.e_modul       = E_modul
+        self.lame_mu       = E_modul / (2*(1+poisson_ratio))
+        self.lame_lambda   = poisson_ratio*E_modul/((1+poisson_ratio)*(1-2*poisson_ratio))
+        self.rho           = density
+
+        self.M = np.zeros((30,30))
+        self.K = np.zeros((30,30))
+        self.f = np.zeros(30)
+
+        self.C_SE = np.array([
+                [self.lame_lambda + 2*self.lame_mu, self.lame_lambda, self.lame_lambda, 0, 0, 0],
+                [self.lame_lambda , self.lame_lambda + 2*self.lame_mu, self.lame_lambda, 0, 0, 0],
+                [self.lame_lambda , self.lame_lambda, self.lame_lambda + 2*self.lame_mu, 0, 0, 0],
+                [0, 0, 0, self.lame_mu, 0, 0],
+                [0, 0, 0, 0, self.lame_mu, 0],
+                [0, 0, 0, 0, 0, self.lame_mu] ])
+
+        self.gauss_points = ((1/4, 1/4, 1/4, 1/4, 1), )
+        
+        w1 = 0.030283678097089*6
+        w2 = 0.006026785714286*6
+        w3 = 0.011645249086029*6
+        w4 = 0.010949141561386*6
+
+        a1 = 1/4
+        a2 = 0.
+        b2 = 1/3
+        a3 = 72/99
+        b3 =  9/99
+        a4 = 0.066550153573664
+        c4 = 0.433449846426336
+
+        self.gauss_points = ((a1, a1, a1, a1, w1),
+                              
+                             (a2, b2, b2, b2, w2),
+                             (b2, a2, b2, b2, w2),
+                             (b2, b2, a2, b2, w2),
+                             (b2, b2, b2, a2, w2),
+
+                             (a3, b3, b3, b3, w3),
+                             (b3, a3, b3, b3, w3),
+                             (b3, b3, a3, b3, w3),
+                             (b3, b3, b3, a3, w3),
+
+                             (a4, a4, c4, c4, w4),
+                             (a4, c4, a4, c4, w4),
+                             (a4, c4, c4, a4, w4),
+                             (c4, c4, a4, a4, w4),
+                             (c4, a4, c4, a4, w4),
+                             (c4, a4, a4, c4, w4))
+
+    def _compute_tensors(self, X, u):
+        X1, Y1, Z1, \
+        X2, Y2, Z2, \
+        X3, Y3, Z3, \
+        X4, Y4, Z4, \
+        X5, Y5, Z5, \
+        X6, Y6, Z6, \
+        X7, Y7, Z7, \
+        X8, Y8, Z8, \
+        X9, Y9, Z9, \
+        X10, Y10, Z10 = X
+        
+        u_mat = u.reshape((10,3))
+        self.K *= 0
+        self.f *= 0
+        
+        for L1, L2, L3, L4, w in self.gauss_points:
+            
+            Jx1 = 4*L2*X5 + 4*L3*X7 + 4*L4*X8  + X1*(4*L1 - 1)
+            Jx2 = 4*L1*X5 + 4*L3*X6 + 4*L4*X9  + X2*(4*L2 - 1)
+            Jx3 = 4*L1*X7 + 4*L2*X6 + 4*L4*X10 + X3*(4*L3 - 1)
+            Jx4 = 4*L1*X8 + 4*L2*X9 + 4*L3*X10 + X4*(4*L4 - 1)
+            Jy1 = 4*L2*Y5 + 4*L3*Y7 + 4*L4*Y8  + Y1*(4*L1 - 1)
+            Jy2 = 4*L1*Y5 + 4*L3*Y6 + 4*L4*Y9  + Y2*(4*L2 - 1)
+            Jy3 = 4*L1*Y7 + 4*L2*Y6 + 4*L4*Y10 + Y3*(4*L3 - 1)
+            Jy4 = 4*L1*Y8 + 4*L2*Y9 + 4*L3*Y10 + Y4*(4*L4 - 1)
+            Jz1 = 4*L2*Z5 + 4*L3*Z7 + 4*L4*Z8  + Z1*(4*L1 - 1)
+            Jz2 = 4*L1*Z5 + 4*L3*Z6 + 4*L4*Z9  + Z2*(4*L2 - 1)
+            Jz3 = 4*L1*Z7 + 4*L2*Z6 + 4*L4*Z10 + Z3*(4*L3 - 1)
+            Jz4 = 4*L1*Z8 + 4*L2*Z9 + 4*L3*Z10 + Z4*(4*L4 - 1)
+            
+            det = -Jx1*Jy2*Jz3 + Jx1*Jy2*Jz4 + Jx1*Jy3*Jz2 - Jx1*Jy3*Jz4 \
+                 - Jx1*Jy4*Jz2 + Jx1*Jy4*Jz3 + Jx2*Jy1*Jz3 - Jx2*Jy1*Jz4 \
+                 - Jx2*Jy3*Jz1 + Jx2*Jy3*Jz4 + Jx2*Jy4*Jz1 - Jx2*Jy4*Jz3 \
+                 - Jx3*Jy1*Jz2 + Jx3*Jy1*Jz4 + Jx3*Jy2*Jz1 - Jx3*Jy2*Jz4 \
+                 - Jx3*Jy4*Jz1 + Jx3*Jy4*Jz2 + Jx4*Jy1*Jz2 - Jx4*Jy1*Jz3 \
+                 - Jx4*Jy2*Jz1 + Jx4*Jy2*Jz3 + Jx4*Jy3*Jz1 - Jx4*Jy3*Jz2
+            
+            a1 = -Jy2*Jz3 + Jy2*Jz4 + Jy3*Jz2 - Jy3*Jz4 - Jy4*Jz2 + Jy4*Jz3
+            a2 =  Jy1*Jz3 - Jy1*Jz4 - Jy3*Jz1 + Jy3*Jz4 + Jy4*Jz1 - Jy4*Jz3
+            a3 = -Jy1*Jz2 + Jy1*Jz4 + Jy2*Jz1 - Jy2*Jz4 - Jy4*Jz1 + Jy4*Jz2
+            a4 =  Jy1*Jz2 - Jy1*Jz3 - Jy2*Jz1 + Jy2*Jz3 + Jy3*Jz1 - Jy3*Jz2
+            b1 =  Jx2*Jz3 - Jx2*Jz4 - Jx3*Jz2 + Jx3*Jz4 + Jx4*Jz2 - Jx4*Jz3
+            b2 = -Jx1*Jz3 + Jx1*Jz4 + Jx3*Jz1 - Jx3*Jz4 - Jx4*Jz1 + Jx4*Jz3
+            b3 =  Jx1*Jz2 - Jx1*Jz4 - Jx2*Jz1 + Jx2*Jz4 + Jx4*Jz1 - Jx4*Jz2
+            b4 = -Jx1*Jz2 + Jx1*Jz3 + Jx2*Jz1 - Jx2*Jz3 - Jx3*Jz1 + Jx3*Jz2
+            c1 = -Jx2*Jy3 + Jx2*Jy4 + Jx3*Jy2 - Jx3*Jy4 - Jx4*Jy2 + Jx4*Jy3
+            c2 =  Jx1*Jy3 - Jx1*Jy4 - Jx3*Jy1 + Jx3*Jy4 + Jx4*Jy1 - Jx4*Jy3
+            c3 = -Jx1*Jy2 + Jx1*Jy4 + Jx2*Jy1 - Jx2*Jy4 - Jx4*Jy1 + Jx4*Jy2
+            c4 =  Jx1*Jy2 - Jx1*Jy3 - Jx2*Jy1 + Jx2*Jy3 + Jx3*Jy1 - Jx3*Jy2
+            
+            B0_tilde = 1/det*np.array([
+                [    a1*(4*L1 - 1),     b1*(4*L1 - 1),     c1*(4*L1 - 1)],
+                [    a2*(4*L2 - 1),     b2*(4*L2 - 1),     c2*(4*L2 - 1)],
+                [    a3*(4*L3 - 1),     b3*(4*L3 - 1),     c3*(4*L3 - 1)],
+                [    a4*(4*L4 - 1),     b4*(4*L4 - 1),     c4*(4*L4 - 1)],
+                [4*L1*a2 + 4*L2*a1, 4*L1*b2 + 4*L2*b1, 4*L1*c2 + 4*L2*c1],
+                [4*L2*a3 + 4*L3*a2, 4*L2*b3 + 4*L3*b2, 4*L2*c3 + 4*L3*c2],
+                [4*L1*a3 + 4*L3*a1, 4*L1*b3 + 4*L3*b1, 4*L1*c3 + 4*L3*c1],
+                [4*L1*a4 + 4*L4*a1, 4*L1*b4 + 4*L4*b1, 4*L1*c4 + 4*L4*c1],
+                [4*L2*a4 + 4*L4*a2, 4*L2*b4 + 4*L4*b2, 4*L2*c4 + 4*L4*c2],
+                [4*L3*a4 + 4*L4*a3, 4*L3*b4 + 4*L4*b3, 4*L3*c4 + 4*L4*c3]]).T
+            
+            H = u_mat.T.dot(B0_tilde.T)
+            F = H + np.eye(3)
+            E = 1/2*(H + H.T + H.T.dot(H))
+            E_v = np.array([  E[0,0],   E[1,1],   E[2,2],
+                            2*E[1,2], 2*E[0,2], 2*E[0,1]])
+    
+            S_v = self.C_SE.dot(E_v)
+            S = np.array([[S_v[0], S_v[5], S_v[4]],
+                          [S_v[5], S_v[1], S_v[3]],
+                          [S_v[4], S_v[3], S_v[2]]])
+    
+            B0 = compute_B_matrix(B0_tilde, F)
+            K_geo_small = B0_tilde.T.dot(S.dot(B0_tilde)) * det/6
+            K_geo = scatter_matrix(K_geo_small, 3)
+            K_mat = B0.T.dot(self.C_SE.dot(B0)) * det/6
+            
+            self.K += (K_geo + K_mat) * w
+            self.f += B0.T.dot(S_v)*det/6 * w
+
+            
+        pass
+    
+    def _f_int(self, X, u):
+        return self.f
+
+    def _k_int(self, X, u):
+        return self.K
+
+    def _m_int(self, X, u):
+        '''
+        Mass matrix using CAS-System
+        '''
+        X1, Y1, Z1, \
+        X2, Y2, Z2, \
+        X3, Y3, Z3, \
+        X4, Y4, Z4, \
+        X5, Y5, Z5, \
+        X6, Y6, Z6, \
+        X7, Y7, Z7, \
+        X8, Y8, Z8, \
+        X9, Y9, Z9, \
+        X10, Y10, Z10 = X
+        
+        self.M *= 0
+        
+        for L1, L2, L3, L4, w in self.gauss_points:
+            
+            Jx1 = 4*L2*X5 + 4*L3*X7 + 4*L4*X8  + X1*(4*L1 - 1)
+            Jx2 = 4*L1*X5 + 4*L3*X6 + 4*L4*X9  + X2*(4*L2 - 1)
+            Jx3 = 4*L1*X7 + 4*L2*X6 + 4*L4*X10 + X3*(4*L3 - 1)
+            Jx4 = 4*L1*X8 + 4*L2*X9 + 4*L3*X10 + X4*(4*L4 - 1)
+            Jy1 = 4*L2*Y5 + 4*L3*Y7 + 4*L4*Y8  + Y1*(4*L1 - 1)
+            Jy2 = 4*L1*Y5 + 4*L3*Y6 + 4*L4*Y9  + Y2*(4*L2 - 1)
+            Jy3 = 4*L1*Y7 + 4*L2*Y6 + 4*L4*Y10 + Y3*(4*L3 - 1)
+            Jy4 = 4*L1*Y8 + 4*L2*Y9 + 4*L3*Y10 + Y4*(4*L4 - 1)
+            Jz1 = 4*L2*Z5 + 4*L3*Z7 + 4*L4*Z8  + Z1*(4*L1 - 1)
+            Jz2 = 4*L1*Z5 + 4*L3*Z6 + 4*L4*Z9  + Z2*(4*L2 - 1)
+            Jz3 = 4*L1*Z7 + 4*L2*Z6 + 4*L4*Z10 + Z3*(4*L3 - 1)
+            Jz4 = 4*L1*Z8 + 4*L2*Z9 + 4*L3*Z10 + Z4*(4*L4 - 1)
+            
+            det = -Jx1*Jy2*Jz3 + Jx1*Jy2*Jz4 + Jx1*Jy3*Jz2 - Jx1*Jy3*Jz4 \
+                 - Jx1*Jy4*Jz2 + Jx1*Jy4*Jz3 + Jx2*Jy1*Jz3 - Jx2*Jy1*Jz4 \
+                 - Jx2*Jy3*Jz1 + Jx2*Jy3*Jz4 + Jx2*Jy4*Jz1 - Jx2*Jy4*Jz3 \
+                 - Jx3*Jy1*Jz2 + Jx3*Jy1*Jz4 + Jx3*Jy2*Jz1 - Jx3*Jy2*Jz4 \
+                 - Jx3*Jy4*Jz1 + Jx3*Jy4*Jz2 + Jx4*Jy1*Jz2 - Jx4*Jy1*Jz3 \
+                 - Jx4*Jy2*Jz1 + Jx4*Jy2*Jz3 + Jx4*Jy3*Jz1 - Jx4*Jy3*Jz2
+
+            N = np.array([  [L1*(2*L1 - 1)],
+                            [L2*(2*L2 - 1)],
+                            [L3*(2*L3 - 1)],
+                            [L4*(2*L4 - 1)],
+                            [      4*L1*L2],
+                            [      4*L2*L3],
+                            [      4*L1*L3],
+                            [      4*L1*L4],
+                            [      4*L2*L4],
+                            [      4*L3*L4]])
+            
+            M_small = N.dot(N.T) * det/6 * self.rho * w
+            self.M += scatter_matrix(M_small, 3)
+        return self.M
 
 class Quad4_FG(Element):
 

@@ -223,6 +223,37 @@ print('The total mass of the element (in one direction) is', np.sum(M)/3 )
 
 
 
+#%%
+
+print('''
+###############################################################################
+######  Testing Tet10 Element
+###############################################################################
+''')
+
+x = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1,  0.5, 0, 0,  0.5, 0.5, 0,  0, 0.5, 0,  0, 0, 0.5,  0.5,0,0.5,  0, 0.5, 0.5])
+
+u = np.zeros(30)
+
+element_tet10 = amfe.Tet10(E_modul=60, poisson_ratio=1/4, density=1.)
+plot_element(x, u, title='Tet10', three_d=True)
+
+K, K_finite_diff = force_test(element_tet10, x, u)
+
+M = element_tet10.m_int(x, u)
+K0 = element_tet10.k_int(x, np.zeros_like(x))
+
+print('The total mass of the element (in one direction) is', np.sum(M)/3 )
+
+#np.save('element_matrices/K0_tet4', K0)
+# np.save('element_matrices/K_tet4', K)
+#a = np.load('element_matrices/K_tet4.npy')
+#b = np.load('element_matrices/K0_tet4.npy')
+##
+## load references from ANSYS
+##
+
+
 
 #%%
 
