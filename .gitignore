@@ -2,8 +2,14 @@
 #
 *.pyc
 *.so
+*.o
 
 *.vtu
 *.pvd
 docs/
 *~
+
+# saved numpy-arrays
+*.npy
+*.pdf
+*.dat
