@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 
 # Building the mechanical system
 my_mechanical_system = amfe.MechanicalSystem()
-my_mechanical_system.load_mesh_from_gmsh('../meshes/test_meshes/bar_Tetra4_fine.msh', mesh_3d=True)
+my_mechanical_system.load_mesh_from_gmsh('../meshes/test_meshes/bar_Tet10_fine.msh', mesh_3d=True)
 
 
 #%%
@@ -70,5 +70,5 @@ my_mechanical_system.element_class_dict['Tet4'] = my_tetra_element
 # static solution
 amfe.solve_nonlinear_displacement(my_mechanical_system, 10, smplfd_nwtn_itr=1)
 #amfe.solve_linear_displacement(my_mechanical_system)
-export_path = '../results/bar_tetra4' + time.strftime("_%Y%m%d_%H%M%S") + '/bar_tetra4'
+export_path = '../results/bar_tet10' + time.strftime("_%Y%m%d_%H%M%S") + '/bar_tet10'
 my_mechanical_system.export_paraview(export_path)
