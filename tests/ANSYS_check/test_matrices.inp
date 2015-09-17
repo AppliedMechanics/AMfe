@@ -1,0 +1,79 @@
+! stop all processes
+finish
+! reset everything
+/clear,start
+
+! START PREPROCESSOR 
+/PREP7
+
+
+! NODES
+!N,<NODE_ID>,X,Y,Z
+N,1,0,0,0
+N,2,1,0,0
+N,3,1,1,0
+N,4,0,1,0
+
+! Nonlinear geometric analysis (mostly corotated formulation)
+! NLGEOM,ON
+
+
+! MATERIAL UND ELEMENT TYPE
+! Material properties:
+!MP,keyword,id,value
+! make material valid
+!MAT,id
+
+! Values for steel
+MP,DENS,1,1E4
+MP,EX,1,210E9
+MP,NUXY,1,0.3
+MAT,1
+
+
+! Element types: 
+! PLANE182, PLANE183 (linear and quadratic quadrilaterals); 
+! 
+! 
+
+! Using an element
+!ET,id,Element_type,keyopt1, keyopt2, ...
+ET,1,182,
+
+
+
+! Fix the element type for all elements defined afterwards
+!TYPE,id
+TYPE,1
+
+
+! ELEMENTS
+E,1,2,3,4
+
+
+! BOUNDARY CONDITIONS
+!D,1,UX,0
+!D,1,UY,0
+!D,4,UX,0
+!D,4,UY,0
+
+
+! SOLVER
+/SOLU
+
+antype,modal            ! analysis type
+! antype,static
+modopt,lanb,1           ! option for modal analysis; here block lanczos is chosen
+mxpand,1
+solve
+
+! POSTPROCESSOR
+/POST1
+
+! AUSGABE
+/AUX2
+! Export in HBMAT file format
+FILE,,full
+HBMAT,m_mat,ansmat,,ASCII,MASS,NO,NO
+HBMAT,k_mat,ansmat,,ASCII,STIFF,NO,NO
+
