@@ -27,7 +27,7 @@ f2py/install_fortran_routines.sh
 in order to get the full speed! 
 ''')
 
-#fortran_use = False
+fortran_use = False
 
 
 def scatter_matrix(Mat, ndim):
@@ -363,9 +363,9 @@ class Tri6(Element):
         self.rho = density
         self.M_small = np.zeros((6,6))
 
-        self.gauss_points2 = ((1/2, 1/2, 0, 1/3),
-                             (1/2, 0, 1/2, 1/3),
-                             (0, 1/2, 1/2, 1/3))
+        self.gauss_points2 = ((1/6, 1/6, 2/3, 1/3),
+                             (1/6, 2/3, 1/6, 1/3),
+                             (2/3, 1/6, 1/6, 1/3))
 
         self.gauss_points3 = ((1/3, 1/3, 1/3, -27/48),
                              (0.6, 0.2, 0.2, 25/48),
@@ -407,7 +407,7 @@ class Tri6(Element):
         self.K = np.zeros((12, 12))
         self.f = np.zeros(12)
 
-        for L1, L2, L3, w in self.gauss_points5:
+        for L1, L2, L3, w in self.gauss_points2:
 
             dN_dL = np.array([  [4*L1 - 1,        0,        0],
                                 [       0, 4*L2 - 1,        0],
@@ -457,7 +457,7 @@ class Tri6(Element):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
 
         self.M_small *= 0
-        for L1, L2, L3, w in self.gauss_points5:
+        for L1, L2, L3, w in self.gauss_points2:
 
             # the entries in the jacobian dX_dL
             Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
@@ -623,8 +623,11 @@ class Quad8(Element):
                  (-g3, -g4, w3*w4), (-g4, -g4, w4*w4), ( g3,-g4, w3*w4), ( g4,-g4, w4*w4),
                  (-g3,  g3, w3*w3), (-g4,  g3, w4*w3), ( g3, g3, w3*w3), ( g4, g3, w4*w3),
                  (-g3,  g4, w3*w4), (-g4,  g4, w4*w4), ( g3, g4, w3*w4), ( g4, g4, w4*w4))
-
-
+                 
+        g2 = 0.577350269189626
+        w2 = 1.
+        self.gauss_points = ((-g2, -g2, w2), (-g2, g2, w2),
+                             ( g2, -g2, w2), ( g2, g2, w2))
 
     def _compute_tensors(self, X, u):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X

@@ -7,11 +7,13 @@ crosschecked by a finite difference approximation.
 
 '''
 
-
+import io
 import numpy as np
 import scipy as sp
 import time
 import matplotlib.pyplot as plt
+
+
 
 # make amfe running
 import sys
@@ -22,8 +24,8 @@ import amfe
 
 def jacobian(func, X, u):
     '''
-    Bestimmung der Jacobimatrix auf Basis von finiten Differenzen.
-    Die Funktion func(vec, X) wird nach dem Vektor vec abgeleitet, also d func / d vec an der Stelle X
+    Compute the jacobian of func with respect to u using a finite differences scheme. 
+    
     '''
     ndof = X.shape[0]
     jac = np.zeros((ndof, ndof))
@@ -39,7 +41,7 @@ def jacobian(func, X, u):
 
 def plot_element(x, u=None, title=None, three_d=False, element_loop=None):
     '''
-
+    Plot the element. 
     '''
     ndim = 2
     if three_d:
@@ -84,6 +86,9 @@ def plot_element(x, u=None, title=None, three_d=False, element_loop=None):
 
 
 def force_test(element, x, u=None):
+    '''
+    Check the stiffness matrix and the force vector on consistency. 
+    '''
     if u == None:
         u = np.zeros_like(x)
     K = element.k_int(x, u)
@@ -92,6 +97,132 @@ def force_test(element, x, u=None):
     print('and stiffness matrix from finite differences:', np.max(abs(K - K_finite_diff)))
     print('Maximum value in the integrated stiffness matrix:', np.max(abs(K)))
     return K, K_finite_diff
+
+def read_hbmat(filename):
+    '''
+    reads the hbmat file and returns it in the csc format. 
+    
+    Parameters
+    ----------
+    filename : string
+        string of the filename
+    
+    Returns
+    -------
+    matrix : sp.sparse.csc_matrix
+        matrix which is saved in harwell-boeing format
+    
+    Info
+    ----
+    Information on the Harwell Boeing format: 
+    http://people.sc.fsu.edu/~jburkardt/data/hb/hb.html
+    '''
+    with open(filename, 'r') as infile:
+        matrix_data = infile.read().splitlines()
+    
+    # Analsysis of further line indices
+    n_total, n_indptr, n_indices, n_data, n_rhs = map(int, matrix_data[1].split())
+    matrix_keys, n_rows, n_cols, _, _ = matrix_data[2].split()
+    
+    n_rows, n_cols = int(n_rows), int(n_cols)
+
+    symmetric = False
+    if matrix_keys[1] == 'S':
+        symmetric = True
+
+    idx_0 = 4
+    if n_rhs > 0:
+        idx_0 += 1
+
+    indptr = sp.zeros(n_indptr, dtype=int)
+    indices = sp.zeros(n_indices, dtype=int)
+    data = sp.zeros(n_data)
+    
+    indptr[:] = list(map(int, matrix_data[idx_0 : idx_0 + n_indptr]))
+    indices[:] = list(map(int, matrix_data[idx_0 + n_indptr : idx_0 + n_indptr + n_indices]))
+    # consider the fortran convention with D instead of E in double precison floats
+    data[:] = [float(x.replace('D', 'E')) for x in matrix_data[idx_0 + n_indptr + n_indices : ]]
+    
+    # take care of the indexing notation of fortran
+    indptr -= 1
+    indices -= 1
+
+    matrix = sp.sparse.csc_matrix((data, indices, indptr), shape=(n_rows, n_cols))
+    if symmetric:
+        diagonal = matrix.diagonal()
+        matrix = matrix + matrix.T
+        matrix.setdiag(diagonal)
+    return matrix
+
+def produce_apdl(filename_mat, nodes, elements, ANSYS_element, rho, E, nu):
+    '''
+    Produce an apdl file which produces mass- and stiffness matrix for a single element. 
+    
+    Parameters
+    ----------
+    nodes : ndarray
+        array containing the nodes of the element. The nodes are given in matrix format
+    elements : ndarray
+        array containing the nodes forming the elements. The array has to be a 2D array
+    ANSYS_element : string
+        string containing the elment key number and eventually the keyarguments for the APDL file
+    rho : float
+        density of the elements
+    E : float
+        Yong's modulus of the elements
+    nu : float
+        poisson ratio of the elements
+        
+    Returns
+    -------
+    None
+    
+    '''
+    
+    # check, if nodes are 2D
+    if nodes.shape[-1] == 2:
+        nodes3D = sp.zeros((nodes.shape[0], 3))
+        nodes3D[:,:2] = nodes
+    else:
+        nodes3D = nodes
+        
+    apdl = io.StringIO() # works the same as files do
+    apdl.write('finish \n/clear,start \n/PREP7\n\n')
+    apdl.write('!Nodal values\n')
+    for i, node in enumerate(nodes3D):
+        apdl.write('N,' + str(i+1) + ',' + ','.join(str(x) for x in node) + '\n')
+    
+    apdl.write('\n!Material properties\n')
+    apdl.write('MP,DENS,1,' + str(rho) + '\n')
+    apdl.write('MP,EX,1,' + str(E) + '\n')
+    apdl.write('MP,NUXY,1,' + str(nu) + '\n')
+    apdl.write('MAT,1\n')
+    
+    apdl.write('\n!Elements\n')
+    apdl.write('ET,1,' + ANSYS_element + '\n')
+    apdl.write('TYPE,1\n')
+    for i, element in enumerate(elements):
+        apdl.write('E,' + ','.join(str(x+1) for x in element) + '\n')
+    apdl.write('\n!Solver\n')
+    apdl.write('/SOLU \nantype,modal \nmodopt,lanb,1 \nmxpand,1 \nsolve\n')
+    apdl.write('\n!Postprocessor\n')
+    apdl.write('/POST1 \n/AUX2 \nFILE,,full\n')
+    apdl.write('HBMAT,' + filename_mat + '_m,ansmat,,ASCII,MASS,NO,NO\n')
+    apdl.write('HBMAT,' + filename_mat + '_k,ansmat,,ASCII,STIFF,NO,NO\n\n\n')
+    tmp = apdl.getvalue()
+    apdl.close()
+    return tmp
+
+#%%
+
+ansys_dict = {'Quad4' : '182', 
+              'Quad8' : '183', 
+              'Tri3' : '182', # the last two nodes should be the same
+              'Tri6' : '183,1,,0', # plane stress
+              'Tet4' : '285', 
+              'Tet10' : '187'}
+
+ansys_workdir = '/Volumes/ne89mez/ANSYS/'
 
 #%%
 
@@ -104,6 +235,7 @@ print('''
 ###############################################################################
 ''')
 x = np.array([0,0,3,1,2,2.])
+x += sp.rand(6)
 u = sp.rand(2*3)
 plot_element(x, u, title='Tri3')
 element_tri3 = amfe.Tri3(E_modul=60, poisson_ratio=1/4, density=1., element_thickness=1.)
@@ -114,9 +246,22 @@ K0 = element_tri3.k_int(x, np.zeros_like(x))
 K = element_tri3.k_int(x, u)
 print('The total mass of the element (in one direction) is', np.sum(M)/2 )
 
-##
-## load references from ANSYS
-##
+apdl_tri3 = produce_apdl('tri3', x.reshape((-1,2)), 
+                          np.array([[0,1,2,2],]), ansys_dict['Tri3'], rho=1., E=60., nu=1/4)
+
+with open(ansys_workdir + 'tri3.inp', 'w') as inpfile:
+    inpfile.write(apdl_tri3)
+
+
+#%%
+_ = input('Run ' + ansys_workdir + 'tri3.inp with ANSYS!')
+
+K_ans = read_hbmat(ansys_workdir + 'tri3_k.ansmat').A
+M_ans = read_hbmat(ansys_workdir + 'tri3_m.ansmat').A
+
+print('Difference between ANSYS and AMfe for tri3:\n')
+print('Stiffness matrix:', np.max(abs(K_ans - K0)))
+print('Mass matrix:', np.max(abs(M_ans - M)))
 
 #%%
 
@@ -126,6 +271,7 @@ print('''
 ###############################################################################
 ''')
 x = np.array([0,0, 3,1, 2,2, 1.5,0.5, 2.5,1.5, 1,1])
+x += sp.rand(12)*0.4
 u = np.array([0,0, -0.5,0, 0,0, -0.25,0, -0.25,0, 0,0])
 element_tri6 = amfe.Tri6(E_modul=60, poisson_ratio=1/4, density=1., element_thickness=1.)
 plot_element(x, u, title='Tri6', element_loop=(0, 3, 1, 4, 2, 5))
@@ -136,6 +282,23 @@ M = element_tri6.m_int(x, u)
 K0 = element_tri6.k_int(x, np.zeros_like(x))
 K = element_tri6.k_int(x, u)
 print('The total mass of the element (in one direction) is', np.sum(M)/2 )
+
+apdl_tri6 = produce_apdl('tri6', x.reshape((-1,2)), 
+                          np.array([[0,1,2,3,4,5],]), ansys_dict['Tri6'], rho=1., E=60., nu=1/4)
+
+with open(ansys_workdir + 'tri6.inp', 'w') as inpfile:
+    inpfile.write(apdl_tri6)
+
+#%%
+_ = input('Run ' + ansys_workdir + 'tri6.inp with ANSYS!')
+
+K_ans = read_hbmat(ansys_workdir + 'tri6_k.ansmat').A
+M_ans = read_hbmat(ansys_workdir + 'tri6_m.ansmat').A
+
+print('Difference between ANSYS and AMfe for tri6:\n')
+print('Maximum value stiffness matrix:', np.max(abs(K_ans - K0)))
+print('Maximum value mass matrix:', np.max(abs(M_ans - M)))
+
 
 ##
 ## load references from ANSYS
@@ -151,6 +314,7 @@ print('''
 ###############################################################################
 ''')
 x = np.array([0,0,1,0,1,1,0,1.])
+x += sp.rand(8)*0.5
 u = np.array([0,0,0,0,0,0,0,0.])
 element_quad4 = amfe.Quad4(E_modul=60, poisson_ratio=1/4, density=1., element_thickness=1.)
 plot_element(x, u, title='Quad4')
@@ -162,9 +326,26 @@ M = element_quad4.m_int(x, u)
 K0 = element_quad4.k_int(x, np.zeros_like(x))
 print('The total mass of the element (in one direction) is', np.sum(M)/2 )
 
-##
-## load references from ANSYS and compare
-##
+
+apdl_quad4 = produce_apdl('quad4', x.reshape((-1,2)), 
+                          np.array([[0,1,2,3],]), ansys_dict['Quad4'], rho=1., E=60., nu=1/4)
+
+with open(ansys_workdir + 'quad4.inp', 'w') as inpfile:
+    inpfile.write(apdl_quad4)
+
+
+#%%
+
+_ = input('Run ' + ansys_workdir + 'quad4.inp with ANSYS!')
+K_ans = read_hbmat(ansys_workdir + 'quad4_k.ansmat').A
+M_ans = read_hbmat(ansys_workdir + 'quad4_m.ansmat').A
+
+print('Difference between ANSYS and AMfe for quad4:\n')
+print('Maximum deviations:\n Mass Matrix', np.max(abs(M_ans - M)))
+print('Stiffness Matrix', np.max(abs(K0 - K_ans)))
+#print('Stiffness matrix:', K_ans - K0)
+#print('Mass matrix:', M_ans - M)
+
 
 
 #%%
@@ -176,7 +357,8 @@ print('''
 ''')
 
 x = np.array([1.,1,2,1,2,2,1,2, 1.5, 1, 2, 1.5, 1.5, 2, 1, 1.5])
-u = sp.rand(16)*0.4
+x += sp.rand(16)*0.4
+u = sp.zeros(16)
 element_quad8 = amfe.Quad8(E_modul=60, poisson_ratio=1/4, density=1., element_thickness=1.)
 plot_element(x, u, title='Quad8', element_loop=(0,4,1,5,2,6,3,7))
 
@@ -187,9 +369,24 @@ K0 = element_quad8.k_int(x, np.zeros_like(x))
 
 print('The total mass of the element (in one direction) is', np.sum(M)/2 )
 
-##
-## load references from ANSYS
-##
+
+
+apdl_quad8 = produce_apdl('quad8', x.reshape((-1,2)), 
+                          np.array([[0,1,2,3,4,5,6,7],]), ansys_dict['Quad8'], rho=1., E=60., nu=1/4)
+
+with open(ansys_workdir + 'quad8.inp', 'w') as inpfile:
+    inpfile.write(apdl_quad8)
+
+
+#%%
+
+_ = input('Run ' + ansys_workdir + 'quad8.inp with ANSYS!')
+K_ans = read_hbmat(ansys_workdir + 'quad8_k.ansmat').A
+M_ans = read_hbmat(ansys_workdir + 'quad8_m.ansmat').A
+
+print('Difference between ANSYS and AMfe for quad8:\n')
+print('Maximum deviations:\n Mass Matrix', np.max(abs(M_ans - M)))
+print('Stiffness Matrix', np.max(abs(K0 - K_ans)))
 
 
 #%%
@@ -203,6 +400,8 @@ print('''
 x = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1.])
 u = np.array([0, 0, 0,  1, 0, 0,  0, 0, 0,  0, 0, 0.])
 
+x += sp.rand(3*4)*0.4
+
 element_tet4 = amfe.Tet4(E_modul=60, poisson_ratio=1/4, density=1.)
 plot_element(x, u, title='Tet4', three_d=True)
 
@@ -213,13 +412,29 @@ K0 = element_tet4.k_int(x, np.zeros_like(x))
 
 print('The total mass of the element (in one direction) is', np.sum(M)/3 )
 
-#np.save('element_matrices/K0_tet4', K0)
-# np.save('element_matrices/K_tet4', K)
-#a = np.load('element_matrices/K_tet4.npy')
-#b = np.load('element_matrices/K0_tet4.npy')
-##
-## load references from ANSYS
-##
+
+apdl_tet4 = produce_apdl('tet4', x.reshape((-1,3)), 
+                          np.array([[0,1,2,3],]), ansys_dict['Tet4'], rho=1., E=60., nu=1/4)
+
+with open(ansys_workdir + 'tet4.inp', 'w') as inpfile:
+    inpfile.write(apdl_tet4)
+
+
+#%%
+
+_ = input('Run ' + ansys_workdir + 'tet4.inp with ANSYS!')
+K_ans = read_hbmat(ansys_workdir + 'tet4_k.ansmat').A
+M_ans = read_hbmat(ansys_workdir + 'tet4_m.ansmat').A
+
+# correct the stuff...
+selector = np.ix_([0,1,2,4,5,6,8,9,10,12,13,14],[0,1,2,4,5,6,8,9,10,12,13,14])
+K_ans = K_ans[selector]
+M_ans = M_ans[selector]
+
+print('Difference between ANSYS and AMfe for tet4:\n')
+print('Maximum deviations:\n Mass Matrix', np.max(abs(M_ans - M)))
+print('Stiffness Matrix', np.max(abs(K0 - K_ans)))
+
 
 
 
@@ -245,14 +460,25 @@ K0 = element_tet10.k_int(x, np.zeros_like(x))
 
 print('The total mass of the element (in one direction) is', np.sum(M)/3 )
 
-#np.save('element_matrices/K0_tet4', K0)
-# np.save('element_matrices/K_tet4', K)
-#a = np.load('element_matrices/K_tet4.npy')
-#b = np.load('element_matrices/K0_tet4.npy')
-##
-## load references from ANSYS
-##
 
+apdl_tet10 = produce_apdl('tet10', x.reshape((-1,3)), 
+                          np.array([[0,1,2,3,4,5,6,7,8,9],]), ansys_dict['Tet10'], rho=1., E=60., nu=1/4)
+
+
+with open(ansys_workdir + 'tet10.inp', 'w') as inpfile:
+    inpfile.write(apdl_tet10)
+
+
+#%%
+
+_ = input('Run ' + ansys_workdir + 'tet10.inp with ANSYS!')
+K_ans = read_hbmat(ansys_workdir + 'tet10_k.ansmat').A
+M_ans = read_hbmat(ansys_workdir + 'tet10_m.ansmat').A
+
+
+print('Difference between ANSYS and AMfe for tet4:\n')
+print('Maximum deviations:\n Mass Matrix', np.max(abs(M_ans - M)))
+print('Stiffness Matrix', np.max(abs(K0 - K_ans)))
 
 
 #%%
