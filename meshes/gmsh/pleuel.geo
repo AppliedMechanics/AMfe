@@ -54,3 +54,38 @@ Line Loop(26) = {5, 6, 7, 8};
 Line Loop(27) = {17};
 Line Loop(28) = {16, 13, 14, 15};
 Plane Surface(29) = {26, 27, 28};
+Delete {
+  Line{17};
+}
+Delete {
+  Line{17};
+}
+Delete {
+  Line{17};
+}
+Delete {
+  Surface{29};
+}
+Delete {
+  Line{17};
+}
+Circle(29) = {6, 2, 7};
+Circle(30) = {7, 2, 8};
+Circle(31) = {26, 15, 27};
+Circle(32) = {27, 15, 28};
+Spline(33) = {6, 29, 31, 26};
+Spline(34) = {8, 30, 32, 28};
+Line Loop(35) = {33, 31, 32, -34, -30, -29};
+Plane Surface(36) = {26, 28, 35};
+Extrude {0, 0, 0.4} {
+  Surface{23, 25};
+}
+Extrude {0, 0, 0.4} {
+  Surface{36};
+}
+Extrude {0, 0, 0.1} {
+  Surface{78, 120};
+}
+Extrude {0, 0, -0.1} {
+  Surface{25, 23};
+}
