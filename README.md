@@ -14,11 +14,11 @@
    im Ordner `docs/` ausgeführt wird.
    
 ### Hinweise:
-sphinx muss für pyhton3 installiert sein. Es kann sein, dass sphinx automatisch auf python2 läuft. 
-Unter pyhton3 kann folgendermaßen geprüft werden, welche sphinx-Version installiert ist:
+sphinx muss für pyhton3 installiert sein. Es kann sein, dass sphinx automatisch für python2 installiert wurde. 
+Unter python3 kann in der Konsole folgendermaßen geprüft werden, welche sphinx-Version installiert ist:
 ```python
 python3
 >>> import sphinx
 >>> sphinx.__version__
 ```
-   
+Hier sollte mindestens `'1.3.1` ausgeben werden. 
