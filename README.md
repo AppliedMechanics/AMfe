@@ -28,7 +28,9 @@ im Ordner `docs/` ausgeführt wird.
 
 2. Fortran
 ----------
-Um die Fortran-Routinen (für die Assemblierung und die Elemente) zu nutzen, muss das Skript `install_fortran_routines.sh` im Ordner `f2py` ausgeführt werden.
+Um die Fortran-Routinen (für die Assemblierung und die Elemente) zu nutzen, muss das Skript `install_fortran_routines.sh` im Ordner `f2py/` ausgeführt werden.
+Hierzu ist es wichtig, dass die Fortran Compiler installiert sind (z.B. `gfortran`, `gfortran-4.8`). 
+
    
 3. Hinweise
 -----------
@@ -40,4 +42,3 @@ python3
 >>> sphinx.__version__
 ```
 Hier sollte mindestens `'1.3.1'` ausgeben werden.
-
