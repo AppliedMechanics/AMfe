@@ -5,11 +5,9 @@ Created on Fri Oct 16 14:46:10 2015
 @author: fabian
 """
 
-
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
-
 
 # make amfe running
 import sys
@@ -17,145 +15,64 @@ sys.path.insert(0, '..')
 import amfe
 
 
-#%% Mesh generation
-x_len, y_len, x_no_elements, y_no_elements = 1, 1, 10, 10
+
+#%% Generate mesh for substructures
+'''Generate global mesh with respect to global node ID's'''
+x_len, y_len = 1, 1
+x_no_sub, y_no_sub = 4, 3
+x_no_ele_p_sub, y_no_ele_p_sub = 4, 3
+
 pos_x0, pos_y0 = 0, 0
-my_mesh_generator = amfe.MeshGenerator(x_len=x_len, y_len=y_len,
-                                       x_no_elements=x_no_elements,
-                                       y_no_elements=y_no_elements,
-                                       pos_x0=pos_x0, pos_y0=pos_y0,
-                                       mesh_style='Quad4')
-my_mesh_generator.build_mesh()
-my_mesh_generator.save_mesh('./meshes/selbstgebaut_quad/nodes.csv',
-                            './meshes/selbstgebaut_quad/elements.csv')
 
+x_no_ele = x_no_sub*x_no_ele_p_sub
+y_no_ele = y_no_sub*y_no_ele_p_sub
+no_ele = x_no_ele*y_no_ele
 
-#%% Building the mechanical system
+x_no_nod = x_no_ele+1
+y_no_nod = y_no_ele+1
+no_nod = x_no_nod*y_no_nod
 
-# Initialize system
-my_system = amfe.MechanicalSystem()
-my_system = amfe.MechanicalSystem(E_modul=1.0, poisson_ratio=0., 
-                                  element_thickness=1.0, density=1.0)
+no_sub_total = x_no_sub*y_no_sub
 
-# Load mesh
-my_system.load_mesh_from_csv('./meshes/selbstgebaut_quad/nodes.csv',
-                             './meshes/selbstgebaut_quad/elements.csv')
+x_delta = x_len/x_no_ele
+y_delta = y_len/y_no_ele
 
+# Create node table
+nodes = []
+for j_nod in range(y_no_ele+1):
+    for i_nod in range(x_no_ele+1):
+        nodes.append([pos_x0+x_delta*i_nod,pos_y0+y_delta*j_nod])
 
-#dirichlet_boundary conditions
-#top_fixation_2 = [None, [master_node - 1 + 2*x for x in range(11)], None]
-nodes_to_fix = np.where(my_system.node_list[:, 0] == pos_x0)[0]
-dofs_to_fix = np.concatenate((nodes_to_fix*2, nodes_to_fix*2+1), axis=1)
-fixation_left = [None, dofs_to_fix, None]
-dirichlet_boundary_list = [fixation_left]
-my_system.apply_dirichlet_boundaries(dirichlet_boundary_list)
+# Create element table
+elements = [0]*no_ele
+ele_type = 3
+for j_sub in range(1,y_no_sub+1):
+    for i_sub in range(1,x_no_sub+1):
+        # Compute the number of the current subdomain (starting with 1)
+        no_of_sub = i_sub + x_no_sub*(j_sub-1)
+        # Compute number of node in south-east corner
+        start_node_sub = (i_sub-1)*x_no_ele_p_sub \
+                        +(j_sub-1)*(y_no_ele_p_sub)*(x_no_ele+1)               
+        
+        for j_ele in range(0,y_no_ele_p_sub):
+            for i_ele in range(0,x_no_ele_p_sub):
+                # Compute the global element number (starting with 0)
+                dom_ele_num = i_ele + (j_ele-1+1)*x_no_ele \
+                            + (i_sub-1)*x_no_ele_p_sub \
+                            + (j_sub-1)*y_no_ele_p_sub*x_no_ele
+                                     
+                no_tags = 4
+                no_of_part = 1
+                
 
-# Build mass and stiffness matrix
-M, K = amfe.give_mass_and_stiffness(my_system)
+                node1 = i_ele   + j_ele*x_no_nod    +start_node_sub
+                node2 = i_ele+1 + j_ele*x_no_nod    +start_node_sub
+                node3 = i_ele+1 +(j_ele+1)*x_no_nod +start_node_sub
+                node4 = i_ele   +(j_ele+1)*x_no_nod +start_node_sub
+                
+                
+                
+                temp = [ele_type, no_tags, 0, 0, no_of_part, no_of_sub, \
+                        node1, node2, node3, node4]
 
-
-#%% Plot mesh
-# Copy lists for plotting
-node_list = np.copy(my_system.node_list)
-element_list = np.copy(my_system.element_list)
-pos_of_nodes = node_list.reshape((-1, 1))
-
-
-def plot_nodes_Quad4(coord, p_col='b', no_of_fig=1,
-                     p_title='Nodes of the mesh'):
-    print('Plotting nodes...', end='')
-    plt.figure(no_of_fig)
-    plt.plot(coord[0::2], coord[1::2], color=p_col, marker='o', linestyle='')
-    for i_nod in range(int(len(coord)/2)):
-        plt.text(coord[2*i_nod], coord[2*i_nod+1], i_nod,
-                 verticalalignment='bottom', color=p_col)
-    plt.axis('equal')
-    #plt.axis([pos_x0-0.1, pos_x0+x_len+0.1, pos_y0-0.1, pos_y0+y_len+0.1])
-    plt.title('Nodes of the mesh')
-    plt.hold(True)
-    print(' successful!')
-
-
-def plot_mesh_Quad4(elements, coord, plot_no_of_ele=False, plot_nodes=False,
-                    p_col='r', no_of_fig=1, p_title='Mesh'):
-
-    '''
-    Plot mesh of plane Quad4 elements
-
-    Parameters
-    ----------
-    elements: array
-        array containing the node number of each element
-    coord: array
-        array containing the coordinates of each node
-    plot_no_of_ele: bool, optional
-        flag stating if numbers of elements are plotted
-    plot_nodes: bool, optional
-        flag stating if nodes are plotted
-    p_col: str, optional
-        color of plot
-
-    Returns
-    -------
-    None
-    '''
-    print('Plotting elements...', end='')
-    plt.figure(no_of_fig)
-
-    # Duplicate first node of each element to get closed circle
-    ele_list_plot = np.concatenate((element_list,
-                                    element_list[:, 0]
-                                    .reshape(len(element_list), 1)), axis=1)
-
-    # Loop over elements
-    for i_ele in range(len(elements)):
-
-        nodes = ele_list_plot[i_ele, :]  # Node number of one element
-        plt.plot(coord[nodes*2], coord[nodes*2+1], color=p_col)  # Plot ele
-
-        # Plot number of element in each element if plot_no_of_ele == True
-        if plot_no_of_ele:
-            dof1 = nodes[0]*2+np.array([0, 1])
-            dof2 = nodes[2]*2+np.array([0, 1])
-            pos_of_text = 0.5*coord[dof1] + 0.5*coord[dof2]
-            plt.text(pos_of_text[0], pos_of_text[1], i_ele, color=p_col,
-                     horizontalalignment='center', verticalalignment='center')
-
-    # Plot the nodes of the mesh if plot_nodes == True
-    if plot_nodes:
-        plot_nodes_Quad4(coord, no_of_fig=no_of_fig, p_title=p_title)
-
-    # Further properties of plot
-    plt.axis('equal')
-    plt.title(p_title)
-    plt.hold(True)
-    print(' successful!')
-
-
-# Plot mesh and nodes of Quad4-elements
-plot_nodes_Quad4(pos_of_nodes, p_col='b', no_of_fig=1)
-plot_mesh_Quad4(element_list, pos_of_nodes, plot_no_of_ele=True, p_col='b',
-                no_of_fig=2, p_title='Reine Vernetzung')
-
-
-#%% Compute eigenvalues
-lam, phi = sp.sparse.linalg.eigsh(K, k=20, M=M, which='SM')
-
-
-# Extend computed eigenmodes to all dofs
-disp_glob = my_system.b_constraints * phi
-# Add eigenmode displacement (multiplied by scaling factor) to positions node
-scale = -0.05
-pos = pos_of_nodes + disp_glob*scale
-
-
-# Plot mesh of Quad4-elements
-no_of_eigenm = 10    # = true eigenmodes number is no_of_eigenmode + 1!
-p_title = 'Eigenmode {0} (including rigid body modes)'.format(no_of_eigenm+1)
-plot_mesh_Quad4(element_list, pos[:, no_of_eigenm], plot_no_of_ele=True,
-                plot_nodes=True, p_col='r', no_of_fig=7, p_title=p_title)
-
-plt.show()
-#t1 = time.time()
-#delta_t = time.time() - t1
-#print('Benötigte Zeit: {0}'.format(delta_t))
+                elements[dom_ele_num] = temp
