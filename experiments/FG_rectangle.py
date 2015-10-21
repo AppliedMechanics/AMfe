@@ -19,7 +19,7 @@ import amfe
 
 
 #%% Mesh generation
-x_len, y_len, x_no_elements, y_no_elements = 1, 1, 10, 10
+x_len, y_len, x_no_elements, y_no_elements = 2, 1, 10, 5
 pos_x0, pos_y0 = 0, 0
 my_mesh_generator = amfe.MeshGenerator(x_len=x_len, y_len=y_len,
                                        x_no_elements=x_no_elements,
@@ -146,17 +146,15 @@ lam, phi = sp.sparse.linalg.eigsh(K, k=20, M=M, which='SM')
 # Extend computed eigenmodes to all dofs
 disp_glob = my_system.b_constraints * phi
 # Add eigenmode displacement (multiplied by scaling factor) to positions node
-scale = -0.05
+scale = -0.1
 pos = pos_of_nodes + disp_glob*scale
 
 
 # Plot mesh of Quad4-elements
-no_of_eigenm = 10    # = true eigenmodes number is no_of_eigenmode + 1!
+no_of_eigenm = 5    # = true eigenmodes number is no_of_eigenmode + 1!
 p_title = 'Eigenmode {0} (including rigid body modes)'.format(no_of_eigenm+1)
 plot_mesh_Quad4(element_list, pos[:, no_of_eigenm], plot_no_of_ele=True,
                 plot_nodes=True, p_col='r', no_of_fig=7, p_title=p_title)
 
 plt.show()
-#t1 = time.time()
-#delta_t = time.time() - t1
-#print('Benötigte Zeit: {0}'.format(delta_t))
+

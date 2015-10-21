@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Fri Oct 16 14:46:10 2015
@@ -48,7 +49,7 @@ ele_type = 3
 for j_sub in range(1,y_no_sub+1):
     for i_sub in range(1,x_no_sub+1):
         # Compute the number of the current subdomain (starting with 1)
-        no_of_sub = i_sub + x_no_sub*(j_sub-1)
+        no_of_curr_sub = i_sub + x_no_sub*(j_sub-1)
         # Compute the number of the node in south-east corner of subdomain
         start_node_sub = (i_sub-1)*x_no_ele_p_sub \
                         +(j_sub-1)*(y_no_ele_p_sub)*(x_no_ele+1)               
@@ -59,26 +60,17 @@ for j_sub in range(1,y_no_sub+1):
                 dom_ele_num = i_ele + (j_ele-1+1)*x_no_ele \
                             + (i_sub-1)*x_no_ele_p_sub \
                             + (j_sub-1)*y_no_ele_p_sub*x_no_ele
+                
                 # Default values                     
                 no_tags = 4
-                no_of_part = 1
-
-                if i_ele == 0:
-                    if i_sub > 1:
-                        pass
-                        
-                elif i_ele == (x_no_ele_p_sub-1):
-                    if i_sub < x_no_sub:
-                        pass
-                        
-
+                no_of_part = 1                       
+                
+                # Compute node number corresponding to the elements
                 node1 = i_ele   + j_ele*x_no_nod    +start_node_sub
                 node2 = i_ele+1 + j_ele*x_no_nod    +start_node_sub
                 node3 = i_ele+1 +(j_ele+1)*x_no_nod +start_node_sub
                 node4 = i_ele   +(j_ele+1)*x_no_nod +start_node_sub               
-                
-                temp = [ele_type, no_tags, 0, 0, no_of_part, no_of_sub, \
-                        node1, node2, node3, node4]
 
-                elements[dom_ele_num] = temp
+                elements[dom_ele_num] = [ele_type, no_tags, 0, 0, \
+                        no_of_part, no_of_curr_sub, node1, node2, node3, node4]
 
