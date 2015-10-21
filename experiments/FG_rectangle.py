@@ -19,7 +19,7 @@ import amfe
 
 
 #%% Mesh generation
-x_len, y_len, x_no_elements, y_no_elements = 2, 1, 10, 5
+x_len, y_len, x_no_elements, y_no_elements = 2, 1, 20, 10
 pos_x0, pos_y0 = 0, 0
 my_mesh_generator = amfe.MeshGenerator(x_len=x_len, y_len=y_len,
                                        x_no_elements=x_no_elements,
@@ -151,10 +151,13 @@ pos = pos_of_nodes + disp_glob*scale
 
 
 # Plot mesh of Quad4-elements
-no_of_eigenm = 5    # = true eigenmodes number is no_of_eigenmode + 1!
+no_of_eigenm = 10    # = true eigenmodes number is no_of_eigenmode + 1!
 p_title = 'Eigenmode {0} (including rigid body modes)'.format(no_of_eigenm+1)
 plot_mesh_Quad4(element_list, pos[:, no_of_eigenm], plot_no_of_ele=True,
                 plot_nodes=True, p_col='r', no_of_fig=7, p_title=p_title)
 
 plt.show()
 
+#%% How to save file for further processing with Tikz
+#np.savetxt('data_elements.dat', element_list, fmt='%i')
+#np.savetxt('data_coordinates.dat', pos[:, no_of_eigenm].reshape((-1,2)), fmt='%f')
