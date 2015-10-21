@@ -19,7 +19,7 @@ import amfe
 
 
 #%% Mesh generation
-x_len, y_len, x_no_elements, y_no_elements = 2, 1, 20, 10
+x_len, y_len, x_no_elements, y_no_elements = 2, 1, 10, 5
 pos_x0, pos_y0 = 0, 0
 my_mesh_generator = amfe.MeshGenerator(x_len=x_len, y_len=y_len,
                                        x_no_elements=x_no_elements,
@@ -50,6 +50,7 @@ dofs_to_fix = np.concatenate((nodes_to_fix*2, nodes_to_fix*2+1), axis=1)
 fixation_left = [None, dofs_to_fix, None]
 dirichlet_boundary_list = [fixation_left]
 my_system.apply_dirichlet_boundaries(dirichlet_boundary_list)
+
 
 # Build mass and stiffness matrix
 M, K = amfe.give_mass_and_stiffness(my_system)
@@ -139,22 +140,29 @@ plot_mesh_Quad4(element_list, pos_of_nodes, plot_no_of_ele=True, p_col='b',
                 no_of_fig=2, p_title='Reine Vernetzung')
 
 
+control_eigenvalue = 0
+
 #%% Compute eigenvalues
 lam, phi = sp.sparse.linalg.eigsh(K, k=20, M=M, which='SM')
 
 
-# Extend computed eigenmodes to all dofs
+# Extend computed eigenmodes to all dofs (since some dofs are fixed)
+# each eigenmodes is a 1D-array
 disp_glob = my_system.b_constraints * phi
 # Add eigenmode displacement (multiplied by scaling factor) to positions node
 scale = -0.1
-pos = pos_of_nodes + disp_glob*scale
+pos = pos_of_nodes + disp_glob*scale 
 
 
 # Plot mesh of Quad4-elements
-no_of_eigenm = 10    # = true eigenmodes number is no_of_eigenmode + 1!
+no_of_eigenm =3    # = true eigenmodes number is no_of_eigenmode + 1!
 p_title = 'Eigenmode {0} (including rigid body modes)'.format(no_of_eigenm+1)
 plot_mesh_Quad4(element_list, pos[:, no_of_eigenm], plot_no_of_ele=True,
                 plot_nodes=True, p_col='r', no_of_fig=7, p_title=p_title)
+
+
+
+
 
 plt.show()
 
