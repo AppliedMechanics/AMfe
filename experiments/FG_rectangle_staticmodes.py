@@ -19,7 +19,7 @@ import amfe
 
 
 #%% Mesh generation
-x_len, y_len, x_no_elements, y_no_elements = 2, 1, 10, 5
+x_len, y_len, x_no_elements, y_no_elements = 1.5, 0.5, 12, 4
 pos_x0, pos_y0 = 0, 0
 my_mesh_generator = amfe.MeshGenerator(x_len=x_len, y_len=y_len,
                                        x_no_elements=x_no_elements,
@@ -35,8 +35,10 @@ my_mesh_generator.save_mesh('./meshes/selbstgebaut_quad/nodes.csv',
 
 # Initialize system
 my_system = amfe.MechanicalSystem()
-my_system = amfe.MechanicalSystem(E_modul=1.0, poisson_ratio=0., 
-                                  element_thickness=1.0, density=1.0)
+my_system = amfe.MechanicalSystem(E_modul=1.0, poisson_ratio=0.0, 
+                                  element_thickness=0.1, density=1.0)
+
+
 
 # Load mesh
 my_system.load_mesh_from_csv('./meshes/selbstgebaut_quad/nodes.csv',
@@ -51,6 +53,10 @@ fixation_left = [None, dofs_to_fix, None]
 dirichlet_boundary_list = [fixation_left]
 my_system.apply_dirichlet_boundaries(dirichlet_boundary_list)
 
+# Boundary degrees of freedom (on right side), where structure may be fixed to 
+# another neighbouring structure
+nodes_boundary = np.where(my_system.node_list[:, 0] == pos_x0+x_len)[0]
+dofs_boundary = np.concatenate((nodes_boundary*2, nodes_boundary*2+1), axis=1)
 
 # Build mass and stiffness matrix
 M, K = amfe.give_mass_and_stiffness(my_system)
@@ -136,7 +142,7 @@ def plot_mesh_Quad4(elements, coord, plot_no_of_ele=False, plot_nodes=False,
 
 # Plot mesh and nodes of Quad4-elements
 plot_nodes_Quad4(pos_of_nodes, p_col='b', no_of_fig=1)
-plot_mesh_Quad4(element_list, pos_of_nodes, plot_no_of_ele=True, p_col='b',
+plot_mesh_Quad4(element_list, pos_of_nodes, plot_no_of_ele=True, p_col='g',
                 no_of_fig=2, p_title='Reine Vernetzung')
 
 
@@ -144,27 +150,27 @@ control_eigenvalue = 0
 
 
 #%% Compute static modes
-#TODO
-
-
-#%% Compute eigenvalues
-lam, phi = sp.sparse.linalg.eigsh(K, k=20, M=M, which='SM')
-
-
-
+f = sp.sparse.csr_matrix((my_system.b_constraints.shape[0],dofs_boundary.shape[0]))
+f[dofs_boundary,:] = sp.sparse.eye(dofs_boundary.shape[0])
+f_c = my_system.b_constraints.T*f
+disp = sp.sparse.linalg.spsolve(K, f_c)
 
 # Extend computed eigenmodes to all dofs (since some dofs are fixed)
 # each eigenmodes is a 1D-array
-disp_glob = my_system.b_constraints * phi
+disp_glob = my_system.b_constraints * disp
 # Add eigenmode displacement (multiplied by scaling factor) to positions node
-scale = -0.1
+scale = 0.003
 pos = pos_of_nodes + disp_glob*scale 
 
 
-# Plot mesh of Quad4-elements
-no_of_eigenm =3    # = true eigenmodes number is no_of_eigenmode + 1!
-p_title = 'Eigenmode {0} (including rigid body modes)'.format(no_of_eigenm+1)
-plot_mesh_Quad4(element_list, pos[:, no_of_eigenm], plot_no_of_ele=True,
+# Plot undeformed mesh in grey
+plot_mesh_Quad4(element_list, pos_of_nodes, p_col='0.5',
+                no_of_fig=7)
+
+# Plot deformed mesh of Quad4-elements
+no_of_eigenm =2    # = true eigenmodes number is no_of_eigenmode + 1!
+p_title = 'Static Mode number {0} '.format(no_of_eigenm+1)
+plot_mesh_Quad4(element_list, pos[:, no_of_eigenm], plot_no_of_ele=False,
                 plot_nodes=True, p_col='r', no_of_fig=7, p_title=p_title)
 
 
