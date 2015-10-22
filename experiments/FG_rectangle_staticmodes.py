@@ -85,7 +85,8 @@ def plot_nodes_Quad4(coord, p_col='b', no_of_fig=1,
 
 
 def plot_mesh_Quad4(elements, coord, plot_no_of_ele=False, plot_nodes=False,
-                    p_col='r', no_of_fig=1, p_title='Mesh'):
+                    p_col='r', no_of_fig=1, p_title='Mesh',
+                    p_col_node = 'b'):
 
     '''
     Plot mesh of plane Quad4 elements
@@ -131,7 +132,8 @@ def plot_mesh_Quad4(elements, coord, plot_no_of_ele=False, plot_nodes=False,
 
     # Plot the nodes of the mesh if plot_nodes == True
     if plot_nodes:
-        plot_nodes_Quad4(coord, no_of_fig=no_of_fig, p_title=p_title)
+        plot_nodes_Quad4(coord, no_of_fig=no_of_fig, p_title=p_title,
+                         p_col = p_col_node)
 
     # Further properties of plot
     plt.axis('equal')
@@ -159,13 +161,13 @@ disp = sp.sparse.linalg.spsolve(K, f_c)
 # each eigenmodes is a 1D-array
 disp_glob = my_system.b_constraints * disp
 # Add eigenmode displacement (multiplied by scaling factor) to positions node
-scale = 0.003
+scale = -0.003
 pos = pos_of_nodes + disp_glob*scale 
 
 
 # Plot undeformed mesh in grey
 plot_mesh_Quad4(element_list, pos_of_nodes, p_col='0.5',
-                no_of_fig=7)
+                plot_nodes=True,no_of_fig=7, p_col_node = '0.5')
 
 # Plot deformed mesh of Quad4-elements
 no_of_eigenm =2    # = true eigenmodes number is no_of_eigenmode + 1!
