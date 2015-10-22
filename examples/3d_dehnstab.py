@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 
 # Building the mechanical system
 my_mechanical_system = amfe.MechanicalSystem()
-my_mechanical_system.load_mesh_from_gmsh('../meshes/test_meshes/bar_Tet10_fine.msh', mesh_3d=True)
+my_mechanical_system.load_mesh_from_gmsh('../meshes/test_meshes/bar_Tet4.msh', mesh_3d=True)
 
 
 #%%
