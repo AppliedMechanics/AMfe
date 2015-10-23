@@ -55,8 +55,22 @@ my_system.apply_dirichlet_boundaries(dirichlet_boundary_list)
 
 # Boundary degrees of freedom (on right side), where structure may be fixed to 
 # another neighbouring structure
-nodes_boundary = np.where(my_system.node_list[:, 0] == pos_x0+x_len)[0]
-dofs_boundary = np.concatenate((nodes_boundary*2, nodes_boundary*2+1), axis=1)
+# number of these dofs are the global dof numbers
+nodes_interface = np.where(my_system.node_list[:, 0] == pos_x0+x_len)[0]
+dofs_interface = np.concatenate((nodes_interface*2, nodes_interface*2+1), axis=1)
+
+
+# extract matrix which reduces the unconstrained system to the constraint
+# system out of 'my_system'
+B_matrix = my_system.b_constraints.tocoo()
+(n_dof_free, n_dof_const) =B_matrix.shape
+mapping = np.zeros(n_dof_free)
+mapping[B_matrix.row] = B_matrix.col
+
+# map interface-boundary-dofs to the constrained system
+dof_b = mapping[dofs_interface]
+dofs = np.arange(n_dof_const)
+dof_i = np.setdiff1d(dofs,dof_b)
 
 # Build mass and stiffness matrix
 M, K = amfe.give_mass_and_stiffness(my_system)
@@ -152,8 +166,8 @@ control_eigenvalue = 0
 
 
 #%% Compute static modes
-f = sp.sparse.csr_matrix((my_system.b_constraints.shape[0],dofs_boundary.shape[0]))
-f[dofs_boundary,:] = sp.sparse.eye(dofs_boundary.shape[0])
+f = sp.sparse.csr_matrix((my_system.b_constraints.shape[0],dofs_interface.shape[0]))
+f[dofs_interface,:] = sp.sparse.eye(dofs_interface.shape[0])
 f_c = my_system.b_constraints.T*f
 disp = sp.sparse.linalg.spsolve(K, f_c)
 
