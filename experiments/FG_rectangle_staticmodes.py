@@ -207,8 +207,8 @@ plot_mesh_Quad4(element_list, pos[:, no_of_eigenm], plot_no_of_ele=False,
 #%% Compute static modes with fixed-interface
 disp_fi = sp.sparse.csr_matrix((n_dof_const,dofs_interface.shape[0]))
 u_b = sp.sparse.eye(dof_b.shape[0])
-K_ii = K.tocsr()[dof_i,:].tocsr()[:,dof_i]
-K_ib = K.tocsr()[dof_i,:].tocsr()[:,dof_b]
+K_ii = K.tocsc()[dof_i,:].tocsc()[:,dof_i]
+K_ib = K.tocsc()[dof_i,:].tocsc()[:,dof_b]
 psi_i = sp.sparse.linalg.spsolve(K_ii, -K_ib.dot(u_b))
 disp_fi[dof_b,:] = u_b
 disp_fi[dof_i,:] = psi_i
