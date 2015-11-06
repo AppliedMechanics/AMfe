@@ -64,7 +64,7 @@ dofs_interface = np.concatenate((nodes_interface*2, nodes_interface*2+1), axis=1
 # system out of 'my_system'
 B_matrix = my_system.b_constraints.tocoo()
 (n_dof_free, n_dof_const) =B_matrix.shape
-mapping = np.zeros(n_dof_free)
+mapping = np.zeros(n_dof_free, dtype = int)
 mapping[B_matrix.row] = B_matrix.col
 
 # map interface-boundary-dofs to the constrained system
@@ -72,8 +72,13 @@ dof_b = mapping[dofs_interface]
 dofs = np.arange(n_dof_const)
 dof_i = np.setdiff1d(dofs,dof_b)
 
+
+
 # Build mass and stiffness matrix
 M, K = amfe.give_mass_and_stiffness(my_system)
+
+
+
 
 
 #%% Plot mesh
@@ -81,6 +86,9 @@ M, K = amfe.give_mass_and_stiffness(my_system)
 node_list = np.copy(my_system.node_list)
 element_list = np.copy(my_system.element_list)
 pos_of_nodes = node_list.reshape((-1, 1))
+
+np.savetxt('data_elements_undeformed.dat', element_list, fmt='%i')
+np.savetxt('data_coordinates_undeformed.dat', node_list, fmt='%f')
 
 
 def plot_nodes_Quad4(coord, p_col='b', no_of_fig=1,
@@ -156,27 +164,28 @@ def plot_mesh_Quad4(elements, coord, plot_no_of_ele=False, plot_nodes=False,
     print(' successful!')
 
 
+#%% Plot nodes and mesh of current problem
 # Plot mesh and nodes of Quad4-elements
 plot_nodes_Quad4(pos_of_nodes, p_col='b', no_of_fig=1)
 plot_mesh_Quad4(element_list, pos_of_nodes, plot_no_of_ele=True, p_col='g',
                 no_of_fig=2, p_title='Reine Vernetzung')
 
 
-control_eigenvalue = 0
 
 
-#%% Compute static modes
+
+#%% Compute static modes with free-interface
 f = sp.sparse.csr_matrix((my_system.b_constraints.shape[0],dofs_interface.shape[0]))
 f[dofs_interface,:] = sp.sparse.eye(dofs_interface.shape[0])
 f_c = my_system.b_constraints.T*f
-disp = sp.sparse.linalg.spsolve(K, f_c)
+disp_fr = sp.sparse.linalg.spsolve(K, f_c)
 
 # Extend computed eigenmodes to all dofs (since some dofs are fixed)
 # each eigenmodes is a 1D-array
-disp_glob = my_system.b_constraints * disp
-# Add eigenmode displacement (multiplied by scaling factor) to positions node
-scale = -0.003
-pos = pos_of_nodes + disp_glob*scale 
+disp_glob_fr = my_system.b_constraints * disp_fr
+# Add mode displacement (multiplied by scaling factor) to positions node
+scale = 0.003
+pos = pos_of_nodes + disp_glob_fr*scale 
 
 
 # Plot undeformed mesh in grey
@@ -185,7 +194,7 @@ plot_mesh_Quad4(element_list, pos_of_nodes, p_col='0.5',
 
 # Plot deformed mesh of Quad4-elements
 no_of_eigenm =2    # = true eigenmodes number is no_of_eigenmode + 1!
-p_title = 'Static Mode number {0} '.format(no_of_eigenm+1)
+p_title = 'Free interfrace number {0} '.format(no_of_eigenm+1)
 plot_mesh_Quad4(element_list, pos[:, no_of_eigenm], plot_no_of_ele=False,
                 plot_nodes=True, p_col='r', no_of_fig=7, p_title=p_title)
 
@@ -193,8 +202,40 @@ plot_mesh_Quad4(element_list, pos[:, no_of_eigenm], plot_no_of_ele=False,
 
 
 
+
+
+#%% Compute static modes with fixed-interface
+disp_fi = sp.sparse.csr_matrix((n_dof_const,dofs_interface.shape[0]))
+u_b = sp.sparse.eye(dof_b.shape[0])
+K_ii = K.tocsr()[dof_i,:].tocsr()[:,dof_i]
+K_ib = K.tocsr()[dof_i,:].tocsr()[:,dof_b]
+psi_i = sp.sparse.linalg.spsolve(K_ii, -K_ib.dot(u_b))
+disp_fi[dof_b,:] = u_b
+disp_fi[dof_i,:] = psi_i
+
+disp_glob_fi = my_system.b_constraints * disp_fi 
+
+
+# Add mode displacement (multiplied by scaling factor) to positions node
+scale = 0.1
+pos = pos_of_nodes + disp_glob_fi*scale 
+
+# Plot undeformed mesh in grey
+plot_mesh_Quad4(element_list, pos_of_nodes, p_col='0.5',
+                plot_nodes=True,no_of_fig=10, p_col_node = '0.5')
+
+# Plot deformed mesh of Quad4-elements
+no_of_eigenm =2    # = true eigenmodes number is no_of_eigenmode + 1!
+p_title = 'Fixed interface Mode number {0} '.format(no_of_eigenm+1)
+plot_mesh_Quad4(element_list, pos[:, no_of_eigenm], plot_no_of_ele=False,
+                plot_nodes=True, p_col='r', no_of_fig=10, p_title=p_title)
+#
+#
+
+
+
 plt.show()
 
 #%% How to save file for further processing with Tikz
-#np.savetxt('data_elements.dat', element_list, fmt='%i')
-#np.savetxt('data_coordinates.dat', pos[:, no_of_eigenm].reshape((-1,2)), fmt='%f')
+np.savetxt('data_elements.dat', element_list, fmt='%i')
+np.savetxt('data_coordinates.dat', pos[:, no_of_eigenm].reshape((-1,2)), fmt='%f')
