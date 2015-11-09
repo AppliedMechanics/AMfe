@@ -50,11 +50,8 @@ elements = np.append(elements,[[3,1]],axis=0)
 elements = np.append(elements,[[1,5]],axis=0)
 for i in range(49,65):
     elements = np.append(elements,elements[i-2,:]+[[3,3]],axis=0)
-    
 
-
-
-
+# Plot mesh of bars
 pos_of_nodes = nodes.reshape((-1, 1))    
 plot_bar.plt_mesh(elements, pos_of_nodes, plot_no_of_ele=True, 
                    plot_nodes=True, p_col='b', no_of_fig=1, p_title='Mesh',

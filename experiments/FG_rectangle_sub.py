@@ -6,6 +6,10 @@ Created on Fri Oct 16 14:46:10 2015
 @author: fabian
 """
 
+# IDEE: Substruktur so erzeugen, dass genau das Format wie aus gmsh entsteht,
+# sodass dieses sinnvoll weiterverarbeitet werden kann um mit den Substrukutren
+# zu rechnen 
+
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt

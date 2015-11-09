@@ -186,8 +186,8 @@ plot_mesh_Quad4(element_list, pos[:, no_of_eigenm], plot_no_of_ele=True,
 
 #%% Compute eigenvalues with fixed interface
 disp_fi = sp.sparse.csr_matrix((n_dof_const,20))
-K_ii = K.tocsr()[dof_i,:].tocsr()[:,dof_i]
-M_ii = M.tocsr()[dof_i,:].tocsr()[:,dof_i]
+K_ii = K.tocsc()[dof_i,:].tocsc()[:,dof_i]
+M_ii = M.tocsc()[dof_i,:].tocsc()[:,dof_i]
 lam, phi_i = sp.sparse.linalg.eigsh(K_ii, k=20, M=M_ii, which='SM')
 
 # Sort values in displacement vector
