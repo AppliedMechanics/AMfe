@@ -69,7 +69,9 @@ class MechanicalSystem():
                               'Tri3'  : Tri3(**kwargs),
                               'Tri6'  : Tri6(**kwargs),
                               'Quad4' : Quad4(**kwargs),
-                              'Quad8' : Quad8(**kwargs)}        
+                              'Quad8' : Quad8(**kwargs),
+                              'Bar2Dlumped' : Bar2Dlumped(**kwargs)
+                              }        
         self.T_output = []
         self.u_output = []
         self.element_class_dict = element_class_dict    
@@ -109,7 +111,7 @@ class MechanicalSystem():
         self.assembly_class.preallocate_csr()
 
 
-    def load_mesh_from_csv(self, node_list_csv, element_list_csv, node_dof=2, explicit_node_numbering=False, ele_type ='Tri3'):
+    def load_mesh_from_csv(self, node_list_csv, element_list_csv, node_dof=2, explicit_node_numbering=False, ele_type=False):
         '''
         Loads the mesh from two csv-files containing the node and the element list.
 
@@ -126,6 +128,7 @@ class MechanicalSystem():
         ele_type: str
             Spezifiy elements type of the mesh (e.g. for a Tri-Mesh different
             elements types as Tri3, Tri4, Tri6 can be used)
+            If not spezified value is set to 'False'
 
         Returns
         -------
