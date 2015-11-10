@@ -55,14 +55,25 @@ for i in range(49,65):
 my_mesh_generator = amfe.MeshGenerator()
 my_mesh_generator.nodes = nodes
 my_mesh_generator.elements = elements
-my_mesh_generator.save_mesh('../meshes/benfield_truss/nodes.csv',
-                            '../meshes/benfield_truss/elements.csv')
+my_mesh_generator.save_mesh('./mesh/full_system/nodes.csv',
+                            './mesh/full_system/elements.csv')
+
+
+#%% Building the mechanical system
+
+# Initialize system
+my_system = amfe.MechanicalSystem()
+my_system = amfe.MechanicalSystem(E_modul=1.0, crosssec=1.0, density=1.0,
+                                  mesh_style='Bar')
+# Load mesh
+my_system.load_mesh_from_csv('./mesh/full_system/nodes.csv',
+                             './mesh/full_system/elements.csv')
 
 
 # Plot mesh of bars
 pos_of_nodes = nodes.reshape((-1, 1))    
 plot_bar.plt_mesh(elements, pos_of_nodes, plot_no_of_ele=True, 
-                   plot_nodes=True, p_col='b', no_of_fig=1, p_title='Mesh',
-                   p_col_node='r')   
+                  plot_nodes=True, p_col='b', no_of_fig=1, p_title='Mesh',
+                  p_col_node='r')   
 
 plt.show()

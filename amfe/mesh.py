@@ -138,7 +138,8 @@ class Mesh:
         # Dictionary um an Hand der Anzahl der Knoten des Elements auf den Typ 
         # des Elements zu schließen
         mesh_type_dict = {3: "Tri3",
-                          4: "Quad4"} # Bislang nur 2D-Element aus csv auslesbar
+                          4: "Quad4",
+                          2: "Bar"} # Bislang nur 2D-Element aus csv auslesbar
 
         print('Reading elements from csv...  ', end="")
         self.elements = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
@@ -669,6 +670,8 @@ class MeshGenerator:
                 savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
             elif number_of_nodes == 4:
                 savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + delimiter + 'node_4' + newline)
+            elif number_of_nodes == 2:
+                savefile_elements.write('node_1' + delimiter + 'node_2' + newline)                
             else:
                 print("Hier lief etwas falsch. Anzahl der Knoten pro Element konnte nicht bestimmt werden.")
 

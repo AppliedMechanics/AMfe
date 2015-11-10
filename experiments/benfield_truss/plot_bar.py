@@ -33,7 +33,7 @@ def plt_mesh(elements, coord, plot_no_of_ele=False, plot_nodes=False,
     -------
     None
     '''
-    print('Plotting elements...', end='')
+    print('Plotting elements... ', end='')
     plt.figure(no_of_fig)
 
     # Loop over elements
@@ -59,14 +59,14 @@ def plt_mesh(elements, coord, plot_no_of_ele=False, plot_nodes=False,
     plt.axis('equal')
     plt.title(p_title)
     plt.hold(True)
-    print(' successful!')
+    print('Plot of elements successful!')
 
 
     
     
 def plt_nodes(coord, p_col='b', no_of_fig=1,
                      p_title='Nodes of the mesh'):
-    print('Plotting nodes...', end='')
+    print('Plotting nodes... ', end='')
     plt.figure(no_of_fig)
     plt.plot(coord[0::2], coord[1::2], color=p_col, marker='o', linestyle='')
     for i_nod in range(int(len(coord)/2)):
@@ -75,5 +75,5 @@ def plt_nodes(coord, p_col='b', no_of_fig=1,
     plt.axis('equal')
     plt.title('Nodes of the mesh')
     plt.hold(True)
-    print(' successful!')    
+    print('Plot of nodes successful!')    
     
