@@ -24,6 +24,7 @@ element_mapping_list = [
     ['Quad8',           16, 23,  8, 'Biquadratic rectangle / 8 node second order rectangle'],
     ['straight_line',    1,  3,  2, 'Straight line composed of 2 nodes'],
     ['quadratic_line',   8, 21,  3, 'Quadratic edge/line composed of 3 nodes']
+    # Bars are missing, which are used for simple benfield truss
 ]
 
 
