@@ -51,6 +51,14 @@ elements = np.append(elements,[[1,5]],axis=0)
 for i in range(49,65):
     elements = np.append(elements,elements[i-2,:]+[[3,3]],axis=0)
 
+
+my_mesh_generator = amfe.MeshGenerator()
+my_mesh_generator.nodes = nodes
+my_mesh_generator.elements = elements
+my_mesh_generator.save_mesh('../meshes/benfield_truss/nodes.csv',
+                            '../meshes/benfield_truss/elements.csv')
+
+
 # Plot mesh of bars
 pos_of_nodes = nodes.reshape((-1, 1))    
 plot_bar.plt_mesh(elements, pos_of_nodes, plot_no_of_ele=True, 
