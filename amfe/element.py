@@ -1011,6 +1011,46 @@ class Tet10(Element):
             self.M += scatter_matrix(M_small, 3)
         return self.M
 
+
+
+class Bar2DLumped(Element):
+    '''
+    Bar-Element with 2 nodes and lumped stiffness matrix
+    '''
+    def __init__(self,  E_modul=210E9, density=1E4, crosssec=1.0, **kwargs):
+
+        self.e_modul       = E_modul
+        self.crosssec      = crosssec
+        self.rho           = density
+
+        self.K = np.zeros((12,12))
+        self.f = np.zeros(12)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Quad4_FG(Element):
 
     '''
