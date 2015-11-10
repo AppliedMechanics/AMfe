@@ -98,7 +98,7 @@ class Mesh:
 
 
     def import_csv(self, filename_nodes, filename_elements,
-                   explicit_node_numbering=False):
+                   explicit_node_numbering=False, ele_type='Tri3'):
         '''
         Imports the nodes list and elements list from 2 different csv files.
 
@@ -110,6 +110,9 @@ class Mesh:
             Flag stating, if the nodes are explicitly numbered in the csv-file.
             When set to true, the first column is assumed to have the node numbers
             and is thus ignored.
+        ele_type: str
+            Spezifiy elements type of the mesh (e.g. for a Tri-Mesh different
+            elements types as Tri3, Tri4, Tri6 can be used)            
 
         Returns
         --------
