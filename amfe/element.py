@@ -257,7 +257,7 @@ class Tri3(Element):
     '''
     plane_stress = True
 
-    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4):
+    def __init__(self, E_modul=210E9, poisson_ratio=0.3, element_thickness=1., density=1E4, **kwargs2):
         '''
         Definition of material properties and thickness as they are 2D-Elements.
         '''
