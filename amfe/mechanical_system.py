@@ -109,7 +109,7 @@ class MechanicalSystem():
         self.assembly_class.preallocate_csr()
 
 
-    def load_mesh_from_csv(self, node_list_csv, element_list_csv, node_dof=2, explicit_node_numbering=False):
+    def load_mesh_from_csv(self, node_list_csv, element_list_csv, node_dof=2, explicit_node_numbering=False, ele_type ='Tri3'):
         '''
         Loads the mesh from two csv-files containing the node and the element list.
 
@@ -123,6 +123,9 @@ class MechanicalSystem():
             degree of freedom per node as saved in the csv-file
         explicit_node_numbering : bool, optional
             flag stating, if the node numbers are explcitly numbered in the csv file, i.e. if the first column gives the numbers of the nodes.
+        ele_type: str
+            Spezifiy elements type of the mesh (e.g. for a Tri-Mesh different
+            elements types as Tri3, Tri4, Tri6 can be used)
 
         Returns
         -------
@@ -134,7 +137,7 @@ class MechanicalSystem():
 
         '''
         self.mesh_class = Mesh(node_dof=node_dof)
-        self.mesh_class.import_csv(node_list_csv, element_list_csv, explicit_node_numbering=explicit_node_numbering)
+        self.mesh_class.import_csv(node_list_csv, element_list_csv, explicit_node_numbering=explicit_node_numbering, ele_type=ele_type)
         
         self.node_list = self.mesh_class.nodes.copy()
         self.element_list = self.mesh_class.elements.copy()
