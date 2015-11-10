@@ -98,7 +98,7 @@ class Mesh:
 
 
     def import_csv(self, filename_nodes, filename_elements,
-                   explicit_node_numbering=False, ele_type='Tri3'):
+                   explicit_node_numbering=False, ele_type=False):
         '''
         Imports the nodes list and elements list from 2 different csv files.
 
@@ -112,7 +112,8 @@ class Mesh:
             and is thus ignored.
         ele_type: str
             Spezifiy elements type of the mesh (e.g. for a Tri-Mesh different
-            elements types as Tri3, Tri4, Tri6 can be used)            
+            elements types as Tri3, Tri4, Tri6 can be used)
+            If not spezified value is set to 'False'            
 
         Returns
         --------
@@ -143,7 +144,7 @@ class Mesh:
         # des Elements zu schließen
         mesh_type_dict = {3: "Tri3",
                           4: "Quad4",
-                          2: "Bar"} # Bislang nur 2D-Element aus csv auslesbar
+                          2: "Bar2D"} # Bislang nur 2D-Element aus csv auslesbar
 
         print('Reading elements from csv...  ', end="")
         self.elements = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
@@ -151,13 +152,17 @@ class Mesh:
             self.elements = np.array([self.elements])
         if explicit_node_numbering: # Falls erste Spalte die Elementnummer angibt, wird diese hier abgeschnitten, um nur die Knoten des Elements zu erhalten
             self.elements = self.elements[:,1:]
-        
-        try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
-            (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
-            mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
-        except:
-            print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
-            raise
+
+    
+        if ele_type: # If element type is spezified, use this spezified type
+            mesh_type = ele_type
+        else: # If element type is not spzezified, try to determine element type depending on the number of nodes per element (see default values for different number of nodes per element in 'mesh_type_dict')
+            try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
+                (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
+                mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
+            except:
+                print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
+                raise
 
         print('Element type is {0}...  '.format(mesh_type), end="")
         self.elements_type = [mesh_type for i in self.elements] # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
