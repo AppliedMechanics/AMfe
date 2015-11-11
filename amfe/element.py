@@ -1013,29 +1013,62 @@ class Tet10(Element):
 
 
 
-class Bar2DLumped(Element):
+class Bar2Dlumped(Element):
     '''
     Bar-Element with 2 nodes and lumped stiffness matrix
     '''
     def __init__(self,  E_modul=210E9, density=1E4, crosssec=1.0, **kwargs):
 
-        self.e_modul       = E_modul
+        self.e_modul      = E_modul
         self.crosssec      = crosssec
         self.rho           = density
 
-        self.K = np.zeros((12,12))
-        self.f = np.zeros(12)
+        self.K = np.zeros((4,4))
+        self.M = np.zeros((4,4))        
+        self.f = np.zeros(4)
 
 
+    def _compute_tensors(self, X, u):
+        self._k_and_m_int(X, u)
+        pass
+        
+    def _k_and_m_int(self, X, u):
+
+        X1, Y1, X2, Y2 = X
+        X_mat = X.reshape(-1, 2)        
+        l = np.linalg.norm(X_mat[1,:]-X_mat[0,:])
+
+        # Element stiffnes matrix        
+        k_el_loc = self.e_modul*self.crosssec*l*np.array([[1, -1],
+                                                          [-1, 1]])
+        temp = (X_mat[1,:]-X_mat[0,:])/l
+        A = np.array([[temp[0], temp[1], 0,       0],
+                      [0,       0,       temp[0], temp[1]]])                                                
+        k_el = A.T.dot(k_el_loc.dot(A))                                                  
+                                                              
+        # Element mass matrix        
+        m_el = self.rho*self.crosssec*l/6*np.array([[3, 0, 0, 0],
+                                                    [0, 3, 0, 0],
+                                                    [0, 0, 3, 0],
+                                                    [0, 0, 0, 3]])                                          
+        
+        # Make symmetric (because of round-off errors)
+        self.K = 1/2*(k_el+k_el.T)
+        self.M = 1/2*(m_el+m_el.T)
+        return self.K, self.M
 
 
+    def _k_int(self, X, u):
+        k_el, m_el = self._k_and_m_int(X, u)
+        return k_el
 
+    def _m_int(self, X, u):
+        k_el, m_el = self._k_and_m_int(X, u)
+        return m_el
 
-
-
-
-
-
+    def _f_int(self, X, u):
+        print('The function is not implemented yet...')
+        pass
 
 
 
