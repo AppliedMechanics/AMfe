@@ -248,12 +248,12 @@ class Assembly():
         K_csr = self.C_csr.copy()
         f_glob = np.zeros_like(self.node_coords)
 
-        for i, indices in enumerate(self.global_element_indices):
-            X = self.node_coords[indices]
-            u_local = u[indices]
-            K, f = decorated_matrix_func(X, u_local)
-            f_glob[indices] += f
-            fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
+        for i, indices in enumerate(self.global_element_indices): # Schleife ueber alle Elemente (i - Elementnummer, indices - DOF-Nummern des Elements)
+            X = self.node_coords[indices] # X - zu den DOF-Nummern zugehoerige Koordinaten (Positionen)
+            u_local = u[indices] # Auslesen der localen Elementverschiebungen
+            K, f = decorated_matrix_func(X, u_local) # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
+            f_glob[indices] += f # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
+            fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices) # Einsortieren der lokalen Elementmatrix in die globale Matrix
 
         return K_csr, f_glob
 
