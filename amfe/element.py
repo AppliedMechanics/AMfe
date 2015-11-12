@@ -1039,7 +1039,7 @@ class Bar2Dlumped(Element):
         l = np.linalg.norm(X_mat[1,:]-X_mat[0,:])
 
         # Element stiffnes matrix        
-        k_el_loc = self.e_modul*self.crosssec*l*np.array([[1, -1],
+        k_el_loc = self.e_modul*self.crosssec/l*np.array([[1, -1],
                                                           [-1, 1]])
         temp = (X_mat[1,:]-X_mat[0,:])/l
         A = np.array([[temp[0], temp[1], 0,       0],
@@ -1056,8 +1056,7 @@ class Bar2Dlumped(Element):
         self.K = 1/2*(k_el+k_el.T)
         self.M = 1/2*(m_el+m_el.T)
         return self.K, self.M
-
-
+        
     def _k_int(self, X, u):
         k_el, m_el = self._k_and_m_int(X, u)
         return k_el
@@ -1069,19 +1068,6 @@ class Bar2Dlumped(Element):
     def _f_int(self, X, u):
         print('The function is not implemented yet...')
         pass
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class Quad4_FG(Element):
