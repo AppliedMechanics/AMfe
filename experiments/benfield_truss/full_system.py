@@ -24,7 +24,7 @@ E_modul=1.0
 density=1.0
 A = 1.0
 
-# %%Nodes
+#%%Nodes
 nodes = np.array([[0, 0]])
 nodes = np.append(nodes,[[0,l2]],axis=0)
 nodes = np.append(nodes,[[0,2*l2]],axis=0)
@@ -52,6 +52,7 @@ for i in range(49,65):
     elements = np.append(elements,elements[i-2,:]+[[3,3]],axis=0)
 
 
+# Call mesh_generator to save the mesh as csv-files
 my_mesh_generator = amfe.MeshGenerator(mesh_style='Bar2D')
 my_mesh_generator.nodes = nodes
 my_mesh_generator.elements = elements
@@ -59,23 +60,26 @@ my_mesh_generator.save_mesh('./mesh/full_system/nodes.csv',
                             './mesh/full_system/elements.csv')
 
 
-#%% Building the mechanical system
 
+#%% Building the mechanical system
 # Initialize system
 my_system = amfe.MechanicalSystem(E_modul=1.0, crosssec=1.0, density=1.0)
+
 # Load mesh
 my_system.load_mesh_from_csv('./mesh/full_system/nodes.csv',
                              './mesh/full_system/elements.csv',
                              ele_type = 'Bar2Dlumped')
 
-
-# Dirichlet_boundary conditions
-#my_system.apply_dirichlet_boundaries()
-
-
 # Build mass and stiffness matrix
 M, K = amfe.give_mass_and_stiffness(my_system)
+
+
+#%% Computation of eigenvalues (eigenfrequencies)
 lam, phi_i = sp.sparse.linalg.eigsh(K, k=20, M=M, which='SM')
+
+# Set options to print eigenvalues in convenient format
+np.set_printoptions(precision=20, suppress=True, linewidth=15)
+print(lam)
 
 # Plot mesh of bars
 pos_of_nodes = nodes.reshape((-1, 1))    
@@ -89,3 +93,6 @@ plot_bar.plt_mesh(elements, disp_eigenmodes[:,6], plot_no_of_ele=True,
                   p_col_node='r')
 
 plt.show()
+
+
+
