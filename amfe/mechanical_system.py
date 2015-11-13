@@ -150,6 +150,12 @@ class MechanicalSystem():
         self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
         self.assembly_class.preallocate_csr()
 
+        # Initialize self.b_constraints here,
+        # It does not make sence to call apply_dirichlet_boundaries() if the 
+        # mechanical system has no dirichlet boundaries but self.b_constraints
+        # has to be initialized since an error will occur later if 
+        # self.b_constraints does not exist 
+        self.b_constraints = sp.sparse.eye(self.ndof_global).tocsr()
 
 
     def apply_dirichlet_boundaries(self, dirichlet_boundary_list=[]):
