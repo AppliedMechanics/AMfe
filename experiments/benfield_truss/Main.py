@@ -70,7 +70,7 @@ my_system.load_mesh_from_csv('./mesh/full_system/nodes.csv',
 
 
 # Dirichlet_boundary conditions
-my_system.apply_dirichlet_boundaries()
+#my_system.apply_dirichlet_boundaries()
 
 
 # Build mass and stiffness matrix
