@@ -35,10 +35,13 @@ class DirichletBoundary():
         -----------
 
 
-        Erzeugt die B-Matrix, die die globalen (u_global) Freiheitsgrade mit den beschränkten Freiheitsgraden (u_bound) verbindet:
-
+        Erzeugt die B-Matrix, die die globalen (u_global) Freiheitsgrade (alle defininierten Freiheitsgrade; auch die, welche durch Dirichlet-RB eingeschränkt/fixiert) sind
+        mit den beschränkten Freiheitsgraden (u_bound) verbindet (u_bound sind die noch verbleibenden, freien Freiheitsgrade):
+        
         u_global = B*u_bound
 
+        Liegen keinerlei Randbedinungen vor, ist die B-Matrix eine Einheitsmatrix.        
+        
         Die globalen Freiheitsgrade differieren daher von den Freiheitsgraden des beschränkten Systems;
         Eingabeparameter ist eine Liste mit Dirichlet-Randbedingungen:
         [Master-DOF, [Liste_von_Sklaven-DOFs], Gewichtungsvektor]
