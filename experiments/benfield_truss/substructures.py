@@ -71,6 +71,21 @@ my_mesh_generator.elements = elements
 my_mesh_generator.save_mesh('./mesh/substructures/nodes-sub1-glob.csv',
                             './mesh/substructures/elements-sub1.csv')
                             
+
+#%% Building the mechanical system
+# Initialize system
+my_system = amfe.MechanicalSystem(E_modul=1.0, crosssec=1.0, density=1.0)
+
+# Load mesh
+my_system.load_mesh_from_csv('./mesh/substructures/nodes-sub1-glob.csv',
+                             './mesh/substructures/elements-sub1.csv',
+                             ele_type = 'Bar2Dlumped')
+
+
+# THIS DOES NOT WORK YET
+# Build mass and stiffness matrix
+#M, K = amfe.give_mass_and_stiffness(my_system)
+
                             
                             
                             
@@ -110,3 +125,12 @@ my_mesh_generator.nodes = nodes
 my_mesh_generator.elements = elements
 my_mesh_generator.save_mesh('./mesh/substructures/nodes-sub2-glob.csv',
                             './mesh/substructures/elements-sub2.csv')
+
+#%% Building the mechanical system
+# Initialize system
+my_system = amfe.MechanicalSystem(E_modul=1.0, crosssec=1.0, density=1.0)
+
+# Load mesh
+my_system.load_mesh_from_csv('./mesh/substructures/nodes-sub2-glob.csv',
+                            './mesh/substructures/elements-sub2.csv',
+                             ele_type = 'Bar2Dlumped')
