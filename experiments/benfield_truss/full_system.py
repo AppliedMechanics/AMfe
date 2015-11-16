@@ -1,4 +1,6 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
 """
 Created on Mon Nov  9 09:14:28 2015
 
@@ -52,7 +54,8 @@ for i in range(49,65):
     elements = np.append(elements,elements[i-2,:]+[[3,3]],axis=0)
 
 
-# Call mesh_generator to save the mesh as csv-files
+# Call mesh_generator to save the mesh as csv-files, but use only method 
+# 'save_mesh' to save the mesh of the Benfield truss
 my_mesh_generator = amfe.MeshGenerator(mesh_style='Bar2D')
 my_mesh_generator.nodes = nodes
 my_mesh_generator.elements = elements
@@ -84,13 +87,25 @@ print(lam)
 # Plot mesh of bars
 pos_of_nodes = nodes.reshape((-1, 1))    
 plot_bar.plt_mesh(elements, pos_of_nodes, plot_no_of_ele=False, 
-                  plot_nodes=False, p_col='0.25', no_of_fig=1, p_title='Mesh',
+                  plot_nodes=False, p_col='0.25', no_of_fig=0, p_title='Mesh',
                   p_col_node='r')   
 scale = 20
+# Compute node position of eigenvector mode shapes
 disp_eigenmodes = pos_of_nodes + phi_i*scale
-plot_bar.plt_mesh(elements, disp_eigenmodes[:,6], plot_no_of_ele=True, 
-                  plot_nodes=True, p_col='b', no_of_fig=1, p_title='Eigenmode',
-                  p_col_node='r')
+
+
+# Plot first eigenmodes 
+for no_mode in range(min(10, phi_i.shape[1])):
+    # Plot mesh of bars
+    pos_of_nodes = nodes.reshape((-1, 1))    
+    plot_bar.plt_mesh(elements, pos_of_nodes, plot_no_of_ele=False, 
+                      plot_nodes=False, p_col='0.25', no_of_fig=no_mode+1, p_title='Mesh',
+                      p_col_node='r') 
+    # Plot deformation shape of eigenmode                  
+    plot_bar.plt_mesh(elements, disp_eigenmodes[:,no_mode], plot_no_of_ele=True, 
+                      plot_nodes=True, p_col='b', no_of_fig=no_mode+1, 
+                      p_title='Eigenmode #{:d} (including rigid body modes)'.format(no_mode+1),
+                      p_col_node='r')
 
 plt.show()
 
