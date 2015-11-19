@@ -30,7 +30,6 @@ from amfe.boundary import *
 #   Netz-Einlese-Methode instanziert
 
 
-
 class MechanicalSystem():
     '''
     Mase class for mechanical systems with the goal to black-box the routines
