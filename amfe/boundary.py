@@ -102,7 +102,7 @@ class DirichletBoundary():
 
 
 class NeumannBoundary():
-    '''Class for application of von Neumann coundary conditions. Works a little bit crazy but it's working.
+    '''Class for application of von Neumann boundary conditions. Works a little bit crazy but it's working.
     '''
 
     def __init__(self, ndof_global, neumann_boundary_list):
@@ -222,4 +222,3 @@ if __name__ == '__main__':
     res = np.array([f(t) for t in T])
     from matplotlib import pyplot
     pyplot.plot(T, res[:, 0])
-
