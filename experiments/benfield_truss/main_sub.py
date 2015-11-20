@@ -18,6 +18,7 @@ import amfe
 import plot_bar
 import create_sub
 
+# Noch Probleme bei Substruktur 2!!!, da K-Matrix 5 Null-Eigenwerte hat
 
 np.set_printoptions(precision=7, suppress=True, linewidth=3)
 
@@ -87,10 +88,7 @@ B2 = B2.tocsc()
 L2 = -sp.sparse.identity(6)
 
 
-#%% IN CONSTRUCTION: CRAIG BAMPTON METHODE
-
-
-
+#%% Craig-Bampton Methode
 def assemble_CBsys(substr, no_of_dof_b):
     '''
     Assemblierung von Substrukturen, welche mit Craig-Bampton Methode reduziert
@@ -100,7 +98,7 @@ def assemble_CBsys(substr, no_of_dof_b):
     no_of_dof = no_of_dof_b # Anzahl an Gesamt-boundary-DOF
     counter = no_of_dof_b # Counter fuer assembly
     for i, sub in enumerate(substr): # Bestimme Anzahl an DOF des reduzierten Systems
-        no_of_dof += sub.no_of_modes
+        no_of_dof += sub.no_of_modes_CB
  
     print("no_of_dof = ", no_of_dof)      
     K_CB = sp.sparse.lil_matrix((no_of_dof,no_of_dof)) # Initialize stiffness        
@@ -115,21 +113,21 @@ def assemble_CBsys(substr, no_of_dof_b):
                             + sub.M[np.ix_(sub.dof_b,sub.dof_i)].dot(sub.psi) \
                             + sub.psi.T.dot(sub.M[np.ix_(sub.dof_i,sub.dof_b)]) \
                             + sub.psi.T.dot(sub.M[np.ix_(sub.dof_i,sub.dof_i)].dot(sub.psi))).dot(sub.L)
-        M_CB[0:no_of_dof_b,counter:counter+sub.no_of_modes] = \
+        M_CB[0:no_of_dof_b,counter:counter+sub.no_of_modes_CB] = \
             sub.L.T.dot(sub.M[np.ix_(sub.dof_b,sub.dof_i)] \
                         + sub.psi.T.dot(sub.M[np.ix_(sub.dof_i,sub.dof_i)])).dot(sub.phi)
-        M_CB[counter:counter+sub.no_of_modes,0:no_of_dof_b] = \
-            M_CB[0:no_of_dof_b,counter:counter+sub.no_of_modes].T
-        M_CB[counter:counter+sub.no_of_modes,counter:counter+sub.no_of_modes] = \
-            sp.sparse.identity(sub.no_of_modes)
+        M_CB[counter:counter+sub.no_of_modes_CB,0:no_of_dof_b] = \
+            M_CB[0:no_of_dof_b,counter:counter+sub.no_of_modes_CB].T
+        M_CB[counter:counter+sub.no_of_modes_CB,counter:counter+sub.no_of_modes_CB] = \
+            sp.sparse.identity(sub.no_of_modes_CB)
 
         # Stiffness matrix        
         K_CB[0:no_of_dof_b,0:no_of_dof_b] = K_CB[0:no_of_dof_b,0:no_of_dof_b] \
             + sub.L.T.dot(sub.K[np.ix_(sub.dof_b,sub.dof_b)] \
                         + sub.K[np.ix_(sub.dof_b,sub.dof_i)].dot(sub.psi)).dot(sub.L)
-        K_CB[counter:counter+sub.no_of_modes,counter:counter+sub.no_of_modes] = \
+        K_CB[counter:counter+sub.no_of_modes_CB,counter:counter+sub.no_of_modes_CB] = \
             np.diag(sub.Om2CB) 
-        counter = counter + sub.no_of_modes
+        counter = counter + sub.no_of_modes_CB
            
     return K_CB.tocsc(), M_CB.tocsc()        
         
@@ -152,7 +150,7 @@ class Substructure():
     def set_L(self, L):
         self.L = L
        
-    def CraigBampton(self,n_modes=6):
+    def CraigBampton(self, n_modes=6):
         # Eigenmodes
         self.Om2CB, self.phi = sp.sparse.linalg.eigsh(self.K[np.ix_(self.dof_i,self.dof_i)],
                             k=n_modes, M=self.M[np.ix_(self.dof_i,self.dof_i)],
@@ -161,9 +159,12 @@ class Substructure():
         self.psi = sp.sparse.linalg.spsolve(self.K[np.ix_(self.dof_i,self.dof_i)], 
                                               -self.K[np.ix_(self.dof_i,self.dof_b)])   
         # Set number of modes
-        self.no_of_modes = n_modes            
+        self.no_of_modes_CB = n_modes            
         
-        
+    
+
+
+
 
 substructure1 = Substructure(K1, M1, dof_i1, dof_b1)
 substructure2 = Substructure(K2, M2, dof_i2, dof_b2)
@@ -174,8 +175,8 @@ substructure2.set_B(B2)
 substructure1.set_L(L1)
 substructure2.set_L(L2)
 
-n_modes1 = 30-1
-n_modes2 = 24-1
+n_modes1 = 10
+n_modes2 = 10
 
 
 substructure1.CraigBampton(n_modes=n_modes1)
@@ -188,18 +189,15 @@ substr_list =  [substructure1, substructure2]
 K_CB, M_CB = assemble_CBsys(substr_list, no_of_dof_b = 6)
 
 
-Om2glo, phi = sp.sparse.linalg.eigsh(K_CB, k=16, M=M_CB, which='SM')
+Om2glo, phi = sp.sparse.linalg.eigsh(K_CB, k=15, M=M_CB, which='SM')
 print("Eigenfrequenzen des reduzierten Gesamtsystems: \n", Om2glo)
 
 
 
 
-
-
-
-
+#%% Plotausgabe
 pos_of_nodes1 = my_system1.node_list.reshape((-1, 1))
-disp_fix1 = np.zeros((dof_1.shape[0],substructure1.no_of_modes))
+disp_fix1 = np.zeros((dof_1.shape[0],substructure1.no_of_modes_CB))
 disp_fix1[dof_i1,:] = substructure1.phi
 scale = 10
 disp1 = pos_of_nodes1 + scale*disp_fix1
@@ -210,7 +208,7 @@ plot_bar.plt_mesh(my_system1.element_list, disp1[:,3], plot_no_of_ele=True,
 
 
 pos_of_nodes2 = my_system2.node_list.reshape((-1, 1))
-disp_fix2 = np.zeros((dof_2.shape[0],substructure2.no_of_modes))
+disp_fix2 = np.zeros((dof_2.shape[0],substructure2.no_of_modes_CB))
 disp_fix2[dof_i2,:] = substructure2.phi
 scale = 10
 disp2 = pos_of_nodes2 + scale*disp_fix2
