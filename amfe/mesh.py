@@ -237,8 +237,6 @@ class Mesh:
         list_imported_elements    = data_geometry[i_elements_start : i_elements_end]
 
         # Konvertiere die in den Listen gespeicherten Strings in Integer/Float
-        for j in range(len(list_imported_mesh_format)):
-            list_imported_mesh_format[j] = [float(x) for x in list_imported_mesh_format[j].split()]
         for j in range(len(list_imported_nodes)):
             list_imported_nodes[j] = [float(x) for x in list_imported_nodes[j].split()]
         for j in range(len(list_imported_elements)):
