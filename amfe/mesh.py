@@ -8,7 +8,6 @@ Created on Fri Mar 20 15:25:24 2015
 import numpy as np
 import scipy as sp
 import os
-import sys
 
 
 # Element mapping is described here. If a new element is implemented, the
@@ -23,7 +22,8 @@ element_mapping_list = [
     ['Quad4',            3,  9,  4, 'Bilinear rectangle / 4 node first order rectangle'],
     ['Quad8',           16, 23,  8, 'Biquadratic rectangle / 8 node second order rectangle'],
     ['straight_line',    1,  3,  2, 'Straight line composed of 2 nodes'],
-    ['quadratic_line',   8, 21,  3, 'Quadratic edge/line composed of 3 nodes']
+    ['quadratic_line',   8, 21,  3, 'Quadratic edge/line composed of 3 nodes'],
+    ['point',       15, np.NAN,  1, 'Single Point'],    
     # Bars are missing, which are used for simple benfield truss
 ]
 
