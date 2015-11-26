@@ -27,7 +27,7 @@ f2py/install_fortran_routines.sh
 in order to get the full speed! 
 ''')
 
-fortran_use = False
+#fortran_use = False
 
 
 def scatter_matrix(Mat, ndim):
