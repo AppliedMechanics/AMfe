@@ -7,6 +7,7 @@ Created on Fri Mar 20 15:25:24 2015
 
 import numpy as np
 import scipy as sp
+import pandas as pd
 import os
 
 
@@ -76,7 +77,7 @@ class Mesh:
     -
     '''
 
-    def __init__(self,  node_dof=2):
+    def __init__(self):
         self.nodes               = []
         self.elements            = []
         self.elements_type       = []
@@ -84,8 +85,7 @@ class Mesh:
         # the displacements; They are stored as a list of numpy-arrays with shape (ndof, node_dof):
         self.u                   = None
         self.timesteps           = []
-        self.node_dof            = node_dof
-
+        self.node_dof           = 0
 
     def _update_mesh_props(self):
         '''
@@ -169,8 +169,165 @@ class Mesh:
         self._update_mesh_props()
         print('Reading elements successful.')
 
+    def import_msh(self, filename, phys_group=-1):
+        '''
+        Import a gmsh-mesh. 
+        
+        Parameters
+        ----------
+        filename : string
+            filename of the .msh-file
+        phys_group : int
+            number of physical group defined in gmsh, which should be 
+            processed
+            
+        Returns
+        -------
+        None
+        
+        Notes
+        -----
+        
+        
+        '''
+        tag_format_start   = "$MeshFormat"
+        tag_format_end     = "$EndMeshFormat"
+        tag_nodes_start    = "$Nodes"
+        tag_nodes_end      = "$EndNodes"
+        tag_elements_start = "$Elements"
+        tag_elements_end   = "$EndElements"
+    
 
-    def import_msh(self, filename, mesh_3d=False):
+        self.nodes               = []
+        self.elements            = []
+        self.elements_type       = []
+        self.elements_properties = []
+
+        print('\n*************************************************************')
+        print('Loading gmsh-mesh from', filename)
+        
+        with open(filename, 'r') as infile:
+            data_geometry = infile.read().splitlines()
+        
+        for s in data_geometry:
+            if s == tag_format_start: # Start Formatliste
+                i_format_start   = data_geometry.index(s) + 1
+            elif s == tag_format_end: # Ende Formatliste
+                i_format_end     = data_geometry.index(s)
+            elif s == tag_nodes_start: # Start Knotenliste
+                i_nodes_start    = data_geometry.index(s) + 2
+                n_nodes          = int(data_geometry[i_nodes_start-1])
+            elif s == tag_nodes_end: # Ende Knotenliste
+                i_nodes_end      = data_geometry.index(s)
+            elif s == tag_elements_start: # Start Elementliste
+                i_elements_start = data_geometry.index(s) + 2
+                n_elements       = int(data_geometry[i_elements_start-1])
+            elif s == tag_elements_end: # Ende Elementliste
+                i_elements_end   = data_geometry.index(s)
+        
+        # Check inconsistent dimensions
+        if (i_nodes_end-i_nodes_start)!=n_nodes \
+            or (i_elements_end-i_elements_start)!= n_elements: 
+            raise ValueError(
+            '''Error while processing the file! Dimensions are not consistent.''')
+        
+        # extract data from file to lists
+        list_imported_mesh_format = data_geometry[i_format_start   : i_format_end]
+        list_imported_nodes       = data_geometry[i_nodes_start    : i_nodes_end]
+        list_imported_elements    = data_geometry[i_elements_start : i_elements_end]
+        
+        # conversion of the read strings to integer and floats
+        for j in range(len(list_imported_mesh_format)):
+            list_imported_mesh_format[j] = [float(x) for x in list_imported_mesh_format[j].split()]
+        for j in range(len(list_imported_nodes)):
+            list_imported_nodes[j] = [float(x) for x in list_imported_nodes[j].split()]
+        for j in range(len(list_imported_elements)):
+            list_imported_elements[j] = [int(x) for x in list_imported_elements[j].split()]
+        
+        # Construct Pandas Dataframe for the elements (self.el_df and df for shorter code)
+        self.el_df = df = pd.DataFrame(list_imported_elements)
+        df.rename(copy=False, inplace=True, 
+                 columns={0 : 'idx_gmsh', 
+                          1 : 'el_type', 
+                          2 : 'no_of_tags', 
+                          3 : 'phys_group', 
+                          4 : 'geom_entity'})
+        
+        # determine the index, where the nodes of the element start in the dataframe 
+        if len(df[df['no_of_tags'] != 2]) == 0:
+            node_idx = 5
+        elif len(df[df['no_of_tags'] != 4]) == 0:
+            df.rename(copy=False, inplace=True, 
+                 columns={5 : 'no_of_mesh_partitions', 6 : 'mesh_partition'})
+        else:
+            raise('''The type of mesh is not supported yet. 
+        Either you have a corrupted .msh-file or you have a too 
+        complicated mesh partition structure.''')
+        
+        # correct the issue wiht gmsh index starting at 1 and amfe index starting with 0
+        df.iloc[:, node_idx:] -= 1
+        
+        # change the el_type to the amfe convention
+        df['el_type'] = df.el_type.map(gmsh2amfe)
+        
+        # Handling the physical groups 
+        all_physical_groups = pd.unique(df.phys_group)
+        
+        # make a dictionary with the nodes of every physical group
+        self.boundary_dict = nodes_phys_group = {}
+        for idx in all_physical_groups:
+            gr_nodes = np.array([], dtype=int)
+            # pick the elements corresponding to the current physical group from table
+            df_phys_group = df[df.phys_group == idx] 
+            # assemble all nodes to one huge array
+            for series in df_phys_group.iloc[:, node_idx:]:
+                gr_nodes = np.append(gr_nodes, df_phys_group[series].unique())
+            # make them unique, remove nan (resulting from non-existing entries in pandas)
+            # cast and sort the array and put into dict
+            gr_nodes = pd.unique(gr_nodes)
+            gr_nodes = gr_nodes[np.isfinite(gr_nodes)] # remove nan from non-existing entries
+            gr_nodes = np.array(gr_nodes, dtype=int) # recast to int as somewhere a float is casted
+            gr_nodes.sort()
+            nodes_phys_group[idx] = gr_nodes
+        
+        # printing some information regarding the physical groups
+        print('The loaded mesh contains', len(all_physical_groups), 'physical groups:')
+        for i in all_physical_groups:
+            print('\nPhysical group', i, ':')
+            print('Number of Nodes:', len(nodes_phys_group[i]))
+            print('Number of Elements:', len(df[df.phys_group == i]))
+            print('Element types appearing in this group:', pd.unique(df[df.phys_group == i].el_type))
+        
+        # asking for a physical group to be chosen, when the no valid group is given
+        while phys_group not in all_physical_groups:
+            print('\nNo valid physical group is given.\n(Given physical group is', phys_group, ')')
+            phys_group = int(input('Please choose a physical group to be used as mesh: '))
+        
+        elements_df = df[df.phys_group == phys_group]
+        self.el_type = elements_df.el_type.iloc[0]
+        self.elements = np.array(
+            elements_df.iloc[:, node_idx:node_idx + amfe2no_of_nodes[self.el_type]], dtype=int)
+        
+        # Check, if the problem is 2d or 3d and adjust the dimension of the nodes
+        if self.el_type in element_2d_set:
+            self.node_dof = 2
+        elif self.el_type in element_3d_set:
+            self.node_dof = 3
+        else:
+            raise Exception('The Element of the mesh is not in the set of supported elements.')
+        
+        # fill the nodes of the selected physical group to the array
+        self.nodes = np.array(list_imported_nodes)[:,1:1+self.node_dof]
+
+        self.elements_type = elements_df['el_type'].values
+        self._update_mesh_props()
+        
+        print('\nMesh sucessfully imported. \nNumber of nodes in chosen mesh:', len(nodes_phys_group[phys_group]))
+        print('*************************************************************')
+        
+        
+        
+    def import_msh_old(self, filename, mesh_3d=False):
         """
         Import the mesh file from gmsh.
 
@@ -200,7 +357,7 @@ class Mesh:
         tag_nodes_end      = "$EndNodes"
         tag_elements_start = "$Elements"
         tag_elements_end   = "$EndElements"
-
+    
 
         self.nodes               = []
         self.elements            = []
@@ -337,13 +494,11 @@ class Mesh:
         '''
         Print the information of the boundary stuff
         '''
-        print('List boundary nodes sorted by the boundary number. \n\
-                Take care: The lines start indexing with 0, gmsh does this with 1.\n')
-        for i, line in enumerate(self.boundary_list):
-            print('Boundary', i,
-                  '\n(gmsh-Key:', self.amfe2gmsh_boundary_dict[i],
-                  '/ index in boundary_list:', i, ')')
-            print(line, '\n')
+        print('List boundary nodes sorted by the boundary number.')
+        for i in self.boundary_dict:
+            print('Boundary (physical group)', i,
+                  'contains the following', len(self.boundary_dict[i]), 
+                  ' nodes:\n', self.boundary_dict[i])
 
     def set_displacement(self, u):
         '''
