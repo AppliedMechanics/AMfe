@@ -38,7 +38,7 @@ boundary_3d_set = {'straight_line', 'quadratic_line',
                    'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8'}
 
 #
-# Starting from here everything's working automatically
+# Building the conversion dicts from the element_mapping_list
 #
 gmsh2amfe        = dict([])
 amfe2gmsh        = dict([])
@@ -550,13 +550,6 @@ class Mesh:
     def set_nodal_variable_with_time(self, variable_array, variable_name, timesteps):
         '''
         Sets the nodal variables with the time history
-        '''
-        # TODO
-        pass
-
-    def set_element_variable_with_time(self, variable_array, variable_name, timesteps):
-        '''
-        Sets the element variables with the time history
         '''
         # TODO
         pass
