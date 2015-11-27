@@ -3,53 +3,54 @@ AMfe - Finite Element Research Code at the Chair of Applied Mechanics
 
 (c) 2015 Lehrstuhl für Angewandte Mechanik, Technische Universität München
 
-Dieser FE-Forschungscode wird von einem Teil der Numerik-Arbeitsgruppe entwickelt, gewartet und angewendet. 
+This Finite Element Research code is developed, maintained and used by a part of the numerics group of AM. 
 
 
-Übersicht: 
+Overview: 
 ----------
-1.  [Dokumentation](#1-dokumentation)
-2.  [Fortran-Routinen](#2-fortran-routinen)
-3.  [Hinweise](#3-hinweise)
+1.  [Documentation](#1-documentation)
+2.  [Fortran-Routines](#2-fortran-routines)
+3.  [Hints](#3-hints)
 
 
-1. Dokumentation
+1. Documentation
 ----------------
-Weitere Dokumentationen zu diesem Code sind im Ordner `docs/` zu finden.
-Um die Dokumentation zu bauen, müssen nachfolgende Softwarepakete installiert sein:
+Further documentation to this code is in the folder `docs/`.
+For building the documentation, the following software packages have to be installed:
 
-   - Python Version 3.4 oder höher
-   - Python-Paket sphinx 1.3 oder höher (muss evtl. mit pip3 installiert werden). Version 1.2 funktioniert leider nicht.
-   - Python-Paket numpydoc
+   - Python version 3.4 or higher
+   - Python package sphinx 1.3 oder higher (potentially has to be installed using pip3). Version 1.2 does not work!
+   - Python-package numpydoc
 
-Die Dokumentation kann gebaut werden, wenn
+This documentation can be built with entering 
 ```bash
 make html
 ```
-im Ordner `docs/` ausgeführt wird.
+to the console in folder `docs/`.
    
 
-2. Fortran-Routinen
+2. Fortran-Routines
 -------------------
-Um die Fortran-Routinen (für die Assemblierung und die Elemente) zu nutzen, muss das Skript `install_fortran_routines.sh` im Ordner `f2py/` ausgeführt werden.
-Hierzu ist es wichtig, dass die Fortran Compiler installiert sind (z.B. `gfortran`, `gfortran-4.8`). 
+In order to use the fast Fortran routines, which are used within the assembly process,
+the scirpt `install_fortran_routines.sh` in folder `f2py/` has to be executed.
+A working Fortan compiler (e.g. `gfortran`, `gfortran-4.8`) has to be installed. 
 
    
-3. Hinweise
+3. Hints
 -----------
 
 ### Sphinx:
 
-`sphinx` muss für `pyhton3` installiert sein. Es kann sein, dass `sphinx` automatisch für `python2` installiert wurde. 
-Unter `python3` kann in der Konsole folgendermaßen geprüft werden, welche `sphinx`-Version installiert ist:
+`sphinx` has to be installed for `pyhton3`. Maybe, `sphinx` was automatically intalled for `python2`. 
+Using `python3`, one can test which `sphinx`-version is installed:
 ```python
 python3
 >>> import sphinx
 >>> sphinx.__version__
 ```
-Hier sollte mindestens `'1.3.1'` ausgegeben werden.
+The version shuld be at least `'1.3.1'`.
 
 
 ### Spyder:
 
-Empfohlen wir die Entwicklungsumgebung `spyder3` für `python3`.
+For use within the code, the Integrated Development Environment `spyder3` for `python3` is recommended.

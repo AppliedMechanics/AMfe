@@ -340,7 +340,7 @@ class MechanicalSystem():
 class ReducedSystem(MechanicalSystem):
     '''
     Class for reduced systems.
-    It is directyl inherited from MechanicalSystem.
+    It is directly inherited from MechanicalSystem.
     Provides the interface for an integration scheme and so on where a basis vector is to be chosen...
 
 
