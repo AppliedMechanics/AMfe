@@ -13,8 +13,6 @@ import scipy as sp
 from scipy import sparse
 from scipy import linalg
 
-import multiprocessing as mp
-from multiprocessing import Pool
 
 fortran_use = False
 try:
@@ -120,7 +118,8 @@ def compute_csr_assembly_indices(global_element_indices, indptr, indices):
             for k in range(dofs_per_element):
                 row_idx = global_element_indices[i,j]
                 col_idx = global_element_indices[i,k]
-                matrix_assembly_indices[i, j, k] = get_index_of_csr_data(row_idx, col_idx, indptr, indices)
+                matrix_assembly_indices[i, j, k] = \
+                    get_index_of_csr_data(row_idx, col_idx, indptr, indices)
     return matrix_assembly_indices
 
 
@@ -130,14 +129,15 @@ if fortran_use:
     '''
     get_index_of_csr_data = amfe.f90_assembly.get_index_of_csr_data
     fill_csr_matrix = amfe.f90_assembly.fill_csr_matrix
-    pass
+
 
 
 class Assembly():
     '''
     Class for the more fancy assembly of meshes with non-heterogeneous elements.
     '''
-    def __init__(self, mesh, element_class_dict): # element_class_dict enthaelt die Elementtypen, welche im Modul 'mechanical_system' definiert werden
+    def __init__(self, mesh, element_class_dict): # element_class_dict enthaelt 
+    # die Elementtypen, welche im Modul 'mechanical_system' definiert werden
         '''
         Parameters
         ----
@@ -231,11 +231,11 @@ class Assembly():
         ----------
 
         u : ndarray
-            displacement array
+            global displacement array
         decorated_matrix_func : function
             function which works like
 
-            K, f = func(X_local, u_local)
+            K_local, f_local = func(X_local, u_local)
 
         Returns
         -------
