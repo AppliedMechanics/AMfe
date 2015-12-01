@@ -202,6 +202,7 @@ class Mesh:
         self.elements            = []
         self.elements_type       = []
         self.elements_properties = []
+        self.phys_goup           = phys_group
 
         print('\n*************************************************************')
         print('Loading gmsh-mesh from', filename)
