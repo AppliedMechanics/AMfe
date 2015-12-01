@@ -121,13 +121,13 @@ class MooneyRivlin(HyperelasticMaterial):
         J3I3 = 1/(2*np.sqrt(I3))
 
         I1E = 2*np.array([1, 1, 1, 0, 0, 0])
-        I2E = 2*np.array([C22 + C33, C11 + C33, C11 + C22, -2*C23, -2*C13, -2*C12])
+        I2E = 2*np.array([C22 + C33, C11 + C33, C11 + C22, -C23, -C13, -C12])
         I3E = 2*np.array([C22*C33 - C23**2, 
                           C11*C33 - C13**2, 
                           C11*C22 - C12**2, 
-                          -2*C11*C23 + 2*C12*C13, 
-                          2*C12*C23 - 2*C13*C22, 
-                          -2*C12*C33 + 2*C13*C23])
+                          -C11*C23 + C12*C13, 
+                          C12*C23 - C13*C22, 
+                          -C12*C33 + C13*C23])
         
         J1E = J1I1*I1E + J1I3*I3E
         J2E = J2I2*I2E + J2I3*I3E
@@ -145,20 +145,22 @@ class MooneyRivlin(HyperelasticMaterial):
         J2I3I3 = 10*I2/(9*I3**(8/3))
         J3I3I3 = -1/(4*I3**(3/2))
 
-        I2EE = np.array([   [0, 2, 2,  0,  0,  0],
-                            [2, 0, 2,  0,  0,  0],
-                            [2, 2, 0,  0,  0,  0],
-                            [0, 0, 0, -4,  0,  0],
-                            [0, 0, 0,  0, -4,  0],
-                            [0, 0, 0,  0,  0, -4]])
+        I2EE = np.array([   [0, 4, 4,  0,  0,  0],
+                            [4, 0, 4,  0,  0,  0],
+                            [4, 4, 0,  0,  0,  0],
+                            [0, 0, 0, -2,  0,  0],
+                            [0, 0, 0,  0, -2,  0],
+                            [0, 0, 0,  0,  0, -2]])
                             
-        I3EE = np.array([   [     0,  2*C33,  2*C22, -4*C23,      0,      0],
-                            [ 2*C33,      0,  2*C11,      0, -4*C13,      0],
-                            [ 2*C22,  2*C11,      0,      0,      0, -4*C12],
-                            [-4*C23,      0,      0, -4*C11,  4*C12,  4*C13],
-                            [     0, -4*C13,      0,  4*C12, -4*C22,  4*C23],
-                            [     0,      0, -4*C12,  4*C13,  4*C23, -4*C33]])
+        I3EE = np.array([   [     0,  4*C33,  4*C22, -4*C23,      0,      0],
+                            [ 4*C33,      0,  4*C11,      0, -4*C13,      0],
+                            [ 4*C22,  4*C11,      0,      0,      0, -4*C12],
+                            [-4*C23,      0,      0, -2*C11,  2*C12,  2*C13],
+                            [     0, -4*C13,      0,  2*C12, -2*C22,  2*C23],
+                            [     0,      0, -4*C12,  2*C13,  2*C23, -2*C33]])
 
         J1EE = J1I1I3*(I1E.T.dot(I3E) + I3E.T.dot(I1E)) + J1I3I3*I3E.T.dot(I3E) + J1I3*I3EE        
-#        C_SE = 
-        return S, S_v, J1EE
+        J2EE = J2I2I3*(I2E.T.dot(I3E) + I3E.T.dot(I2E)) + J2I3I3*I3E.T.dot(I3E) + J2I2*I2EE + J2I3*I3EE
+        J3EE = J3I3I3*(I3E.T.dot(I3E)) + J3I3*I3EE
+        C_SE = self.A10*J1EE + self.A01*J2EE + self.kappa*(J3E.T.dot(J3E)) + self.kappa*(J3-1)*J3EE
+        return S, S_v, C_SE
