@@ -138,13 +138,6 @@ class MooneyRivlin(HyperelasticMaterial):
                       [S_v[5], S_v[1], S_v[3],],
                       [S_v[4], S_v[3], S_v[2],]])
         
-        # second derivatives
-        J1I1I3 = -1/(3*I3**(4/3))
-        J1I3I3 = 4*I1/(9*I3**(7/3))
-        J2I2I3 = -2/(3*I3**(5/3))
-        J2I3I3 = 10*I2/(9*I3**(8/3))
-        J3I3I3 = -1/(4*I3**(3/2))
-
         I2EE = np.array([   [0, 4, 4,  0,  0,  0],
                             [4, 0, 4,  0,  0,  0],
                             [4, 4, 0,  0,  0,  0],
@@ -159,8 +152,25 @@ class MooneyRivlin(HyperelasticMaterial):
                             [     0, -4*C13,      0,  2*C12, -2*C22,  2*C23],
                             [     0,      0, -4*C12,  2*C13,  2*C23, -2*C33]])
 
-        J1EE = J1I1I3*(I1E.T.dot(I3E) + I3E.T.dot(I1E)) + J1I3I3*I3E.T.dot(I3E) + J1I3*I3EE        
-        J2EE = J2I2I3*(I2E.T.dot(I3E) + I3E.T.dot(I2E)) + J2I3I3*I3E.T.dot(I3E) + J2I2*I2EE + J2I3*I3EE
-        J3EE = J3I3I3*(I3E.T.dot(I3E)) + J3I3*I3EE
+        # second derivatives
+        J1I1I3 = -1/(3*I3**(4/3))
+        J1I3I3 = 4*I1/(9*I3**(7/3))
+        J2I2I3 = -2/(3*I3**(5/3))
+        J2I3I3 = 10*I2/(9*I3**(8/3))
+        J3I3I3 = -1/(4*I3**(3/2))
+
+        J1EE_old = J1I1I3*(np.outer(I1E, I3E) + np.outer(I3E, I1E)) + J1I3I3*I3E.T.dot(I3E) + J1I3*I3EE        
+        J2EE_old = J2I2I3*(I2E.T.dot(I3E) + I3E.T.dot(I2E)) + J2I3I3*I3E.T.dot(I3E) + J2I2*I2EE + J2I3*I3EE
+        J3EE_old = J3I3I3*(I3E.T.dot(I3E)) + J3I3*I3EE
+        
+        J3J3J3 = -1/np.sqrt(I3)
+        J2J3J3 = 8*I2/(9*I3**(5/3))
+        J2J2J3 = - 4/(3*np.sqrt(I3))
+        J1J3J3 = 8*I1/(9*I3**(4/3))
+        J1J1J3 = - 2/(3*np.sqrt(I3))
+        
+        J1EE = J1J1J3*(np.outer(J1E, J3E) + np.outer(J3E, J1E)) + J1J3J3*np.outer(J3E, J3E) + J1I3*I3EE  
+        J2EE = J2J2J3*(np.outer(J2E, J3E) + np.outer(J3E, J2E)) + J2J3J3*np.outer(J3E, J3E) + J2I2*I2EE + J2I3*I3EE
+        J3EE = J3J3J3*(np.outer(J3E,J3E)) + J3I3*I3EE
         C_SE = self.A10*J1EE + self.A01*J2EE + self.kappa*(J3E.T.dot(J3E)) + self.kappa*(J3-1)*J3EE
         return S, S_v, C_SE
