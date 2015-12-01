@@ -34,7 +34,7 @@ def scatter_matrix(Mat, ndim):
     '''
     Scatter the symmetric (geometric stiffness) matrix to all dofs.
 
-    What is basically done is to perform the kron(Mat, eye(ndof))
+    What is basically done is to perform the kron(Mat, eye(ndim))
 
     Parameters
     ----------
@@ -381,8 +381,12 @@ class Tri6(Element):
         w2 = 0.1259391805
 
         self.gauss_points5 = ((1/3, 1/3, 1/3, 0.225),
-              (alpha1, beta1, beta1, w1), (beta1, alpha1, beta1, w1), (beta1, beta1, alpha1, w1),
-              (alpha2, beta2, beta2, w2), (beta2, alpha2, beta2, w2), (beta2, beta2, alpha2, w2))
+                              (alpha1, beta1, beta1, w1), 
+                              (beta1, alpha1, beta1, w1), 
+                              (beta1, beta1, alpha1, w1),
+                              (alpha2, beta2, beta2, w2),
+                              (beta2, alpha2, beta2, w2),
+                              (beta2, beta2, alpha2, w2))
 
 
 
