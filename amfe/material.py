@@ -58,7 +58,25 @@ class KirchhoffMaterial(HyperelasticMaterial):
     
     def S_Sv_and_C(self, E):
         '''
-        Compute 2nd Piola Kirchhoff stress and tangential stress-strain relationship. 
+        Compute 2nd Piola Kirchhoff stress and tangential stress-strain 
+        relationship. 
+        
+        Parameters
+        ----------
+        E : ndarray
+            Green-Lagrange strain tensor, shape: (3,3)
+        
+        Returns
+        -------
+        S : ndarray
+            2nd Piola Kirchhoff stress tensor in matrix representation, 
+            shape: (3,3)
+        Sv : ndarray
+            2nd Piola Kirchhoff stress tensor in voigt notation, shape: (6,)
+        C_SE : ndarray
+            tangent moduli between Green-Lagrange strain tensor and 2nd Piola
+            Kirchhoff stress tensor, shape (6,6)
+        
         '''
         E_v = np.array([  E[0,0],   E[1,1],   E[2,2],
                         2*E[1,2], 2*E[0,2], 2*E[0,1]])
@@ -70,7 +88,29 @@ class KirchhoffMaterial(HyperelasticMaterial):
 
     def S_Sv_and_C_2d(self, E):
         '''
-        Compute 2nd Piola Kirchhoff stress and tangential stress-strain relationship for 2D-Problems. 
+        Compute 2nd Piola Kirchhoff stress and tangential stress-strain 
+        relationship for 2D-Problems. 
+        
+        Parameters
+        ----------
+        E : ndarray
+            Green-Lagrange strain tensor, shape: (2,2)
+        
+        Returns
+        -------
+        S : ndarray
+            2nd Piola Kirchhoff stress tensor in matrix representation, 
+            shape: (2,2)
+        Sv : ndarray
+            2nd Piola Kirchhoff stress tensor in voigt notation, shape: (3,)
+        C_SE : ndarray
+            tangent moduli between Green-Lagrange strain tensor and 2nd Piola
+            Kirchhoff stress tensor, shape (3,3)
+            
+        Note
+        ----
+        The result is dependent on the the option plane stress or plane strain. 
+        Take care to choose the right option! 
         '''
         E_v = np.array([E[0,0], E[1,1], 2*E[0,1]])
         S_v = self.C_SE_2d.dot(E_v)
@@ -86,7 +126,7 @@ class NeoHookean(HyperelasticMaterial):
 
 class MooneyRivlin(HyperelasticMaterial):
     '''
-    
+    Mooney-Rivlin hyperelastic material 
     
     '''
     def __init__(self, A10, A01, kappa, plane_stress=True):
@@ -99,6 +139,9 @@ class MooneyRivlin(HyperelasticMaterial):
         '''
         Compute S, S in Voigt notation and material stiffness 
         '''
+        A10 = self.A10
+        A01 = self.A01
+        kappa = self.kappa
         C = 2*E + np.eye(3)
         C11 = C[0,0]
         C22 = C[1,1]
@@ -110,8 +153,8 @@ class MooneyRivlin(HyperelasticMaterial):
         I1  = C11 + C22 + C33
         I2  = C11*C22 + C11*C33 - C12**2 - C13**2 + C22*C33 - C23**2
         I3  = C11*C22*C33 - C11*C23**2 - C12**2*C33 + 2*C12*C13*C23 - C13**2*C22
-        J1  = I1*I3**(-1/3)
-        J2  = I2*I3**(-2/3)
+        # J1  = I1*I3**(-1/3)
+        # J2  = I2*I3**(-2/3)
         J3  = np.sqrt(I3)
         # derivatives
         J1I1 = I3**(-1/3)
@@ -133,7 +176,7 @@ class MooneyRivlin(HyperelasticMaterial):
         J2E = J2I2*I2E + J2I3*I3E
         J3E = J3I3*I3E
         # stresses
-        S_v = self.A10*J1E + self.A01*J2E + self.kappa*(J3 - 1)*J3E
+        S_v = A10*J1E + A01*J2E + kappa*(J3 - 1)*J3E
         S = np.array([[S_v[0], S_v[5], S_v[4],],
                       [S_v[5], S_v[1], S_v[3],],
                       [S_v[4], S_v[3], S_v[2],]])
@@ -159,18 +202,27 @@ class MooneyRivlin(HyperelasticMaterial):
         J2I3I3 = 10*I2/(9*I3**(8/3))
         J3I3I3 = -1/(4*I3**(3/2))
 
-        J1EE_old = J1I1I3*(np.outer(I1E, I3E) + np.outer(I3E, I1E)) + J1I3I3*I3E.T.dot(I3E) + J1I3*I3EE        
-        J2EE_old = J2I2I3*(I2E.T.dot(I3E) + I3E.T.dot(I2E)) + J2I3I3*I3E.T.dot(I3E) + J2I2*I2EE + J2I3*I3EE
-        J3EE_old = J3I3I3*(I3E.T.dot(I3E)) + J3I3*I3EE
+        J1EE = J1I1I3*(np.outer(I1E, I3E) + np.outer(I3E, I1E)) \
+                 + J1I3I3*np.outer(I3E, I3E) + J1I3*I3EE
+        J2EE = J2I2I3*(np.outer(I2E, I3E) + np.outer(I3E, I2E)) \
+                 + J2I3I3*np.outer(I3E, I3E) + J2I2*I2EE + J2I3*I3EE
+        J3EE = J3I3I3*(np.outer(I3E, I3E)) + J3I3*I3EE
         
-        J3J3J3 = -1/np.sqrt(I3)
-        J2J3J3 = 8*I2/(9*I3**(5/3))
-        J2J2J3 = - 4/(3*np.sqrt(I3))
-        J1J3J3 = 8*I1/(9*I3**(4/3))
-        J1J1J3 = - 2/(3*np.sqrt(I3))
+        # alternative formulation, using JEs 
+#        J3J3J3 = -1/np.sqrt(I3)
+#        J2J3J3 = 8*I2/(9*I3**(5/3))
+#        J2J2J3 = - 4/(3*np.sqrt(I3))
+#        J1J3J3 = 8*I1/(9*I3**(4/3))
+#        J1J1J3 = - 2/(3*np.sqrt(I3))
+#        
+#        J1EE = J1J1J3*(np.outer(J1E, J3E) + np.outer(J3E, J1E)) \
+#                     + J1J3J3*np.outer(J3E, J3E) + J1I3*I3EE
+#        J2EE = J2J2J3*(np.outer(J2E, J3E) + np.outer(J3E, J2E)) \
+#                      + J2J3J3*np.outer(J3E, J3E) + J2I2*I2EE + J2I3*I3EE
+#        J3EE = J3J3J3*(np.outer(J3E,J3E)) + J3I3*I3EE
         
-        J1EE = J1J1J3*(np.outer(J1E, J3E) + np.outer(J3E, J1E)) + J1J3J3*np.outer(J3E, J3E) + J1I3*I3EE  
-        J2EE = J2J2J3*(np.outer(J2E, J3E) + np.outer(J3E, J2E)) + J2J3J3*np.outer(J3E, J3E) + J2I2*I2EE + J2I3*I3EE
-        J3EE = J3J3J3*(np.outer(J3E,J3E)) + J3I3*I3EE
-        C_SE = self.A10*J1EE + self.A01*J2EE + self.kappa*(J3E.T.dot(J3E)) + self.kappa*(J3-1)*J3EE
+        C_SE = A10*J1EE + A01*J2EE + kappa*(J3E.T.dot(J3E)) + kappa*(J3-1)*J3EE
         return S, S_v, C_SE
+
+    def S_Sv_and_C_2d(self, E):
+        pass
