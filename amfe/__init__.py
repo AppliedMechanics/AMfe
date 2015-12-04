@@ -16,6 +16,7 @@ from amfe.mesh import *
 from amfe.solver import *
 from amfe.tools import *
 from amfe.mechanical_system import *
+from amfe.material import *
 
 from amfe.model_reduction import *
 
