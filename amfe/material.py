@@ -21,9 +21,28 @@ class HyperelasticMaterial():
 
 class KirchhoffMaterial(HyperelasticMaterial):
     '''
-    
+    Kirchhoff-Material that mimicks the linear elastic behavior. 
     '''
     def __init__(self, E=210E9, nu=0.3, rho=1E4, plane_stress=True):
+        '''
+        
+        
+        Parameters
+        ----------
+        E : float
+            Young's modulus
+        nu : float
+            Poisson's ratio
+        rho : flot
+            Density
+        plane_stress : bool, optional
+            flat if plane stress or plane strain is chosen, if a 2D-problem is 
+            considered
+        
+        Returns
+        -------
+        None
+        '''
         self.E_modulus = E
         self.nu = nu
         self.rho = rho
@@ -49,7 +68,7 @@ class KirchhoffMaterial(HyperelasticMaterial):
         if self.plane_stress:
             self.C_SE_2d = E/(1-nu**2)*np.array([[1, nu, 0], 
                                                  [nu, 1, 0],
-                                                 [0, 0, (1-nu)/2],])
+                                                 [0, 0, (1-nu)/2]])
         else:
             self.C_SE_2d = np.array([[lam + 2*mu, lam, 0],
                                      [lam, lam + 2*mu, 0],
@@ -121,6 +140,11 @@ class KirchhoffMaterial(HyperelasticMaterial):
 #%%
 
 class NeoHookean(HyperelasticMaterial):
+    '''
+    Neo-Hookean hyperelastic material. It is the same material as the Mooney-
+    Rivlin material with constant A01=0. 
+    
+    '''
     pass
 
 
@@ -221,8 +245,69 @@ class MooneyRivlin(HyperelasticMaterial):
 #                      + J2J3J3*np.outer(J3E, J3E) + J2I2*I2EE + J2I3*I3EE
 #        J3EE = J3J3J3*(np.outer(J3E,J3E)) + J3I3*I3EE
         
-        C_SE = A10*J1EE + A01*J2EE + kappa*(J3E.T.dot(J3E)) + kappa*(J3-1)*J3EE
+        C_SE = A10*J1EE + A01*J2EE + kappa*(np.outer(J3E, J3E)) + kappa*(J3-1)*J3EE
         return S, S_v, C_SE
 
     def S_Sv_and_C_2d(self, E):
-        pass
+        '''
+        Compute the 2D 2nd Piola-Kirchhoff stress tensor in matrix and voigt 
+        notation and the tangent moduli
+        '''
+        A10 = self.A10
+        A01 = self.A01
+        kappa = self.kappa
+        C = 2*E + np.eye(2)
+        C11 = C[0,0]
+        C22 = C[1,1]
+        C12 = C[0,1]
+        C33 = 1
+        # invatiants and reduced invariants
+        I1  = C11 + C22 + C33
+        I2  = C11*C22 + C11*C33 - C12**2 + C22*C33
+        I3  = C11*C22 - C12**2
+        # J1  = I1*I3**(-1/3)
+        # J2  = I2*I3**(-2/3)
+        J3  = np.sqrt(I3)
+        
+        # derivatives
+        J1I1 = I3**(-1/3)
+        J1I3 = -I1/(3*I3**(4/3))
+        J2I2 = I3**(-2/3)
+        J2I3 = -2*I2/(3*I3**(5/3))
+        J3I3 = 1/(2*np.sqrt(I3))
+        
+        I1E = 2*np.array([1, 1, 0])
+        I2E = 2*np.array([C22 + C33, C11 + C33, -C12])
+        I3E = 2*np.array([C22*C33, C11*C33, -C12*C33 ])
+        
+        J1E = J1I1*I1E + J1I3*I3E
+        J2E = J2I2*I2E + J2I3*I3E
+        J3E = J3I3*I3E
+        # stresses
+        S_v = A10*J1E + A01*J2E + kappa*(J3 - 1)*J3E
+        S = np.array([[S_v[0], S_v[2]],
+                      [S_v[2], S_v[1]]])
+
+        I2EE = np.array([   [0, 4, 0],
+                            [4, 0, 0],
+                            [0, 0,-2]])
+                            
+        I3EE = np.array([   [ 0,  4, 0],
+                            [ 4,  0, 0],
+                            [ 0,  0,-2]])
+
+        # second derivatives
+        J1I1I3 = -1/(3*I3**(4/3))
+        J1I3I3 = 4*I1/(9*I3**(7/3))
+        J2I2I3 = -2/(3*I3**(5/3))
+        J2I3I3 = 10*I2/(9*I3**(8/3))
+        J3I3I3 = -1/(4*I3**(3/2))
+
+        J1EE = J1I1I3*(np.outer(I1E, I3E) + np.outer(I3E, I1E)) \
+                 + J1I3I3*np.outer(I3E, I3E) + J1I3*I3EE
+        J2EE = J2I2I3*(np.outer(I2E, I3E) + np.outer(I3E, I2E)) \
+                 + J2I3I3*np.outer(I3E, I3E) + J2I2*I2EE + J2I3*I3EE
+        J3EE = J3I3I3*(np.outer(I3E, I3E)) + J3I3*I3EE
+    
+        C_SE = A10*J1EE + A01*J2EE + kappa*(np.outer(J3E, J3E)) + kappa*(J3-1)*J3EE
+        return S, S_v, C_SE
