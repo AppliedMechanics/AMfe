@@ -52,3 +52,16 @@ def total2node(total_index, ndof_node=2):
     '''
     return total_index // ndof_node, total_index % ndof_node
 
+def inherit_docs(cls):
+    '''
+    Decorator function for inheriting the docs of a class to the subclass.
+    '''
+    for name, func in vars(cls).items():
+        if not func.__doc__:
+            print(func, 'needs doc')
+            for parent in cls.__bases__:
+                parfunc = getattr(parent, name)
+                if parfunc and getattr(parfunc, '__doc__', None):
+                    func.__doc__ = parfunc.__doc__
+                    break
+    return cls

@@ -7,17 +7,63 @@ Created on Mon Nov 30 12:30:03 2015
 
 import numpy as np
 
+
 class HyperelasticMaterial():
     
     def __init__(self):
         pass
     
     def S_Sv_and_C(self, E):
+        '''
+        Compute 2nd Piola Kirchhoff stress tensor in matrix form and voigt 
+        notation as well as material tangent modulus. 
+        
+        Parameters
+        ----------
+        E : ndarray
+            Green-Lagrange strain tensor, shape: (3,3)
+        
+        Returns
+        -------
+        S : ndarray
+            2nd Piola Kirchhoff stress tensor in matrix representation, 
+            shape: (3,3)
+        Sv : ndarray
+            2nd Piola Kirchhoff stress tensor in voigt notation, shape: (6,)
+        C_SE : ndarray
+            tangent moduli between Green-Lagrange strain tensor and 2nd Piola
+            Kirchhoff stress tensor, shape (6,6)
+        
+        '''
         pass
     
     def S_Sv_and_C_2d(self, E):
+        '''
+        Compute 2nd Piola Kirchhoff stress tensor in matrix form and voigt 
+        notation as well as material tangent modulus for 2D-Problems. 
+        
+        Parameters
+        ----------
+        E : ndarray
+            Green-Lagrange strain tensor, shape: (2,2)
+        
+        Returns
+        -------
+        S : ndarray
+            2nd Piola Kirchhoff stress tensor in matrix representation, 
+            shape: (2,2)
+        Sv : ndarray
+            2nd Piola Kirchhoff stress tensor in voigt notation, shape: (3,)
+        C_SE : ndarray
+            tangent moduli between Green-Lagrange strain tensor and 2nd Piola
+            Kirchhoff stress tensor, shape (3,3)
+            
+        Note
+        ----
+        The result is dependent on the the option plane stress or plane strain. 
+        Take care to choose the right option! 
+        '''
         pass
-
 
 class KirchhoffMaterial(HyperelasticMaterial):
     r'''
@@ -90,27 +136,9 @@ class KirchhoffMaterial(HyperelasticMaterial):
 
     
     def S_Sv_and_C(self, E):
-        '''
-        Compute 2nd Piola Kirchhoff stress and tangential stress-strain 
-        relationship. 
-        
-        Parameters
-        ----------
-        E : ndarray
-            Green-Lagrange strain tensor, shape: (3,3)
-        
-        Returns
-        -------
-        S : ndarray
-            2nd Piola Kirchhoff stress tensor in matrix representation, 
-            shape: (3,3)
-        Sv : ndarray
-            2nd Piola Kirchhoff stress tensor in voigt notation, shape: (6,)
-        C_SE : ndarray
-            tangent moduli between Green-Lagrange strain tensor and 2nd Piola
-            Kirchhoff stress tensor, shape (6,6)
-        
-        '''
+        # copy docstring
+        self.S_Sv_and_C.__doc__ = HyperelasticMaterial.S_Sv_and_C.__doc__
+
         E_v = np.array([  E[0,0],   E[1,1],   E[2,2],
                         2*E[1,2], 2*E[0,2], 2*E[0,1]])
         S_v = self.C_SE.dot(E_v)
@@ -121,30 +149,10 @@ class KirchhoffMaterial(HyperelasticMaterial):
 
     def S_Sv_and_C_2d(self, E):
         '''
-        Compute 2nd Piola Kirchhoff stress and tangential stress-strain 
-        relationship for 2D-Problems. 
-        
-        Parameters
-        ----------
-        E : ndarray
-            Green-Lagrange strain tensor, shape: (2,2)
-        
-        Returns
-        -------
-        S : ndarray
-            2nd Piola Kirchhoff stress tensor in matrix representation, 
-            shape: (2,2)
-        Sv : ndarray
-            2nd Piola Kirchhoff stress tensor in voigt notation, shape: (3,)
-        C_SE : ndarray
-            tangent moduli between Green-Lagrange strain tensor and 2nd Piola
-            Kirchhoff stress tensor, shape (3,3)
-            
-        Note
-        ----
-        The result is dependent on the the option plane stress or plane strain. 
-        Take care to choose the right option! 
         '''
+        # copy docstring
+        self.S_Sv_and_C_2d.__doc__ = HyperelasticMaterial.S_Sv_and_C_2d.__doc__
+
         E_v = np.array([E[0,0], E[1,1], 2*E[0,1]])
         S_v = self.C_SE_2d.dot(E_v)
         S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
@@ -152,7 +160,7 @@ class KirchhoffMaterial(HyperelasticMaterial):
 
 
 #%%
-
+# @inherit_docs(HyperelasticMaterial)
 class NeoHookean(HyperelasticMaterial):
     r'''
     Neo-Hookean hyperelastic material. It is the same material as the Mooney-
@@ -160,7 +168,7 @@ class NeoHookean(HyperelasticMaterial):
     
     The Neo-Hookean material has the strain energy potential:
     
-    ..math::
+    .. math::
         W(J_1, J_3) = \frac{\mu}{2}(J_1-3) + \frac{\kappa}{2}(J_3 - 1)^2
     
     with:
@@ -168,7 +176,8 @@ class NeoHookean(HyperelasticMaterial):
         
         :math:`J_1` = first deviatoric strain invariant
         
-        :math:`J_3` = third deviatoric strain invariant (determinant of elastic deformation gradient :math:`\mathbf{F}`)
+        :math:`J_3` = third deviatoric strain invariant (determinant of elastic 
+        deformation gradient :math:`\mathbf{F}`)
                 
         :math:`\mu` = initial shear modulus of the material
         
@@ -181,10 +190,14 @@ class NeoHookean(HyperelasticMaterial):
         self.plane_stress = plane_stress
         if plane_stress:
             raise ValueError('Attention! plane stress is not supported yet \
-            within the MooneyRivlin material!')
+within the MooneyRivlin material!')
 
 
     def S_Sv_and_C(self, E):
+        ''' '''
+        # copy docstring
+        self.S_Sv_and_C.__doc__ = HyperelasticMaterial.S_Sv_and_C.__doc__
+
         mu = self.mu
         kappa = self.kappa
         C = 2*E + np.eye(3)
@@ -243,9 +256,10 @@ class NeoHookean(HyperelasticMaterial):
         
     def S_Sv_and_C_2d(self, E):
         '''
-        Compute the 2D 2nd Piola-Kirchhoff stress tensor in matrix and voigt 
-        notation and the tangent moduli
         '''
+        # copy docstring
+        self.S_Sv_and_C_2d.__doc__ = HyperelasticMaterial.S_Sv_and_C_2d.__doc__
+        
         mu = self.mu
         kappa = self.kappa
         C = 2*E + np.eye(2)
@@ -314,6 +328,23 @@ class MooneyRivlin(HyperelasticMaterial):
             
     '''
     def __init__(self, A10, A01, kappa, plane_stress=False):
+        '''
+        Parameters
+        ----------
+        A10 : float
+            first material constant for deviatoric deformation of material
+        A01 : float
+            second material constant for deviatoric deformation of material
+        kappa : float
+            bulk modulus of material
+        plane_stress : bool, optional
+            flag for plane stress or plane strain, preset = False
+            
+        Output
+        ------
+        None
+        
+        '''
         self.A10 = A10
         self.A01 = A01
         self.kappa = kappa
@@ -325,8 +356,9 @@ class MooneyRivlin(HyperelasticMaterial):
     
     def S_Sv_and_C(self, E):
         '''
-        Compute S, S in Voigt notation and material stiffness 
         '''
+        # copy docstring
+        self.S_Sv_and_C.__doc__ = HyperelasticMaterial.S_Sv_and_C.__doc__
         A10 = self.A10
         A01 = self.A01
         kappa = self.kappa
@@ -414,9 +446,10 @@ class MooneyRivlin(HyperelasticMaterial):
 
     def S_Sv_and_C_2d(self, E):
         '''
-        Compute the 2D 2nd Piola-Kirchhoff stress tensor in matrix and voigt 
-        notation and the tangent moduli
         '''
+        # copy docstring
+        self.S_Sv_and_C_2d.__doc__ = HyperelasticMaterial.S_Sv_and_C_2d.__doc__
+        
         A10 = self.A10
         A01 = self.A01
         kappa = self.kappa
