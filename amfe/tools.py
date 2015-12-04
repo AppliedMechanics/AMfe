@@ -52,6 +52,7 @@ def total2node(total_index, ndof_node=2):
     '''
     return total_index // ndof_node, total_index % ndof_node
 
+
 def inherit_docs(cls):
     '''
     Decorator function for inheriting the docs of a class to the subclass.

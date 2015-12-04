@@ -137,7 +137,7 @@ class KirchhoffMaterial(HyperelasticMaterial):
     
     def S_Sv_and_C(self, E):
         # copy docstring
-        self.S_Sv_and_C.__doc__ = HyperelasticMaterial.S_Sv_and_C.__doc__
+#        self.S_Sv_and_C.__doc__ = HyperelasticMaterial.S_Sv_and_C.__doc__
 
         E_v = np.array([  E[0,0],   E[1,1],   E[2,2],
                         2*E[1,2], 2*E[0,2], 2*E[0,1]])
@@ -151,7 +151,7 @@ class KirchhoffMaterial(HyperelasticMaterial):
         '''
         '''
         # copy docstring
-        self.S_Sv_and_C_2d.__doc__ = HyperelasticMaterial.S_Sv_and_C_2d.__doc__
+#        self.S_Sv_and_C_2d.__doc__ = HyperelasticMaterial.S_Sv_and_C_2d.__doc__
 
         E_v = np.array([E[0,0], E[1,1], 2*E[0,1]])
         S_v = self.C_SE_2d.dot(E_v)
@@ -196,7 +196,7 @@ within the MooneyRivlin material!')
     def S_Sv_and_C(self, E):
         ''' '''
         # copy docstring
-        self.S_Sv_and_C.__doc__ = HyperelasticMaterial.S_Sv_and_C.__doc__
+#        self.S_Sv_and_C.__doc__ = HyperelasticMaterial.S_Sv_and_C.__doc__
 
         mu = self.mu
         kappa = self.kappa
@@ -258,7 +258,7 @@ within the MooneyRivlin material!')
         '''
         '''
         # copy docstring
-        self.S_Sv_and_C_2d.__doc__ = HyperelasticMaterial.S_Sv_and_C_2d.__doc__
+#        self.S_Sv_and_C_2d.__doc__ = HyperelasticMaterial.S_Sv_and_C_2d.__doc__
         
         mu = self.mu
         kappa = self.kappa
@@ -340,8 +340,8 @@ class MooneyRivlin(HyperelasticMaterial):
         plane_stress : bool, optional
             flag for plane stress or plane strain, preset = False
             
-        Output
-        ------
+        Returns
+        -------
         None
         
         '''
@@ -358,7 +358,7 @@ class MooneyRivlin(HyperelasticMaterial):
         '''
         '''
         # copy docstring
-        self.S_Sv_and_C.__doc__ = HyperelasticMaterial.S_Sv_and_C.__doc__
+#        self.S_Sv_and_C.__doc__ = HyperelasticMaterial.S_Sv_and_C.__doc__
         A10 = self.A10
         A01 = self.A01
         kappa = self.kappa
@@ -448,7 +448,7 @@ class MooneyRivlin(HyperelasticMaterial):
         '''
         '''
         # copy docstring
-        self.S_Sv_and_C_2d.__doc__ = HyperelasticMaterial.S_Sv_and_C_2d.__doc__
+#        self.S_Sv_and_C_2d.__doc__ = HyperelasticMaterial.S_Sv_and_C_2d.__doc__
         
         A10 = self.A10
         A01 = self.A01

@@ -77,8 +77,8 @@ class NewmarkIntegrator():
         element work the set_mechanical_system interface is more convenient and
         does everything automatically including the recording of displacements etc.
 
-        See Also:
-        ---------
+        See Also
+        --------
         set_mechanical_system
 
         '''

@@ -174,11 +174,11 @@ class NeumannBoundary():
 
     def f_ext(self):
         '''
-        Input:
-        ------
-        no input is required for this function
+        Parameters
+        ----------
+        None
 
-        Output:
+        Returns
         -------
         a function f, which can be called with f(t) giving back the von neumann bcs
 
