@@ -110,7 +110,7 @@ class MechanicalSystem():
         self.no_of_dofs = self.mesh_class.no_of_dofs
         self.no_of_dofs_per_node = self.mesh_class.no_of_dofs_per_node
         
-        self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
+        self.assembly_class = Assembly(self.mesh_class)
         self.assembly_class.preallocate_csr()
 
 
@@ -145,12 +145,10 @@ class MechanicalSystem():
         self.mesh_class = Mesh()
         self.mesh_class.import_csv(node_list_csv, element_list_csv, explicit_node_numbering=explicit_node_numbering, ele_type=ele_type)
         
-        self.node_list = self.mesh_class.nodes.copy()
-        self.element_list = self.mesh_class.elements.copy()
         self.no_of_dofs = self.mesh_class.no_of_dofs
         self.no_of_dofs_per_node = no_of_dofs_per_node
         
-        self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
+        self.assembly_class = Assembly(self.mesh_class)
         self.assembly_class.preallocate_csr()
 
         # Initialize self.b_constraints here,

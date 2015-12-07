@@ -207,7 +207,6 @@ class Mesh:
         self.nodes               = []
         self.elements            = []
         self.elements_type       = []
-        self.elements_properties = []
         self.phys_goup           = phys_group
 
         print('\n*************************************************************')
@@ -369,7 +368,6 @@ class Mesh:
         self.nodes               = []
         self.elements            = []
         self.elements_type       = []
-        self.elements_properties = []
 
         with open(filename, 'r') as infile:
             data_geometry = infile.read().splitlines()
@@ -431,7 +429,6 @@ class Mesh:
 
                 # handling of the elements:
                 if gmsh2amfe[gmsh_element_key] in element_set:
-                    self.elements_properties.append(element[3:3+tag])
                     self.elements.append(element[3+tag:])
                     self.elements_type.append(gmsh2amfe[gmsh_element_key])
 
