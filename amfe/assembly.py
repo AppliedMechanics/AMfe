@@ -7,12 +7,12 @@ Created on Tue Apr 21 11:13:52 2015
 @author: Johannes Rutzmoser
 """
 
-
 import numpy as np
 import scipy as sp
 from scipy import sparse
 from scipy import linalg
 
+import numba as nb
 
 fortran_use = False
 try:
@@ -29,7 +29,7 @@ in order to get the full speed!
 ''')
 
 
-
+@nb.jit('int32(int32, int32, int32[:], int32[:])')
 def get_index_of_csr_data(i,j, indptr, indices):
     '''Get the value index of the i,j element of a matrix in CSR format.
 
@@ -51,8 +51,8 @@ def get_index_of_csr_data(i,j, indptr, indices):
     k : int
         index of the value array of the CSR-matrix, in which value [i,j] is stored.
 
-    Note
-    ----
+    Notes
+    -----
 
     This routine works only, if the tuple i,j is acutally a real entry of the Matrix.
     Otherwise the value k=0 will be returned and an Error Message will be provided.
@@ -67,6 +67,7 @@ def get_index_of_csr_data(i,j, indptr, indices):
             break
     return k
 
+@nb.jit('void(int32[:], int32[:], float64[:], float64[:,:], int32[:])')
 def fill_csr_matrix(indptr, indices, vals, K, k_indices):
     '''
     Fill the values of K into the vals-array of a sparse CSR Matrix given the k_indices array.
@@ -230,7 +231,7 @@ class Assembly():
         decorated_matrix_func : function
             function which works like
 
-            K_local, f_local = func(X_local, u_local)
+            K_local, f_local = func(index, X_local, u_local)
 
         Returns
         -------
@@ -246,7 +247,7 @@ class Assembly():
         for i, indices in enumerate(self.global_element_indices): # Schleife ueber alle Elemente (i - Elementnummer, indices - DOF-Nummern des Elements)
             X = self.node_coords[indices] # X - zu den DOF-Nummern zugehoerige Koordinaten (Positionen)
             u_local = u[indices] # Auslesen der localen Elementverschiebungen
-            K, f = decorated_matrix_func(X, u_local) # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
+            K, f = decorated_matrix_func(i, X, u_local) # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
             f_glob[indices] += f # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices) # Einsortieren der lokalen Elementmatrix in die globale Matrix
 
@@ -268,9 +269,12 @@ class Assembly():
         f : ndarray
             unconstrained assembled force vector
         '''
-        # This is only working for one element type!
-        element = self.element_class_dict[self.mesh.elements_type[0]]
-        return self.assemble_matrix_and_vector(u, element.k_and_f_int)
+        # define the function that returns K, f for (i, X, u)
+        # sort of a decorator approach! 
+        def k_and_f_func(i, X, u):
+            return self.mesh.ele_obj[i].k_and_f_int(X, u)
+            
+        return self.assemble_matrix_and_vector(u, k_and_f_func)
 
     def assemble_m(self, u=None):
         '''
@@ -290,12 +294,11 @@ class Assembly():
         ---------
         TODO
         '''
-
+        def m_and_vec_func(i, X, u):
+            return self.mesh.elements_type[i].m_and_vec_int(X, u)
+            
         if u == None:
             u = np.zeros_like(self.node_coords)
-        element = self.element_class_dict[self.mesh.elements_type[0]] # Zuweisen der Elementklasse
-        M, _ = self.assemble_matrix_and_vector(u, element.m_and_vec_int) # element.m_and_vec_in
+        M, _ = self.assemble_matrix_and_vector(u, m_and_vec_func) 
         return M
-
-
 
