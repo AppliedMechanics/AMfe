@@ -206,7 +206,8 @@ class NeumannBoundary():
             # construct_the_list
             self.function_list.append(self.function_dict[type_](self, *props))
 
-        self.boolean_force_matrix = sp.sparse.csr_matrix((vals_global, (row_global, col_global)), shape=(self.ndof_global, len(self.function_list)))
+        self.boolean_force_matrix = sp.sparse.csr_matrix((vals_global, 
+            (row_global, col_global)), shape=(self.no_of_dofs, len(self.function_list)))
 
         # export external forcing function
         def external_forcing_function(t):
