@@ -187,11 +187,11 @@ class Assembly():
 
         '''
         # computation of all necessary variables:
-        dofs_per_node = self.mesh.node_dof
+        no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
         self.node_coords = self.mesh.nodes.reshape(-1)
         elements = self.mesh.elements
         nodes_per_element = elements.shape[-1]
-        dofs_per_element = nodes_per_element*dofs_per_node
+        dofs_per_element = nodes_per_element*no_of_dofs_per_node
         no_of_elements = len(elements)
         dofs_total = self.node_coords.shape[0]
         no_of_local_matrix_entries = dofs_per_element**2
@@ -200,7 +200,7 @@ class Assembly():
         self.global_element_indices = np.zeros((no_of_elements, dofs_per_element), dtype=int)
         for i, element in enumerate(elements):
             self.global_element_indices[i,:] = np.array(
-                [(np.arange(dofs_per_node) + dofs_per_node*i)  for i in element]).reshape(-1)
+                [(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i)  for i in element]).reshape(-1)
 
 
         # Auxiliary Help-Matrix H

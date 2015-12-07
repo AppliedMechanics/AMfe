@@ -66,33 +66,39 @@ class Mesh:
     '''
     Class for handling the mesh operations.
 
-    Interne Variablen:
-    - nodes: Ist eine Liste bzw. ein numpy-Array, welches Angibt, wie die x-y-z-Koordinaten eines Knotens lauten. Es gibt keinen Zählindex.
-    - elements: Ist eine Liste bzw. ein numpy-Array, welches angibt, welche Knoten zu welchem Element gehören. Es gibt keinen Zählindex.
-    - no_of_element_nodes: Anzahl der Knoten pro Element
+    Internal variables:
+    - nodes: Ist eine Liste bzw. ein numpy-Array, welches Angibt, wie die 
+        x-y-z-Koordinaten eines Knotens lauten. Es gibt keinen Zählindex.
+    - ele_nodes: Ist eine Liste bzw. ein numpy-Array, welches angibt, welche 
+        Knoten zu welchem Element gehören. Es gibt keinen Zählindex.
+    - ele_obj: numpy.ndarray of element objects
+    - no_of_dofs_per_node: Freiheitsgrade pro Knoten; Sind je nach 
+        Elementformulierung bei reiner Verschiebung bei 2D-Problemen 2, 
+        bei 3D-Problemen 3 dofs; Wenn Rotationen betrachtet werden natürlich 
+        entsprechend mehr
     - no_of_elements: Globale Anzahl der Elemente im System
     - no_of_nodes: Globale Anzahl der Knoten im System
+    
+    Deprecated:
+    - no_of_element_nodes: Anzahl der Knoten pro Element
     - element_dof: Anzahl der Freiheitsgrade eines Elements
-    - node_dof: Freiheitsgrade pro Knoten; Sind je nach Elementformulierung bei reiner Verschiebung bei 2D-Problemen 2, bei 3D-Problemen 3 dofs; Wenn Rotationen betrachtet werden natürlich entsprechend mehr
-    -
     '''
 
     def __init__(self):
         self.nodes               = []
-        self.elements            = []
-        self.elements_type       = []
-        self.elements_properties = []
-        # the displacements; They are stored as a list of numpy-arrays with shape (ndof, node_dof):
+        self.ele_nodes           = []
+        self.ele_obj             = []
+        # the displacements; They are stored as a list of numpy-arrays with shape (ndof, no_of_dofs_per_node):
         self.u                   = None
         self.timesteps           = []
-        self.node_dof           = 0
+        self.no_of_dofs_per_node = 0
 
     def _update_mesh_props(self):
         '''
         Update the number properties of nodes and elements when the mesh has changed
         '''
         self.no_of_nodes = len(self.nodes)
-        self.no_of_dofs = self.no_of_nodes*self.node_dof
+        self.no_of_dofs = self.no_of_nodes*self.no_of_dofs_per_node
         self.no_of_elements = len(self.elements)
         self.no_of_element_nodes = len(self.elements[0])
 
@@ -132,7 +138,7 @@ class Mesh:
         except:
             print('FEHLER beim lesen der Datei', filename_nodes, 
                   '\nVermutlich stimmt die erwartete Dimension der Knotenfreiheitsgrade', 
-                  self.node_dof, 'nicht mit der Dimension in der Datei zusammen.')
+                  self.no_of_dofs_per_node, 'nicht mit der Dimension in der Datei zusammen.')
         # when line numbers are erased if they are content of the csv
         if explicit_node_numbering:
             self.nodes = self.nodes[:,1:]
@@ -311,14 +317,14 @@ class Mesh:
         
         # Check, if the problem is 2d or 3d and adjust the dimension of the nodes
         if self.el_type in element_2d_set:
-            self.node_dof = 2
+            self.no_of_dofs_per_node = 2
         elif self.el_type in element_3d_set:
-            self.node_dof = 3
+            self.no_of_dofs_per_node = 3
         else:
             raise Exception('The Element of the mesh is not in the set of supported elements.')
         
         # fill the nodes of the selected physical group to the array
-        self.nodes = np.array(list_imported_nodes)[:,1:1+self.node_dof]
+        self.nodes = np.array(list_imported_nodes)[:,1:1+self.no_of_dofs_per_node]
 
         self.elements_type = elements_df['el_type'].values
         self._update_mesh_props()
@@ -446,10 +452,10 @@ class Mesh:
         self.elements = np.array(self.elements)
         # Node handling in order to make 2D-meshes flat by removing z-coordinate:
         if mesh_3d:
-            self.node_dof = 3
+            self.no_of_dofs_per_node = 3
         else: 
             self.nodes = self.nodes[:,:-1]
-            self.node_dof = 2 # überflüssig, da in __init__ als default gesetzt
+            self.no_of_dofs_per_node = 2 # überflüssig, da in __init__ als default gesetzt
 
         # Take care here!!! gmsh starts indexing with 1,
         # paraview with 0!
@@ -519,7 +525,7 @@ class Mesh:
         TODO
         '''
         self.timesteps.append(1)
-        self.u = [np.array(u).reshape((-1, self.node_dof))]
+        self.u = [np.array(u).reshape((-1, self.no_of_dofs_per_node))]
 
 
     def set_displacement_with_time(self, u, timesteps):
@@ -546,7 +552,7 @@ class Mesh:
         self.timesteps = timesteps.copy()
         self.u = []
         for i, timestep in enumerate(self.timesteps):
-            self.u.append(np.array(u[i]).reshape((-1, self.node_dof)))
+            self.u.append(np.array(u[i]).reshape((-1, self.no_of_dofs_per_node)))
 
     def set_nodal_variable_with_time(self, variable_array, variable_name, timesteps):
         '''
@@ -583,7 +589,7 @@ class Mesh:
 
         '''
         if len(self.timesteps) == 0:
-            self.u = [np.zeros((self.no_of_nodes, self.node_dof))]
+            self.u = [np.zeros((self.no_of_nodes, self.no_of_dofs_per_node))]
             self.timesteps.append(0)
 
         # Make the pvd-File with the links to vtu-files
@@ -623,9 +629,9 @@ class Mesh:
                 savefile_vtu.write('<Points>\n')
                 savefile_vtu.write('<DataArray type="Float64" Name="Array" NumberOfComponents="3" format="ascii">\n')
                 # bei Systemen mit 2 Knotenfreiheitsgraden wird die dritte 0-Komponenten noch extra durch die endflag hinzugefügt...
-                if self.node_dof == 2:
+                if self.no_of_dofs_per_node == 2:
                     endflag = ' 0 \n'
-                elif self.node_dof == 3:
+                elif self.no_of_dofs_per_node == 3:
                     endflag = '\n'
                 for j in self.nodes:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)

@@ -107,16 +107,14 @@ class MechanicalSystem():
         self.mesh_class = Mesh()
         self.mesh_class.import_msh(msh_file, phys_group)
         
-        self.node_list = np.array(self.mesh_class.nodes)
-        self.element_list = np.array(self.mesh_class.elements)
-        self.ndof_global = self.mesh_class.no_of_dofs
-        self.node_dof = self.mesh_class.node_dof
+        self.no_of_dofs = self.mesh_class.no_of_dofs
+        self.no_of_dofs_per_node = self.mesh_class.no_of_dofs_per_node
         
         self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
         self.assembly_class.preallocate_csr()
 
 
-    def load_mesh_from_csv(self, node_list_csv, element_list_csv, node_dof=2, explicit_node_numbering=False, ele_type=False):
+    def load_mesh_from_csv(self, node_list_csv, element_list_csv, no_of_dofs_per_node=2, explicit_node_numbering=False, ele_type=False):
         '''
         Loads the mesh from two csv-files containing the node and the element list.
 
@@ -126,7 +124,7 @@ class MechanicalSystem():
             filename of the csv-file containing the coordinates of the nodes (x, y, z)
         element_list_csv: str
             filename of the csv-file containing the nodes which belong to one element
-        node_dof: int, optional
+        no_of_dofs_per_node: int, optional
             degree of freedom per node as saved in the csv-file
         explicit_node_numbering : bool, optional
             flag stating, if the node numbers are explcitly numbered in the csv file, i.e. if the first column gives the numbers of the nodes.
@@ -144,13 +142,13 @@ class MechanicalSystem():
         todo
 
         '''
-        self.mesh_class = Mesh(node_dof=node_dof)
+        self.mesh_class = Mesh()
         self.mesh_class.import_csv(node_list_csv, element_list_csv, explicit_node_numbering=explicit_node_numbering, ele_type=ele_type)
         
         self.node_list = self.mesh_class.nodes.copy()
         self.element_list = self.mesh_class.elements.copy()
-        self.ndof_global = self.node_list.size
-        self.node_dof = node_dof
+        self.no_of_dofs = self.mesh_class.no_of_dofs
+        self.no_of_dofs_per_node = no_of_dofs_per_node
         
         self.assembly_class = Assembly(self.mesh_class, self.element_class_dict)
         self.assembly_class.preallocate_csr()
@@ -160,7 +158,7 @@ class MechanicalSystem():
         # mechanical system has no dirichlet boundaries but self.b_constraints
         # has to be initialized since an error will occur later if 
         # self.b_constraints does not exist 
-        self.b_constraints = sp.sparse.eye(self.ndof_global).tocsr()
+        self.b_constraints = sp.sparse.eye(self.no_of_dofs).tocsr()
 
 
     def apply_dirichlet_boundaries(self, dirichlet_boundary_list=[]):
@@ -222,9 +220,9 @@ class MechanicalSystem():
         >>> mysystem.apply_dirichlet_boundaries([DBT_symm, ])
 
         '''
-        self.dirichlet_bc_class = DirichletBoundary(self.ndof_global, dirichlet_boundary_list)
+        self.dirichlet_bc_class = DirichletBoundary(self.no_of_dofs, dirichlet_boundary_list)
         self.b_constraints = self.dirichlet_bc_class.b_matrix()
-        self.ndof_global_constrained = self.b_constraints.shape[-1]
+        self.no_of_dofs_constrained = self.b_constraints.shape[-1]
 
 
     def apply_neumann_boundaries(self, neumann_boundary_list):
@@ -282,7 +280,7 @@ class MechanicalSystem():
 
 
         '''
-        self.neumann_bc_class = NeumannBoundary(self.ndof_global, neumann_boundary_list)
+        self.neumann_bc_class = NeumannBoundary(self.no_of_dofs, neumann_boundary_list)
         self._f_ext_without_bc = self.neumann_bc_class.f_ext()
 
 
@@ -291,7 +289,7 @@ class MechanicalSystem():
         '''
         if len(self.T_output) is 0:
             self.T_output.append(0)
-            self.u_output.append(np.zeros(self.ndof_global))
+            self.u_output.append(np.zeros(self.no_of_dofs))
         print('Start exporting mesh for paraview to', filename)
         self.mesh_class.set_displacement_with_time(self.u_output, self.T_output)
         self.mesh_class.save_mesh_for_paraview(filename)

@@ -105,9 +105,9 @@ class NeumannBoundary():
     '''Class for application of von Neumann boundary conditions. Works a little bit crazy but it's working.
     '''
 
-    def __init__(self, ndof_global, neumann_boundary_list):
+    def __init__(self, no_of_dofs, neumann_boundary_list):
         self.neumann_boundary_list = neumann_boundary_list
-        self.ndof_global = ndof_global
+        self.no_of_dofs = no_of_dofs
         pass
 
     def _harmonic_excitation(self, amplitude, frequency):
