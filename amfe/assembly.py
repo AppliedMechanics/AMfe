@@ -136,15 +136,11 @@ class Assembly():
     '''
     Class for the more fancy assembly of meshes with non-heterogeneous elements.
     '''
-    def __init__(self, mesh, element_class_dict): # element_class_dict enthaelt 
-    # die Elementtypen, welche im Modul 'mechanical_system' definiert werden
+    def __init__(self, mesh): 
         '''
         Parameters
         ----
         mesh : instance of the Mesh-class
-
-        element_class_dict : dict
-            dict where the official keyword and the the Element-objects are linked
 
         Returns
         --------
@@ -156,7 +152,6 @@ class Assembly():
 
         '''
         self.mesh = mesh
-        self.element_class_dict = element_class_dict
         self.save_stresses = False
         pass
 
