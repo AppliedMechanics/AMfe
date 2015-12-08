@@ -19,12 +19,19 @@ import amfe
 
 # test gmsh input-output functionality
 
-gmsh_input_file = '../meshes/test_meshes/bar_Tetra4.msh'
+gmsh_input_file = 'meshes/test_meshes/bar_Tet4.msh'
 paraview_output_file = '../results/gmsh_test/gmsh_import'
 
 my_mesh = amfe.Mesh()
-my_mesh.import_msh(gmsh_input_file, mesh_3d=True)
+my_mesh.import_msh(gmsh_input_file)
 
+
+#%%
+
+my_material = amfe.material.KirchhoffMaterial()
+my_mesh.assign_physical_group(1, my_material)
+
+#%%
 my_mesh.save_mesh_for_paraview(paraview_output_file)
 
 

@@ -295,7 +295,7 @@ class Assembly():
         TODO
         '''
         def m_and_vec_func(i, X, u):
-            return self.mesh.elements_type[i].m_and_vec_int(X, u)
+            return self.mesh.ele_obj[i].m_and_vec_int(X, u)
             
         if u == None:
             u = np.zeros_like(self.node_coords)
