@@ -396,6 +396,16 @@ class Mesh:
             print('Number of Elements:', len(df[df.phys_group == i]))
             print('Element types appearing in this group:', pd.unique(df[df.phys_group == i].el_type))
 
+    def boundary_information(self):
+        '''
+        Print the information of the boundary stuff
+        '''
+        print('Voundary nodes sorted by the boundary number:')
+        for i in self.phys_group_dict:
+            print('Boundary (physical group)', i,
+                  'contains the following', len(self.phys_group_dict[i]), 
+                  ' nodes:\n', self.phys_group_dict[i])
+
     def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group'):
         '''
         Add a group of the mesh to the dirichlet nodes to be fixed. 
@@ -457,16 +467,6 @@ class Mesh:
         print('Total number of constrained dofs:', len(self.dofs_dirichlet))
         print('*************************************************************')
         
-
-    def boundary_information(self):
-        '''
-        Print the information of the boundary stuff
-        '''
-        print('Voundary nodes sorted by the boundary number:')
-        for i in self.phys_group_dict:
-            print('Boundary (physical group)', i,
-                  'contains the following', len(self.phys_group_dict[i]), 
-                  ' nodes:\n', self.phys_group_dict[i])
 
     def set_displacement(self, u):
         '''
