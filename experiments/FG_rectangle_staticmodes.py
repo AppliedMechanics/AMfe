@@ -48,7 +48,7 @@ my_system.load_mesh_from_csv('./meshes/selbstgebaut_quad/nodes.csv',
 #dirichlet_boundary conditions
 #top_fixation_2 = [None, [master_node - 1 + 2*x for x in range(11)], None]
 nodes_to_fix = np.where(my_system.node_list[:, 0] == pos_x0)[0]
-dofs_to_fix = np.concatenate((nodes_to_fix*2, nodes_to_fix*2+1), axis=1)
+dofs_to_fix = np.concatenate((nodes_to_fix*2, nodes_to_fix*2+1))
 fixation_left = [None, dofs_to_fix, None]
 dirichlet_boundary_list = [fixation_left]
 my_system.apply_dirichlet_boundaries(dirichlet_boundary_list)
@@ -57,7 +57,7 @@ my_system.apply_dirichlet_boundaries(dirichlet_boundary_list)
 # another neighbouring structure
 # number of these dofs are the global dof numbers
 nodes_interface = np.where(my_system.node_list[:, 0] == pos_x0+x_len)[0]
-dofs_interface = np.concatenate((nodes_interface*2, nodes_interface*2+1), axis=1)
+dofs_interface = np.concatenate((nodes_interface*2, nodes_interface*2+1))
 
 
 # extract matrix which reduces the unconstrained system to the constraint

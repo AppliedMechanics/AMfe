@@ -32,12 +32,19 @@ to the console in folder `docs/`.
 2. Fortran-Routines
 -------------------
 In order to use the fast Fortran routines, which are used within the assembly process,
-the scirpt `install_fortran_routines.sh` in folder `f2py/` has to be executed.
+the script `install_fortran_routines.sh` in folder `f2py/` has to be executed.
 A working Fortan compiler (e.g. `gfortran`, `gfortran-4.8`) has to be installed. 
+The script `install_fortran_routines.sh` has to be compiled again if another 
+python version is used, e.g. after a upgrade from Python 3.4 to Python 3.5.
 
    
 3. Hints
 -----------
+
+### Anaconda:
+
+See installation details for anaconda on http://docs.continuum.io/anaconda/install#anaconda-install .
+
 
 ### Sphinx:
 
