@@ -406,7 +406,7 @@ class Mesh:
                   'contains the following', len(self.phys_group_dict[i]), 
                   ' nodes:\n', self.phys_group_dict[i])
 
-    def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group'):
+    def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group', output='internal'):
         '''
         Add a group of the mesh to the dirichlet nodes to be fixed. 
         
@@ -421,10 +421,16 @@ class Mesh:
         mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
             label of which the element should be chosen from. Standard is 
             physical group. 
+        output : str {'internal', 'external'}
+            key stating, boundary information is stored internally or externally
+            
             
         Returns
         -------
-        None
+        nodes : ndarray, if output == 'external'
+            Array of nodes belonging to the selected group
+        dofs : ndarray, if output == 'external'
+            Array of dofs respecting the coordinates belonging to the selected groups
         
         '''
         # asking for a group to be chosen, when no valid group is given
@@ -442,7 +448,7 @@ class Mesh:
         unique_nodes = unique_nodes[np.isfinite(unique_nodes)]
         
         # build the dofs_dirichlet, a list containing the dirichlet dofs:
-        dofs_dirichlet = self.dofs_dirichlet.tolist()
+        dofs_dirichlet = [] 
         if 'x' in coord:
             dofs_dirichlet.extend(unique_nodes * self.no_of_dofs_per_node)
         if 'y' in coord:
@@ -451,14 +457,17 @@ class Mesh:
             dofs_dirichlet.extend(unique_nodes * self.no_of_dofs_per_node + 2)
             
         dofs_dirichlet = np.array(dofs_dirichlet, dtype=int)
-        self.dofs_dirichlet = np.unique(dofs_dirichlet)
-        self.dofs_dirichlet.sort()
         
         nodes_dirichlet = self.nodes_dirichlet.tolist()
         nodes_dirichlet.extend(unique_nodes)
         nodes_dirichlet = np.array(nodes_dirichlet, dtype=int)
-        self.nodes_dirichlet = np.unique(nodes_dirichlet)
-        self.nodes_dirichlet.sort()
+
+        if output is 'internal':
+            dofs_dirichlet = np.append(dofs_dirichlet, self.dofs_dirichlet)
+            self.dofs_dirichlet = np.unique(dofs_dirichlet)
+            self.dofs_dirichlet.sort()
+            self.nodes_dirichlet = np.unique(nodes_dirichlet)
+            self.nodes_dirichlet.sort()
         
         # print some output stuff
         print('\n', mesh_prop, key, 'with', len(unique_nodes), 
@@ -466,6 +475,8 @@ class Mesh:
         print('Total number of nodes with Dirichlet BCs:', len(self.nodes_dirichlet))
         print('Total number of constrained dofs:', len(self.dofs_dirichlet))
         print('*************************************************************')
+        if output is 'external':
+            return nodes_dirichlet, dofs_dirichlet
         
 
     def set_displacement(self, u):
