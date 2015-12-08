@@ -18,7 +18,7 @@ import amfe
 
 # test gmsh input-output functionality
 
-gmsh_input_file = 'meshes/test_meshes/bar_Tet4_finer_phys_group.msh'
+gmsh_input_file = '../meshes/test_meshes/bar_Tet4_finer_phys_group.msh'
 paraview_output_file = '../results/gmsh_test/gmsh_import'
 
 my_mesh = amfe.Mesh()
@@ -26,17 +26,19 @@ my_mesh.import_msh(gmsh_input_file)
 
 
 #%%
+my_mesh.mesh_information()
 
 my_material = amfe.material.KirchhoffMaterial()
 my_mesh.load_group_to_mesh(31, my_material)
 my_assembly = amfe.Assembly(my_mesh)
+my_mesh.select_dirichlet_bc(29, 'xyz')
 #%%
 my_assembly.preallocate_csr()
 
 #%%
 K, f = my_assembly.assemble_k_and_f(np.zeros(my_mesh.no_of_dofs))
 #%%
-#my_mesh.save_mesh_for_paraview(paraview_output_file)
+my_mesh.save_mesh_for_paraview(paraview_output_file)
 #
 #
 #

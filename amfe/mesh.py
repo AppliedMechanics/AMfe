@@ -221,6 +221,7 @@ class Mesh:
         self.nodes         = []
         self.ele_nodes     = []
         self.ele_obj       = []
+        self.ele_types     = [] # Element-types for Export
 
         print('\n*************************************************************')
         print('Loading gmsh-mesh from', filename)
@@ -368,6 +369,9 @@ class Mesh:
             ele_nodes[i] = np.array(element[self.node_idx : 
                     self.node_idx + amfe2no_of_nodes[element[1]]], dtype=int)
         self.ele_nodes.extend(ele_nodes)
+        
+        # ele_types for paraview export
+        self.ele_types = elements_df['el_type'].values
         
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
@@ -582,7 +586,7 @@ class Mesh:
             with open(filename_vtu, 'w') as savefile_vtu:
                 savefile_vtu.write(vtu_header)
                 # Es muss die Anzahl der gesamten Punkte und Elemente angegeben werden
-                savefile_vtu.write('<Piece NumberOfPoints="' + str(len(self.nodes)) + '" NumberOfCells="' + str(len(self.elements)) + '">\n')
+                savefile_vtu.write('<Piece NumberOfPoints="' + str(len(self.nodes)) + '" NumberOfCells="' + str(len(self.ele_nodes)) + '">\n')
                 savefile_vtu.write('<Points>\n')
                 savefile_vtu.write('<DataArray type="Float64" Name="Array" NumberOfComponents="3" format="ascii">\n')
                 # bei Systemen mit 2 Knotenfreiheitsgraden wird die dritte 0-Komponenten noch extra durch die endflag hinzugefuegt...
@@ -595,16 +599,16 @@ class Mesh:
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Points>\n<Cells>\n')
                 savefile_vtu.write('<DataArray type="Int32" Name="connectivity" format="ascii">\n')
-                for j in self.elements:
+                for j in self.ele_nodes:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + '\n')
                 savefile_vtu.write('\n</DataArray>\n')
                 # Writing the offset for the elements; they are ascending by the number of dofs and have to start with the real integer
                 savefile_vtu.write('<DataArray type="Int32" Name="offsets" format="ascii">\n')
-                for j, el_ty in enumerate(self.elements_type):
-                    savefile_vtu.write(str(amfe2no_of_nodes[el_ty]*j +amfe2no_of_nodes[el_ty]) + ' ')
+                for j, el_nodes in enumerate(self.ele_nodes):
+                    savefile_vtu.write(str(len(el_nodes)*j + len(el_nodes)) + ' ')
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
-                savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) for el_ty in self.elements_type)) # Elementtyp ueber Zahl gesetzt
+                savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) for el_ty in self.ele_types)) # Elementtyp ueber Zahl gesetzt
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Cells> \n')
                 savefile_vtu.write('<PointData Vectors="displacement">\n')
