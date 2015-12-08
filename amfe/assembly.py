@@ -12,8 +12,6 @@ import scipy as sp
 from scipy import sparse
 from scipy import linalg
 
-import numba as nb
-
 fortran_use = False
 try:
     import amfe.f90_assembly
@@ -28,8 +26,6 @@ f2py/install_fortran_routines.sh
 in order to get the full speed! 
 ''')
 
-
-@nb.jit('int32(int32, int32, int32[:], int32[:])')
 def get_index_of_csr_data(i,j, indptr, indices):
     '''Get the value index of the i,j element of a matrix in CSR format.
 
@@ -67,7 +63,6 @@ def get_index_of_csr_data(i,j, indptr, indices):
             break
     return k
 
-@nb.jit('void(int32[:], int32[:], float64[:], float64[:,:], int32[:])')
 def fill_csr_matrix(indptr, indices, vals, K, k_indices):
     '''
     Fill the values of K into the vals-array of a sparse CSR Matrix given the k_indices array.
