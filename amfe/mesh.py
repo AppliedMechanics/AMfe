@@ -29,7 +29,7 @@ element_mapping_list = [
     # Bars are missing, which are used for simple benfield truss
 ]
 
-# Element Class dictionary with 
+# Element Class dictionary with all available elements
 kwargs = {'thickness' : 1, }
 element_class_dict = {'Tet4'  : Tet4(**kwargs),
                       'Tet10' : Tet10(**kwargs),
@@ -203,7 +203,9 @@ class Mesh:
         
         Notes
         -----
-        
+        The internal representation of the elements is done via a Pandas Dataframe
+        object. This gives the possibility to dynamically choose an part of the mesh
+        for boundary conditons etc. 
         
         '''
         tag_format_start   = "$MeshFormat"
@@ -351,23 +353,27 @@ class Mesh:
             print('\nNo valid physical group is given.\n(Given physical group is', phys_group, ')')
             phys_group = int(input('Please choose a physical group to be used as mesh: '))
         
+        # make a pandas dataframe just for the desired elements
         df = self.el_df
         elements_df = df[df.phys_group == phys_group]
         
+        # add the nodes of the chosen group
         ele_nodes = [np.nan for i in range(len(elements_df))]
         for i, element in enumerate(elements_df.values):
             ele_nodes[i] = np.array(element[self.node_idx : 
                     self.node_idx + amfe2no_of_nodes[element[1]]], dtype=int)
         self.ele_nodes.extend(ele_nodes)
         
+        # make a deep copy of the element class dict and apply the material
+        # then add the element objects to the ele_obj list
         ele_class_dict = copy.deepcopy(element_class_dict)
         for i in ele_class_dict:
             ele_class_dict[i].material = material
-        object_series = df.el_type.map(ele_class_dict)
+        object_series = elements_df.el_type.map(ele_class_dict)
         self.ele_obj.extend(object_series.values.tolist())
         self._update_mesh_props()
         
-#        print('\nMesh sucessfully imported. \nNumber of nodes in chosen mesh:', len(nodes_phys_group[phys_group]))
+        # print some output stuff
         print('\nPhysical group', phys_group, 'with', len(ele_nodes), 'elements successfully added.')
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')

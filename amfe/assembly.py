@@ -160,6 +160,15 @@ class Assembly():
         '''
         Precompute the values and allocate the matrices for efficient assembly.
 
+        Parameters
+        ----------
+        None
+        
+        Returns
+        -------
+        None
+        
+        
         Internal variables computed:
         ----------------------------
 
@@ -171,52 +180,57 @@ class Assembly():
             for the i-th element and the j-th row and the k-th column
             of the local stiffness matrix of the i-th element.
             The dimension is (n_elements, ndof_element, ndof_element).
-        global_element_indices : np.ndarray
-            Array containing the global indices for the local variables of an element.
+        element_indices : list
+            List containing the global indices for the local variables of an element.
             The entry [i,j] gives the index in the global vector of element i with dof j
-        node_coords : np.ndarray
-            vector of all nodal coordinates. Dimension is (ndofs_total, )
+        nodes_voigt : np.ndarray
+            vector of all nodal coordinates in voigt-notation. Dimension is (ndofs_total, )
 
         Notes
         -----
         This preallocation routine can take some while for small matrices.
 
         '''
+        print('Preallocating the stiffness matrix')
         # computation of all necessary variables:
+        ele_nodes = self.mesh.ele_nodes
         no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
-        self.node_coords = self.mesh.nodes.reshape(-1)
-        elements = self.mesh.elements
-        nodes_per_element = elements.shape[-1]
-        dofs_per_element = nodes_per_element*no_of_dofs_per_node
-        no_of_elements = len(elements)
-        dofs_total = self.node_coords.shape[0]
-        no_of_local_matrix_entries = dofs_per_element**2
-
-        # compute the global element indices
-        self.global_element_indices = np.zeros((no_of_elements, dofs_per_element), dtype=int)
-        for i, element in enumerate(elements):
-            self.global_element_indices[i,:] = np.array(
-                [(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i)  for i in element]).reshape(-1)
+        no_of_elements = self.mesh.no_of_elements
+        no_of_dofs = self.mesh.no_of_dofs
+        self.nodes_voigt = self.mesh.nodes.reshape(-1)
+        
+#        nodes_per_element = ele_nodes.shape[-1]
+#        dofs_per_element = nodes_per_element*no_of_dofs_per_node
+#        dofs_total = self.node_coords.shape[0]
+#        no_of_local_matrix_entries = dofs_per_element**2
+        # 
+        self.element_indices = \
+        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i) for i in nodes], 
+                   dtype=int).reshape(-1) for nodes in ele_nodes]
+        
+        max_dofs_per_element = np.max([len(i) for i in self.element_indices])
 
 
         # Auxiliary Help-Matrix H
-        H = np.zeros((dofs_per_element, dofs_per_element))
+        H = np.zeros((max_dofs_per_element, max_dofs_per_element))
 
         # preallocate the CSR-matrix
-        row_global = np.zeros(no_of_elements*dofs_per_element**2, dtype=int)
+        row_global = np.zeros(no_of_elements*max_dofs_per_element**2, dtype=int)
         col_global = row_global.copy()
-        vals_global = np.zeros(no_of_elements*dofs_per_element**2)
+        vals_global = np.zeros_like(col_global, dtype=float)
 
-        for i, element_indices in enumerate(self.global_element_indices):
-            H[:,:] = element_indices
-            row_global[i*no_of_local_matrix_entries:(i+1)*no_of_local_matrix_entries] = \
+        for i, indices_of_one_element in enumerate(self.element_indices):
+            l = len(indices_of_one_element)
+            H[:l,:l] = indices_of_one_element
+            row_global[i*max_dofs_per_element**2:(i+1)*max_dofs_per_element**2] = \
                 H.reshape(-1)
-            col_global[i*no_of_local_matrix_entries:(i+1)*no_of_local_matrix_entries] = \
+            col_global[i*max_dofs_per_element**2:(i+1)*max_dofs_per_element**2] = \
                 H.T.reshape(-1)
 
         self.C_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
-                                          shape=(dofs_total, dofs_total))
-
+                                          shape=(no_of_dofs, no_of_dofs))
+        print('Done preallocating stiffness matrix with', no_of_elements, 'elements', 
+              'and', no_of_dofs, 'dofs.')
 
 
     def assemble_matrix_and_vector(self, u, decorated_matrix_func):
@@ -242,10 +256,10 @@ class Assembly():
             array of the assembled vector
         '''
         K_csr = self.C_csr.copy()
-        f_glob = np.zeros_like(self.node_coords)
+        f_glob = np.zeros(self.mesh.no_of_dofs)
 
-        for i, indices in enumerate(self.global_element_indices): # Schleife ueber alle Elemente (i - Elementnummer, indices - DOF-Nummern des Elements)
-            X = self.node_coords[indices] # X - zu den DOF-Nummern zugehoerige Koordinaten (Positionen)
+        for i, indices in enumerate(self.element_indices): # Schleife ueber alle Elemente (i - Elementnummer, indices - DOF-Nummern des Elements)
+            X = self.nodes_voigt[indices] # X - zu den DOF-Nummern zugehoerige Koordinaten (Positionen)
             u_local = u[indices] # Auslesen der localen Elementverschiebungen
             K, f = decorated_matrix_func(i, X, u_local) # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
             f_glob[indices] += f # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
