@@ -99,6 +99,8 @@ class Mesh:
         self.nodes               = []
         self.ele_nodes           = []
         self.ele_obj             = []
+        self.nodes_dirichlet     = np.array([], dtype=int)
+        self.dofs_dirichlet      = np.array([], dtype=int)
         # the displacements; They are stored as a list of numpy-arrays with shape (ndof, no_of_dofs_per_node):
         self.u                   = None
         self.timesteps           = []
@@ -313,7 +315,7 @@ class Mesh:
                 gr_nodes = np.append(gr_nodes, df_phys_group[series].unique())
             # make them unique, remove nan (resulting from non-existing entries in pandas)
             # cast and sort the array and put into dict
-            gr_nodes = pd.unique(gr_nodes)
+            gr_nodes = np.unique(gr_nodes)
             gr_nodes = gr_nodes[np.isfinite(gr_nodes)] # remove nan from non-existing entries
             gr_nodes = np.array(gr_nodes, dtype=int) # recast to int as somewhere a float is casted
             gr_nodes.sort()
@@ -325,19 +327,22 @@ class Mesh:
     
         
 
-    def assign_physical_group(self, phys_group, material, 
+    def load_group_to_mesh(self, key, material, mesh_prop='phys_group',
                               element_class_dict=element_class_dict):
         '''
         Add a physical group to the main mesh with given material. 
         
         Parameters
         ----------
-        phys_group : int
-            Key for physical group. Matches the group which is given in the 
-            gmsh file. For help, the function boundary_information gives the 
-            groups
+        key : int
+            Key for mesh property which is to be chosen. Matches the group given 
+            in the gmsh file. For help, the function mesh_information or 
+            boundary_information gives the groups
         material : Material class
             Material class which will be assigned to the elements
+        mesh_prop : {'phys_group', 'geom_entity', 'el_type'}, optional
+            label of which the element should be chosen from. Standard is 
+            physical group. 
         element_class_dict : dict, optional
             Dictionary of elements, where the element keys are mapped to the 
             element objects. 
@@ -347,15 +352,15 @@ class Mesh:
         None
         
         '''
-        # asking for a physical group to be chosen, when the no valid group is given
-        while phys_group not in self.phys_group_dict:
+        # asking for a group to be chosen, when no valid group is given
+        df = self.el_df
+        while key not in pd.unique(df[mesh_prop]):
             self.mesh_information()
-            print('\nNo valid physical group is given.\n(Given physical group is', phys_group, ')')
-            phys_group = int(input('Please choose a physical group to be used as mesh: '))
+            print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop, 'is', key, ')')
+            key = int(input('Please choose a', mesh_prop,'to be used as mesh: '))
         
         # make a pandas dataframe just for the desired elements
-        df = self.el_df
-        elements_df = df[df.phys_group == phys_group]
+        elements_df = df[df[mesh_prop] == key]
         
         # add the nodes of the chosen group
         ele_nodes = [np.nan for i in range(len(elements_df))]
@@ -374,7 +379,7 @@ class Mesh:
         self._update_mesh_props()
         
         # print some output stuff
-        print('\nPhysical group', phys_group, 'with', len(ele_nodes), 'elements successfully added.')
+        print('\n', mesh_prop, key, 'with', len(ele_nodes), 'elements successfully added.')
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
         
@@ -387,12 +392,73 @@ class Mesh:
             print('Number of Elements:', len(df[df.phys_group == i]))
             print('Element types appearing in this group:', pd.unique(df[df.phys_group == i].el_type))
 
+    def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group'):
+        '''
+        Add a group of the mesh to the dirichlet nodes to be fixed. 
+        
+        Parameters
+        ----------
+        key : int
+            Key for mesh property which is to be chosen. Matches the group given 
+            in the gmsh file. For help, the function mesh_information or 
+            boundary_information gives the groups
+        coord : str {'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz'}
+            coordinates which should be fixed
+        mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
+            label of which the element should be chosen from. Standard is 
+            physical group. 
+            
+        Returns
+        -------
+        None
+        
+        '''
+        # asking for a group to be chosen, when no valid group is given
+        df = self.el_df
+        while key not in pd.unique(df[mesh_prop]):
+            self.mesh_information()
+            print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop, 'is', key, ')')
+            key = int(input('Please choose a', mesh_prop,'to be chosen for Dirichlet BCs: '))
+        
+        # make a pandas dataframe just for the desired elements
+        elements_df = df[df[mesh_prop] == key]
+        # pick the nodes, make them unique and remove NaNs
+        all_nodes = elements_df.iloc[:, self.node_idx:]
+        unique_nodes = np.unique(all_nodes.values.reshape(-1))
+        unique_nodes = unique_nodes[np.isfinite(unique_nodes)]
+        
+        # build the dofs_dirichlet, a list containing the dirichlet dofs:
+        dofs_dirichlet = self.dofs_dirichlet.tolist()
+        if 'x' in coord:
+            dofs_dirichlet.extend(unique_nodes * self.no_of_dofs_per_node)
+        if 'y' in coord:
+            dofs_dirichlet.extend(unique_nodes * self.no_of_dofs_per_node + 1)
+        if 'z' in coord and self.no_of_dofs_per_node > 2:
+            dofs_dirichlet.extend(unique_nodes * self.no_of_dofs_per_node + 2)
+            
+        dofs_dirichlet = np.array(dofs_dirichlet, dtype=int)
+        self.dofs_dirichlet = np.unique(dofs_dirichlet)
+        self.dofs_dirichlet.sort()
+        
+        nodes_dirichlet = self.nodes_dirichlet.tolist()
+        nodes_dirichlet.extend(unique_nodes)
+        nodes_dirichlet = np.array(nodes_dirichlet, dtype=int)
+        self.nodes_dirichlet = np.unique(nodes_dirichlet)
+        self.nodes_dirichlet.sort()
+        
+        # print some output stuff
+        print('\n', mesh_prop, key, 'with', len(unique_nodes), 
+                  'nodes successfully added to Dirichlet Boundaries.')
+        print('Total number of nodes with Dirichlet BCs:', len(self.nodes_dirichlet))
+        print('Total number of constrained dofs:', len(self.dofs_dirichlet))
+        print('*************************************************************')
+        
 
     def boundary_information(self):
         '''
         Print the information of the boundary stuff
         '''
-        print('List boundary nodes sorted by the boundary number.')
+        print('Voundary nodes sorted by the boundary number:')
         for i in self.phys_group_dict:
             print('Boundary (physical group)', i,
                   'contains the following', len(self.phys_group_dict[i]), 
