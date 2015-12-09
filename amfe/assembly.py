@@ -324,7 +324,7 @@ class Assembly():
             return self.mesh.ele_obj[i].m_and_vec_int(X, u)
             
         if u == None:
-            u = np.zeros_like(self.node_coords)
+            u = np.zeros_like(self.nodes_voigt)
         M, _ = self.assemble_matrix_and_vector(u, m_and_vec_func) 
         return M
 

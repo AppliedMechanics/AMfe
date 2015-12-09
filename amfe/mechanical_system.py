@@ -45,7 +45,7 @@ class MechanicalSystem():
         # make syntax a little bit leaner
         self.unconstrain_vec = self.dirichlet_class.unconstrain_vec
         self.constrain_vec = self.dirichlet_class.constrain_vec
-        self.constrain_mat = self.dirichlet_class.constrain_matrix
+        self.constrain_matrix = self.dirichlet_class.constrain_matrix
         
         pass
 
@@ -153,10 +153,10 @@ class MechanicalSystem():
 
         dofs_list : list
             list containig the dofs which are loaded
-        load_type : str out of {'stepload', 'dirac', 'harmonic', 'ramp', 'const'}
+        load_type : str out of {'stepload', 'dirac', 'harmonic', 'ramp', 'static'}
             string specifying the load type
-        properties : dict
-            dict with the properties for the given load_type (see table below)
+        properties : tupel
+            tupel with the properties for the given load_type (see table below)
         B_matrix : ndarray / None
             Vector giving the load weights for the given dofs in dofs_list. 
             If None is chosen, the weight will be 1 for every dof by default.
@@ -171,7 +171,7 @@ class MechanicalSystem():
         'dirac'      (amplitude, time)
         'harmonic'   (amplitude, frequency)
         'ramp'       (slope, time)
-        'const'      (amplitude)
+        'static'      (amplitude)
         ===========  =====================
 
         Examples

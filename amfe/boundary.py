@@ -257,7 +257,7 @@ class DirichletBoundary():
             B = self.b_matrix()
         else:
             B = self.B
-        return np.dot(B.T, vec_unconstr)
+        return B.T.dot(vec_unconstr)
 
     def unconstrain_vec(self, vec):
         '''
@@ -283,7 +283,7 @@ class DirichletBoundary():
             B = self.b_matrix()
         else:
             B = self.B
-        return np.dot(B, vec)
+        return B.dot(vec)
             
 
 class NeumannBoundary():
