@@ -14,33 +14,47 @@ class DirichletBoundary():
     '''
     Class responsible for the Dirichlet Boundary conditions
 
-    The boundary-information is stored in the master_slave_list, which forms the interface for all homogeneous Dirichlet boundary condtions.
-
-    The Master-Slave-List is organized as follows:
-
+    The boundary-information is stored in the master_slave_list, which forms 
+    the interface for all homogeneous Dirichlet boundary condtions.
     '''
     def __init__(self, ndof_full_system, master_slave_list=[]):
         self.ndof_full_system = ndof_full_system    # number of all dofs of the full system without boundary conditions
         self.master_slave_list = master_slave_list  # boundary list
-        pass
+        self.B = None
 
 
     def b_matrix(self):
         '''
         Parameters
         ----------
-        no parameters
-
-        Information
-        -----------
+        None
 
 
-        Erzeugt die B-Matrix, die die globalen (u_global) Freiheitsgrade (alle defininierten Freiheitsgrade; auch die, welche durch Dirichlet-RB eingeschränkt/fixiert) sind
-        mit den beschränkten Freiheitsgraden (u_bound) verbindet (u_bound sind die noch verbleibenden, freien Freiheitsgrade):
+        Returns
+        -------
+        B : scipy.sparse.csr_matrix
+            Matrix (is usually Boolean, when no weightingfactors are assigned), 
+            which links the dofs of the constrained system to the dofs of the 
+            unconstrained system: 
+            
+            >>> u = B @ u_constr
+            
+            If no Dirichlet Boundaries are chosen, B is identity. 
+            
+        Examples
+        --------
+        Apply the constraints to a random stiffness matrix:
         
-        u_global = B*u_bound
-
-        Liegen keinerlei Randbedinungen vor, ist die B-Matrix eine Einheitsmatrix.        
+        >>> ndim = 100
+        >>> K = sp.sparse.random(100,100, format='csr')
+        >>> my_dirichlet_boundary = amfe.DirichletBoundary(ndim, [[None, [0,1,2,3,4], None]])
+        >>> B = my_dirichlet_boundary.b_matrix()
+        >>> B.T.dot(K.dot(B)) # B.T @ K @ B
+        ... <95x95 sparse matrix of type '<class 'numpy.float64'>'
+                with 93 stored elements in Compressed Sparse Column format>      
+                
+        Information
+        -----------      
         
         Die globalen Freiheitsgrade differieren daher von den Freiheitsgraden des beschränkten Systems;
         Eingabeparameter ist eine Liste mit Dirichlet-Randbedingungen:
@@ -97,8 +111,48 @@ class DirichletBoundary():
         mask = np.ones(self.ndof_full_system, dtype=bool)
         mask[global_slave_node_list] = False
         B = B[:,mask]
+        self.B = B
         return B
 
+    def constrain_matrix(self, M_unconstr):
+        '''
+        Constrain a matrix with the given Dirichlet boundary conditions. 
+        
+        Parameters
+        ----------
+        M_unconstr : sp.sparse.sparse_matrix
+            Sparse unconstrained matrix 
+        
+        Returns
+        -------
+        M : sp.sparse.sparse_matrix
+            Sparse constrained matrix
+        '''
+        if not sp.sparse.issparse(self.B):
+            B = self.b_matrix()
+        else:
+            B = self.B
+        return B.T.dot(M_unconstr.dot(B))
+    
+    def constrain_vec(self, vec_unconstr):
+        '''
+        Constrain a vector with the given Dirichlet boundary conditions. 
+        
+        Parameters
+        ----------
+        vec_unconstr : ndarray
+            vector of unconstrained system
+        
+        Returns
+        -------
+        vec : ndarray
+            vector of constrained system
+        '''
+        if not sp.sparse.issparse(self.B):
+            B = self.b_matrix()
+        else:
+            B = self.B
+        return np.dot(vec_unconstr, B)
 
 
 class NeumannBoundary():
