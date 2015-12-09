@@ -9,6 +9,7 @@
 docs/
 *~
 
+experiments/paper_icoev
 # saved numpy-arrays
 *.npy
 *.pdf
