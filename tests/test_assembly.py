@@ -25,14 +25,11 @@ gmsh_input_file = '../meshes/test_meshes/bar_Quad4.msh'
 paraview_output_file = '../results/gmsh_test/gmsh_import'
 
 my_mesh = amfe.Mesh()
-my_mesh.import_msh(gmsh_input_file, mesh_3d=False)
+my_mesh.import_msh(gmsh_input_file)
 
-element_class_dict = {'Quad4' : amfe.Quad4(),
-                      'Tet4' : amfe.Tet4()}
+my_assembly = amfe.Assembly(my_mesh)
 
-my_assembly = amfe.Assembly(my_mesh, element_class_dict)
-
-K_sparse = my_assembly.assemble_k()
+K_sparse = my_assembly.
 K_sparse = K_sparse.tocsr()
 
 my_assembly.preallocate_csr()
