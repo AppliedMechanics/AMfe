@@ -11,6 +11,7 @@ import numpy as np
 import scipy as sp
 from scipy import sparse
 from scipy import linalg
+import time
 
 fortran_use = False
 try:
@@ -187,6 +188,7 @@ class Assembly():
 
         '''
         print('Preallocating the stiffness matrix')
+        t1 = time.clock()
         # computation of all necessary variables:
         ele_nodes = self.mesh.ele_nodes
         no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
@@ -224,8 +226,10 @@ class Assembly():
 
         self.C_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
                                           shape=(no_of_dofs, no_of_dofs))
+        t2 = time.clock()
         print('Done preallocating stiffness matrix with', no_of_elements, 'elements', 
               'and', no_of_dofs, 'dofs.')
+        print('Time taken for assembly:', t2 - t1, 'seconds.')
 
 
     def assemble_matrix_and_vector(self, u, decorated_matrix_func):

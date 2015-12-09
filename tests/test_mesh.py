@@ -10,6 +10,7 @@ Test the mesh-module
 
 import numpy as np
 import scipy as sp
+import time
 
 # make amfe running
 import sys
@@ -19,6 +20,8 @@ import amfe
 # test gmsh input-output functionality
 
 gmsh_input_file = 'meshes/test_meshes/bar_3d.msh'
+
+gmsh_input_file = 'meshes/test_meshes/bar_Tet4_finest_phys_group.msh'
 paraview_output_file = '../results/gmsh_test/gmsh_import'
 
 my_mesh = amfe.Mesh()
@@ -36,7 +39,20 @@ my_mesh.select_dirichlet_bc(-1, 'xyz')
 my_assembly.preallocate_csr()
 
 #%%
-K, f = my_assembly.assemble_k_and_f(np.zeros(my_mesh.no_of_dofs))
+t1 = time.clock()
+K_unconstr, f_unconstr = my_assembly.assemble_k_and_f(np.zeros(my_mesh.no_of_dofs))
+t2 = time.clock()
+print('Time for assembly:', t2-t1, 's.')
+#%%
+
+my_boundary = amfe.DirichletBoundary(my_mesh.no_of_dofs, [[None, my_mesh.dofs_dirichlet, None],])
+B = my_boundary.b_matrix()
+K = B.T.dot(K_unconstr).dot(B)
+#%%
+
+# Constructing an arbitrary sparse matrix
+
+
 #%%
 my_mesh.save_mesh_for_paraview(paraview_output_file)
 #
