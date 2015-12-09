@@ -22,10 +22,6 @@ from amfe.boundary import *
 
 
 # Anmerkungen (Fabian):
-# - 'element_class_dict' wird in __init__ dem Attribut 
-#   'self.element_class_dict' zugewiesen, sodass in jedem mechanischen System
-#   von jedem Elementtyp ein Element geladen wird, welches spaeter an assembly 
-#   uebergeben wird
 # - die Assembly-Klasse wird nach dem Einlesen des Netzes in der jeweiligen 
 #   Netz-Einlese-Methode instanziert
 
@@ -69,7 +65,8 @@ class MechanicalSystem():
         self.assembly_class.preallocate_csr()
 
 
-    def load_mesh_from_csv(self, node_list_csv, element_list_csv, no_of_dofs_per_node=2, explicit_node_numbering=False, ele_type=False):
+    def load_mesh_from_csv(self, node_list_csv, element_list_csv, 
+                no_of_dofs_per_node=2, explicit_node_numbering=False, ele_type=False):
         '''
         Loads the mesh from two csv-files containing the node and the element list.
 
@@ -82,7 +79,8 @@ class MechanicalSystem():
         no_of_dofs_per_node: int, optional
             degree of freedom per node as saved in the csv-file
         explicit_node_numbering : bool, optional
-            flag stating, if the node numbers are explcitly numbered in the csv file, i.e. if the first column gives the numbers of the nodes.
+            flag stating, if the node numbers are explcitly numbered in the 
+            csv file, i.e. if the first column gives the numbers of the nodes.
         ele_type: str
             Spezifiy elements type of the mesh (e.g. for a Tri-Mesh different
             elements types as Tri3, Tri4, Tri6 can be used)
@@ -98,7 +96,8 @@ class MechanicalSystem():
 
         '''
         self.mesh_class = Mesh()
-        self.mesh_class.import_csv(node_list_csv, element_list_csv, explicit_node_numbering=explicit_node_numbering, ele_type=ele_type)
+        self.mesh_class.import_csv(node_list_csv, element_list_csv, 
+                    explicit_node_numbering=explicit_node_numbering, ele_type=ele_type)
         
         self.no_of_dofs = self.mesh_class.no_of_dofs
         self.no_of_dofs_per_node = no_of_dofs_per_node
@@ -116,61 +115,7 @@ class MechanicalSystem():
 
     def apply_dirichlet_boundaries(self, dirichlet_boundary_list=[]):
         '''
-        Applies dirichlet-boundaries to the system.
-
-        Parameters
-        ----------
-        dirichlet_boundary_list : list
-            list containing the dirichlet-boundary triples (DBT)
-
-            >>> [DBT_1, DBT_2, DBT_3, ]
-
-        Returns
-        -------
-        None
-
-        Notes
-        -----
-        each dirchilet_boundary_triple is itself a list containing
-
-        >>> DBT = [master_dof=None, [list_of_slave_dofs], B_matrix=None]
-
-        master_dof : int / None
-            the dof onto which the slave dofs are projected. The master_dof
-            will be overwritten at the end, i.e. if the master dof should
-            participate at the end, it has to be a member in teh list of
-            slave_dofs. If the master_dof is set to None, the slave_dofs will
-            be fixed
-        list_of_slave_dofs : list containing ints
-            The list of the dofs which will be projected onto the master dof;
-            the weights of the projection are stored in the B_matrix
-        B_matrix : ndarras / None
-            The weighting-matrix which gives enables to apply complicated
-            boundary conditions showing up in symmetry-conditions or rotational
-            dofs. The default-value for B_matrix is None, which weighs all
-            members of the slave_dof_list equally with 1.
-
-        Examples
-        --------
-
-        The dofs 0, 2 and 4 are fixed:
-
-        >>> mysystem = MechanicalSystem()
-        >>> DBT = [None, [0, 2, 4], None]
-        >>> mysystem.apply_dirichlet_boundaries([DBT, ])
-
-        The dofs 0, 1, 2, 3, 4, 5, 6 are fixed and the dofs 100, 101, 102, 103 have all the same displacements:
-
-        >>> mysystem = MechanicalSystem()
-        >>> DBT_fix = [None, np.arange(7), None]
-        >>> DBT_disp = [100, [100, 101, 102, 103], None]
-        >>> mysystem.apply_dirichlet_boundaries([DBT_fix, DBT_disp])
-
-        Symmetry: The displacement of dof 21 is negativ equal to the displacement of dof 20, i.e. u_20 + u_21 = 0
-
-        >>> mysystem = MechanicalSystem()
-        >>> DBT_symm = [20, [20, 21], np.array([1, -1])]
-        >>> mysystem.apply_dirichlet_boundaries([DBT_symm, ])
+        Applies dirichlet-boundaries to the system. This needs to be reworked!
 
         '''
         self.dirichlet_bc_class = DirichletBoundary(self.no_of_dofs, dirichlet_boundary_list)
@@ -201,7 +146,8 @@ class MechanicalSystem():
         properties : dict
             dict with the properties for the given load_type (see table below)
         B_matrix : ndarray / None
-            Vector giving the load weights for the given dofs in dofs_list. If None is chosen, the weight will be 1 for every dof by default.
+            Vector giving the load weights for the given dofs in dofs_list. 
+            If None is chosen, the weight will be 1 for every dof by default.
 
         the load_type-Keywords and the corresponding properties are:
 
@@ -262,8 +208,10 @@ class MechanicalSystem():
         '''Return the global tangential stiffness matrix with dirichlet boundary conditions imposed'''
         if u is None:
             u = np.zeros(self.b_constraints.shape[-1])
-        _K, _f = self.assembly_class.assemble_k_and_f(self.b_constraints.dot(u)) # Assembled stiffness matrix without dirichlet boundary conditions imposed
-        self._K_bc = self.b_constraints.T.dot(_K.dot(self.b_constraints)) # Apply dirichlet boundary conditions by matrix product (B^T * K * B)
+        # Assembled stiffness matrix without dirichlet boundary conditions imposed
+        _K, _f = self.assembly_class.assemble_k_and_f(self.b_constraints.dot(u)) 
+        # Apply dirichlet boundary conditions by matrix product (B.T @ K @ B)
+        self._K_bc = self.b_constraints.T.dot(_K.dot(self.b_constraints)) 
         return self._K_bc
 
     def f_int_global(self, u):
@@ -273,7 +221,10 @@ class MechanicalSystem():
         return self._f_bc
 
     def f_ext_global(self, u, du, t):
-        '''return the global nonlinear external force of the right hand side of the equation, i.e. the excitation'''
+        '''
+        Return the global nonlinear external force of the right hand side 
+        of the equation, i.e. the excitation.
+        '''
         return self.b_constraints.T.dot(self._f_ext_without_bc(t))
 
     def K_and_f_global(self, u):
@@ -296,9 +247,9 @@ class MechanicalSystem():
 
 class ReducedSystem(MechanicalSystem):
     '''
-    Class for reduced systems.
-    It is directyl inherited from MechanicalSystem.
-    Provides the interface for an integration scheme and so on where a basis vector is to be chosen...
+    Class for reduced systems. It is directyl inherited from MechanicalSystem.
+    Provides the interface for an integration scheme and so on where a basis 
+    vector is to be chosen...
 
 
     Parameters
@@ -308,9 +259,13 @@ class ReducedSystem(MechanicalSystem):
 
     Notes
     -----
-    The Basis V is a Matrix with x = V*q mapping the reduced set of coordinates q onto the physical coordinates x. The coordinates x are constrained, i.e. the x denotes the full system in the sense of the problem set and not of the pure finite element set.
+    The Basis V is a Matrix with x = V*q mapping the reduced set of coordinates 
+    q onto the physical coordinates x. The coordinates x are constrained, i.e. 
+    the x denotes the full system in the sense of the problem set and not of 
+    the pure finite element set.
 
-    The system runs without providing a V_basis when constructing the method only for the unreduced routines.
+    The system runs without providing a V_basis when constructing the method 
+    only for the unreduced routines.
 
     Examples
     --------
@@ -395,7 +350,8 @@ class ConstrainedMechanicalSystem():
         '''
         Return the tangential damping matrix.
 
-        The tangential damping matrix is the jacobian matrix of the nonlinear forces with respect to the generalized velocities q.
+        The tangential damping matrix is the jacobian matrix of the nonlinear 
+        forces with respect to the generalized velocities q.
         Parameters
         ----------
         q : ndarray
@@ -434,7 +390,8 @@ class ConstrainedMechanicalSystem():
         '''
         Return the residual of the constraints.
 
-        The constraints are given in the canonical form C=0. This function returns the residual of the constraints, i.e. C=res.
+        The constraints are given in the canonical form C=0. This function 
+        returns the residual of the constraints, i.e. C=res.
 
         Parameters
         ----------
@@ -457,7 +414,9 @@ class ConstrainedMechanicalSystem():
         '''
         Return the Jacobian B of the constraints.
 
-        The Jacobian matrix of the constraints B is the partial derivative of the constraint vector C with respect to the generalized coordinates q, i.e. B = dC/dq
+        The Jacobian matrix of the constraints B is the partial derivative of 
+        the constraint vector C with respect to the generalized coordinates q, 
+        i.e. B = dC/dq
 
         Parameters
         ----------
@@ -471,7 +430,8 @@ class ConstrainedMechanicalSystem():
         Returns
         -------
         B : ndarray
-            Jacobian of the constraint vector with respect to the generalized coordinates
+            Jacobian of the constraint vector with respect to the generalized 
+            coordinates
         '''
         return np.zeros((self.ndof_const, self.ndof))
 
@@ -498,7 +458,8 @@ class ConstrainedMechanicalSystem():
         '''
         External force of the mechanical system.
 
-        This is the right hand side of the canonical dynamic equation giving the external forcing.
+        This is the right hand side of the canonical dynamic equation giving 
+        the external forcing.
 
         Parameters
         ----------

@@ -71,7 +71,8 @@ my_mesh.save_mesh_for_paraview(paraview_output_file)
 #my_mesh.save_mesh_for_paraview('../results/selbstgebaut/selbstgebaut')
 #
 #
-#print('List boundary nodes sorted by the boundary number. \nTake care: The lines start indexing with 0, gmsh does this with 1.\n')
+#print('List boundary nodes sorted by the boundary number. \
+# \nTake care: The lines start indexing with 0, gmsh does this with 1.\n')
 #for i, line in enumerate(my_mesh.boundary_list):
 #    print('Boundary', i, '(gmsh-Key:', my_mesh.amfe2gmsh_boundary_dict[i], ')')
 #    print(line, '\n')

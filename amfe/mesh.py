@@ -168,13 +168,18 @@ class Mesh:
         self.elements = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
         if self.elements.ndim == 1: # Wenn nur genau ein Element vorliegt
             self.elements = np.array([self.elements])
-        if explicit_node_numbering: # Falls erste Spalte die Elementnummer angibt, wird diese hier abgeschnitten, um nur die Knoten des Elements zu erhalten
+        # Falls erste Spalte die Elementnummer angibt, wird diese hier 
+        # abgeschnitten, um nur die Knoten des Elements zu erhalten
+        if explicit_node_numbering: 
             self.elements = self.elements[:,1:]
 
     
         if ele_type: # If element type is spezified, use this spezified type
             mesh_type = ele_type
-        else: # If element type is not spzezified, try to determine element type depending on the number of nodes per element (see default values for different number of nodes per element in 'mesh_type_dict')
+        # If element type is not spzezified, try to determine element type 
+        # depending on the number of nodes per element (see default values for 
+        # different number of nodes per element in 'mesh_type_dict')
+        else: 
             try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
                 (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
                 mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
@@ -183,7 +188,9 @@ class Mesh:
                 raise
 
         print('Element type is {0}...  '.format(mesh_type), end="")
-        self.elements_type = [mesh_type for i in self.elements] # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
+        # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet 
+        # wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
+        self.elements_type = [mesh_type for i in self.elements] 
         self._update_mesh_props()
         print('Reading elements successful.')
 
@@ -535,9 +542,12 @@ class Mesh:
 
     def save_mesh_for_paraview(self, filename):
         '''
-        Saves the mesh and the corresponding displacements to a .pvd file and corresponding .vtu-files readable for ParaView.
+        Saves the mesh and the corresponding displacements to a .pvd file and 
+        corresponding .vtu-files readable for ParaView.
 
-        In the .pvd file the information of the timesteps are given. For every timestep a .vtu file is created where the displacement and eventually the stress is saved.
+        In the .pvd file the information of the timesteps are given. For every 
+        timestep a .vtu file is created where the displacement and eventually 
+        the stress is saved.
 
         Parameters
         -----------
@@ -565,7 +575,8 @@ class Mesh:
             self.timesteps.append(0)
 
         # Make the pvd-File with the links to vtu-files
-        pvd_header = '''<?xml version="1.0"?> \n <VTKFile type="Collection" version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
+        pvd_header = '''<?xml version="1.0"?> \n <VTKFile type="Collection" 
+version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
         pvd_footer = ''' </Collection> \n </VTKFile>'''
         pvd_line_start = '''<DataSet timestep="'''
         pvd_line_middle = '''" group="" part="0" file="'''
@@ -578,7 +589,8 @@ class Mesh:
         with open(filename_pvd, 'w') as savefile_pvd:
             savefile_pvd.write(pvd_header)
             for i, t in enumerate(self.timesteps):
-                savefile_pvd.write(pvd_line_start + str(t) + pvd_line_middle + filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
+                savefile_pvd.write(pvd_line_start + str(t) + pvd_line_middle + 
+                    filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
             savefile_pvd.write(pvd_footer)
 
         vtu_header = '''<?xml version="1.0"?> \n
@@ -597,10 +609,13 @@ class Mesh:
             with open(filename_vtu, 'w') as savefile_vtu:
                 savefile_vtu.write(vtu_header)
                 # Es muss die Anzahl der gesamten Punkte und Elemente angegeben werden
-                savefile_vtu.write('<Piece NumberOfPoints="' + str(len(self.nodes)) + '" NumberOfCells="' + str(len(self.ele_nodes)) + '">\n')
+                savefile_vtu.write('<Piece NumberOfPoints="' + str(len(self.nodes)) 
+                    + '" NumberOfCells="' + str(len(self.ele_nodes)) + '">\n')
                 savefile_vtu.write('<Points>\n')
-                savefile_vtu.write('<DataArray type="Float64" Name="Array" NumberOfComponents="3" format="ascii">\n')
-                # bei Systemen mit 2 Knotenfreiheitsgraden wird die dritte 0-Komponenten noch extra durch die endflag hinzugefuegt...
+                savefile_vtu.write('<DataArray type="Float64" Name="Array" \
+                    NumberOfComponents="3" format="ascii">\n')
+                # bei Systemen mit 2 Knotenfreiheitsgraden wird die dritte 
+                # 0-Komponenten noch extra durch die endflag hinzugefuegt...
                 if self.no_of_dofs_per_node == 2:
                     endflag = ' 0 \n'
                 elif self.no_of_dofs_per_node == 3:
@@ -613,17 +628,20 @@ class Mesh:
                 for j in self.ele_nodes:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + '\n')
                 savefile_vtu.write('\n</DataArray>\n')
-                # Writing the offset for the elements; they are ascending by the number of dofs and have to start with the real integer
+                # Writing the offset for the elements; they are ascending by 
+                # the number of dofs and have to start with the real integer
                 savefile_vtu.write('<DataArray type="Int32" Name="offsets" format="ascii">\n')
                 for j, el_nodes in enumerate(self.ele_nodes):
                     savefile_vtu.write(str(len(el_nodes)*j + len(el_nodes)) + ' ')
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
-                savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) for el_ty in self.ele_types)) # Elementtyp ueber Zahl gesetzt
+                # Elementtyp ueber Zahl gesetzt
+                savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) for el_ty in self.ele_types)) 
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Cells> \n')
                 savefile_vtu.write('<PointData Vectors="displacement">\n')
-                savefile_vtu.write('<DataArray type="Float64" Name="displacement" NumberOfComponents="3" format="ascii">\n')
+                savefile_vtu.write('<DataArray type="Float64" Name="displacement" \
+                    NumberOfComponents="3" format="ascii">\n')
                 # pick the i-th timestep
                 for j in self.u[i]:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
@@ -633,8 +651,9 @@ class Mesh:
 
 class MeshGenerator:
     '''
-    Klasse zum Erzeugen von zweidimensionalen Netzen, die Dreiecks- oder Vierecksstruktur haben.
-    Ausgabe in Netz-Files, die von der Netz-Klasse wieder eingelesen werden koennen
+    Klasse zum Erzeugen von zweidimensionalen Netzen, die Dreiecks- oder 
+    Vierecksstruktur haben. Ausgabe in Netz-Files, die von der Netz-Klasse 
+    wieder eingelesen werden können
 
     '''
 

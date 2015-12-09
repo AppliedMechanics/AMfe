@@ -1,7 +1,8 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
 """
-Basic assembly module for the finite element code. Assumes to have all elements in the inertial frame.
+Basic assembly module for the finite element code. Assumes to have all elements 
+in the inertial frame.
 Created on Tue Apr 21 11:13:52 2015
 
 @author: Johannes Rutzmoser
@@ -46,13 +47,15 @@ def get_index_of_csr_data(i,j, indptr, indices):
     -------
 
     k : int
-        index of the value array of the CSR-matrix, in which value [i,j] is stored.
+        index of the value array of the CSR-matrix, in which value [i,j] is 
+        stored.
 
     Notes
     -----
 
-    This routine works only, if the tuple i,j is acutally a real entry of the Matrix.
-    Otherwise the value k=0 will be returned and an Error Message will be provided.
+    This routine works only, if the tuple i,j is acutally a real entry of the 
+    Matrix. Otherwise the value k=0 will be returned and an Error Message will 
+    be provided.
     '''
 
     k = indptr[i]
@@ -66,7 +69,8 @@ def get_index_of_csr_data(i,j, indptr, indices):
 
 def fill_csr_matrix(indptr, indices, vals, K, k_indices):
     '''
-    Fill the values of K into the vals-array of a sparse CSR Matrix given the k_indices array.
+    Fill the values of K into the vals-array of a sparse CSR Matrix given the 
+    k_indices array.
 
     Parameters
     ----------
@@ -177,10 +181,12 @@ class Assembly():
             of the local stiffness matrix of the i-th element.
             The dimension is (n_elements, ndof_element, ndof_element).
         element_indices : list
-            List containing the global indices for the local variables of an element.
-            The entry [i,j] gives the index in the global vector of element i with dof j
+            List containing the global indices for the local variables of an 
+            element. The entry [i,j] gives the index in the global vector of 
+            element i with dof j
         nodes_voigt : np.ndarray
-            vector of all nodal coordinates in voigt-notation. Dimension is (ndofs_total, )
+            vector of all nodal coordinates in voigt-notation. 
+            Dimension is (ndofs_total, )
 
         Notes
         -----
@@ -257,12 +263,19 @@ class Assembly():
         K_csr = self.C_csr.copy()
         f_glob = np.zeros(self.mesh.no_of_dofs)
 
-        for i, indices in enumerate(self.element_indices): # Schleife ueber alle Elemente (i - Elementnummer, indices - DOF-Nummern des Elements)
-            X = self.nodes_voigt[indices] # X - zu den DOF-Nummern zugehoerige Koordinaten (Positionen)
-            u_local = u[indices] # Auslesen der localen Elementverschiebungen
-            K, f = decorated_matrix_func(i, X, u_local) # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
-            f_glob[indices] += f # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
-            fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices) # Einsortieren der lokalen Elementmatrix in die globale Matrix
+        # Schleife ueber alle Elemente 
+        # (i - Elementnummer, indices - DOF-Nummern des Elements)
+        for i, indices in enumerate(self.element_indices): 
+            # X - zu den DOF-Nummern zugehoerige Koordinaten (Positionen)
+            X = self.nodes_voigt[indices] 
+            # Auslesen der localen Elementverschiebungen
+            u_local = u[indices] 
+            # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
+            K, f = decorated_matrix_func(i, X, u_local) 
+            # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
+            f_glob[indices] += f 
+            # Einsortieren der lokalen Elementmatrix in die globale Matrix
+            fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices) 
 
         return K_csr, f_glob
 

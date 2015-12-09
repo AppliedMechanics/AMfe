@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue May 12 09:28:07 2015
-
-@author: johannesr
-"""
+"""Module for handling the Dirichlet and Neumann boundary. """
 
 import numpy as np
 import scipy as sp
-
 
 
 class DirichletBoundary():
@@ -17,11 +12,67 @@ class DirichletBoundary():
     The boundary-information is stored in the master_slave_list, which forms 
     the interface for all homogeneous Dirichlet boundary condtions.
     '''
-    def __init__(self, ndof_full_system, master_slave_list=[]):
-        self.ndof_full_system = ndof_full_system    # number of all dofs of the full system without boundary conditions
+    def __init__(self, no_of_unconstrained_dofs, master_slave_list=[]):
+        '''
+        Parameters
+        ----------
+        ndof_unconstrained_system : int
+            Number of dofs of the unconstrained system. 
+        master_slave_list : list
+            list containing the dirichlet-boundary triples (DBT)
+
+            >>> [DBT_1, DBT_2, DBT_3, ]
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        each dirchilet_boundary_triple is itself a list containing
+
+        >>> DBT = [master_dof=None, [list_of_slave_dofs], B_matrix=None]
+
+        master_dof : int / None
+            the dof onto which the slave dofs are projected. The master_dof
+            will be overwritten at the end, i.e. if the master dof should
+            participate at the end, it has to be a member in teh list of
+            slave_dofs. If the master_dof is set to None, the slave_dofs will
+            be fixed
+        list_of_slave_dofs : list containing ints
+            The list of the dofs which will be projected onto the master dof;
+            the weights of the projection are stored in the B_matrix
+        B_matrix : ndarras / None
+            The weighting-matrix which gives enables to apply complicated
+            boundary conditions showing up in symmetry-conditions or rotational
+            dofs. The default-value for B_matrix is None, which weighs all
+            members of the slave_dof_list equally with 1.
+
+        Examples
+        --------
+
+        The dofs 0, 2 and 4 are fixed:
+
+        >>> DBT = [None, [0, 2, 4], None]
+        >>> my_boundary = DirichletBoundary([DBT, ])
+
+        The dofs 0, 1, 2, 3, 4, 5, 6 are fixed and the dofs 100, 101, 102, 103 
+        have all the same displacements:
+
+        >>> DBT_fix = [None, np.arange(7), None]
+        >>> DBT_disp = [100, [100, 101, 102, 103], None]
+        >>> my_boundary = DirichletBoundary([DBT_fix, DBT_disp])
+
+        Symmetry: The displacement of dof 21 is negativ equal to the 
+        displacement of dof 20, i.e. u_20 + u_21 = 0
+
+        >>> DBT_symm = [20, [20, 21], np.array([1, -1])]
+        >>> my_boundary = DirichletBoundary([DBT_symm, ])
+        '''
+        # number of all dofs of the full system without boundary conditions
+        self.no_of_unconstrained_dofs = no_of_unconstrained_dofs    
         self.master_slave_list = master_slave_list  # boundary list
         self.B = None
-
 
     def b_matrix(self):
         '''
@@ -47,7 +98,7 @@ class DirichletBoundary():
         
         >>> ndim = 100
         >>> K = sp.sparse.random(100,100, format='csr')
-        >>> my_dirichlet_boundary = amfe.DirichletBoundary(ndim, [[None, [0,1,2,3,4], None]])
+        >>> my_dirichlet_boundary = DirichletBoundary(ndim, [[None, [0,1,2,3,4], None]])
         >>> B = my_dirichlet_boundary.b_matrix()
         >>> B.T.dot(K.dot(B)) # B.T @ K @ B
         ... <95x95 sparse matrix of type '<class 'numpy.float64'>'
@@ -56,19 +107,28 @@ class DirichletBoundary():
         Information
         -----------      
         
-        Die globalen Freiheitsgrade differieren daher von den Freiheitsgraden des beschränkten Systems;
+        Die globalen Freiheitsgrade differieren daher von den Freiheitsgraden 
+        des beschränkten Systems;
         Eingabeparameter ist eine Liste mit Dirichlet-Randbedingungen:
         [Master-DOF, [Liste_von_Sklaven-DOFs], Gewichtungsvektor]
 
-        Master-DOF: (typ: int) Der DOF, auf den die Sklaven-DOFs projiziert werden. Der Master-DOF wird am ende eliminiert, d.h. er sollte üblicherweise auch in den Sklaven-DOFs auftauchen
+        Master-DOF: (typ: int) Der DOF, auf den die Sklaven-DOFs projiziert 
+        werden. Der Master-DOF wird am ende eliminiert, d.h. er sollte 
+        üblicherweise auch in den Sklaven-DOFs auftauchen
 
-        [Liste_von_Sklaven-DOFs]: (typ: liste mit ints) Die DOFs, die auf den Master-DOF projiziert werden. Zur Gewichtung wird der Gewichtungsvektor angewendet, der genauso viele Einträge haben muss wie die Sklaven-DOF-Liste
+        [Liste_von_Sklaven-DOFs]: (typ: liste mit ints) Die DOFs, die auf den 
+        Master-DOF projiziert werden. Zur Gewichtung wird der Gewichtungsvektor 
+        angewendet, der genauso viele Einträge haben muss wie die Sklaven-DOF-Liste
 
         Gewichtungsvektor: (typ: np.array oder None) TODO Beschreibung
 
 
-        Wichtig: Für die Dirichlet-Randbedingungen werden Freiheitsgrade des globalen Systems und nicht die Knotenfreiheitsgrade berücksichtigt. Die Indexwerte der Knoten müssen stets in DOFs des globalen Sytems umgerechnet werden
+        Wichtig: Für die Dirichlet-Randbedingungen werden Freiheitsgrade des 
+        globalen Systems und nicht die Knotenfreiheitsgrade berücksichtigt. 
+        Die Indexwerte der Knoten müssen stets in DOFs des globalen Sytems 
+        umgerechnet werden
         '''
+        dofs_uncstr = self.no_of_unconstrained_dofs
         B = sp.sparse.eye(self.ndof_full_system).tocsr()
         
         if self.master_slave_list == []:  # no boundary conditions
@@ -77,17 +137,22 @@ class DirichletBoundary():
         global_slave_node_list = np.array([], dtype=int)
         global_master_node_list = np.array([], dtype=int)
 
-        # Loop over all boundary items; the boundary information is stored in the _tmp-Variables
+        # Loop over all boundary items; the boundary information is stored in 
+        # the _tmp-Variables
         for master_node, slave_node_list, b_matrix in self.master_slave_list:
 
-            if (type(b_matrix) != type(np.zeros(1))): # a little hack in order to get the types right
+            # a little hack in order to get the types right
+            if (type(b_matrix) != type(np.zeros(1))): 
                 # Make a B-Matrix, if it's not there
                 b_matrix = np.ones(len(slave_node_list))
 
             if len(slave_node_list) != len(b_matrix):
-                raise ValueError('Die Dimension der Sklaven-Knotenliste entspricht nicht der Dimension des Gewichtungsvektors!')
-
-            if master_node != None: # check, if the master node is existent; otherwise the columns will only be deleted
+                raise ValueError('Die Dimension der Sklaven-Knotenliste \
+                entspricht nicht der Dimension des Gewichtungsvektors!')
+                
+            # check, if the master node is existent; otherwise the columns will 
+            # only be deleted
+            if master_node != None: 
                 for i in range(len(slave_node_list)):
                     ## This is incredible slow!!!, but it's exactly what is done:
                     # B_tmp[:,master_node] += B[:,i]*b_matrix[i]
@@ -96,7 +161,8 @@ class DirichletBoundary():
                     row_indices = col.nonzero()[0]
                     no_of_nonzero_entries = row_indices.shape[0]
                     col_indices = np.ones(no_of_nonzero_entries)*master_node
-                    B_tmp = B_tmp + sp.sparse.csr_matrix((col.data, (row_indices, col_indices)), shape=(self.ndof_full_system, self.ndof_full_system))
+                    B_tmp = B_tmp + sp.sparse.csr_matrix((col.data, 
+                            (row_indices, col_indices)), shape=(dofs_uncstr, dofs_uncstr))
 
                 global_master_node_list = np.append(global_master_node_list, master_node)
             global_slave_node_list = np.append(global_slave_node_list, slave_node_list)
@@ -106,9 +172,11 @@ class DirichletBoundary():
             B[i, i] -= 1
         B = B + B_tmp
 
-        # Remove the master-nodes from the slave_node_list and mast the matrix such, that the slave_nodes are removed
-        global_slave_node_list = np.array([i for i in global_slave_node_list if i not in global_master_node_list])
-        mask = np.ones(self.ndof_full_system, dtype=bool)
+        # Remove the master-nodes from the slave_node_list and mast the matrix such, 
+        # that the slave_nodes are removed
+        global_slave_node_list = np.array(
+            [i for i in global_slave_node_list if i not in global_master_node_list])
+        mask = np.ones(dofs_uncstr, dtype=bool)
         mask[global_slave_node_list] = False
         B = B[:,mask]
         self.B = B
@@ -156,7 +224,9 @@ class DirichletBoundary():
 
 
 class NeumannBoundary():
-    '''Class for application of von Neumann boundary conditions. Works a little bit crazy but it's working.
+    '''
+    Class for application of von Neumann boundary conditions. 
+    Works a little bit crazy but it's working.
     '''
 
     def __init__(self, no_of_dofs, neumann_boundary_list):
@@ -244,7 +314,8 @@ class NeumannBoundary():
         vals_global = np.array([], dtype=float)
 
         for dofs, type_, props, B_matrix in self.neumann_boundary_list:
-            # constructing the indices for the boolean matrix grouping the functions in the right place
+            # constructing the indices for the boolean matrix grouping 
+            # the functions in the right place
             col = np.ones(len(dofs), dtype=int)*counter
             row = np.array(dofs)
             if B_matrix:

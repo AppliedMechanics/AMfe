@@ -77,7 +77,8 @@ class KirchhoffMaterial(HyperelasticMaterial):
     with:
         :math:`W` = strain energy potential
         
-        :math:`\lambda` = first Lamé constant: :math:`\lambda = \frac{\nu E}{(1+\nu)(1-2\nu)}`
+        :math:`\lambda` = first Lamé constant: 
+        :math:`\lambda = \frac{\nu E}{(1+\nu)(1-2\nu)}`
         
         :math:`\mu` = second Lamé constant: :math:`\mu = \frac{E}{2(1+\nu)}`
         
@@ -312,9 +313,11 @@ class MooneyRivlin(HyperelasticMaterial):
         
         :math:`J_2` = second deviatoric strain invariant
         
-        :math:`J_3` = third deviatoric strain invariant (determinant of elastic deformation gradient :math:`\mathbf{F}`)
+        :math:`J_3` = third deviatoric strain invariant (determinant of elastic 
+        deformation gradient :math:`\mathbf{F}`)
                 
-        :math:`A_{10}, A_{01}` = material constants characterizing the deviatoric deformation of the material
+        :math:`A_{10}, A_{01}` = material constants characterizing the 
+        deviatoric deformation of the material
         
         :math:`\kappa` = bulk modulus (material incompressibility parameter)
             
