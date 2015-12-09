@@ -358,7 +358,7 @@ class Mesh:
         while key not in pd.unique(df[mesh_prop]):
             self.mesh_information()
             print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop, 'is', key, ')')
-            key = int(input('Please choose a', mesh_prop,'to be used as mesh: '))
+            key = int(input('Please choose a ' + mesh_prop + ' to be used as mesh: '))
         
         # make a pandas dataframe just for the desired elements
         elements_df = df[df[mesh_prop] == key]
@@ -438,7 +438,7 @@ class Mesh:
         while key not in pd.unique(df[mesh_prop]):
             self.mesh_information()
             print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop, 'is', key, ')')
-            key = int(input('Please choose a', mesh_prop,'to be chosen for Dirichlet BCs: '))
+            key = int(input('Please choose a ' + mesh_prop + ' to be chosen for Dirichlet BCs: '))
         
         # make a pandas dataframe just for the desired elements
         elements_df = df[df[mesh_prop] == key]
