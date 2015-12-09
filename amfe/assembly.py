@@ -235,7 +235,7 @@ class Assembly():
         t2 = time.clock()
         print('Done preallocating stiffness matrix with', no_of_elements, 'elements', 
               'and', no_of_dofs, 'dofs.')
-        print('Time taken for assembly:', t2 - t1, 'seconds.')
+        print('Time taken for preallocation:', t2 - t1, 'seconds.')
 
 
     def assemble_matrix_and_vector(self, u, decorated_matrix_func):

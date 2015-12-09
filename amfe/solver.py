@@ -111,11 +111,12 @@ class NewmarkIntegrator():
 
         '''
         self.mechanical_system = mechanical_system
-        self.M = mechanical_system.M_global()
-#        self.K = mechanical_system.K_global
-        self.f_non = mechanical_system.f_int_global
-        self.f_ext = mechanical_system.f_ext_global
-        self.K_and_f_non = mechanical_system.K_and_f_global
+        # assuming constant mass matrix! 
+        self.M = mechanical_system.M()
+#        self.K = mechanical_system.K
+        self.f_non = mechanical_system.f_int
+        self.f_ext = mechanical_system.f_ext
+        self.K_and_f_non = mechanical_system.K_and_f
 
 
     def _residual(self, f_non, q, dq, ddq, t):
@@ -262,12 +263,12 @@ def solve_linear_displacement(mechanical_system, t=0, verbose=True):
     None
 
     '''
-    f_ext = mechanical_system.f_ext_global(None, None, t)
+    f_ext = mechanical_system.f_ext(None, None, t)
     mechanical_system.write_timestep(0, f_ext*0) # write zeros
 
     if verbose: print('Start solving linear static problem')
 
-    u = linalg.spsolve(mechanical_system.K_global(), f_ext)
+    u = linalg.spsolve(mechanical_system.K(), f_ext)
     mechanical_system.write_timestep(1, u)
 
     if verbose: print('Static problem solved')
@@ -312,7 +313,7 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
 
     '''
     stepwidth = 1/no_of_load_steps
-    f_ext = mechanical_system.f_ext_global(None, None, t)
+    f_ext = mechanical_system.f_ext(None, None, t)
     ndof = f_ext.shape[0]
     u = np.zeros(ndof)
     mechanical_system.write_timestep(0, u) # initial write
@@ -320,7 +321,7 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     abs_f_ext = np.sqrt(f_ext.dot(f_ext))
     for force_factor in np.arange(stepwidth, 1+stepwidth, stepwidth):
         # prediction
-        K, f_int= mechanical_system.K_and_f_global(u)
+        K, f_int= mechanical_system.K_and_f(u)
         res = f_int - f_ext*force_factor
         abs_res = norm_of_vector(res)
 
@@ -329,7 +330,7 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         while (abs_res > eps*abs_f_ext) and (n_max_iter > n_iter):
             corr = linalg.spsolve(K, res)
             u -= corr*newton_damping
-            K, f_int= mechanical_system.K_and_f_global(u)
+            K, f_int= mechanical_system.K_and_f(u)
             res = f_int - f_ext * force_factor
             abs_res = norm_of_vector(res)
             n_iter += 1
@@ -356,8 +357,8 @@ def give_mass_and_stiffness(mechanical_system):
         Stiffness matrix of the mechanical system
     '''
 
-    K = mechanical_system.K_global()
-    M = mechanical_system.M_global()
+    K = mechanical_system.K()
+    M = mechanical_system.M()
     return M, K
 
 

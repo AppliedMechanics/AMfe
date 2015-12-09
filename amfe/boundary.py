@@ -73,6 +73,38 @@ class DirichletBoundary():
         self.no_of_unconstrained_dofs = no_of_unconstrained_dofs    
         self.master_slave_list = master_slave_list  # boundary list
         self.B = None
+        self.no_of_constrained_dofs = no_of_unconstrained_dofs
+    
+    def update(self):
+        '''
+        update internal variables according to internally saved boundary list. 
+
+        Parameters
+        ----------
+        None
+        
+        Returns
+        -------
+        None
+        '''
+        self.b_matrix()
+        self.no_of_unconstrained_dofs, self.no_of_constrained_dofs = self.B.shape
+    
+    def constrain_dofs(self, dofs):
+        '''
+        Take the dofs to the constrained dofs. 
+        
+        Parameters
+        ----------
+        dofs : ndarray
+            Array containing the dofs to be constrained
+        
+        Returns
+        -------
+        None
+        '''
+        self.master_slave_list.append([None, dofs, None])
+        self.update()
 
     def b_matrix(self):
         '''
@@ -129,7 +161,7 @@ class DirichletBoundary():
         umgerechnet werden
         '''
         dofs_uncstr = self.no_of_unconstrained_dofs
-        B = sp.sparse.eye(self.ndof_full_system).tocsr()
+        B = sp.sparse.eye(dofs_uncstr).tocsr()
         
         if self.master_slave_list == []:  # no boundary conditions
             return B
@@ -215,13 +247,44 @@ class DirichletBoundary():
         -------
         vec : ndarray
             vector of constrained system
+        
+        Notes
+        -----
+        The dimension of the returned `vec` is smaller than of `vec_unconstr`,
+        as the fixed dofs are removed from the vector. 
         '''
         if not sp.sparse.issparse(self.B):
             B = self.b_matrix()
         else:
             B = self.B
-        return np.dot(vec_unconstr, B)
+        return np.dot(B.T, vec_unconstr)
 
+    def unconstrain_vec(self, vec):
+        '''
+        Remove the constraints of a vector. 
+        
+        Parameters
+        ----------
+        vec : ndarray
+            vector of the finite element system where constraints are imposed on. 
+        
+        Returns 
+        -------
+        vec_unconstr : ndarray
+            Vector of hte finite element system where no constraints are imposed 
+            on. All dofs correspond to the dofs of the mesh. 
+        
+        Notes
+        -----
+        The dimension of vec become larger, as the constrained dofs are added
+        to the vector `vec`. 
+        '''
+        if not sp.sparse.issparse(self.B):
+            B = self.b_matrix()
+        else:
+            B = self.B
+        return np.dot(B, vec)
+            
 
 class NeumannBoundary():
     '''

@@ -96,6 +96,15 @@ class Mesh:
     '''
 
     def __init__(self):
+        '''
+        Parameters
+        ----------
+        None
+        
+        Returns
+        -------
+        None
+        '''
         self.nodes               = []
         self.ele_nodes           = []
         self.ele_obj             = []
@@ -328,7 +337,8 @@ class Mesh:
             gr_nodes = np.array(gr_nodes, dtype=int) # recast to int as somewhere a float is casted
             gr_nodes.sort()
             nodes_phys_group[idx] = gr_nodes
-        
+
+        self._update_mesh_props()
         # printing some information regarding the physical groups
         print('Mesh', filename, 'successfully imported. \nAssign a material to a physical group.')
         print('*************************************************************')

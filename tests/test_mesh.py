@@ -21,7 +21,7 @@ import amfe
 
 gmsh_input_file = 'meshes/test_meshes/bar_3d.msh'
 
-gmsh_input_file = 'meshes/test_meshes/bar_Tet4_finest_phys_group.msh'
+#gmsh_input_file = 'meshes/test_meshes/bar_Tet4_finest_phys_group.msh'
 paraview_output_file = '../results/gmsh_test/gmsh_import'
 
 my_mesh = amfe.Mesh()
@@ -45,7 +45,9 @@ t2 = time.clock()
 print('Time for assembly:', t2-t1, 's.')
 #%%
 
-my_boundary = amfe.DirichletBoundary(my_mesh.no_of_dofs, [[None, my_mesh.dofs_dirichlet, None],])
+# my_boundary = amfe.DirichletBoundary(my_mesh.no_of_dofs, [[None, my_mesh.dofs_dirichlet, None],])
+my_boundary = amfe.DirichletBoundary(my_mesh.no_of_dofs)
+my_boundary.constrain_dofs(my_mesh.dofs_dirichlet)
 B = my_boundary.b_matrix()
 K = B.T.dot(K_unconstr).dot(B)
 #%%
