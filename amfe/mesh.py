@@ -30,7 +30,7 @@ element_mapping_list = [
 ]
 
 # Element Class dictionary with all available elements
-kwargs = {'thickness' : 1, }
+kwargs = { }
 element_class_dict = {'Tet4'  : Tet4(**kwargs),
                       'Tet10' : Tet10(**kwargs),
                       'Tri3'  : Tri3(**kwargs),

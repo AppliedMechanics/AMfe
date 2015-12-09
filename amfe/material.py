@@ -85,7 +85,7 @@ class KirchhoffMaterial(HyperelasticMaterial):
         :math:`\mathbf{E}` = Green-Lagrange strain tensor
         
     '''
-    def __init__(self, E=210E9, nu=0.3, rho=1E4, plane_stress=True):
+    def __init__(self, E=210E9, nu=0.3, rho=1E4, plane_stress=True, thickness=1.):
         '''
         
         Parameters
@@ -94,11 +94,13 @@ class KirchhoffMaterial(HyperelasticMaterial):
             Young's modulus
         nu : float
             Poisson's ratio
-        rho : flot
-            Density
+        rho : float
+            Density of the material. 
         plane_stress : bool, optional
             flat if plane stress or plane strain is chosen, if a 2D-problem is 
             considered
+        thickness : float
+            Thickness of the material, if 2D-prolbem is considered
         
         Returns
         -------
@@ -108,6 +110,7 @@ class KirchhoffMaterial(HyperelasticMaterial):
         self.nu = nu
         self.rho = rho
         self.plane_stress = plane_stress
+        self.thickness = thickness
         self._update_variables()
    
     def _update_variables(self):
@@ -181,9 +184,14 @@ class NeoHookean(HyperelasticMaterial):
         :math:`\kappa` = bulk modulus (material incompressibility parameter)
         
     '''
-    def __init__(self, mu, kappa, plane_stress=False):
+    def __init__(self, mu, kappa, rho, plane_stress=False, thickness=1.):
+        '''
+        
+        '''
         self.mu = mu
         self.kappa = kappa
+        self.rho = rho
+        self.thickness = thickness
         self.plane_stress = plane_stress
         if plane_stress:
             raise ValueError('Attention! plane stress is not supported yet \
@@ -322,19 +330,23 @@ class MooneyRivlin(HyperelasticMaterial):
         :math:`\kappa` = bulk modulus (material incompressibility parameter)
             
     '''
-    def __init__(self, A10, A01, kappa, plane_stress=False):
+    def __init__(self, A10, A01, kappa, rho, plane_stress=False, thickness=1.):
         '''
         Parameters
         ----------
         A10 : float
-            first material constant for deviatoric deformation of material
+            first material constant for deviatoric deformation of material.
         A01 : float
-            second material constant for deviatoric deformation of material
+            second material constant for deviatoric deformation of material.
         kappa : float
-            bulk modulus of material
+            bulk modulus of material.
+        rho : float
+            density of the material.
         plane_stress : bool, optional
             flag for plane stress or plane strain, preset = False
-            
+        thickness : float
+            Thickness of the material, if 2D-prolbem is considered.
+
         Returns
         -------
         None
@@ -343,6 +355,7 @@ class MooneyRivlin(HyperelasticMaterial):
         self.A10 = A10
         self.A01 = A01
         self.kappa = kappa
+        self.rho = rho
         self.plane_stress = plane_stress
         if plane_stress:
             raise ValueError('Attention! plane stress is not supported yet \

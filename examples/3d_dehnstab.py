@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-
-
-
-
+Running a 3D-tension bar
 """
 
 

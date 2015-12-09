@@ -20,7 +20,7 @@ try:
     fortran_use = True
 except:
     print('''
-Python was not able to load the fast fortran element routines.
+Python was not able to load the fast fortran assembly routines.
 run the script 
 
 f2py/install_fortran_routines.sh 

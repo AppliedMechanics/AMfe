@@ -50,15 +50,11 @@ my_boundary = amfe.DirichletBoundary(my_mesh.no_of_dofs)
 my_boundary.constrain_dofs(my_mesh.dofs_dirichlet)
 B = my_boundary.b_matrix()
 K = B.T.dot(K_unconstr).dot(B)
-#%%
-
-# Constructing an arbitrary sparse matrix
-
 
 #%%
 my_mesh.save_mesh_for_paraview(paraview_output_file)
-#
-#
+
+#%%
 #
 ## test mesh generator and mesh functionality
 #node_file = '../meshes/selbstgebaut/curved_mesh_nodes.csv'
