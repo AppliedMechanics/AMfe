@@ -356,6 +356,7 @@ class MooneyRivlin(HyperelasticMaterial):
         self.A01 = A01
         self.kappa = kappa
         self.rho = rho
+        self.thickness = thickness
         self.plane_stress = plane_stress
         if plane_stress:
             raise ValueError('Attention! plane stress is not supported yet \
