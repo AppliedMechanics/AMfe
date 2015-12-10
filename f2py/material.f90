@@ -151,7 +151,7 @@ subroutine kirchhoff_S_Sv_and_C(E, S, Sv, C_SE, E_modul, nu)
             0.0D0, 0.0D0, 0.0D0, 0.0D0, mu, 0.0D0, &
             0.0D0, 0.0D0, 0.0D0, 0.0D0, 0.0D0, mu/), (/6,6/))
 
-    Ev = (/E(1,1), E(2,2), E(3,3), E(2,3), E(1,3), E(1,2)/)
+    Ev = (/E(1,1), E(2,2), E(3,3), 2*E(2,3), 2*E(1,3), 2*E(1,2)/)
     Sv = matmul(C_SE, Ev)
     S = reshape((/Sv(1), Sv(6), Sv(5), &
                     Sv(6), Sv(2), Sv(4), &
@@ -181,7 +181,7 @@ subroutine kirchhoff_S_Sv_and_C_2D(E, S, Sv, C_SE, E_modul, nu, plane_stress)
                          0.0D0, 0.0D0, mu/), shape(C_SE))
     end if
 
-    Ev = (/E(1,1), E(2,2), E(1,2)/)
+    Ev = (/E(1,1), E(2,2), 2*E(1,2)/)
     Sv = matmul(C_SE, Ev)
     S = reshape((/Sv(1), Sv(3), &
                   Sv(3), Sv(2) /), shape(S))

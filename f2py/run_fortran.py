@@ -28,8 +28,8 @@ cd f2py
 # ! f2py3 -c test_callback.pyf test_callback.f90
 
 
-f2py3 -m f90_element element.f90 -h element.pyf --override-signature
-f2py3 -c element.pyf element.f90
+#f2py3 -m f90_element element.f90 -h element.pyf --override-signature
+#f2py3 -c element.pyf element.f90
 
 #%%
 import f90_element

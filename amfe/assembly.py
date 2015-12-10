@@ -14,10 +14,10 @@ from scipy import sparse
 from scipy import linalg
 import time
 
-fortran_use = False
+use_fortran = False
 try:
     import amfe.f90_assembly
-    fortran_use = True
+    use_fortran = True
 except:
     print('''
 Python was not able to load the fast fortran assembly routines.
@@ -124,7 +124,7 @@ def compute_csr_assembly_indices(global_element_indices, indptr, indices):
     return matrix_assembly_indices
 
 
-if fortran_use:
+if use_fortran:
     '''
     Fortran routine that will override the functions above for massive speedup.
     '''

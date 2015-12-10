@@ -7,11 +7,11 @@ Created on Mon Nov 30 12:30:03 2015
 
 import numpy as np
 
-fortran_use = False
+use_fortran = False
 
 try:
     import amfe.f90_material as f90_material
-    fortran_use = True
+    use_fortran = True
 except:
     print('''
 Python was not able to load the fast fortran material routines.
@@ -21,8 +21,6 @@ f2py/install_fortran_routines.sh
 
 in order to get the full speed! 
 ''')
-
-
 
 class HyperelasticMaterial():
     
@@ -532,7 +530,7 @@ class MooneyRivlin(HyperelasticMaterial):
 
 
 # overloading of the python functions in case FORTRAN should be used
-if fortran_use:
+if use_fortran:
     def kirchhoff_S_Sv_and_C(self, E):
         return f90_material.kirchhoff_s_sv_and_c(E, self.E_modulus, self.nu)
 

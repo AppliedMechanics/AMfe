@@ -12,11 +12,11 @@ Most of the time is spent with pyhton-functions, when they are used. For instanc
 
 import numpy as np
 
-fortran_use = False
+use_fortran = False
 
 try:
     import amfe.f90_element
-    fortran_use = True
+    use_fortran = True
 except:
     print('''
 Python was not able to load the fast fortran element routines.
@@ -27,7 +27,7 @@ f2py/install_fortran_routines.sh
 in order to get the full speed! 
 ''')
 
-#fortran_use = False
+#use_fortran = False
 
 
 def scatter_matrix(Mat, ndim):
@@ -115,7 +115,7 @@ def compute_B_matrix(B_tilde, F):
     return B
 
 
-if fortran_use:
+if use_fortran:
     compute_B_matrix = amfe.f90_element.compute_b_matrix
     scatter_matrix = amfe.f90_element.scatter_matrix
 
@@ -264,7 +264,10 @@ class Tri3(Element):
 
     def __init__(self, *args, **kwargs):
         '''
-        Definition of material properties and thickness as they are 2D-Elements.
+        Parameters
+        ----------
+        material : class HyperelasticMaterial
+            Material class representing the material
         '''
         super().__init__(*args, **kwargs)
         self.I     = np.eye(2)
@@ -954,12 +957,12 @@ class Bar2Dlumped(Element):
         return m_el
 
 
-if fortran_use:
+if use_fortran:
     def compute_tri3_tensors(self, X, u):
-        self.K, self.f = amfe.f90_element.tri3_k_and_f(X, u, self.t, self.material.S_Sv_and_C_2d)
+        self.K, self.f = amfe.f90_element.tri3_k_and_f(X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
 
     def compute_tri6_tensors(self, X, u):
-        self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.t, self.material.S_Sv_and_C_2d)
+        self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
 
     def compute_tet4_tensors(self, X, u):
         self.K, self.f = amfe.f90_element.tet4_k_and_f(X, u, self.material.S_Sv_and_C)

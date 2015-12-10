@@ -226,6 +226,10 @@ ansys_workdir = '/Volumes/ne89mez/ANSYS/'
 
 #%%
 
+print('Setting up the material. ')
+material = amfe.KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
+#material = amfe.NeoHookean(0.1, 80, 1)
+#%% 
 # Test of the different elements:
 
 # Tri3
@@ -238,7 +242,7 @@ x = np.array([0,0,3,1,2,2.])
 x += sp.rand(6)
 u = sp.rand(2*3)
 plot_element(x, u, title='Tri3')
-element_tri3 = amfe.Tri3(E_modul=60, poisson_ratio=1/4, density=1., element_thickness=1.)
+element_tri3 = amfe.Tri3(material)
 force_test(element_tri3, x, u)
 
 M = element_tri3.m_int(x, u)
