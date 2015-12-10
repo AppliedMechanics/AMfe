@@ -11,6 +11,7 @@ import numpy as np
 sys.path.insert(0, '../amfe')
 # %cd /Users/johannesr/Documents/004_AMfe/amfe
 
+import amfe
 import material 
 import amfe.f90_material as fortran_material
 
