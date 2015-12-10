@@ -121,7 +121,7 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     real(8), intent(out) :: K(12, 12), f_int(12)
     real(8) :: X1, X2, X3, Y1, Y2, Y3, X4, Y4, X5, Y5, X6, Y6, A0
     real(8) :: Jx1 ,Jx2 ,Jx3 ,Jy1 ,Jy2 ,Jy3, w
-    real(8) :: u_e(6,2), C_SE(3,3),
+    real(8) :: u_e(6,2), C_SE(3,3)
     real(8) :: K_geo_sm(6,6), K_mat(12,12), K_geo(12,12)
     real(8) :: B0_tilde(2,6), B0(3,12)
     real(8) :: E(2,2), H(2,2), F(2,2), EYE(2,2), S(2,2), S_v(3)
