@@ -18,59 +18,52 @@ sys.path.insert(0,'..')
 
 import amfe
 
+#%%
+cd f2py
+#%%
+# ! f2py3 -c  --fcompiler=gnu95 -m callback test_callback.f90
+# Generate the signature file
+# ! f2py3 -m callback test_callback.f90  -h test_callback.pyf --overwrite-signature
+# run with signature file
+# ! f2py3 -c test_callback.pyf test_callback.f90
 
-import element
-import time
+#%%
 
-A = sp.rand(5,8)
+import callback
 
-B = element.scatter_matrix(A, 2)
-
-#plt.matshow(B)
-
-# use tri3
-x = sp.array([0,0,3,1,2,2.])
-u = sp.array([0,0,-0.5,0,0,0.])
-
-# use tri6
-x = np.array([0,0, 3,1, 2,2, 1.5,0.5, 2.5,1.5, 1,1])
-u = np.array([0,0, -0.5,0, 0,0, -0.25,0, -0.25,0, 0,0])
-
-
-
-t = 1.
-
-C_SE = sp.array([[ 64.,  16.,   0.],
-       [ 16.,  64.,   0.],
-       [  0.,   0.,  24.]])
+#callback.test(3,4)
+#
+#def my_func(a, b):
+#    return np.sqrt(a**2 + b**2)
+#
+#callback.test2(3, 4, my_func)
 
 
-my_amfe_element = amfe.Tri6()
-my_amfe_element.C_SE = C_SE
-
-N = int(1E1)
-
-t1 = time.time()
-for i in range(N):
-    K_f, f_f = element.tri6_k_and_f(x, u, C_SE, t)
-
-t2 = time.time()
-a = 0
-for i in range(N):
-    # K, f = my_amfe_element.k_and_f_int(x, u)
-    a += 1
-t3 = time.time()
-
-#np.max(abs(K - K_f))
-
-print('Kurzes Profiling:\nZeit für Fortran:', t2-t1, 'Zeit für Python:', t3-t2)
-print('Performance-Gewinn: Faktor', (t3-t2)/(t2-t1) )
+def vec_func(a, b):
+    c = a
+    d = b
+    return c, d
+    
 
 
+a = sp.rand(6)
+b = sp.rand(6)
+c = sp.zeros(6)
+
+c_new = callback.test3(a, b, vec_func)
+
+#%%
+%%timeit
+for i in range(1000000):
+    c_new = callback.test3(a, b, vec_func)
 
 
-
-
-
-
-
+#%% 
+import f90_element
+X = sp.rand(12)
+u = sp.rand(12)
+C_SE = sp.rand(3,3)
+#%%
+%%timeit
+for i in range(1000000):
+    K, f = f90_element.tri6_k_and_f(X, u, C_SE, 0)
