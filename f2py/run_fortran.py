@@ -27,7 +27,17 @@ cd f2py
 # run with signature file
 # ! f2py3 -c test_callback.pyf test_callback.f90
 
+
+f2py3 -m f90_element element.f90 -h element.pyf 
+f2py3 -c element.pyf element.f90
+
 #%%
+import f90_element
+my_material = amfe.KirchhoffMaterial()
+f90_element.tri3_k_and_f
+
+#%%
+
 
 import callback
 

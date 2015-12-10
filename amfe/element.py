@@ -938,7 +938,7 @@ class Bar2Dlumped(Element):
         m_el = self.rho*self.crosssec*l/6*np.array([[3, 0, 0, 0],
                                                     [0, 3, 0, 0],
                                                     [0, 0, 3, 0],
-                                                    [0, 0, 0, 3]])                                          
+                                                    [0, 0, 0, 3]])
         
         # Make symmetric (because of round-off errors)
         self.K = 1/2*(k_el+k_el.T)
