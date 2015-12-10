@@ -27,7 +27,7 @@ f2py/install_fortran_routines.sh
 in order to get the full speed! 
 ''')
 
-fortran_use = False
+#fortran_use = False
 
 
 def scatter_matrix(Mat, ndim):
@@ -962,7 +962,7 @@ if fortran_use:
         self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.t, self.material.S_Sv_and_C_2d)
 
     def compute_tet4_tensors(self, X, u):
-        self.K, self.f = amfe.f90_element.tet4_k_and_f(X, u, self.material.S_Sv_and_C_2d)
+        self.K, self.f = amfe.f90_element.tet4_k_and_f(X, u, self.material.S_Sv_and_C)
 
     def compute_tri6_mass(self, X, u):
         self.M = amfe.f90_element.tri6_m(X, self.material.rho, self.material.thickness)
