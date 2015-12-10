@@ -954,20 +954,18 @@ class Bar2Dlumped(Element):
         return m_el
 
 
-
-
 if fortran_use:
     def compute_tri3_tensors(self, X, u):
-        self.K, self.f = amfe.f90_element.tri3_k_and_f(X, u, self.C_SE, self.t)
+        self.K, self.f = amfe.f90_element.tri3_k_and_f(X, u, self.t, self.material.S_Sv_and_C_2d)
 
     def compute_tri6_tensors(self, X, u):
-        self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.C_SE, self.t)
+        self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.t, self.material.S_Sv_and_C_2d)
 
     def compute_tet4_tensors(self, X, u):
-        self.K, self.f = amfe.f90_element.tet4_k_and_f(X, u, self.C_SE)
+        self.K, self.f = amfe.f90_element.tet4_k_and_f(X, u, self.material.S_Sv_and_C_2d)
 
     def compute_tri6_mass(self, X, u):
-        self.M = amfe.f90_element.tri6_m(X, self.rho, self.t)
+        self.M = amfe.f90_element.tri6_m(X, self.material.rho, self.material.thickness)
         return self.M
 
     # overloading the routines with fortran routines
