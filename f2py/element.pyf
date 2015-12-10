@@ -61,6 +61,13 @@ python module f90_element ! in
             real(kind=8) intent(in) :: t
             external s_sv_and_c_2d
         end subroutine tri6_k_and_f
+        
+        subroutine tri6_m(x,rho,t,m) ! in :f90_element:element.f90
+            real(kind=8) dimension(12),intent(in) :: x
+            real(kind=8) intent(in) :: rho
+            real(kind=8) intent(in) :: t
+            real(kind=8) dimension(12,12), intent(out) :: m
+        end subroutine tri6_m
     end interface 
 end python module f90_element
 

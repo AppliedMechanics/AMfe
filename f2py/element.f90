@@ -231,84 +231,84 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
 end subroutine
 
 
-! subroutine tri6_m(X, rho, t, M)
-!     implicit none
-!
-!     integer :: i
-!     real(8), intent(in) :: X(12), t, rho
-!     real(8), intent(out) :: M(12,12)
-!     real(8) :: X1, X2, X3, Y1, Y2, Y3, X4, Y4, X5, Y5, X6, Y6
-!     real(8) :: Jx1 ,Jx2 ,Jx3 ,Jy1 ,Jy2 ,Jy3, w
-!     real(8) :: N(6,1), M_small(6,6)
-!
-!     real(8) :: gauss_points(7,3), weights(7)
-!     real(8) :: w0, w1, w2, alpha1, alpha2, beta1, beta2
-!     real(8) :: L1, L2, L3, det
-!
-! !   External functions that will be used afterwards
-!     external :: scatter_matrix
-!
-!     ! take care of a precise description of 1/3 in order to avoid errors!
-!     w0 = 0.225D0
-!
-!     alpha1 = 0.0597158717D0
-!     beta1 = 0.4701420641D0
-!     w1 = 0.1323941527D0
-!
-!     alpha2 = 0.7974269853D0
-!     beta2 = 0.1012865073D0
-!     w2 = 0.1259391805D0
-!
-!     weights = (/ w0, w1, w1, w1, w2, w2, w2 /)
-!     gauss_points(1,:) = (/ 1/3.0D0, 1/3.0D0, 1/3.0D0 /)
-!     gauss_points(2,:) = (/ alpha1, beta1, beta1 /)
-!     gauss_points(3,:) = (/ beta1, alpha1, beta1 /)
-!     gauss_points(4,:) = (/ beta1, beta1, alpha1 /)
-!     gauss_points(5,:) = (/ alpha2, beta2, beta2 /)
-!     gauss_points(6,:) = (/ beta2, alpha2, beta2 /)
-!     gauss_points(7,:) = (/ beta2, beta2, alpha2 /)
-!
-!
-!     X1 = X(1)
-!     Y1 = X(2)
-!     X2 = X(3)
-!     Y2 = X(4)
-!     X3 = X(5)
-!     Y3 = X(6)
-!     X4 = X(7)
-!     Y4 = X(8)
-!     X5 = X(9)
-!     Y5 = X(10)
-!     X6 = X(11)
-!     Y6 = X(12)
-!
-!     M_small = 0.0
-!     M = 0.0
-!
-!     do i=1,7
-!        L1 = gauss_points(i, 1)
-!        L2 = gauss_points(i, 2)
-!        L3 = gauss_points(i, 3)
-!        w  = weights(i)
-!
-!        Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
-!        Jx2 = 4*L1*X4 + 4*L3*X5 + X2*(4*L2 - 1)
-!        Jx3 = 4*L1*X6 + 4*L2*X5 + X3*(4*L3 - 1)
-!        Jy1 = 4*L2*Y4 + 4*L3*Y6 + Y1*(4*L1 - 1)
-!        Jy2 = 4*L1*Y4 + 4*L3*Y5 + Y2*(4*L2 - 1)
-!        Jy3 = 4*L1*Y6 + 4*L2*Y5 + Y3*(4*L3 - 1)
-!
-!        det = Jx1*Jy2 - Jx1*Jy3 - Jx2*Jy1 + Jx2*Jy3 + Jx3*Jy1 - Jx3*Jy2
-!
-!        N(:,1) = (/ L1*(2*L1 - 1), L2*(2*L2 - 1), L3*(2*L3 - 1), 4*L1*L2, 4*L2*L3, 4*L1*L3 /)
-!        M_small = M_small + matmul(N, transpose(N)) * det/2 * rho * t * w
-!     end do
-!
-!     call scatter_matrix(M_small, M, 2, 6, 6)
-!
-! end subroutine
-!
-!
+subroutine tri6_m(X, rho, t, M)
+    implicit none
+
+    integer :: i
+    real(8), intent(in) :: X(12), t, rho
+    real(8), intent(out) :: M(12,12)
+    real(8) :: X1, X2, X3, Y1, Y2, Y3, X4, Y4, X5, Y5, X6, Y6
+    real(8) :: Jx1 ,Jx2 ,Jx3 ,Jy1 ,Jy2 ,Jy3, w
+    real(8) :: N(6,1), M_small(6,6)
+
+    real(8) :: gauss_points(7,3), weights(7)
+    real(8) :: w0, w1, w2, alpha1, alpha2, beta1, beta2
+    real(8) :: L1, L2, L3, det
+
+!   External functions that will be used afterwards
+    external :: scatter_matrix
+
+    ! take care of a precise description of 1/3 in order to avoid errors!
+    w0 = 0.225D0
+
+    alpha1 = 0.0597158717D0
+    beta1 = 0.4701420641D0
+    w1 = 0.1323941527D0
+
+    alpha2 = 0.7974269853D0
+    beta2 = 0.1012865073D0
+    w2 = 0.1259391805D0
+
+    weights = (/ w0, w1, w1, w1, w2, w2, w2 /)
+    gauss_points(1,:) = (/ 1/3.0D0, 1/3.0D0, 1/3.0D0 /)
+    gauss_points(2,:) = (/ alpha1, beta1, beta1 /)
+    gauss_points(3,:) = (/ beta1, alpha1, beta1 /)
+    gauss_points(4,:) = (/ beta1, beta1, alpha1 /)
+    gauss_points(5,:) = (/ alpha2, beta2, beta2 /)
+    gauss_points(6,:) = (/ beta2, alpha2, beta2 /)
+    gauss_points(7,:) = (/ beta2, beta2, alpha2 /)
+
+
+    X1 = X(1)
+    Y1 = X(2)
+    X2 = X(3)
+    Y2 = X(4)
+    X3 = X(5)
+    Y3 = X(6)
+    X4 = X(7)
+    Y4 = X(8)
+    X5 = X(9)
+    Y5 = X(10)
+    X6 = X(11)
+    Y6 = X(12)
+
+    M_small = 0.0
+    M = 0.0
+
+    do i=1,7
+       L1 = gauss_points(i, 1)
+       L2 = gauss_points(i, 2)
+       L3 = gauss_points(i, 3)
+       w  = weights(i)
+
+       Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
+       Jx2 = 4*L1*X4 + 4*L3*X5 + X2*(4*L2 - 1)
+       Jx3 = 4*L1*X6 + 4*L2*X5 + X3*(4*L3 - 1)
+       Jy1 = 4*L2*Y4 + 4*L3*Y6 + Y1*(4*L1 - 1)
+       Jy2 = 4*L1*Y4 + 4*L3*Y5 + Y2*(4*L2 - 1)
+       Jy3 = 4*L1*Y6 + 4*L2*Y5 + Y3*(4*L3 - 1)
+
+       det = Jx1*Jy2 - Jx1*Jy3 - Jx2*Jy1 + Jx2*Jy3 + Jx3*Jy1 - Jx3*Jy2
+
+       N(:,1) = (/ L1*(2*L1 - 1), L2*(2*L2 - 1), L3*(2*L3 - 1), 4*L1*L2, 4*L2*L3, 4*L1*L3 /)
+       M_small = M_small + matmul(N, transpose(N)) * det/2 * rho * t * w
+    end do
+
+    call scatter_matrix(M_small, M, 2, 6, 6)
+
+end subroutine
+
+
 ! subroutine tet4_k_and_f(X, u, C_SE, K, f_int)
 !     implicit none
 !
