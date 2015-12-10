@@ -39,7 +39,7 @@ python module f90_element ! in
         
         subroutine scatter_matrix(a,b,ndim,n,m) ! in :f90_element:element.f90
             real(kind=8) dimension(m,n),intent(in) :: a
-            real(kind=8) dimension(ndim*m,ndim*n),depend(ndim,m,ndim,n) :: b
+            real(kind=8) dimension(ndim*m,ndim*n),depend(ndim,m,ndim,n),intent(out) :: b
             integer intent(in) :: ndim
             integer, optional,intent(in),check(shape(a,1)==n),depend(a) :: n=shape(a,1)
             integer, optional,intent(in),check(shape(a,0)==m),depend(a) :: m=shape(a,0)
@@ -48,7 +48,7 @@ python module f90_element ! in
         subroutine compute_b_matrix(bt,f,b,no_of_nodes,no_of_dims) ! in :f90_element:element.f90
             real(kind=8) dimension(no_of_dims,no_of_nodes),intent(in) :: bt
             real(kind=8) dimension(no_of_dims,no_of_dims),intent(in),depend(no_of_dims,no_of_dims) :: f
-            real(kind=8) dimension(no_of_dims*(no_of_dims+1)/2,no_of_nodes*no_of_dims),depend(no_of_dims,no_of_nodes,no_of_dims) :: b
+            real(kind=8) dimension(no_of_dims*(no_of_dims+1)/2,no_of_nodes*no_of_dims),depend(no_of_dims,no_of_nodes,no_of_dims),intent(out) :: b
             integer, optional,intent(in),check(shape(bt,1)==no_of_nodes),depend(bt) :: no_of_nodes=shape(bt,1)
             integer, optional,intent(in),check(shape(bt,0)==no_of_dims),depend(bt) :: no_of_dims=shape(bt,0)
         end subroutine compute_b_matrix
