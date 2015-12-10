@@ -1,0 +1,44 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+
+python module f90_element__user__routines 
+    interface f90_element_user_interface 
+        subroutine s_sv_and_c_2d(E, S, S_v, C_SE) ! in :callback:test_callback.f90:test3:unknown_interface
+            real(kind=8) dimension(2,2),intent(in) :: E
+            real(kind=8) dimension(2,2),intent(out) :: S
+            real(kind=8) dimension(3),intent(out) :: S_v
+            real(kind=8) dimension(3,3),intent(out) :: C_SE
+        end subroutine s_sv_and_c_2d
+    end interface f90_element_user_interface
+end python module f90_element__user__routines
+
+python module f90_element ! in 
+    interface  ! in :f90_element
+        subroutine scatter_matrix(a,b,ndim,n,m) ! in :f90_element:element.f90
+            real(kind=8) dimension(m,n),intent(in) :: a
+            real(kind=8) dimension(ndim*m,ndim*n),depend(ndim,m,ndim,n) :: b
+            integer intent(in) :: ndim
+            integer, optional,intent(in),check(shape(a,1)==n),depend(a) :: n=shape(a,1)
+            integer, optional,intent(in),check(shape(a,0)==m),depend(a) :: m=shape(a,0)
+        end subroutine scatter_matrix
+        subroutine compute_b_matrix(bt,f,b,no_of_nodes,no_of_dims) ! in :f90_element:element.f90
+            real(kind=8) dimension(no_of_dims,no_of_nodes),intent(in) :: bt
+            real(kind=8) dimension(no_of_dims,no_of_dims),intent(in),depend(no_of_dims,no_of_dims) :: f
+            real(kind=8) dimension(no_of_dims*(no_of_dims+1)/2,no_of_nodes*no_of_dims),depend(no_of_dims,no_of_nodes,no_of_dims) :: b
+            integer, optional,intent(in),check(shape(bt,1)==no_of_nodes),depend(bt) :: no_of_nodes=shape(bt,1)
+            integer, optional,intent(in),check(shape(bt,0)==no_of_dims),depend(bt) :: no_of_dims=shape(bt,0)
+        end subroutine compute_b_matrix
+        subroutine tri3_k_and_f(x,u,k,f_int,t,s_sv_and_c_2d) ! in :f90_element:element.f90
+            real(kind=8) dimension(6),intent(in) :: x
+            real(kind=8) dimension(6),intent(in) :: u
+            real(kind=8) dimension(6,6) :: k
+            real(kind=8) dimension(6) :: f_int
+            real(kind=8) intent(in) :: t
+            external s_sv_and_c_2d
+        end subroutine tri3_k_and_f
+    end interface 
+end python module f90_element
+
+! This file was auto-generated with f2py (version:2).
+! See http://cens.ioc.ee/projects/f2py2e/
