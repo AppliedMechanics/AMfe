@@ -22,6 +22,8 @@ f2py/install_fortran_routines.sh
 in order to get the full speed! 
 ''')
 
+#use_fortran = False
+
 class HyperelasticMaterial():
     
     def __init__(self):

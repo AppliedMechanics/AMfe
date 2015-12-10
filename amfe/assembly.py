@@ -27,6 +27,7 @@ f2py/install_fortran_routines.sh
 
 in order to get the full speed! 
 ''')
+#use_fortran = False
 
 def get_index_of_csr_data(i,j, indptr, indices):
     '''Get the value index of the i,j element of a matrix in CSR format.

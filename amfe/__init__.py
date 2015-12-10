@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Module for advanced nonlinear finite element analysis. This software is developed and maintained at the Chair for Applied Mechanics, Technische Universität München.
+Module for advanced nonlinear finite element analysis. This software is 
+developed and maintained at the Chair for Applied Mechanics, 
+Technische Universität München.
 
 Authors:
 Johannes Rutzmoser, Fabian Gruber
 """
 
-
+# Finite Element stuff
 from amfe.assembly import *
 from amfe.boundary import *
 from amfe.element import *
@@ -18,5 +20,6 @@ from amfe.tools import *
 from amfe.mechanical_system import *
 from amfe.material import *
 
+# Reduction stuff
 from amfe.model_reduction import *
 
