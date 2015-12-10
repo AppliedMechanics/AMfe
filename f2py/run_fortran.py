@@ -36,6 +36,8 @@ import f90_element
 my_material = amfe.KirchhoffMaterial()
 f90_element.tri3_k_and_f(sp.rand(6), sp.rand(6), 1, my_material.S_Sv_and_C_2d)
 f90_element.tri6_k_and_f(sp.rand(12), sp.rand(12), 1, my_material.S_Sv_and_C_2d)
+f90_element.tri6_m(sp.rand(12), 1, 1)
+f90_element.tet4_k_and_f(sp.rand(12), sp.rand(12), my_material.S_Sv_and_C)
 
 #%%
 
