@@ -7,6 +7,22 @@ Created on Mon Nov 30 12:30:03 2015
 
 import numpy as np
 
+fortran_use = False
+
+try:
+    import amfe.f90_material as f90_material
+    fortran_use = True
+except:
+    print('''
+Python was not able to load the fast fortran material routines.
+run the script 
+
+f2py/install_fortran_routines.sh 
+
+in order to get the full speed! 
+''')
+
+
 
 class HyperelasticMaterial():
     
@@ -513,3 +529,25 @@ class MooneyRivlin(HyperelasticMaterial):
     
         C_SE = A10*J1EE + A01*J2EE + kappa*(np.outer(J3E, J3E)) + kappa*(J3-1)*J3EE
         return S, S_v, C_SE
+
+
+# overloading of the python functions in case FORTRAN should be used
+if fortran_use:
+    def kirchhoff_S_Sv_and_C(self, E):
+        return f90_material.kirchhoff_s_sv_and_c(E, self.E_modulus, self.nu)
+
+    def kirchhoff_S_Sv_and_C_2d(self, E):
+        return f90_material.kirchhoff_s_sv_and_c_2d(E, self.E_modulus, self.nu, self.plane_stress)
+        
+    def mooney_rivlin_S_Sv_and_C(self, E):
+        return f90_material.mooney_rivlin_s_sv_and_c(E, self.A10, self.A01, self.kappa)
+        
+    def neo_hookean_S_Sv_and_C(self, E):
+        return f90_material.neo_hookean_s_sv_and_c(E, self.mu, self.kappa)
+
+    # overloading the functions
+    KirchhoffMaterial.S_Sv_and_C = kirchhoff_S_Sv_and_C
+    KirchhoffMaterial.S_Sv_and_C_2d = kirchhoff_S_Sv_and_C_2d
+    MooneyRivlin.S_Sv_and_C = mooney_rivlin_S_Sv_and_C
+    NeoHookean.S_Sv_and_C = neo_hookean_S_Sv_and_C  
+    
