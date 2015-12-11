@@ -575,8 +575,8 @@ class Mesh:
         >>> mymesh.save_mesh_for_paraview('../results/gmsh/my_simulation')
 
 
-        References:
-        -----------
+        References
+        ----------
         www.vtk.org/VTK/img/file-formats.pdf
 
         '''

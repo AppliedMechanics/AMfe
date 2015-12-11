@@ -253,8 +253,8 @@ class Tri3(Element):
     Thus the approximation quality is very moderate.
 
 
-    References:
-    -----------
+    References
+    ----------
     Basis for this implementation is the Monograph of Ted Belytschko:
     Nonlinear Finite Elements for Continua and Structures.
     pp. 201 and 207.

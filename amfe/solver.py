@@ -34,8 +34,8 @@ class NewmarkIntegrator():
     --------
     TODO
 
-    References:
-    -----------
+    References
+    ----------
     M. Géradin and D. J. Rixen. Mechanical vibrations: theory and application
     to structural dynamics. John Wiley & Sons, 2014. pp. 564.
 
@@ -452,8 +452,8 @@ class HHTConstrained():
         lambda : ndarray
             Matrix of the Lagrange multipliers associated with the constraints of the system. The columns of lambda correspond to the vectors of the time steps given in time_range.
 
-        Example
-        -------
+        Examples
+        --------
         TODO
 
         '''

@@ -74,8 +74,8 @@ class HyperelasticMaterial():
             tangent moduli between Green-Lagrange strain tensor and 2nd Piola
             Kirchhoff stress tensor, shape (3,3)
             
-        Note
-        ----
+        Notes
+        -----
         The result is dependent on the the option plane stress or plane strain. 
         Take care to choose the right option! 
         '''
