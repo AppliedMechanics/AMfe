@@ -22,7 +22,7 @@ my_mesh.import_msh(gmsh_input_file)
 
 my_assembly = amfe.Assembly(my_mesh)
 
-K_sparse = my_assembly.assemble_k_and_f(np.zeros(my_mesh.no_of_dofs))
+K_sparse, f = my_assembly.assemble_k_and_f(np.zeros(my_mesh.no_of_dofs))
 K_sparse = K_sparse.tocsr()
 
 my_assembly.preallocate_csr()

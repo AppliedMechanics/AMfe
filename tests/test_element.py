@@ -9,7 +9,7 @@ import scipy as sp
 import sys
 sys.path.insert(0,'..')
 
-
+import nose
 
 from amfe import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10
 from amfe import material
@@ -38,7 +38,8 @@ class ElementTest(unittest.TestCase):
         self.u = sp.rand(no_of_dofs)
         self.my_material = material.KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
         self.my_element = element(self.my_material)
-
+    
+    @nose.tools.nottest
     def jacobi_test_element(self, rtol=1E-4, atol=1E-6):
         K, f = self.my_element.k_and_f_int(self.X, self.u)
         K_finite_diff = jacobian(self.my_element.f_int, self.X, self.u)
@@ -166,6 +167,34 @@ class MaterialTest(unittest.TestCase):
         S_mooney, Sv_mooney, C_mooney = self.mooney.S_Sv_and_C(self.E)
         S_neo, Sv_neo, C_neo = self.neo.S_Sv_and_C(self.E)
         np.testing.assert_allclose(C_mooney, C_neo)
+
+
+class MaterialTest2dPlaneStress(unittest.TestCase):
+    def setUp(self):
+        F = sp.zeros((3,3))
+        F[:2,:2] = sp.rand(2,2)
+        F[2,2] = 1
+        self.E = 1/2*(F.T @ F - sp.eye(3))
+        A10, A01, kappa, rho = sp.rand(4)
+        mu = A10*2
+        self.mooney = material.MooneyRivlin(A10, A01, kappa, rho, plane_stress=False)
+        self.neo = material.NeoHookean(mu, kappa, rho, plane_stress=False)
+    
+    def test_mooney_2d(self):
+        E = self.E
+        S, S_v, C = self.mooney.S_Sv_and_C(E)
+        S2d, S_v2d, C2d = self.mooney.S_Sv_and_C_2d(E[:2, :2])
+        np.testing.assert_allclose(S[:2, :2], S2d)
+        np.testing.assert_allclose(C[np.ix_([0,1,-1], [0,1,-1])], C2d)
+        
+    
+    def test_neo_2d(self):
+        E = self.E
+        S, S_v, C = self.neo.S_Sv_and_C(E)
+        S2d, S_v2d, C2d = self.neo.S_Sv_and_C_2d(E[:2, :2])
+        np.testing.assert_allclose(S[:2, :2], S2d)
+        np.testing.assert_allclose(C[np.ix_([0,1,-1], [0,1,-1])], C2d)
+
     
 if __name__ == '__main__':
     unittest.main()

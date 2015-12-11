@@ -19,7 +19,7 @@ import amfe
 
 # test gmsh input-output functionality
 
-gmsh_input_file = 'meshes/test_meshes/bar_3d.msh'
+gmsh_input_file = '../meshes/test_meshes/bar_3d.msh'
 
 #gmsh_input_file = 'meshes/test_meshes/bar_Tet4_finest_phys_group.msh'
 paraview_output_file = '../results/gmsh_test/gmsh_import'
