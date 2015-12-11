@@ -66,3 +66,11 @@ def inherit_docs(cls):
                     func.__doc__ = parfunc.__doc__
                     break
     return cls
+
+
+def test():
+    '''
+    Run all tests for AMfe. 
+    '''
+    import nose
+    nose.main()

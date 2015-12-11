@@ -118,6 +118,30 @@ class MaterialTest3D(ElementTest):
         self.my_element.material = my_material
         self.jacobi_test_element()
 
+class MaterialTest2D(ElementTest):
+    '''
+    Test the material using the Tri3 Element and different materials; 
+    Perform a jacobian check to find out, if any inconsistencies are apparent. 
+    '''
+    def setUp(self):
+        self.initialize_element(Tri3, 2*3)
+
+    def test_Mooney(self):
+        A10, A01, kappa, rho = sp.rand(4)
+        my_material = material.MooneyRivlin(A10, A01, kappa, rho)
+        self.my_element.material = my_material
+        self.jacobi_test_element()
+    
+    def test_Neo(self):
+        mu, kappa, rho = sp.rand(3)
+#        mu /= 4
+        kappa *= 100
+        my_material = material.NeoHookean(mu, kappa, rho)
+        self.my_element.material = my_material
+        self.jacobi_test_element()
+
+
+
 class MaterialTest(unittest.TestCase):
     def setUp(self):
         mu, kappa, rho = sp.rand(3)

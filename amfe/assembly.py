@@ -29,6 +29,7 @@ in order to get the full speed!
 ''')
 #use_fortran = False
 
+
 def get_index_of_csr_data(i,j, indptr, indices):
     '''Get the value index of the i,j element of a matrix in CSR format.
 
@@ -154,8 +155,11 @@ class Assembly():
 
         '''
         self.mesh = mesh
+        # TODO: implement stress assembly
         self.save_stresses = False
-        pass
+        self.element_indices = []
+        self.C_csr = sp.sparse.csr_matrix([[]])
+        self.nodes_voigt = sp.array([])
 
     def preallocate_csr(self):
         '''

@@ -1,24 +1,17 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Aug 20 08:44:57 2015
-
-@author: johannesr
-f2py3 -c  --fcompiler=gnu95 -m f90_assembly assembly.f90 && cp f90_assembly.so ../amfe
-
-This is a test routine for the assembly process performed in python or in FORTRAN.
-
-"""
+"""Test Routine for assembly"""
 
 import numpy as np
 import scipy as sp
-import matplotlib.pyplot as plt
-import time
-
 
 # make amfe running
 import sys
 sys.path.insert(0,'..')
 import amfe
+
+from numpy.testing import assert_equal, assert_almost_equal
+
+
 
 
 gmsh_input_file = '../meshes/test_meshes/bar_Quad4.msh'
@@ -29,7 +22,7 @@ my_mesh.import_msh(gmsh_input_file)
 
 my_assembly = amfe.Assembly(my_mesh)
 
-K_sparse = my_assembly.
+K_sparse = my_assembly.assemble_k_and_f(np.zeros(my_mesh.no_of_dofs))
 K_sparse = K_sparse.tocsr()
 
 my_assembly.preallocate_csr()
@@ -76,32 +69,15 @@ amfe.f90_assembly.fill_csr_matrix(B.indptr, B.indices, B.data, K_local, idxs)
 
 #%%
 
-#
-# Test the get_index_of_csr_data-routine
-#
-N = int(1E4)
-row = sp.random.randint(0, N, N)
-col = sp.random.randint(0, N, N)
-val = sp.rand(N)
-A = sp.sparse.csr_matrix((val, (row, col)))
-print('row:', row, '\ncol:', col)
-for i in range(N):
-    a = amfe.get_index_of_csr_data(row[i], col[i], A.indptr, A.indices)
-    b = amfe.f90_assembly.get_index_of_csr_data(row[i], col[i], A.indptr, A.indices)
-#    print(val[i] - A.data[b])
-    if (a != b):
-        print('ACHTUNG!!! Hier ist etwas falsch')
-
-
-#%%
-
-if False:
-    X = sp.rand(2E7)
-    a = sp.array([5,2,9,8,56,4,234,8])
-    t1 = time.time()
-    a = sp.random.randint(0,2E5, 6)
-    for i in range(int(3E6)):
-        x = X[a]
-        b = X[a]
-    t2 = time.time()
-    print('Time for picking entries:', t2-t1)
+def test_index_getter():
+    N = int(1E3)
+    row = sp.random.randint(0, N, N)
+    col = sp.random.randint(0, N, N)
+    val = sp.rand(N)
+    A = sp.sparse.csr_matrix((val, (row, col)))
+    # print('row:', row, '\ncol:', col)
+    for i in range(N):
+        a = amfe.get_index_of_csr_data(row[i], col[i], A.indptr, A.indices)
+        b = A[row[i], col[i]]
+        #    print(val[i] - A.data[b])
+        assert_equal(a, b)
