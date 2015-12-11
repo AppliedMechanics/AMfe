@@ -15,20 +15,28 @@ def norm_of_vector(array):
 
 class NewmarkIntegrator():
     '''
-    Newmark-integration scheme using generalized alpha routine for nonlinear second order systems
+    Newmark-integration scheme using generalized alpha routine for nonlinear 
+    second order systems
 
     Parameters
     -----------
     alpha : float, optional
         damping factor of the generalized alpha routine for numerical damping
     vebose : bool, optional
-        flag for making the integration process verbose, i.e. printing the residual for every correction in the newton iteration
+        flag for making the integration process verbose, i.e. printing the 
+        residual for every correction in the newton iteration
     n_iter_max : int, optional
         number of maximum iteration in the newton correction process
 
     Notes
     ------
-    This integration scheme is an unconditionally stable implicit nonlinear integration scheme. The unconditional stabiltiy refers to the stability of the solution itself, not on the solutin procedure. With a too tight tolerance (eps > 1E8) the solution might not converge, as the solution procedure can not lower the residual below a threshold that's higher than the eps. In general the solution should converge in less than ten iteration steps.
+    This integration scheme is an unconditionally stable implicit nonlinear 
+    integration scheme. The unconditional stabiltiy refers to the stability of 
+    the solution itself, not on the solutin procedure. With a too tight 
+    tolerance (eps > 1E8) the solution might not converge, as the solution 
+    procedure can not lower the residual below a threshold that's higher than 
+    the eps. In general the solution should converge in less than ten iteration 
+    steps.
 
     Examples
     --------
@@ -51,7 +59,6 @@ class NewmarkIntegrator():
         self.mechanical_system = None
         self.verbose = verbose
         self.n_iter_max = n_iter_max
-        pass
 
     def set_nonlinear_model(self, f_non, K, M, f_ext=None):
         '''
@@ -60,13 +67,16 @@ class NewmarkIntegrator():
         Parameters
         -----------
         f_non : function
-            function of nonlinear force being called with f_non(q) and returning the nonlinear force as ndarray
+            function of nonlinear force being called with f_non(q) and 
+            returning the nonlinear force as ndarray
         K : function
-            function of tangential stiffness matrix being called with K(q) and returning the nonlinear stiffness matrix as ndarray
+            function of tangential stiffness matrix being called with K(q) and 
+            returning the nonlinear stiffness matrix as ndarray
         M : ndarray
             mass matrix
         f_ext : function, optional
-            function of external force being called with f_ext(q, dq, t) and returning the external force as ndarray
+            function of external force being called with f_ext(q, dq, t) and 
+            returning the external force as ndarray
 
         Examples
         ---------
@@ -212,8 +222,8 @@ class NewmarkIntegrator():
                 delta_q = - linalg.spsolve(S, res)
                 if res_abs > self.residual_threshold:
                     delta_q *= self.newton_damping
-                q   += delta_q
-                dq  += self.gamma/(self.beta*dt)*delta_q
+                q += delta_q
+                dq += self.gamma/(self.beta*dt)*delta_q
                 ddq += 1/(self.beta*dt**2)*delta_q
                 K, f_non = self.K_and_f_non(q)
                 res = self._residual(f_non, q, dq, ddq, t)
@@ -330,7 +340,7 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         while (abs_res > eps*abs_f_ext) and (n_max_iter > n_iter):
             corr = linalg.spsolve(K, res)
             u -= corr*newton_damping
-            K, f_int= mechanical_system.K_and_f(u)
+            K, f_int = mechanical_system.K_and_f(u)
             res = f_int - f_ext * force_factor
             abs_res = norm_of_vector(res)
             n_iter += 1
@@ -366,7 +376,11 @@ class HHTConstrained():
     '''
     Generalized-alpha integration scheme for constrained mechanical systems.
 
-    The integrator solves the DAE on the direct given index, i.e. index 3 DAEs are solved directly without index reduction technique. In order to keep the algorithm stable, scaling of the equations is used to avoid instabilities due to small time steps. Secondly, an Augmented Lagrange Term is used to stabilize the algorithm.
+    The integrator solves the DAE on the direct given index, i.e. index 3 DAEs 
+    are solved directly without index reduction technique. In order to keep the 
+    algorithm stable, scaling of the equations is used to avoid instabilities 
+    due to small time steps. Secondly, an Augmented Lagrange Term is used to 
+    stabilize the algorithm.
     '''
 
     def __init__(self, delta_t=1E-3, alpha=0, verbose=True, n_iter_max=40):
@@ -383,7 +397,10 @@ class HHTConstrained():
         verbose : bool, optional
             flag for verbose output. Default value True.
         n_iter_max : int, optional
-            number of maximal iterations in the newton correction loop. If maximum number of iterations is reached, the iteration is aborted. If limit is reached, usually either the time step size is to large or the jacobian of the system is wrong.  Default value 40.
+            number of maximal iterations in the newton correction loop. If 
+            maximum number of iterations is reached, the iteration is aborted. 
+            If limit is reached, usually either the time step size is to large 
+            or the jacobian of the system is wrong.  Default value 40.
 
         Returns
         -------
@@ -391,7 +408,8 @@ class HHTConstrained():
 
         References
         ----------
-        Bauchau, Olivier Andre: Flexible multibody dynamics, volume 176. Springer Science & Business Media, 2010.
+        Bauchau, Olivier Andre: Flexible multibody dynamics, volume 176. 
+        Springer Science & Business Media, 2010.
         '''
         self.beta = 1/4*(1 + alpha)**2
         self.gamma = 1/2 + alpha
