@@ -15,7 +15,7 @@ import amfe
 from amfe import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10
 from amfe import material
 
-def jacobian(func, X, u):
+def jacobian(func, X, u, t):
     '''
     Compute the jacobian of func with respect to u using a finite differences scheme. 
     
@@ -23,11 +23,11 @@ def jacobian(func, X, u):
     ndof = X.shape[0]
     jac = np.zeros((ndof, ndof))
     h = np.sqrt(np.finfo(float).eps)
-    f = func(X, u).copy()
+    f = func(X, u, t).copy()
     for i in range(ndof):
         u_tmp = u.copy()
         u_tmp[i] += h
-        f_tmp = func(X, u_tmp)
+        f_tmp = func(X, u_tmp, t)
         jac[:,i] = (f_tmp - f) / h
     return jac
 
@@ -42,8 +42,8 @@ class ElementTest(unittest.TestCase):
     
     @nose.tools.nottest
     def jacobi_test_element(self, rtol=1E-4, atol=1E-6):
-        K, f = self.my_element.k_and_f_int(self.X, self.u)
-        K_finite_diff = jacobian(self.my_element.f_int, self.X, self.u)
+        K, f = self.my_element.k_and_f_int(self.X, self.u, t=0)
+        K_finite_diff = jacobian(self.my_element.f_int, self.X, self.u, t=0)
         np.testing.assert_allclose(K, K_finite_diff, rtol=rtol, atol=atol)
         
 

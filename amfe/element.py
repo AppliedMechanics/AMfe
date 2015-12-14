@@ -135,7 +135,7 @@ class Element():
         '''
         self.material = material
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         '''
         Virtual function for the element specific implementation of a tensor
         computation routine which will be called before _k_int and _f_int
@@ -144,14 +144,14 @@ class Element():
         '''
         pass
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t=0):
         '''
         Virtual function for the element specific implementation of the mass
         matrix;
         '''
         print('The function is not implemented yet...')
 
-    def k_and_f_int(self, X, u):
+    def k_and_f_int(self, X, u, t=0):
         '''
         Returns the tangential stiffness matrix and the internal nodal force
         of the Element.
@@ -176,10 +176,10 @@ class Element():
         TODO
 
         '''
-        self._compute_tensors(X, u)
+        self._compute_tensors(X, u, t)
         return self.K, self.f
 
-    def k_int(self, X, u):
+    def k_int(self, X, u, t=0):
         '''
         Returns the tangential stiffness matrix of the Element.
 
@@ -196,10 +196,10 @@ class Element():
                     type ndim x ndim)
 
         '''
-        self._compute_tensors(X, u)
+        self._compute_tensors(X, u, t)
         return self.K
 
-    def f_int(self, X, u):
+    def f_int(self, X, u, t=0):
         '''
         Returns the tangential stiffness matrix of the Element.
 
@@ -215,10 +215,10 @@ class Element():
         f_int :     The nodal force vector (numpy.ndarray of dimension (ndim,))
 
         '''
-        self._compute_tensors(X, u)
+        self._compute_tensors(X, u, t)
         return self.f
 
-    def m_and_vec_int(self, X, u):
+    def m_and_vec_int(self, X, u, t=0):
         '''
         Returns the tangential stiffness matrix of the Element.
 
@@ -237,8 +237,8 @@ class Element():
         '''
         return self._m_int(X, u), np.zeros_like(X)
 
-    def m_int(self, X, u):
-        return self._m_int(X, u)
+    def m_int(self, X, u, t=0):
+        return self._m_int(X, u, t)
 
 
 
@@ -274,7 +274,7 @@ class Tri3(Element):
         self.S     = np.zeros((2,2))
         self.K_geo = np.zeros((6,6))
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         '''
         Compute the tensors B0_tilde, B0, F, E and S at the Gauss Points.
 
@@ -306,7 +306,7 @@ class Tri3(Element):
         self.f = B0.T.dot(S_v)*det/2*t
 
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         '''
         Compute the mass matrix.
 
@@ -381,7 +381,7 @@ class Tri6(Element):
                               (beta2, alpha2, beta2, w2),
                               (beta2, beta2, alpha2, w2))
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         '''
         Tensor computation the same way as in the Tri3 element
         '''
@@ -429,7 +429,7 @@ class Tri6(Element):
             self.f += B0.T.dot(S_v)*det/2*t*w
         pass
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
         t = self.material.thickness
         rho = self.material.rho
@@ -478,7 +478,7 @@ class Quad4(Element):
         self.gauss_points = ((-g1, -g1, 1.), (g1, -g1, 1.), (-g1, g1, 1.), (g1, g1, 1.))
 
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         '''
         Compute the tensors.
         '''
@@ -515,7 +515,7 @@ class Quad4(Element):
             self.f += B0.T.dot(S_v)*det*t*w
         pass
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
         self.M_small *= 0
         t = self.material.thickness
@@ -569,7 +569,7 @@ class Quad8(Element):
         self.gauss_points = ((-g2, -g2, w2), (-g2, g2, w2),
                              ( g2, -g2, w2), ( g2, g2, w2))
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
         X_mat = X.reshape(-1, 2)
         u_e = u.reshape(-1, 2)
@@ -608,7 +608,7 @@ class Quad8(Element):
             self.f += B0.T.dot(S_v)*det*t*w
         pass
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         '''
         Mass matrix using CAS-System
         '''
@@ -656,7 +656,7 @@ class Tet4(Element):
         self.K = np.zeros((12,12))
         self.f = np.zeros(12)
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4 = X
         u_e = u.reshape(-1, 3)
         # not sure yet if the determinant is correct when doing the integration
@@ -690,7 +690,7 @@ class Tet4(Element):
         self.K = K_geo + K_mat
         self.f = B0.T.dot(S_v)*det/6
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         '''
         Mass matrix using CAS-System
         '''
@@ -769,7 +769,7 @@ class Tet10(Element):
                              (c4, a4, c4, a4, w4),
                              (c4, a4, a4, c4, w4))
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
 
         X1, Y1, Z1, \
         X2, Y2, Z2, \
@@ -846,7 +846,7 @@ class Tet10(Element):
             self.f += B0.T.dot(S_v)*det/6 * w
         pass
     
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         '''
         Mass matrix using CAS-System
         '''
@@ -919,11 +919,11 @@ class Bar2Dlumped(Element):
         self.rho           = self.material.rho
 
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         self._k_and_m_int(X, u)
         pass
         
-    def _k_and_m_int(self, X, u):
+    def _k_and_m_int(self, X, u, t):
 
         X1, Y1, X2, Y2 = X
         X_mat = X.reshape(-1, 2)        
@@ -948,26 +948,26 @@ class Bar2Dlumped(Element):
         self.M = 1/2*(m_el+m_el.T)
         return self.K, self.M
         
-    def _k_int(self, X, u):
+    def _k_int(self, X, u, t):
         k_el, m_el = self._k_and_m_int(X, u)
         return k_el
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         k_el, m_el = self._k_and_m_int(X, u)
         return m_el
 
 
 if use_fortran:
-    def compute_tri3_tensors(self, X, u):
+    def compute_tri3_tensors(self, X, u, t):
         self.K, self.f = amfe.f90_element.tri3_k_and_f(X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
 
-    def compute_tri6_tensors(self, X, u):
+    def compute_tri6_tensors(self, X, u, t):
         self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
 
-    def compute_tet4_tensors(self, X, u):
+    def compute_tet4_tensors(self, X, u, t):
         self.K, self.f = amfe.f90_element.tet4_k_and_f(X, u, self.material.S_Sv_and_C)
 
-    def compute_tri6_mass(self, X, u):
+    def compute_tri6_mass(self, X, u, t):
         self.M = amfe.f90_element.tri6_m(X, self.material.rho, self.material.thickness)
         return self.M
 
