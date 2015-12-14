@@ -961,7 +961,7 @@ class BoundaryElement(Element):
     '''
     Class for the application of Neumann Boundary Conditions. 
     '''
-    def __init__(self, val, direct, time_func=None):
+    def __init__(self, val, direct, ndof, time_func=None):
         '''
         Parameters
         ----------
@@ -999,6 +999,9 @@ class BoundaryElement(Element):
         None
         '''
         self.val = val
+        self.f = np.zeros(ndof)
+        self.K = np.zeros((ndof, ndof))
+        self.M = np.zeros((ndof, ndof))
         
         B0 = self.B0_dict[direct]
         # definition of force_func:
@@ -1045,11 +1048,7 @@ class Tri3Boundary(BoundaryElement):
     B0_dict.update({'z' : np.array([0, 0, 1/3, 0, 0, 1/3, 0, 0, 1/3])})
 
     def __init__(self, val, direct, time_func=None):
-        super().__init__(val, direct, time_func)
-        self.f = np.zeros(9)
-        self.K = np.zeros((9,9))
-        self.M = np.zeros((9,9))
-        pass
+        super().__init__(val, direct, time_func=time_func, ndof=9)
         
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 3)).T
@@ -1058,20 +1057,20 @@ class Tri3Boundary(BoundaryElement):
         n = np.cross(v1, v2)/2
         self.f = self.f_func(n) * self.val * self.time_func(t)
     
-class Tri6Boundary(Element):
+class Tri6Boundary(BoundaryElement):
     '''
     
     '''
-    def __init__(self):
-        pass
+    def __init__(self, val, direct, time_func=None):
+        super().__init__(val, direct, time_func=time_func, ndof=18)
     
     def _compute_tensors(self, X, u, t):
-        pass
-    
-    def _m_int(self, X, u, t):
+        x_vec = (X+u).reshape((-1, 3)).T
+        v = x_vec[:,1] - x_vec[:,0]
+
         pass
 
-class LineLinearBoundary(Element):
+class LineLinearBoundary(BoundaryElement):
     '''
     Line Boundary element for 2D-Problems
     '''
@@ -1089,34 +1088,7 @@ class LineLinearBoundary(Element):
     rot_mat = np.array([[0,-1], [1, 0]])
 
     def __init__(self, val, direct, time_func=None):
-        '''
-        '''
-        self.val = val
-        
-        B0 = self.B0_dict[direct]
-        # definition of force_func:
-        if direct in {'x', 'y'}:
-            def f_func(n):
-                n_abs = np.sqrt(n.dot(n))
-                return B0 * n_abs
-            self.f_func = f_func
-        else:
-            def f_func(n):
-                return B0.dot(n)
-            self.f_func = f_func
-        
-        # time function...
-        def static_func(t):
-            return 1
-        if time_func is None:
-            self.time_func = static_func
-        else:
-            self.time_func = time_func
-            
-        self.f = np.zeros(4)
-        self.K = np.zeros((4,4))
-        self.M = np.zeros((4,4))
-        pass
+        super().__init__(val, direct, time_func=time_func, ndof=4)
 
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 2)).T
@@ -1124,22 +1096,38 @@ class LineLinearBoundary(Element):
         n = self.rot_mat.dot(v)
         self.f = self.f_func(n) * self.val * self.time_func(t)
         pass
+ 
+class LineQuadraticBoundary(BoundaryElement):
+    '''
     
-    def _m_int(self, X, u, t):
-        return self.M
+    '''
+    B0_dict = {}
+    B0_dict.update({'normal' : np.vstack((np.eye(2), 2*np.eye(2), np.eye(2)))/4})
+    B0_dict.update({'x_n' : np.array([ [ 1.,  0.],
+                                       [ 0.,  0.],
+                                       [ 2.,  0.],
+                                       [ 0.,  0.],
+                                       [ 1.,  0.],
+                                       [ 0.,  0.]])/4})
+    B0_dict.update({'y_n' : np.array([ [ 0.,  0.],
+                                       [ 0.,  1.],
+                                       [ 0.,  0.],
+                                       [ 0.,  2.],
+                                       [ 0.,  0.],
+                                       [ 0.,  1.]])/4})
+    B0_dict.update({'x' : np.array([1/4, 0, 1/2, 0, 1/4, 0])})
+    B0_dict.update({'y' : np.array([0, 1/4, 0, 1/2, 0, 1/4])})
 
-class LineQuadraticBoundary(Element):
-    '''
-    
-    '''
-    def __init__(self):
-        pass
+    rot_mat = np.array([[0,-1], [1, 0]])
+
+    def __init__(self, val, direct, time_func=None):
+        super().__init__(val, direct, time_func=time_func, ndof=6)
     
     def _compute_tensors(self, X, u, t):
-        pass
-    
-    def _m_int(self, X, u, t):
-        pass
+        x_vec = (X+u).reshape((-1, 2)).T
+        v = x_vec[:,2] - x_vec[:,0]
+        n = self.rot_mat.dot(v)
+        self.f = self.f_func(n) * self.val * self.time_func(t)
 
 
 #%%
