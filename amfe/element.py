@@ -956,7 +956,193 @@ class Bar2Dlumped(Element):
         k_el, m_el = self._k_and_m_int(X, u)
         return m_el
 
+#%%
+class BoundaryElement(Element):
+    '''
+    Class for the application of Neumann Boundary Conditions. 
+    '''
+    def __init__(self, val, direct, time_func=None):
+        '''
+        Parameters
+        ----------
+        val : float
+            value for the pressure/traction onto the element
+        direct : str {'normal', 'x_n', 'y_n', 'z_n', 'x', 'y', 'z'}
+            direction, in which the traction should point at: 
+            
+            - 'normal': Pressure acting onto the normal face of the deformed 
+            configuration
+            
+            - 'x_n': Traction acting in x-direction proportional to the area 
+            projected onto the y-z surface
+            
+            - 'y_n': Traction acting in y-direction proportional to the area 
+            projected onto the x-z surface
+            
+            - 'z_n': Traction acting in z-direction proportional to the area 
+            projected onto the x-y surface
+            
+            - 'x': Traction acting in x-direction proportional to the area
+            
+            - 'y': Traction acting in y-direction proportional to the area
+            
+            - 'z': Traction acting in z-direction proportional to the area
+            
+        time_func : function object
+            Function object returning a value between -1 and 1 given the 
+            input t: 
 
+            >>> val = time_func(t)
+            
+        Returns
+        -------
+        None
+        '''
+        self.val = val
+        
+        B0 = self.B0_dict[direct]
+        # definition of force_func:
+        if direct in {'x', 'y', 'z'}:
+            def f_func(n):
+                n_abs = np.sqrt(n.dot(n))
+                return B0 * n_abs
+            self.f_func = f_func
+        else:
+            def f_func(n):
+                return B0.dot(n)
+            self.f_func = f_func
+        
+        # time function...
+        def static_func(t):
+            return 1
+        if time_func is None:
+            self.time_func = static_func
+        else:
+            self.time_func = time_func
+
+    def _m_int(self, X, u, t):
+        return self.M
+
+
+class Tri3Boundary(BoundaryElement):
+    '''
+    Class for application of Neumann Boundary Conditions. 
+    '''
+    
+    B0_dict = {}
+    B0_dict.update({'normal' : np.vstack((np.eye(3), np.eye(3), np.eye(3)))/3})
+    B0 = np.zeros((9,3))
+    B0[np.ix_([0,3,6], [0])] = 1/3
+    B0_dict.update({'x_n' : B0})
+    B0 = np.zeros((9,3))
+    B0[np.ix_([1,4,7], [1])] = 1/3
+    B0_dict.update({'y_n' : B0})
+    B0 = np.zeros((9,3))
+    B0[np.ix_([2,5,8], [2])] = 1/3
+    B0_dict.update({'z_n' : B0})
+    B0_dict.update({'x' : np.array([1/3, 0, 0, 1/3, 0, 0, 1/3, 0, 0])})
+    B0_dict.update({'y' : np.array([0, 1/3, 0, 0, 1/3, 0, 0, 1/3, 0])})
+    B0_dict.update({'z' : np.array([0, 0, 1/3, 0, 0, 1/3, 0, 0, 1/3])})
+
+    def __init__(self, val, direct, time_func=None):
+        super().__init__(val, direct, time_func)
+        self.f = np.zeros(9)
+        self.K = np.zeros((9,9))
+        self.M = np.zeros((9,9))
+        pass
+        
+    def _compute_tensors(self, X, u, t):
+        x_vec = (X+u).reshape((-1, 3)).T
+        v1 = x_vec[:,2] - x_vec[:,0]
+        v2 = x_vec[:,1] - x_vec[:,0]
+        n = np.cross(v1, v2)/2
+        self.f = self.f_func(n) * self.val * self.time_func(t)
+    
+class Tri6Boundary(Element):
+    '''
+    
+    '''
+    def __init__(self):
+        pass
+    
+    def _compute_tensors(self, X, u, t):
+        pass
+    
+    def _m_int(self, X, u, t):
+        pass
+
+class LineLinearBoundary(Element):
+    '''
+    Line Boundary element for 2D-Problems
+    '''
+    B0_dict = {}
+    B0_dict.update({'normal' : np.vstack((np.eye(2), np.eye(2)))/2})
+    B0 = np.zeros((4,2))
+    B0[np.ix_([0,2], [0])] = 1/2
+    B0_dict.update({'x_n' : B0})
+    B0 = np.zeros((4,2))
+    B0[np.ix_([1,3], [1])] = 1/2
+    B0_dict.update({'y_n' : B0})
+    B0_dict.update({'x' : np.array([1/2, 0, 1/2, 0])})
+    B0_dict.update({'y' : np.array([0, 1/2, 0, 1/2])})
+
+    rot_mat = np.array([[0,-1], [1, 0]])
+
+    def __init__(self, val, direct, time_func=None):
+        '''
+        '''
+        self.val = val
+        
+        B0 = self.B0_dict[direct]
+        # definition of force_func:
+        if direct in {'x', 'y'}:
+            def f_func(n):
+                n_abs = np.sqrt(n.dot(n))
+                return B0 * n_abs
+            self.f_func = f_func
+        else:
+            def f_func(n):
+                return B0.dot(n)
+            self.f_func = f_func
+        
+        # time function...
+        def static_func(t):
+            return 1
+        if time_func is None:
+            self.time_func = static_func
+        else:
+            self.time_func = time_func
+            
+        self.f = np.zeros(4)
+        self.K = np.zeros((4,4))
+        self.M = np.zeros((4,4))
+        pass
+
+    def _compute_tensors(self, X, u, t):
+        x_vec = (X+u).reshape((-1, 2)).T
+        v = x_vec[:,1] - x_vec[:,0]
+        n = self.rot_mat.dot(v)
+        self.f = self.f_func(n) * self.val * self.time_func(t)
+        pass
+    
+    def _m_int(self, X, u, t):
+        return self.M
+
+class LineQuadraticBoundary(Element):
+    '''
+    
+    '''
+    def __init__(self):
+        pass
+    
+    def _compute_tensors(self, X, u, t):
+        pass
+    
+    def _m_int(self, X, u, t):
+        pass
+
+
+#%%
 if use_fortran:
     def compute_tri3_tensors(self, X, u, t):
         self.K, self.f = amfe.f90_element.tri3_k_and_f(X, u, self.material.thickness, self.material.S_Sv_and_C_2d)

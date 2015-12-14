@@ -196,6 +196,18 @@ class MaterialTest2dPlaneStress(unittest.TestCase):
         np.testing.assert_allclose(S[:2, :2], S2d)
         np.testing.assert_allclose(C[np.ix_([0,1,-1], [0,1,-1])], C2d)
 
+#%%
+def test_tri3_pressure():
+    X = np.array([0,0,0,1,0,0,0,1,0])
+    u = np.zeros_like(X)
+    my_press_ele = amfe.Tri3Boundary(1, 'normal')
+    K, f = my_press_ele.k_and_f_int(X, u, t=0)
+    np.testing.assert_array_equal( K, np.zeros((9,9)))
+    np.testing.assert_allclose(np.sum(f), -1/2)
+
+
+#%%
+
 class TestB_matrix_compuation(unittest.TestCase):
     '''
     Check the validity of the B-Matrix routine
