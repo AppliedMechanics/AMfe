@@ -10,6 +10,7 @@ Modules of the AMfe-Package
    amfe.assembly
    amfe.boundary
    amfe.element
+   amfe.material
    amfe.mechanical_system
    amfe.mesh
    amfe.solver

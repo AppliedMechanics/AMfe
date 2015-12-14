@@ -4,12 +4,14 @@ Created on Fri Mar 20 15:25:24 2015
 
 @author: johannesr
 """
+import os
+import copy
 
 import numpy as np
 import scipy as sp
-import os
+import pandas as pd
 
-
+from amfe.element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
 # Element mapping is described here. If a new element is implemented, the
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
@@ -27,6 +29,16 @@ element_mapping_list = [
     # Bars are missing, which are used for simple benfield truss
 ]
 
+# Element Class dictionary with all available elements
+kwargs = { }
+element_class_dict = {'Tet4'  : Tet4(**kwargs),
+                      'Tet10' : Tet10(**kwargs),
+                      'Tri3'  : Tri3(**kwargs),
+                      'Tri6'  : Tri6(**kwargs),
+                      'Quad4' : Quad4(**kwargs),
+                      'Quad8' : Quad8(**kwargs),
+                      'Bar2Dlumped' : Bar2Dlumped(**kwargs)
+                              }
 
 # actual set of implemented elements
 element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
@@ -37,7 +49,7 @@ boundary_3d_set = {'straight_line', 'quadratic_line',
                    'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8'}
 
 #
-# Starting from here everything's working automatically
+# Building the conversion dicts from the element_mapping_list
 #
 gmsh2amfe        = dict([])
 amfe2gmsh        = dict([])
@@ -65,36 +77,51 @@ class Mesh:
     '''
     Class for handling the mesh operations.
 
-    Interne Variablen:
-    - nodes: Ist eine Liste bzw. ein numpy-Array, welches Angibt, wie die x-y-z-Koordinaten eines Knotens lauten. Es gibt keinen Zählindex.
-    - elements: Ist eine Liste bzw. ein numpy-Array, welches angibt, welche Knoten zu welchem Element gehören. Es gibt keinen Zählindex.
-    - no_of_element_nodes: Anzahl der Knoten pro Element
+    Internal variables:
+    - nodes: Ist eine Liste bzw. ein numpy-Array, welches Angibt, wie die 
+        x-y-z-Koordinaten eines Knotens lauten. Es gibt keinen Zaehlindex.
+    - ele_nodes: Ist eine Liste bzw. ein numpy-Array, welches angibt, welche 
+        Knoten zu welchem Element gehoeren. Es gibt keinen Zaehlindex.
+    - ele_obj: numpy.ndarray of element objects
+    - no_of_dofs_per_node: Freiheitsgrade pro Knoten; Sind je nach 
+        Elementformulierung bei reiner Verschiebung bei 2D-Problemen 2, 
+        bei 3D-Problemen 3 dofs; Wenn Rotationen betrachtet werden natuerlich 
+        entsprechend mehr
     - no_of_elements: Globale Anzahl der Elemente im System
     - no_of_nodes: Globale Anzahl der Knoten im System
+    
+    Deprecated:
+    - no_of_element_nodes: Anzahl der Knoten pro Element
     - element_dof: Anzahl der Freiheitsgrade eines Elements
-    - node_dof: Freiheitsgrade pro Knoten; Sind je nach Elementformulierung bei reiner Verschiebung bei 2D-Problemen 2, bei 3D-Problemen 3 dofs; Wenn Rotationen betrachtet werden natürlich entsprechend mehr
-    -
     '''
 
-    def __init__(self,  node_dof=2):
+    def __init__(self):
+        '''
+        Parameters
+        ----------
+        None
+        
+        Returns
+        -------
+        None
+        '''
         self.nodes               = []
-        self.elements            = []
-        self.elements_type       = []
-        self.elements_properties = []
-        # the displacements; They are stored as a list of numpy-arrays with shape (ndof, node_dof):
+        self.ele_nodes           = []
+        self.ele_obj             = []
+        self.nodes_dirichlet     = np.array([], dtype=int)
+        self.dofs_dirichlet      = np.array([], dtype=int)
+        # the displacements; They are stored as a list of numpy-arrays with shape (ndof, no_of_dofs_per_node):
         self.u                   = None
         self.timesteps           = []
-        self.node_dof            = node_dof
-
+        self.no_of_dofs_per_node = 0
 
     def _update_mesh_props(self):
         '''
         Update the number properties of nodes and elements when the mesh has changed
         '''
         self.no_of_nodes = len(self.nodes)
-        self.no_of_dofs = self.no_of_nodes*self.node_dof
-        self.no_of_elements = len(self.elements)
-        self.no_of_element_nodes = len(self.elements[0])
+        self.no_of_dofs = self.no_of_nodes*self.no_of_dofs_per_node
+        self.no_of_elements = len(self.ele_nodes)
 
 
     def import_csv(self, filename_nodes, filename_elements,
@@ -132,7 +159,7 @@ class Mesh:
         except:
             print('FEHLER beim lesen der Datei', filename_nodes, 
                   '\nVermutlich stimmt die erwartete Dimension der Knotenfreiheitsgrade', 
-                  self.node_dof, 'nicht mit der Dimension in der Datei zusammen.')
+                  self.no_of_dofs_per_node, 'nicht mit der Dimension in der Datei zusammen.')
         # when line numbers are erased if they are content of the csv
         if explicit_node_numbering:
             self.nodes = self.nodes[:,1:]
@@ -150,13 +177,18 @@ class Mesh:
         self.elements = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
         if self.elements.ndim == 1: # Wenn nur genau ein Element vorliegt
             self.elements = np.array([self.elements])
-        if explicit_node_numbering: # Falls erste Spalte die Elementnummer angibt, wird diese hier abgeschnitten, um nur die Knoten des Elements zu erhalten
+        # Falls erste Spalte die Elementnummer angibt, wird diese hier 
+        # abgeschnitten, um nur die Knoten des Elements zu erhalten
+        if explicit_node_numbering: 
             self.elements = self.elements[:,1:]
 
     
         if ele_type: # If element type is spezified, use this spezified type
             mesh_type = ele_type
-        else: # If element type is not spzezified, try to determine element type depending on the number of nodes per element (see default values for different number of nodes per element in 'mesh_type_dict')
+        # If element type is not spzezified, try to determine element type 
+        # depending on the number of nodes per element (see default values for 
+        # different number of nodes per element in 'mesh_type_dict')
+        else: 
             try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
                 (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
                 mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
@@ -165,52 +197,54 @@ class Mesh:
                 raise
 
         print('Element type is {0}...  '.format(mesh_type), end="")
-        self.elements_type = [mesh_type for i in self.elements] # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
+        # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet 
+        # wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
+        self.elements_type = [mesh_type for i in self.elements] 
         self._update_mesh_props()
         print('Reading elements successful.')
 
-
-    def import_msh(self, filename, mesh_3d=False):
-        """
-        Import the mesh file from gmsh.
-
+    def import_msh(self, filename):
+        '''
+        Import a gmsh-mesh. 
+        
         Parameters
-        -----------
-        filename : str
-            file name of the msh-file
-        mesh_3d : bool, optional
-            flag for information whether mesh is 2D (False) or 3D (True)
-
+        ----------
+        filename : string
+            filename of the .msh-file
+        phys_group : int
+            number of physical group defined in gmsh, which should be 
+            processed
+            
         Returns
-        --------
+        -------
         None
-
-        Examples
-        ---------
-        TODO
-
-        """
-        # Wichtige Konvention: Wird 2D-Netz gerechnet, wird die Z-Koordinate
-        # gelöscht, d.h. in gmsh muss Netz in der X-Y-Ebene liegen!!!!
-
-        # Setze die in gmsh verwendeten Tags
+        
+        Notes
+        -----
+        The internal representation of the elements is done via a Pandas Dataframe
+        object. This gives the possibility to dynamically choose an part of the mesh
+        for boundary conditons etc. 
+        
+        '''
         tag_format_start   = "$MeshFormat"
         tag_format_end     = "$EndMeshFormat"
         tag_nodes_start    = "$Nodes"
         tag_nodes_end      = "$EndNodes"
         tag_elements_start = "$Elements"
         tag_elements_end   = "$EndElements"
+    
 
+        self.nodes         = []
+        self.ele_nodes     = []
+        self.ele_obj       = []
+        self.ele_types     = [] # Element-types for Export
 
-        self.nodes               = []
-        self.elements            = []
-        self.elements_type       = []
-        self.elements_properties = []
-
+        print('\n*************************************************************')
+        print('Loading gmsh-mesh from', filename)
+        
         with open(filename, 'r') as infile:
             data_geometry = infile.read().splitlines()
-
-        # Auslesen der Indizes, bei denen die Formatliste, die Knotenliste und die Elementliste beginnen und enden
+        
         for s in data_geometry:
             if s == tag_format_start: # Start Formatliste
                 i_format_start   = data_geometry.index(s) + 1
@@ -226,124 +260,241 @@ class Mesh:
                 n_elements       = int(data_geometry[i_elements_start-1])
             elif s == tag_elements_end: # Ende Elementliste
                 i_elements_end   = data_geometry.index(s)
-
-        # Konsistenzcheck (Pruefe ob Dimensionen zusammenpassen)
-        if (i_nodes_end-i_nodes_start)!=n_nodes or (i_elements_end-i_elements_start)!= n_elements: # Pruefe auf Inkonsistenzen in den Dimensionen
-            raise ValueError("Fehler beim Weiterverarbeiten der eingelesenen Daten! Dimensionen nicht konsistent!")
-
-        # Extrahiere Daten aus dem eingelesen msh-File
+        
+        # Check inconsistent dimensions
+        if (i_nodes_end-i_nodes_start)!=n_nodes \
+            or (i_elements_end-i_elements_start)!= n_elements: 
+            raise ValueError(
+            '''Error while processing the file! Dimensions are not consistent.''')
+        
+        # extract data from file to lists
         list_imported_mesh_format = data_geometry[i_format_start   : i_format_end]
         list_imported_nodes       = data_geometry[i_nodes_start    : i_nodes_end]
         list_imported_elements    = data_geometry[i_elements_start : i_elements_end]
-
-        # Konvertiere die in den Listen gespeicherten Strings in Integer/Float
+        
+        # conversion of the read strings to integer and floats
+        for j in range(len(list_imported_mesh_format)):
+            list_imported_mesh_format[j] = [float(x) for x in list_imported_mesh_format[j].split()]
         for j in range(len(list_imported_nodes)):
             list_imported_nodes[j] = [float(x) for x in list_imported_nodes[j].split()]
         for j in range(len(list_imported_elements)):
             list_imported_elements[j] = [int(x) for x in list_imported_elements[j].split()]
-
-        # Zeile [i] von [nodes] beinhaltet die X-, Y-, Z-Koordinate von Knoten [i+1]
-        self.nodes = [list_imported_nodes[j][1:] for j in range(len(list_imported_nodes))]
-
-        # set correct sets to distinguish, what is a boundary and what is an element
-        if mesh_3d:
-            element_set  = element_3d_set
-            boundary_set = boundary_3d_set
+        
+        # Construct Pandas Dataframe for the elements (self.el_df and df for shorter code)
+        self.el_df = df = pd.DataFrame(list_imported_elements)
+        df.rename(copy=False, inplace=True, 
+                 columns={0 : 'idx_gmsh', 
+                          1 : 'el_type', 
+                          2 : 'no_of_tags', 
+                          3 : 'phys_group', 
+                          4 : 'geom_entity'})
+        
+        # determine the index, where the nodes of the element start in the dataframe 
+        if len(df[df['no_of_tags'] != 2]) == 0:
+            self.node_idx = node_idx = 5
+        elif len(df[df['no_of_tags'] != 4]) == 0:
+            df.rename(copy=False, inplace=True, 
+                 columns={5 : 'no_of_mesh_partitions', 6 : 'mesh_partition'})
         else:
-            element_set  = element_2d_set
-            boundary_set = boundary_2d_set
+            raise('''The type of mesh is not supported yet. 
+        Either you have a corrupted .msh-file or you have a too 
+        complicated mesh partition structure.''')
+        
+        # correct the issue wiht gmsh index starting at 1 and amfe index starting with 0
+        df.iloc[:, node_idx:] -= 1
+        
+        # change the el_type to the amfe convention
+        df['el_type'] = df.el_type.map(gmsh2amfe)
+        
+        element_types = pd.unique(df['el_type'])
+        # Check, if the problem is 2d or 3d and adjust the dimension of the nodes
+        # Check, if there is one 3D-Element in the mesh! 
+        self.no_of_dofs_per_node = 2
+        for i in element_types:
+            if i in element_3d_set:
+                self.no_of_dofs_per_node = 3
+                
+        # fill the nodes of the selected physical group to the array
+        self.nodes = np.array(list_imported_nodes)[:,1:1+self.no_of_dofs_per_node]
 
-        gmsh2amfe_boundary_dict= {}
-        boundary_list = [] # The nodes of a boundary are stored here in a unordered way
-        # Zeile [i] von [elements] beinhaltet die Knotennummern von Element [i+1]
-
-        ############################
-        # Loop over all elements ###
-        ############################
-        for element in list_imported_elements:
-            gmsh_element_key = element[1]
-            tag = element[2] # Tag information giving everything where the structure belongs to and so on...
-            if gmsh_element_key in gmsh2amfe:
-
-                # handling of the elements:
-                if gmsh2amfe[gmsh_element_key] in element_set:
-                    self.elements_properties.append(element[3:3+tag])
-                    self.elements.append(element[3+tag:])
-                    self.elements_type.append(gmsh2amfe[gmsh_element_key])
-
-                # Handling of the boundaries
-                if gmsh2amfe[gmsh_element_key] in boundary_set:
-                    gmsh_boundary_number = element[2+tag]
-
-                    if gmsh_boundary_number not in gmsh2amfe_boundary_dict:
-                        nbounds = len(gmsh2amfe_boundary_dict)
-                        gmsh2amfe_boundary_dict.update({gmsh_boundary_number : nbounds})
-                        boundary_list.append([])
-
-                    boundary_index = gmsh2amfe_boundary_dict[gmsh_boundary_number]
-                    boundary_list[boundary_index].append(element[3+tag:])
-
-        # even if the nodes are heterogeneous, it should work out...
-        self.nodes = np.array(self.nodes)
-        self.elements = np.array(self.elements)
-        # Node handling in order to make 2D-meshes flat by removing z-coordinate:
-        if mesh_3d:
-            self.node_dof = 3
-        else: 
-            self.nodes = self.nodes[:,:-1]
-            self.node_dof = 2 # überflüssig, da in __init__ als default gesetzt
-
-        # Take care here!!! gmsh starts indexing with 1,
-        # paraview with 0!
-        self.elements = np.array(self.elements) - 1
-
-        # cleaning up redundant nodes, which may show up in gmsh files
-        # This looks littel tedious but is necessary, as the 'flying' nodes
-        # have neither stiffness nor mass in the assembled structure and make
-        # the handling very complicated
-        # Thus the preprocessing for boundary conditions has to be done with
-        # paraview
-        #
-        # The Idea here is to make a mapping of all used nodes and the full
-        # nodes and map the elements and the nodes with this mapping dict
-        # called new_old_node_mapping_dict.
-        used_node_set = set(self.elements.reshape(-1))
-        no_of_used_nodes = len(used_node_set)
-        new_old_node_mapping_dict = dict(zip(used_node_set, np.arange(no_of_used_nodes)))
-        # update indexing in the element list
-        for index_1, element in enumerate(self.elements):
-            for index_2, node in enumerate(element):
-                self.elements[index_1, index_2] = new_old_node_mapping_dict[node]
-        # update indexing in the nodes list
-        self.nodes = self.nodes[list(used_node_set)]
-
-        ########
-        # Postprocessing of the line_sets
-        ########
-        self.gmsh2amfe_boundary_dict = gmsh2amfe_boundary_dict
-        self.amfe2gmsh_boundary_dict = \
-            dict(zip(gmsh2amfe_boundary_dict.values(), gmsh2amfe_boundary_dict.keys()))
-        self.boundary_list = []
-        for set_ in boundary_list:
-            set_ = np.array(set_).reshape(-1)
-            set_ = np.array(list(set(set_))) # remove the duplicates
-            set_ -= 1 # consider node indexing change of gmsh
-            set_ = [new_old_node_mapping_dict[node] for node in set_ if node in new_old_node_mapping_dict]
-            self.boundary_list.append(np.array(set_))
+        
+        # Handling the physical groups 
+        all_physical_groups = pd.unique(df.phys_group)
+        
+        # make a dictionary with the nodes of every physical group
+        self.phys_group_dict = nodes_phys_group = {}
+        for idx in all_physical_groups:
+            gr_nodes = np.array([], dtype=int)
+            # pick the elements corresponding to the current physical group from table
+            df_phys_group = df[df.phys_group == idx] 
+            # assemble all nodes to one huge array
+            for series in df_phys_group.iloc[:, node_idx:]:
+                gr_nodes = np.append(gr_nodes, df_phys_group[series].unique())
+            # make them unique, remove nan (resulting from non-existing entries in pandas)
+            # cast and sort the array and put into dict
+            gr_nodes = np.unique(gr_nodes)
+            gr_nodes = gr_nodes[np.isfinite(gr_nodes)] # remove nan from non-existing entries
+            gr_nodes = np.array(gr_nodes, dtype=int) # recast to int as somewhere a float is casted
+            gr_nodes.sort()
+            nodes_phys_group[idx] = gr_nodes
 
         self._update_mesh_props()
+        # printing some information regarding the physical groups
+        print('Mesh', filename, 'successfully imported. \nAssign a material to a physical group.')
+        print('*************************************************************')
+    
+        
+
+    def load_group_to_mesh(self, key, material, mesh_prop='phys_group',
+                              element_class_dict=element_class_dict):
+        '''
+        Add a physical group to the main mesh with given material. 
+        
+        Parameters
+        ----------
+        key : int
+            Key for mesh property which is to be chosen. Matches the group given 
+            in the gmsh file. For help, the function mesh_information or 
+            boundary_information gives the groups
+        material : Material class
+            Material class which will be assigned to the elements
+        mesh_prop : {'phys_group', 'geom_entity', 'el_type'}, optional
+            label of which the element should be chosen from. Standard is 
+            physical group. 
+        element_class_dict : dict, optional
+            Dictionary of elements, where the element keys are mapped to the 
+            element objects. 
+            
+        Returns
+        -------
+        None
+        
+        '''
+        # asking for a group to be chosen, when no valid group is given
+        df = self.el_df
+        while key not in pd.unique(df[mesh_prop]):
+            self.mesh_information()
+            print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop, 'is', key, ')')
+            key = int(input('Please choose a ' + mesh_prop + ' to be used as mesh: '))
+        
+        # make a pandas dataframe just for the desired elements
+        elements_df = df[df[mesh_prop] == key]
+        
+        # add the nodes of the chosen group
+        ele_nodes = [np.nan for i in range(len(elements_df))]
+        for i, element in enumerate(elements_df.values):
+            ele_nodes[i] = np.array(element[self.node_idx : 
+                    self.node_idx + amfe2no_of_nodes[element[1]]], dtype=int)
+        self.ele_nodes.extend(ele_nodes)
+        
+        # ele_types for paraview export
+        self.ele_types = elements_df['el_type'].values
+        
+        # make a deep copy of the element class dict and apply the material
+        # then add the element objects to the ele_obj list
+        ele_class_dict = copy.deepcopy(element_class_dict)
+        for i in ele_class_dict:
+            ele_class_dict[i].material = material
+        object_series = elements_df.el_type.map(ele_class_dict)
+        self.ele_obj.extend(object_series.values.tolist())
+        self._update_mesh_props()
+        
+        # print some output stuff
+        print('\n', mesh_prop, key, 'with', len(ele_nodes), 'elements successfully added.')
+        print('Total number of elements in mesh:', len(self.ele_obj))
+        print('*************************************************************')
+        
+    def mesh_information(self):
+        df = self.el_df
+        print('The loaded mesh contains', len(self.phys_group_dict), 'physical groups:')
+        for i in self.phys_group_dict :
+            print('\nPhysical group', i, ':')
+            print('Number of Nodes:', len(self.phys_group_dict [i]))
+            print('Number of Elements:', len(df[df.phys_group == i]))
+            print('Element types appearing in this group:', pd.unique(df[df.phys_group == i].el_type))
 
     def boundary_information(self):
         '''
         Print the information of the boundary stuff
         '''
-        print('List boundary nodes sorted by the boundary number. \n\
-                Take care: The lines start indexing with 0, gmsh does this with 1.\n')
-        for i, line in enumerate(self.boundary_list):
-            print('Boundary', i,
-                  '\n(gmsh-Key:', self.amfe2gmsh_boundary_dict[i],
-                  '/ index in boundary_list:', i, ')')
-            print(line, '\n')
+        print('Voundary nodes sorted by the boundary number:')
+        for i in self.phys_group_dict:
+            print('Boundary (physical group)', i,
+                  'contains the following', len(self.phys_group_dict[i]), 
+                  ' nodes:\n', self.phys_group_dict[i])
+
+    def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group', output='internal'):
+        '''
+        Add a group of the mesh to the dirichlet nodes to be fixed. 
+        
+        Parameters
+        ----------
+        key : int
+            Key for mesh property which is to be chosen. Matches the group given 
+            in the gmsh file. For help, the function mesh_information or 
+            boundary_information gives the groups
+        coord : str {'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz'}
+            coordinates which should be fixed
+        mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
+            label of which the element should be chosen from. Standard is 
+            physical group. 
+        output : str {'internal', 'external'}
+            key stating, boundary information is stored internally or externally
+            
+            
+        Returns
+        -------
+        nodes : ndarray, if output == 'external'
+            Array of nodes belonging to the selected group
+        dofs : ndarray, if output == 'external'
+            Array of dofs respecting the coordinates belonging to the selected groups
+        
+        '''
+        # asking for a group to be chosen, when no valid group is given
+        df = self.el_df
+        while key not in pd.unique(df[mesh_prop]):
+            self.mesh_information()
+            print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop, 'is', key, ')')
+            key = int(input('Please choose a ' + mesh_prop + ' to be chosen for Dirichlet BCs: '))
+        
+        # make a pandas dataframe just for the desired elements
+        elements_df = df[df[mesh_prop] == key]
+        # pick the nodes, make them unique and remove NaNs
+        all_nodes = elements_df.iloc[:, self.node_idx:]
+        unique_nodes = np.unique(all_nodes.values.reshape(-1))
+        unique_nodes = unique_nodes[np.isfinite(unique_nodes)]
+        
+        # build the dofs_dirichlet, a list containing the dirichlet dofs:
+        dofs_dirichlet = [] 
+        if 'x' in coord:
+            dofs_dirichlet.extend(unique_nodes * self.no_of_dofs_per_node)
+        if 'y' in coord:
+            dofs_dirichlet.extend(unique_nodes * self.no_of_dofs_per_node + 1)
+        if 'z' in coord and self.no_of_dofs_per_node > 2:
+            dofs_dirichlet.extend(unique_nodes * self.no_of_dofs_per_node + 2)
+            
+        dofs_dirichlet = np.array(dofs_dirichlet, dtype=int)
+        
+        nodes_dirichlet = self.nodes_dirichlet.tolist()
+        nodes_dirichlet.extend(unique_nodes)
+        nodes_dirichlet = np.array(nodes_dirichlet, dtype=int)
+
+        if output is 'internal':
+            dofs_dirichlet = np.append(dofs_dirichlet, self.dofs_dirichlet)
+            self.dofs_dirichlet = np.unique(dofs_dirichlet)
+            self.dofs_dirichlet.sort()
+            self.nodes_dirichlet = np.unique(nodes_dirichlet)
+            self.nodes_dirichlet.sort()
+        
+        # print some output stuff
+        print('\n', mesh_prop, key, 'with', len(unique_nodes), 
+                  'nodes successfully added to Dirichlet Boundaries.')
+        print('Total number of nodes with Dirichlet BCs:', len(self.nodes_dirichlet))
+        print('Total number of constrained dofs:', len(self.dofs_dirichlet))
+        print('*************************************************************')
+        if output is 'external':
+            return nodes_dirichlet, dofs_dirichlet
+        
 
     def set_displacement(self, u):
         '''
@@ -363,7 +514,7 @@ class Mesh:
         TODO
         '''
         self.timesteps.append(1)
-        self.u = [np.array(u).reshape((-1, self.node_dof))]
+        self.u = [np.array(u).reshape((-1, self.no_of_dofs_per_node))]
 
 
     def set_displacement_with_time(self, u, timesteps):
@@ -390,7 +541,7 @@ class Mesh:
         self.timesteps = timesteps.copy()
         self.u = []
         for i, timestep in enumerate(self.timesteps):
-            self.u.append(np.array(u[i]).reshape((-1, self.node_dof)))
+            self.u.append(np.array(u[i]).reshape((-1, self.no_of_dofs_per_node)))
 
     def set_nodal_variable_with_time(self, variable_array, variable_name, timesteps):
         '''
@@ -399,18 +550,14 @@ class Mesh:
         # TODO
         pass
 
-    def set_element_variable_with_time(self, variable_array, variable_name, timesteps):
-        '''
-        Sets the element variables with the time history
-        '''
-        # TODO
-        pass
-
     def save_mesh_for_paraview(self, filename):
         '''
-        Saves the mesh and the corresponding displacements to a .pvd file and corresponding .vtu-files readable for ParaView.
+        Saves the mesh and the corresponding displacements to a .pvd file and 
+        corresponding .vtu-files readable for ParaView.
 
-        In the .pvd file the information of the timesteps are given. For every timestep a .vtu file is created where the displacement and eventually the stress is saved.
+        In the .pvd file the information of the timesteps are given. For every 
+        timestep a .vtu file is created where the displacement and eventually 
+        the stress is saved.
 
         Parameters
         -----------
@@ -428,17 +575,18 @@ class Mesh:
         >>> mymesh.save_mesh_for_paraview('../results/gmsh/my_simulation')
 
 
-        References:
-        -----------
+        References
+        ----------
         www.vtk.org/VTK/img/file-formats.pdf
 
         '''
         if len(self.timesteps) == 0:
-            self.u = [np.zeros((self.no_of_nodes, self.node_dof))]
+            self.u = [np.zeros((self.no_of_nodes, self.no_of_dofs_per_node))]
             self.timesteps.append(0)
 
         # Make the pvd-File with the links to vtu-files
-        pvd_header = '''<?xml version="1.0"?> \n <VTKFile type="Collection" version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
+        pvd_header = '''<?xml version="1.0"?> \n <VTKFile type="Collection" 
+version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
         pvd_footer = ''' </Collection> \n </VTKFile>'''
         pvd_line_start = '''<DataSet timestep="'''
         pvd_line_middle = '''" group="" part="0" file="'''
@@ -451,7 +599,8 @@ class Mesh:
         with open(filename_pvd, 'w') as savefile_pvd:
             savefile_pvd.write(pvd_header)
             for i, t in enumerate(self.timesteps):
-                savefile_pvd.write(pvd_line_start + str(t) + pvd_line_middle + filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
+                savefile_pvd.write(pvd_line_start + str(t) + pvd_line_middle + 
+                    filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
             savefile_pvd.write(pvd_footer)
 
         vtu_header = '''<?xml version="1.0"?> \n
@@ -470,33 +619,39 @@ class Mesh:
             with open(filename_vtu, 'w') as savefile_vtu:
                 savefile_vtu.write(vtu_header)
                 # Es muss die Anzahl der gesamten Punkte und Elemente angegeben werden
-                savefile_vtu.write('<Piece NumberOfPoints="' + str(len(self.nodes)) + '" NumberOfCells="' + str(len(self.elements)) + '">\n')
+                savefile_vtu.write('<Piece NumberOfPoints="' + str(len(self.nodes)) 
+                    + '" NumberOfCells="' + str(len(self.ele_nodes)) + '">\n')
                 savefile_vtu.write('<Points>\n')
-                savefile_vtu.write('<DataArray type="Float64" Name="Array" NumberOfComponents="3" format="ascii">\n')
-                # bei Systemen mit 2 Knotenfreiheitsgraden wird die dritte 0-Komponenten noch extra durch die endflag hinzugefügt...
-                if self.node_dof == 2:
+                savefile_vtu.write('<DataArray type="Float64" Name="Array" \
+                    NumberOfComponents="3" format="ascii">\n')
+                # bei Systemen mit 2 Knotenfreiheitsgraden wird die dritte 
+                # 0-Komponenten noch extra durch die endflag hinzugefuegt...
+                if self.no_of_dofs_per_node == 2:
                     endflag = ' 0 \n'
-                elif self.node_dof == 3:
+                elif self.no_of_dofs_per_node == 3:
                     endflag = '\n'
                 for j in self.nodes:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Points>\n<Cells>\n')
                 savefile_vtu.write('<DataArray type="Int32" Name="connectivity" format="ascii">\n')
-                for j in self.elements:
+                for j in self.ele_nodes:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + '\n')
                 savefile_vtu.write('\n</DataArray>\n')
-                # Writing the offset for the elements; they are ascending by the number of dofs and have to start with the real integer
+                # Writing the offset for the elements; they are ascending by 
+                # the number of dofs and have to start with the real integer
                 savefile_vtu.write('<DataArray type="Int32" Name="offsets" format="ascii">\n')
-                for j, el_ty in enumerate(self.elements_type):
-                    savefile_vtu.write(str(amfe2no_of_nodes[el_ty]*j +amfe2no_of_nodes[el_ty]) + ' ')
+                for j, el_nodes in enumerate(self.ele_nodes):
+                    savefile_vtu.write(str(len(el_nodes)*j + len(el_nodes)) + ' ')
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
-                savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) for el_ty in self.elements_type)) # Elementtyp ueber Zahl gesetzt
+                # Elementtyp ueber Zahl gesetzt
+                savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) for el_ty in self.ele_types)) 
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Cells> \n')
                 savefile_vtu.write('<PointData Vectors="displacement">\n')
-                savefile_vtu.write('<DataArray type="Float64" Name="displacement" NumberOfComponents="3" format="ascii">\n')
+                savefile_vtu.write('<DataArray type="Float64" Name="displacement" \
+                    NumberOfComponents="3" format="ascii">\n')
                 # pick the i-th timestep
                 for j in self.u[i]:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
@@ -506,8 +661,9 @@ class Mesh:
 
 class MeshGenerator:
     '''
-    Klasse zum Erzeugen von zweidimensionalen Netzen, die Dreiecks- oder Vierecksstruktur haben.
-    Ausgabe in Netz-Files, die von der Netz-Klasse wieder eingelesen werden können
+    Klasse zum Erzeugen von zweidimensionalen Netzen, die Dreiecks- oder 
+    Vierecksstruktur haben. Ausgabe in Netz-Files, die von der Netz-Klasse 
+    wieder eingelesen werden können
 
     '''
 
@@ -535,8 +691,8 @@ class MeshGenerator:
 
     def _curved_mesh_get_phi_r(self, h, l):
         '''
-        wenn ein gekrümmtes Netz vorliegt:
-        Bestimmung des Winkels phi und des Radiusses r aus der Höhe und der Länge
+        wenn ein gekruemmtes Netz vorliegt:
+        Bestimmung des Winkels phi und des Radiusses r aus der Hoehe und der Laenge
 
         '''
         # Abfangen, wenn Halbschale vorliegt
@@ -544,7 +700,7 @@ class MeshGenerator:
             phi = np.pi
         else:
             phi = 2*np.arctan(2*h*l/(l**2 - 4*h**2))
-        # Checkt, wenn die Schale über pi hinaus geht:
+        # Checkt, wenn die Schale ueber pi hinaus geht:
         if phi<0:
             phi += 2*np.pi
         r = l/(2*np.sin(phi/2))
@@ -582,7 +738,7 @@ class MeshGenerator:
                     phi_y, r_y = self._curved_mesh_get_phi_r(self.height, self.y_len)
                     delta_phi_y = phi_y/self.y_no_elements
                     r_OO_y = np.array([0, 0, -r_y])
-                # Einführen von Ortsvektoren, die Vektorkette zum Element geben:
+                # Einfuehren von Ortsvektoren, die Vektorkette zum Element geben:
                 r_OP_x = np.array([0, 0, 0])
                 r_OP_y = np.array([0, 0, 0])
                 r_OO   = np.array([self.x_len/2, self.y_len/2, self.height])
@@ -652,7 +808,7 @@ class MeshGenerator:
 
     def save_mesh(self, filename_nodes, filename_elements):
         '''
-        Speichert das Netz ab; Funktioniert für alle Elementtypen,
+        Speichert das Netz ab; Funktioniert fuer alle Elementtypen,
         es muss also stets nur eine Liste vorhanden sein
         '''
 

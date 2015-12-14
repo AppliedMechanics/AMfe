@@ -33,7 +33,8 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*sq_eps, verbose=True):
     omega_i : float
         eigenfrequency corresponding to the modeshape x_i
     h : float, optional
-        step size for the computation of the finite difference scheme. Default value 500 * machine_epsilon
+        step size for the computation of the finite difference scheme. Default 
+        value 500 * machine_epsilon
     verbose : bool
         additional output provided; Default value True.
 
@@ -102,20 +103,26 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*sq_eps, verbose=True):
     x_j : ndarray
         displacement vector j
     K_func : function
-        function for the tangential stiffness matrix to be called in the form K_tangential = K_func(x_i)
+        function for the tangential stiffness matrix to be called in the form 
+        K_tangential = K_func(x_i)
     h : float, optional
-        step size for the computation of the finite difference scheme. Default value 500 * machine_epsilon
+        step size for the computation of the finite difference scheme. Default 
+        value 500 * machine_epsilon
     verbose : bool
         additional output provided; Default value True.
 
     Returns
     -------
     dx_i_dx_j : ndarray
-        static correction derivative (if x_i and x_j is a modal vector it's the modal derivative neglecting mass terms) of displacement x_i with respect to displacement x_j
+        static correction derivative (if x_i and x_j is a modal vector it's 
+        the modal derivative neglecting mass terms) of displacement x_i with 
+        respect to displacement x_j
 
     Notes
     -----
-    The static correction is done purely on the arrays x_i and x_j, so there is no mass normalization. This is a difference in contrast to the technique used in the related function modal_derivative.
+    The static correction is done purely on the arrays x_i and x_j, so there is 
+    no mass normalization. This is a difference in contrast to the technique 
+    used in the related function modal_derivative.
 
     See Also
     --------

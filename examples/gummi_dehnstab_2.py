@@ -33,6 +33,7 @@ my_mechanical_system.load_mesh_from_gmsh('../meshes/gmsh/2D_Rectangle_tri6_dehns
 # Boundary handling
 bottom_line_indices = my_mechanical_system.mesh_class.boundary_list[6]
 top_line_indices = my_mechanical_system.mesh_class.boundary_list[4]
+
 bottom_fixation_x = [None, [amfe.node2total(i, 0) for i in bottom_line_indices], None]
 bottom_fixation_y = [None, [amfe.node2total(i, 1) for i in bottom_line_indices], None]
 top_fixation_x = [amfe.node2total(top_line_indices[0], 0), [amfe.node2total(i, 0) for i in top_line_indices], None]
