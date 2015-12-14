@@ -98,61 +98,7 @@ def force_test(element, x, u=None):
     print('Maximum value in the integrated stiffness matrix:', np.max(abs(K)))
     return K, K_finite_diff
 
-def read_hbmat(filename):
-    '''
-    reads the hbmat file and returns it in the csc format. 
-    
-    Parameters
-    ----------
-    filename : string
-        string of the filename
-    
-    Returns
-    -------
-    matrix : sp.sparse.csc_matrix
-        matrix which is saved in harwell-boeing format
-    
-    Info
-    ----
-    Information on the Harwell Boeing format: 
-    http://people.sc.fsu.edu/~jburkardt/data/hb/hb.html
-    '''
-    with open(filename, 'r') as infile:
-        matrix_data = infile.read().splitlines()
-    
-    # Analsysis of further line indices
-    n_total, n_indptr, n_indices, n_data, n_rhs = map(int, matrix_data[1].split())
-    matrix_keys, n_rows, n_cols, _, _ = matrix_data[2].split()
-    
-    n_rows, n_cols = int(n_rows), int(n_cols)
 
-    symmetric = False
-    if matrix_keys[1] == 'S':
-        symmetric = True
-
-    idx_0 = 4
-    if n_rhs > 0:
-        idx_0 += 1
-
-    indptr = sp.zeros(n_indptr, dtype=int)
-    indices = sp.zeros(n_indices, dtype=int)
-    data = sp.zeros(n_data)
-    
-    indptr[:] = list(map(int, matrix_data[idx_0 : idx_0 + n_indptr]))
-    indices[:] = list(map(int, matrix_data[idx_0 + n_indptr : idx_0 + n_indptr + n_indices]))
-    # consider the fortran convention with D instead of E in double precison floats
-    data[:] = [float(x.replace('D', 'E')) for x in matrix_data[idx_0 + n_indptr + n_indices : ]]
-    
-    # take care of the indexing notation of fortran
-    indptr -= 1
-    indices -= 1
-
-    matrix = sp.sparse.csc_matrix((data, indices, indptr), shape=(n_rows, n_cols))
-    if symmetric:
-        diagonal = matrix.diagonal()
-        matrix = matrix + matrix.T
-        matrix.setdiag(diagonal)
-    return matrix
 
 def produce_apdl(filename_mat, nodes, elements, ANSYS_element, rho, E, nu):
     '''
@@ -260,8 +206,8 @@ with open(ansys_workdir + 'tri3.inp', 'w') as inpfile:
 #%%
 _ = input('Run ' + ansys_workdir + 'tri3.inp with ANSYS!')
 
-K_ans = read_hbmat(ansys_workdir + 'tri3_k.ansmat').A
-M_ans = read_hbmat(ansys_workdir + 'tri3_m.ansmat').A
+K_ans = amfe.read_hbmat(ansys_workdir + 'tri3_k.ansmat').A
+M_ans = amfe.read_hbmat(ansys_workdir + 'tri3_m.ansmat').A
 
 print('Difference between ANSYS and AMfe for tri3:\n')
 print('Stiffness matrix:', np.max(abs(K_ans - K0)))
@@ -296,8 +242,8 @@ with open(ansys_workdir + 'tri6.inp', 'w') as inpfile:
 #%%
 _ = input('Run ' + ansys_workdir + 'tri6.inp with ANSYS!')
 
-K_ans = read_hbmat(ansys_workdir + 'tri6_k.ansmat').A
-M_ans = read_hbmat(ansys_workdir + 'tri6_m.ansmat').A
+K_ans = amfe.read_hbmat(ansys_workdir + 'tri6_k.ansmat').A
+M_ans = amfe.read_hbmat(ansys_workdir + 'tri6_m.ansmat').A
 
 print('Difference between ANSYS and AMfe for tri6:\n')
 print('Maximum value stiffness matrix:', np.max(abs(K_ans - K0)))
@@ -341,8 +287,8 @@ with open(ansys_workdir + 'quad4.inp', 'w') as inpfile:
 #%%
 
 _ = input('Run ' + ansys_workdir + 'quad4.inp with ANSYS!')
-K_ans = read_hbmat(ansys_workdir + 'quad4_k.ansmat').A
-M_ans = read_hbmat(ansys_workdir + 'quad4_m.ansmat').A
+K_ans = amfe.read_hbmat(ansys_workdir + 'quad4_k.ansmat').A
+M_ans = amfe.read_hbmat(ansys_workdir + 'quad4_m.ansmat').A
 
 print('Difference between ANSYS and AMfe for quad4:\n')
 print('Maximum deviations:\n Mass Matrix', np.max(abs(M_ans - M)))
@@ -385,8 +331,8 @@ with open(ansys_workdir + 'quad8.inp', 'w') as inpfile:
 #%%
 
 _ = input('Run ' + ansys_workdir + 'quad8.inp with ANSYS!')
-K_ans = read_hbmat(ansys_workdir + 'quad8_k.ansmat').A
-M_ans = read_hbmat(ansys_workdir + 'quad8_m.ansmat').A
+K_ans = amfe.read_hbmat(ansys_workdir + 'quad8_k.ansmat').A
+M_ans = amfe.read_hbmat(ansys_workdir + 'quad8_m.ansmat').A
 
 print('Difference between ANSYS and AMfe for quad8:\n')
 print('Maximum deviations:\n Mass Matrix', np.max(abs(M_ans - M)))
@@ -427,8 +373,8 @@ with open(ansys_workdir + 'tet4.inp', 'w') as inpfile:
 #%%
 
 _ = input('Run ' + ansys_workdir + 'tet4.inp with ANSYS!')
-K_ans = read_hbmat(ansys_workdir + 'tet4_k.ansmat').A
-M_ans = read_hbmat(ansys_workdir + 'tet4_m.ansmat').A
+K_ans = amfe.read_hbmat(ansys_workdir + 'tet4_k.ansmat').A
+M_ans = amfe.read_hbmat(ansys_workdir + 'tet4_m.ansmat').A
 
 # correct the stuff...
 selector = np.ix_([0,1,2,4,5,6,8,9,10,12,13,14],[0,1,2,4,5,6,8,9,10,12,13,14])
@@ -476,8 +422,8 @@ with open(ansys_workdir + 'tet10.inp', 'w') as inpfile:
 #%%
 
 _ = input('Run ' + ansys_workdir + 'tet10.inp with ANSYS!')
-K_ans = read_hbmat(ansys_workdir + 'tet10_k.ansmat').A
-M_ans = read_hbmat(ansys_workdir + 'tet10_m.ansmat').A
+K_ans = amfe.read_hbmat(ansys_workdir + 'tet10_k.ansmat').A
+M_ans = amfe.read_hbmat(ansys_workdir + 'tet10_m.ansmat').A
 
 
 print('Difference between ANSYS and AMfe for tet4:\n')
@@ -539,28 +485,6 @@ element_tri6.gauss_points3 = ((1/3, 1/3, 1/3, 0.225),
                               (alpha1, beta1, beta1, w1), (beta1, alpha1, beta1, w1), (beta1, beta1, alpha1, w1),
                               (alpha2, beta2, beta2, w2), (beta2, alpha2, beta2, w2), (beta2, beta2, alpha2, w2))
 
-
-#%%
-
-if False:
-    # Routine for testing the compute_B_matrix_routine
-    # Try it the hard way:
-    ndim = 2
-    B_tilde = sp.rand(ndim,4)
-    F = sp.rand(ndim, ndim)
-    S_v = sp.rand(ndim*(ndim+1)/2)
-
-    if ndim == 2:
-        S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
-    else:
-        S = np.array([[S_v[0], S_v[5], S_v[4]],
-                      [S_v[5], S_v[1], S_v[3]],
-                      [S_v[4], S_v[3], S_v[2]]])
-
-    B = amfe.compute_B_matrix(B_tilde, F)
-    res1 = B.T.dot(S_v)
-    res2 = B_tilde.T.dot(S.dot(F.T))
-    print(res1 - res2.reshape(-1))
 
 #%%
 

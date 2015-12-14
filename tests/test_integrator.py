@@ -16,7 +16,7 @@ import amfe
 
 #%%
 
-if __name__ == "__main__":
+def test_intgrator():
     c1 = 10
     c2 = 20
     c3 = 10
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     q_start = np.array([1, 0, 2.])*0
     dq_start = q_start*0
 
-    T = np.arange(0,30,0.05)
+    T = np.arange(0,5,0.05)
 
     my_integrator = amfe.NewmarkIntegrator()
     my_integrator.set_nonlinear_model(f_non, my_k, M, f_ext)

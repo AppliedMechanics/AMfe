@@ -11,6 +11,7 @@ sys.path.insert(0,'..')
 
 import nose
 
+import amfe
 from amfe import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10
 from amfe import material
 
@@ -194,6 +195,37 @@ class MaterialTest2dPlaneStress(unittest.TestCase):
         S2d, S_v2d, C2d = self.neo.S_Sv_and_C_2d(E[:2, :2])
         np.testing.assert_allclose(S[:2, :2], S2d)
         np.testing.assert_allclose(C[np.ix_([0,1,-1], [0,1,-1])], C2d)
+
+class TestB_matrix_compuation(unittest.TestCase):
+    '''
+    Check the validity of the B-Matrix routine
+    '''
+    def produce_numbers(self, ndim):
+        
+        # Routine for testing the compute_B_matrix_routine
+        # Try it the hard way:
+        B_tilde = sp.rand(ndim,4)
+        F = sp.rand(ndim, ndim)
+        S_v = sp.rand(ndim*(ndim+1)//2)
+    
+        if ndim == 2:
+            S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
+        else:
+            S = np.array([[S_v[0], S_v[5], S_v[4]],
+                          [S_v[5], S_v[1], S_v[3]],
+                          [S_v[4], S_v[3], S_v[2]]])
+    
+        B = amfe.compute_B_matrix(B_tilde, F)
+        self.res1 = B.T.dot(S_v)
+        self.res2 = B_tilde.T.dot(S.dot(F.T))
+    
+    def test_2d(self):
+        self.produce_numbers(2)
+        np.testing.assert_allclose(self.res1, self.res2.reshape(-1))
+    
+    def test_3d(self):
+        self.produce_numbers(3)
+        np.testing.assert_allclose(self.res1, self.res2.reshape(-1))
 
     
 if __name__ == '__main__':
