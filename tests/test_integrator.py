@@ -52,8 +52,8 @@ def test_intgrator():
     my_integrator.verbose = True
     q, dq = my_integrator.integrate_nonlinear_system(q_start, dq_start, T)
 
-    from matplotlib import pyplot
-    pyplot.plot(T, q)
+#    from matplotlib import pyplot
+#    pyplot.plot(T, q)
     #pyplot.plot(T, dq)
 
 

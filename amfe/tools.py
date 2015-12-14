@@ -123,9 +123,9 @@ def read_hbmat(filename):
         matrix.setdiag(diagonal)
     return matrix
 
-def test():
+def test(*args, **kwargs):
     '''
     Run all tests for AMfe. 
     '''
     import nose
-    nose.main()
+    nose.main(*args, **kwargs)

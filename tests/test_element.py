@@ -33,7 +33,7 @@ def jacobian(func, X, u):
 
 
 class ElementTest(unittest.TestCase):
-    
+    '''Base class for testing the elements with the jacobian'''
     def initialize_element(self, element, no_of_dofs):
         self.X = sp.rand(no_of_dofs)
         self.u = sp.rand(no_of_dofs)
