@@ -1068,7 +1068,8 @@ class Tri6Boundary(BoundaryElement):
     necessary. 
     '''
     B0_dict = {}
-    B0_dict.update({'normal' : np.vstack((np.zeros(3*3,3),np.eye(3), np.eye(3), np.eye(3)))/3})
+    B0_dict.update({'normal' : np.vstack((np.zeros((3*3,3)),
+                                          np.eye(3), np.eye(3), np.eye(3)))/3})
     B0 = np.zeros((18,3))
     B0[np.ix_([9,12,15], [0])] = 1/3
     B0_dict.update({'x_n' : B0})
@@ -1107,6 +1108,8 @@ class Tri6Boundary(BoundaryElement):
     def _compute_tensors_full(self, X, u, t):
         '''
         Compute the full pressure contribution by doing gauss integration. 
+        TODO: Attention! This function does not work!!! 
+        
         '''
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
         N = np.zeros(6)

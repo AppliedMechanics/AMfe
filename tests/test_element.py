@@ -221,6 +221,26 @@ def test_line_pressure2():
     np.testing.assert_array_equal(K, np.zeros((4,4)))
     np.testing.assert_allclose(f, np.sqrt(2)*np.array([1,0,1,0]))
 
+@nose.tools.nottest
+def test_tri6_pressure():
+    my_material = amfe.KirchhoffMaterial(rho=1)
+    my_tri6 = amfe.Tri6(my_material)
+    X = np.array([0,0,2,0,0,2,1,0,1,1,0,1.])
+    u = np.zeros(12)
+    X += sp.rand(12)*0.2
+    M = my_tri6.m_int(X, u)
+    t = np.array([ 0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.])
+    f_2d = M @ t
+    f_1d = f_2d[np.ix_([1,3,5,7,9,11])]
+    my_boundary = amfe.Tri6Boundary(val=1., direct='normal', full_integration=True)
+    X_3D = np.array([0,0,0,2,0,0,0,2,0,1,0,0,1,1,0,0,1.,0])
+    u_3D = np.zeros(3*6)
+    K, f = my_boundary.k_and_f_int(X_3D, u_3D)
+    np.testing.assert_equal(K, np.zeros((18,18)))
+    np.testing.assert_allclose(f_1d, f[np.ix_([2,5,8,11,14,17])])
+    
+
+
 
 
 #%%
