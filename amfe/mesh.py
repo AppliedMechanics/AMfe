@@ -105,9 +105,10 @@ class Mesh:
         -------
         None
         '''
-        self.nodes               = []
-        self.ele_nodes           = []
-        self.ele_obj             = []
+        self.nodes         = []
+        self.ele_nodes     = []
+        self.ele_obj       = []
+        self.ele_types     = [] # Element-types for Export
         self.nodes_dirichlet     = np.array([], dtype=int)
         self.dofs_dirichlet      = np.array([], dtype=int)
         # the displacements; They are stored as a list of numpy-arrays with shape (ndof, no_of_dofs_per_node):
@@ -174,13 +175,13 @@ class Mesh:
                           2: "Bar2D"} # Bislang nur 2D-Element aus csv auslesbar
 
         print('Reading elements from csv...  ', end="")
-        self.elements = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
-        if self.elements.ndim == 1: # Wenn nur genau ein Element vorliegt
-            self.elements = np.array([self.elements])
+        self.ele_nodes = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
+        if self.ele_nodes.ndim == 1: # Wenn nur genau ein Element vorliegt
+            self.ele_nodes = np.array([self.ele_nodes])
         # Falls erste Spalte die Elementnummer angibt, wird diese hier 
         # abgeschnitten, um nur die Knoten des Elements zu erhalten
         if explicit_node_numbering: 
-            self.elements = self.elements[:,1:]
+            self.ele_nodes = self.ele_nodes[:,1:]
 
     
         if ele_type: # If element type is spezified, use this spezified type
@@ -190,7 +191,7 @@ class Mesh:
         # different number of nodes per element in 'mesh_type_dict')
         else: 
             try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
-                (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
+                (no_of_ele, no_of_nodes_per_ele) = self.ele_nodes.shape
                 mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
             except:
                 print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
@@ -199,7 +200,7 @@ class Mesh:
         print('Element type is {0}...  '.format(mesh_type), end="")
         # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet 
         # wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
-        self.elements_type = [mesh_type for i in self.elements] 
+        self.ele_types = [mesh_type for i in self.ele_nodes] 
         self._update_mesh_props()
         print('Reading elements successful.')
 
@@ -233,12 +234,6 @@ class Mesh:
         tag_elements_start = "$Elements"
         tag_elements_end   = "$EndElements"
     
-
-        self.nodes         = []
-        self.ele_nodes     = []
-        self.ele_obj       = []
-        self.ele_types     = [] # Element-types for Export
-
         print('\n*************************************************************')
         print('Loading gmsh-mesh from', filename)
         
@@ -683,7 +678,7 @@ class MeshGenerator:
         self.pos_x0 = pos_x0
         self.pos_y0 = pos_y0
         self.nodes = []
-        self.elements = []
+        self.ele_nodes = []
         # Make mesh 3D, if it is curved in one direction
         if x_curve | y_curve:
             self.flat_mesh = False
@@ -765,13 +760,13 @@ class MeshGenerator:
                     first_node  = y_counter*(self.x_no_elements + 1) + x_counter + 0
                     second_node = y_counter*(self.x_no_elements + 1) + x_counter + 1
                     third_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
-                    self.elements.append([first_node, second_node, third_node])
+                    self.ele_nodes.append([first_node, second_node, third_node])
                     element_number += 1
                     # second the upper triangulars
                     first_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 1
                     second_node = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
                     third_node  = y_counter*(self.x_no_elements + 1) + x_counter + 1
-                    self.elements.append([first_node, second_node, third_node])
+                    self.ele_nodes.append([first_node, second_node, third_node])
                     element_number += 1
 
 
@@ -794,7 +789,7 @@ class MeshGenerator:
                     node2 = counter_x + 1 + (counter_y - 0)*(self.x_no_elements + 1)
                     node3 = counter_x + 1 + (counter_y + 1)*(self.x_no_elements + 1)
                     node4 = counter_x     + (counter_y + 1)*(self.x_no_elements + 1)
-                    self.elements.append([node1, node2, node3, node4])
+                    self.ele_nodes.append([node1, node2, node3, node4])
 
 
         mesh_type_dict = {"Tri": build_tri,
@@ -828,7 +823,7 @@ class MeshGenerator:
 
         with open(filename_elements, 'w') as savefile_elements: # Save elements
             # Header for the file:
-            number_of_nodes = len(self.elements[0])
+            number_of_nodes = len(self.ele_nodes[0])
             if number_of_nodes == 3:
                 savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
             elif number_of_nodes == 4:
@@ -838,6 +833,6 @@ class MeshGenerator:
             else:
                 print("Hier lief etwas falsch. Anzahl der Knoten pro Element konnte nicht bestimmt werden.")
 
-            for elements in self.elements:
+            for elements in self.ele_nodes:
                 savefile_elements.write(delimiter.join(str(x) for x in elements) + newline)
 
