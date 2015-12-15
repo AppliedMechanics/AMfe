@@ -1060,13 +1060,37 @@ class Tri3Boundary(BoundaryElement):
 class Tri6Boundary(BoundaryElement):
     '''
     
+    
+    Note
+    ----
+    The area and the normal are approximated using only the three corner nodes. 
+    Maybe in the future a more sophisticated area and normal computation is 
+    necessary. 
     '''
+    B0_dict = {}
+    B0_dict.update({'normal' : np.vstack((np.eye(3), np.eye(3), np.eye(3)))/3})
+    B0 = np.zeros((9,3))
+    B0[np.ix_([0,3,6], [0])] = 1/3
+    B0_dict.update({'x_n' : B0})
+    B0 = np.zeros((9,3))
+    B0[np.ix_([1,4,7], [1])] = 1/3
+    B0_dict.update({'y_n' : B0})
+    B0 = np.zeros((9,3))
+    B0[np.ix_([2,5,8], [2])] = 1/3
+    B0_dict.update({'z_n' : B0})
+    B0_dict.update({'x' : np.array([1/3, 0, 0, 1/3, 0, 0, 1/3, 0, 0])})
+    B0_dict.update({'y' : np.array([0, 1/3, 0, 0, 1/3, 0, 0, 1/3, 0])})
+    B0_dict.update({'z' : np.array([0, 0, 1/3, 0, 0, 1/3, 0, 0, 1/3])})
+
     def __init__(self, val, direct, time_func=None):
         super().__init__(val, direct, time_func=time_func, ndof=18)
     
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 3)).T
-        v = x_vec[:,1] - x_vec[:,0]
+        v1 = x_vec[:,2] - x_vec[:,0]
+        v2 = x_vec[:,1] - x_vec[:,0]
+        n = np.cross(v1, v2)/2
+        self.f = self.f_func(n) * self.val * self.time_func(t)
 
         pass
 
