@@ -485,8 +485,8 @@ class Mesh:
         coord : str {'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz'}
             coordinates which should be fixed
         mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
-            label of which the element should be chosen from. Standard is 
-            physical group. 
+            label of which the element should be chosen from. Default is 
+            phys_group. 
         output : str {'internal', 'external'}
             key stating, boundary information is stored internally or externally
             

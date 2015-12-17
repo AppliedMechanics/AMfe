@@ -1016,10 +1016,10 @@ class BoundaryElement(Element):
             self.f_func = f_func
         
         # time function...
-        def static_func(t):
+        def const_func(t):
             return 1
         if time_func is None:
-            self.time_func = static_func
+            self.time_func = const_func
         else:
             self.time_func = time_func
 

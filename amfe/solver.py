@@ -211,7 +211,7 @@ class NewmarkIntegrator():
             ddq *= 0
 
             # checking residual and convergence
-            K, f_non = self.K_and_f_non(q)
+            K, f_non = self.K_and_f_non(q, t)
             res = self._residual(f_non, q, dq, ddq, t)
             res_abs = norm_of_vector(res)
 
@@ -225,7 +225,7 @@ class NewmarkIntegrator():
                 q += delta_q
                 dq += self.gamma/(self.beta*dt)*delta_q
                 ddq += 1/(self.beta*dt**2)*delta_q
-                K, f_non = self.K_and_f_non(q)
+                K, f_non = self.K_and_f_non(q, t)
                 res = self._residual(f_non, q, dq, ddq, t)
                 res_abs = norm_of_vector(res)
                 n_iter += 1

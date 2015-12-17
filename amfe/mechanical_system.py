@@ -129,8 +129,23 @@ class MechanicalSystem():
 
     def apply_dirichlet_boundaries(self, key, coord, mesh_prop='phys_group'):
         '''
-        Apply dirichlet-boundaries to the system. This needs to be reworked!
-
+        Apply dirichlet-boundaries to the system.
+        
+        Parameters
+        ----------
+        key : int
+            Key for mesh property which is to be chosen. Matches the group given 
+            in the gmsh file. For help, the function mesh_information or 
+            boundary_information gives the groups
+        coord : str {'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz'}
+            coordinates which should be fixed
+        mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
+            label of which the element should be chosen from. Default is 
+            'phys_group'. 
+            
+        Returns
+        -------
+        None
         '''
         self.mesh_class.select_dirichlet_bc(key, coord, mesh_prop)
         self.dirichlet_class.constrain_dofs(self.mesh_class.dofs_dirichlet)
@@ -139,7 +154,7 @@ class MechanicalSystem():
     def apply_neumann_boundaries(self, key, val, direct, time_func=None, 
                                  mesh_prop='phys_group'):
         '''
-        Apply neumann boundaries to the system via pressure elements
+        Apply neumann boundaries to the system via skin elements. 
         '''
         self.mesh_class.select_neumann_bc(key=key, val=val, direct=direct, 
                                           time_func=time_func, mesh_prop=mesh_prop)
