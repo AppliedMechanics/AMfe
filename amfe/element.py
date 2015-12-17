@@ -124,6 +124,11 @@ class Element():
     '''
     this is the baseclass for all elements. It contains the methods needed
     for the computation of the element stuff...
+    
+    Attributes
+    ----------
+    material : Material-Class
+        Class containing the material behavior. 
     '''
 
     def __init__(self, material=None):
@@ -135,7 +140,7 @@ class Element():
         '''
         self.material = material
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         '''
         Virtual function for the element specific implementation of a tensor
         computation routine which will be called before _k_int and _f_int
@@ -144,14 +149,14 @@ class Element():
         '''
         pass
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t=0):
         '''
         Virtual function for the element specific implementation of the mass
         matrix;
         '''
         print('The function is not implemented yet...')
 
-    def k_and_f_int(self, X, u):
+    def k_and_f_int(self, X, u, t=0):
         '''
         Returns the tangential stiffness matrix and the internal nodal force
         of the Element.
@@ -176,10 +181,10 @@ class Element():
         TODO
 
         '''
-        self._compute_tensors(X, u)
+        self._compute_tensors(X, u, t)
         return self.K, self.f
 
-    def k_int(self, X, u):
+    def k_int(self, X, u, t=0):
         '''
         Returns the tangential stiffness matrix of the Element.
 
@@ -196,10 +201,10 @@ class Element():
                     type ndim x ndim)
 
         '''
-        self._compute_tensors(X, u)
+        self._compute_tensors(X, u, t)
         return self.K
 
-    def f_int(self, X, u):
+    def f_int(self, X, u, t=0):
         '''
         Returns the tangential stiffness matrix of the Element.
 
@@ -215,10 +220,10 @@ class Element():
         f_int :     The nodal force vector (numpy.ndarray of dimension (ndim,))
 
         '''
-        self._compute_tensors(X, u)
+        self._compute_tensors(X, u, t)
         return self.f
 
-    def m_and_vec_int(self, X, u):
+    def m_and_vec_int(self, X, u, t=0):
         '''
         Returns the tangential stiffness matrix of the Element.
 
@@ -235,10 +240,10 @@ class Element():
                     (numpy.ndarray of dimension (ndim,ndim))
 
         '''
-        return self._m_int(X, u), np.zeros_like(X)
+        return self._m_int(X, u, t), np.zeros_like(X)
 
-    def m_int(self, X, u):
-        return self._m_int(X, u)
+    def m_int(self, X, u, t=0):
+        return self._m_int(X, u, t)
 
 
 
@@ -274,7 +279,7 @@ class Tri3(Element):
         self.S     = np.zeros((2,2))
         self.K_geo = np.zeros((6,6))
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         '''
         Compute the tensors B0_tilde, B0, F, E and S at the Gauss Points.
 
@@ -306,7 +311,7 @@ class Tri3(Element):
         self.f = B0.T.dot(S_v)*det/2*t
 
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         '''
         Compute the mass matrix.
 
@@ -381,7 +386,7 @@ class Tri6(Element):
                               (beta2, alpha2, beta2, w2),
                               (beta2, beta2, alpha2, w2))
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         '''
         Tensor computation the same way as in the Tri3 element
         '''
@@ -429,7 +434,7 @@ class Tri6(Element):
             self.f += B0.T.dot(S_v)*det/2*t*w
         pass
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
         t = self.material.thickness
         rho = self.material.rho
@@ -478,7 +483,7 @@ class Quad4(Element):
         self.gauss_points = ((-g1, -g1, 1.), (g1, -g1, 1.), (-g1, g1, 1.), (g1, g1, 1.))
 
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         '''
         Compute the tensors.
         '''
@@ -515,7 +520,7 @@ class Quad4(Element):
             self.f += B0.T.dot(S_v)*det*t*w
         pass
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
         self.M_small *= 0
         t = self.material.thickness
@@ -569,7 +574,7 @@ class Quad8(Element):
         self.gauss_points = ((-g2, -g2, w2), (-g2, g2, w2),
                              ( g2, -g2, w2), ( g2, g2, w2))
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
         X_mat = X.reshape(-1, 2)
         u_e = u.reshape(-1, 2)
@@ -608,7 +613,7 @@ class Quad8(Element):
             self.f += B0.T.dot(S_v)*det*t*w
         pass
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         '''
         Mass matrix using CAS-System
         '''
@@ -656,7 +661,7 @@ class Tet4(Element):
         self.K = np.zeros((12,12))
         self.f = np.zeros(12)
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4 = X
         u_e = u.reshape(-1, 3)
         # not sure yet if the determinant is correct when doing the integration
@@ -690,7 +695,7 @@ class Tet4(Element):
         self.K = K_geo + K_mat
         self.f = B0.T.dot(S_v)*det/6
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         '''
         Mass matrix using CAS-System
         '''
@@ -769,7 +774,7 @@ class Tet10(Element):
                              (c4, a4, c4, a4, w4),
                              (c4, a4, a4, c4, w4))
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
 
         X1, Y1, Z1, \
         X2, Y2, Z2, \
@@ -846,7 +851,7 @@ class Tet10(Element):
             self.f += B0.T.dot(S_v)*det/6 * w
         pass
     
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         '''
         Mass matrix using CAS-System
         '''
@@ -919,11 +924,11 @@ class Bar2Dlumped(Element):
         self.rho           = self.material.rho
 
 
-    def _compute_tensors(self, X, u):
+    def _compute_tensors(self, X, u, t):
         self._k_and_m_int(X, u)
         pass
         
-    def _k_and_m_int(self, X, u):
+    def _k_and_m_int(self, X, u, t):
 
         X1, Y1, X2, Y2 = X
         X_mat = X.reshape(-1, 2)        
@@ -948,26 +953,293 @@ class Bar2Dlumped(Element):
         self.M = 1/2*(m_el+m_el.T)
         return self.K, self.M
         
-    def _k_int(self, X, u):
+    def _k_int(self, X, u, t):
         k_el, m_el = self._k_and_m_int(X, u)
         return k_el
 
-    def _m_int(self, X, u):
+    def _m_int(self, X, u, t):
         k_el, m_el = self._k_and_m_int(X, u)
         return m_el
 
+#%%
+class BoundaryElement(Element):
+    '''
+    Class for the application of Neumann Boundary Conditions. 
+    
+    Attributes
+    ----------
+        
+    time_func : func
+        function returning a value between {-1, 1} which is time dependent
+        storing the time dependency of the Neumann Boundary condition. 
+        Example for constant function:
+        
+        >>> def func(t):
+        >>>    return 1
 
+    f_func : func
+        function mapping the normal vector n of the element pointing outwards
+        to the nodes of the element. 
+
+    '''
+    def __init__(self, val, direct, ndof, time_func=None):
+        '''
+        Parameters
+        ----------
+        val : float
+            value for the pressure/traction onto the element
+        direct : str {'normal', 'x_n', 'y_n', 'z_n', 'x', 'y', 'z'}
+            direction, in which the traction should point at: 
+            
+            'normal'
+                Pressure acting onto the normal face of the deformed configuration
+            'x_n'
+                Traction acting in x-direction proportional to the area 
+            projected onto the y-z surface
+            'y_n'
+                Traction acting in y-direction proportional to the area 
+                projected onto the x-z surface            
+            'z_n'
+                Traction acting in z-direction proportional to the area 
+                projected onto the x-y surface
+            'x'
+                Traction acting in x-direction proportional to the area
+            'y'
+                Traction acting in y-direction proportional to the area
+            'z'
+                Traction acting in z-direction proportional to the area
+            
+        time_func : function object
+            Function object returning a value between -1 and 1 given the 
+            input t: 
+
+            >>> val = time_func(t)
+            
+            
+        Returns
+        -------
+        None
+        '''
+        self.val = val
+        self.f = np.zeros(ndof)
+        self.K = np.zeros((ndof, ndof))
+        self.M = np.zeros((ndof, ndof))
+        
+        B0 = self.B0_dict[direct]
+        # definition of force_func:
+        if direct in {'x', 'y', 'z'}:
+            def f_func(n):
+                n_abs = np.sqrt(n.dot(n))
+                return B0 * n_abs
+            self.f_func = f_func
+        else:
+            def f_func(n):
+                return B0.dot(n)
+            self.f_func = f_func
+        
+        # time function...
+        def const_func(t):
+            return 1
+        if time_func is None:
+            self.time_func = const_func
+        else:
+            self.time_func = time_func
+
+    def _m_int(self, X, u, t):
+        return self.M
+
+
+class Tri3Boundary(BoundaryElement):
+    '''
+    Class for application of Neumann Boundary Conditions. 
+    '''
+    
+    B0_dict = {}
+    B0_dict.update({'normal' : np.vstack((np.eye(3), np.eye(3), np.eye(3)))/3})
+    B0 = np.zeros((9,3))
+    B0[np.ix_([0,3,6], [0])] = 1/3
+    B0_dict.update({'x_n' : B0})
+    B0 = np.zeros((9,3))
+    B0[np.ix_([1,4,7], [1])] = 1/3
+    B0_dict.update({'y_n' : B0})
+    B0 = np.zeros((9,3))
+    B0[np.ix_([2,5,8], [2])] = 1/3
+    B0_dict.update({'z_n' : B0})
+    B0_dict.update({'x' : np.array([1/3, 0, 0, 1/3, 0, 0, 1/3, 0, 0])})
+    B0_dict.update({'y' : np.array([0, 1/3, 0, 0, 1/3, 0, 0, 1/3, 0])})
+    B0_dict.update({'z' : np.array([0, 0, 1/3, 0, 0, 1/3, 0, 0, 1/3])})
+
+    def __init__(self, val, direct, time_func=None):
+        super().__init__(val, direct, time_func=time_func, ndof=9)
+        
+    def _compute_tensors(self, X, u, t):
+        x_vec = (X+u).reshape((-1, 3)).T
+        v1 = x_vec[:,2] - x_vec[:,0]
+        v2 = x_vec[:,1] - x_vec[:,0]
+        n = np.cross(v1, v2)/2
+        # negative sign as it is internal force on the left hand side of the 
+        # function
+        self.f = -self.f_func(n) * self.val * self.time_func(t)
+    
+class Tri6Boundary(BoundaryElement):
+    '''
+    
+    
+    Note
+    ----
+    The area and the normal are approximated using only the three corner nodes. 
+    Maybe in the future a more sophisticated area and normal computation is 
+    necessary. 
+    '''
+    B0_dict = {}
+    B0_dict.update({'normal' : np.vstack((np.zeros((3*3,3)),
+                                          np.eye(3), np.eye(3), np.eye(3)))/3})
+    B0 = np.zeros((18,3))
+    B0[np.ix_([9,12,15], [0])] = 1/3
+    B0_dict.update({'x_n' : B0})
+    B0 = np.zeros((18,3))
+    B0[np.ix_([10,13,16], [0])] = 1/3
+    B0_dict.update({'y_n' : B0})
+    B0 = np.zeros((18,3))
+    B0[np.ix_([11,14,17], [0])] = 1/3
+    B0_dict.update({'z_n' : B0})
+    B0_dict.update({'x' : np.array([0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0., 
+                                    1/3, 0, 0, 1/3, 0, 0, 1/3, 0, 0])})
+    B0_dict.update({'y' : np.array([0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+                                    0, 1/3, 0, 0, 1/3, 0, 0, 1/3, 0])})
+    B0_dict.update({'z' : np.array([0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
+                                    0, 0, 1/3, 0, 0, 1/3, 0, 0, 1/3])})
+
+    gauss_points = ((1/6, 1/6, 2/3, 1/3),
+                     (1/6, 2/3, 1/6, 1/3),
+                     (2/3, 1/6, 1/6, 1/3))
+
+
+    def __init__(self, val, direct, time_func=None, full_integration=False):
+        super().__init__(val, direct, time_func=time_func, ndof=18)
+        # ovlerloading of _compute_tensors function for case that full 
+        # integration is valid
+        if full_integration:
+            self._compute_tensors = self._compute_tensors_full
+    
+    def _compute_tensors(self, X, u, t):
+        x_vec = (X+u).reshape((-1, 3)).T
+        v1 = x_vec[:,2] - x_vec[:,0]
+        v2 = x_vec[:,1] - x_vec[:,0]
+        n = np.cross(v1, v2)/2
+        self.f = -self.f_func(n) * self.val * self.time_func(t)
+
+    def _compute_tensors_full(self, X, u, t):
+        '''
+        Compute the full pressure contribution by doing gauss integration. 
+        TODO: Attention! This function does not work!!! 
+        
+        '''
+        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
+        N = np.zeros(6)
+        # gauss point evaluation of full pressure field
+        for L1, L2, L3, w in self.gauss_points:
+            # the entries in the jacobian dX_dL
+            Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
+            Jx2 = 4*L1*X4 + 4*L3*X5 + X2*(4*L2 - 1)
+            Jx3 = 4*L1*X6 + 4*L2*X5 + X3*(4*L3 - 1)
+            Jy1 = 4*L2*Y4 + 4*L3*Y6 + Y1*(4*L1 - 1)
+            Jy2 = 4*L1*Y4 + 4*L3*Y5 + Y2*(4*L2 - 1)
+            Jy3 = 4*L1*Y6 + 4*L2*Y5 + Y3*(4*L3 - 1)
+
+            det = Jx1*Jy2 - Jx1*Jy3 - Jx2*Jy1 + Jx2*Jy3 + Jx3*Jy1 - Jx3*Jy2
+            A = det/2
+
+            N_w = np.array([L1*(2*L1 - 1), L2*(2*L2 - 1), L3*(2*L3 - 1), 
+                          4*L1*L2, 4*L2*L3, 4*L1*L3])
+            N += N_w * A
+            
+        x_vec = (X+u).reshape((-1, 3)).T
+        v1 = x_vec[:,2] - x_vec[:,0]
+        v2 = x_vec[:,1] - x_vec[:,0]
+        n = np.cross(v1, v2)/2
+        # normalize:
+        n /= np.sqrt(n @ n)
+        f = self.f_func(n) * self.val * self.time_func(t)
+        # correct the contributions of the standard B-matrix with the one 
+        # computed with gauss integration
+        B_corr = 3 * np.array([(i, i, i) for i in N]).flatten()
+        self.f = -B_corr*f
+        
+
+
+class LineLinearBoundary(BoundaryElement):
+    '''
+    Line Boundary element for 2D-Problems
+    '''
+    B0_dict = {}
+    B0_dict.update({'normal' : np.vstack((np.eye(2), np.eye(2)))/2})
+    B0 = np.zeros((4,2))
+    B0[np.ix_([0,2], [0])] = 1/2
+    B0_dict.update({'x_n' : B0})
+    B0 = np.zeros((4,2))
+    B0[np.ix_([1,3], [1])] = 1/2
+    B0_dict.update({'y_n' : B0})
+    B0_dict.update({'x' : np.array([1/2, 0, 1/2, 0])})
+    B0_dict.update({'y' : np.array([0, 1/2, 0, 1/2])})
+
+    rot_mat = np.array([[0,-1], [1, 0]])
+
+    def __init__(self, val, direct, time_func=None):
+        super().__init__(val, direct, time_func=time_func, ndof=4)
+
+    def _compute_tensors(self, X, u, t):
+        x_vec = (X+u).reshape((-1, 2)).T
+        v = x_vec[:,1] - x_vec[:,0]
+        n = self.rot_mat.dot(v)
+        self.f = - self.f_func(n) * self.val * self.time_func(t)
+        pass
+ 
+class LineQuadraticBoundary(BoundaryElement):
+    '''
+    
+    '''
+    B0_dict = {}
+    B0_dict.update({'normal' : np.vstack((np.eye(2), 2*np.eye(2), np.eye(2)))/4})
+    B0_dict.update({'x_n' : np.array([ [ 1.,  0.],
+                                       [ 0.,  0.],
+                                       [ 2.,  0.],
+                                       [ 0.,  0.],
+                                       [ 1.,  0.],
+                                       [ 0.,  0.]])/4})
+    B0_dict.update({'y_n' : np.array([ [ 0.,  0.],
+                                       [ 0.,  1.],
+                                       [ 0.,  0.],
+                                       [ 0.,  2.],
+                                       [ 0.,  0.],
+                                       [ 0.,  1.]])/4})
+    B0_dict.update({'x' : np.array([1/4, 0, 1/2, 0, 1/4, 0])})
+    B0_dict.update({'y' : np.array([0, 1/4, 0, 1/2, 0, 1/4])})
+
+    rot_mat = np.array([[0,-1], [1, 0]])
+
+    def __init__(self, val, direct, time_func=None):
+        super().__init__(val, direct, time_func=time_func, ndof=6)
+    
+    def _compute_tensors(self, X, u, t):
+        x_vec = (X+u).reshape((-1, 2)).T
+        v = x_vec[:,2] - x_vec[:,0]
+        n = self.rot_mat.dot(v)
+        self.f = - self.f_func(n) * self.val * self.time_func(t)
+
+
+#%%
 if use_fortran:
-    def compute_tri3_tensors(self, X, u):
+    def compute_tri3_tensors(self, X, u, t):
         self.K, self.f = amfe.f90_element.tri3_k_and_f(X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
 
-    def compute_tri6_tensors(self, X, u):
+    def compute_tri6_tensors(self, X, u, t):
         self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
 
-    def compute_tet4_tensors(self, X, u):
+    def compute_tet4_tensors(self, X, u, t):
         self.K, self.f = amfe.f90_element.tet4_k_and_f(X, u, self.material.S_Sv_and_C)
 
-    def compute_tri6_mass(self, X, u):
+    def compute_tri6_mass(self, X, u, t):
         self.M = amfe.f90_element.tri6_m(X, self.material.rho, self.material.thickness)
         return self.M
 

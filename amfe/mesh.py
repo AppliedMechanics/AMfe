@@ -12,6 +12,7 @@ import scipy as sp
 import pandas as pd
 
 from amfe.element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
+from amfe.element import LineLinearBoundary, LineQuadraticBoundary, Tri3Boundary, Tri6Boundary
 # Element mapping is described here. If a new element is implemented, the
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
@@ -37,9 +38,15 @@ element_class_dict = {'Tet4'  : Tet4(**kwargs),
                       'Tri6'  : Tri6(**kwargs),
                       'Quad4' : Quad4(**kwargs),
                       'Quad8' : Quad8(**kwargs),
-                      'Bar2Dlumped' : Bar2Dlumped(**kwargs)
+                      'Bar2Dlumped' : Bar2Dlumped(**kwargs),
                               }
-
+kwargs = {'val' : 1., 'direct' : 'normal'}
+element_boundary_class_dict = {'straight_line' : LineLinearBoundary(**kwargs), 
+                               'quadratic_line': LineQuadraticBoundary(**kwargs),
+                               'Tri3'          : Tri3Boundary(**kwargs),
+                               'Tri6'          : Tri6Boundary(**kwargs),
+                              }
+                              
 # actual set of implemented elements
 element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
 element_3d_set = {'Tet4', 'Tet10'}
@@ -77,22 +84,34 @@ class Mesh:
     '''
     Class for handling the mesh operations.
 
-    Internal variables:
-    - nodes: Ist eine Liste bzw. ein numpy-Array, welches Angibt, wie die 
-        x-y-z-Koordinaten eines Knotens lauten. Es gibt keinen Zaehlindex.
-    - ele_nodes: Ist eine Liste bzw. ein numpy-Array, welches angibt, welche 
-        Knoten zu welchem Element gehoeren. Es gibt keinen Zaehlindex.
-    - ele_obj: numpy.ndarray of element objects
-    - no_of_dofs_per_node: Freiheitsgrade pro Knoten; Sind je nach 
-        Elementformulierung bei reiner Verschiebung bei 2D-Problemen 2, 
-        bei 3D-Problemen 3 dofs; Wenn Rotationen betrachtet werden natuerlich 
-        entsprechend mehr
-    - no_of_elements: Globale Anzahl der Elemente im System
-    - no_of_nodes: Globale Anzahl der Knoten im System
-    
-    Deprecated:
-    - no_of_element_nodes: Anzahl der Knoten pro Element
-    - element_dof: Anzahl der Freiheitsgrade eines Elements
+    Attributes
+    ----------
+    nodes : list
+        List of x-y-z coordinates of the nodes. Dimension is 
+        (no_of_nodes, no_of_dofs_per_node). 
+    ele_nodes : list
+        List of nodes indices belonging to one element. 
+    ele_obj : list
+        List of element objects. The list contains actually only the pointers
+        pointing to the element object
+    ele_types : list
+        List of strings containing the element types. Basically used for export
+        to postprocessing tools. 
+    nodes_dirichlet : ndarray
+        Array containing the nodes involved in Dirichlet Boundary Conditions. 
+    dofs_dirichlet : ndarray
+        Array containing the dofs which are to be blocked by Dirichlet Boundary
+        Conditions. 
+    no_of_dofs_per_node : int
+        Number of dofs per node. Is 3 for 3D-problems, 2 for 2D-problems. If 
+        rotations are considered, this nubmer can be >3. 
+    no_of_elements : int
+        Number of elements in the whole mesh associated with an element object. 
+    no_of_nodes : int
+        Number of nodes of the whole system. 
+    no_of_dofs : int
+        Number of dofs of the whole system (ignoring constrained dofs). 
+        
     '''
 
     def __init__(self):
@@ -105,15 +124,19 @@ class Mesh:
         -------
         None
         '''
-        self.nodes               = []
-        self.ele_nodes           = []
-        self.ele_obj             = []
+        self.nodes         = []
+        self.ele_nodes     = []
+        self.ele_obj       = []
+        self.ele_types     = [] # Element-types for Export
         self.nodes_dirichlet     = np.array([], dtype=int)
         self.dofs_dirichlet      = np.array([], dtype=int)
         # the displacements; They are stored as a list of numpy-arrays with shape (ndof, no_of_dofs_per_node):
-        self.u                   = None
+        self.u                   = []
         self.timesteps           = []
         self.no_of_dofs_per_node = 0
+        self.no_of_dofs = 0
+        self.no_of_nodes = 0
+        self.no_of_elements = 0
 
     def _update_mesh_props(self):
         '''
@@ -174,13 +197,13 @@ class Mesh:
                           2: "Bar2D"} # Bislang nur 2D-Element aus csv auslesbar
 
         print('Reading elements from csv...  ', end="")
-        self.elements = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
-        if self.elements.ndim == 1: # Wenn nur genau ein Element vorliegt
-            self.elements = np.array([self.elements])
+        self.ele_nodes = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
+        if self.ele_nodes.ndim == 1: # Wenn nur genau ein Element vorliegt
+            self.ele_nodes = np.array([self.ele_nodes])
         # Falls erste Spalte die Elementnummer angibt, wird diese hier 
         # abgeschnitten, um nur die Knoten des Elements zu erhalten
         if explicit_node_numbering: 
-            self.elements = self.elements[:,1:]
+            self.ele_nodes = self.ele_nodes[:,1:]
 
     
         if ele_type: # If element type is spezified, use this spezified type
@@ -190,7 +213,7 @@ class Mesh:
         # different number of nodes per element in 'mesh_type_dict')
         else: 
             try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
-                (no_of_ele, no_of_nodes_per_ele) = self.elements.shape
+                (no_of_ele, no_of_nodes_per_ele) = self.ele_nodes.shape
                 mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
             except:
                 print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
@@ -199,7 +222,7 @@ class Mesh:
         print('Element type is {0}...  '.format(mesh_type), end="")
         # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet 
         # wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
-        self.elements_type = [mesh_type for i in self.elements] 
+        self.ele_types = [mesh_type for i in self.ele_nodes] 
         self._update_mesh_props()
         print('Reading elements successful.')
 
@@ -233,12 +256,6 @@ class Mesh:
         tag_elements_start = "$Elements"
         tag_elements_end   = "$EndElements"
     
-
-        self.nodes         = []
-        self.ele_nodes     = []
-        self.ele_obj       = []
-        self.ele_types     = [] # Element-types for Export
-
         print('\n*************************************************************')
         print('Loading gmsh-mesh from', filename)
         
@@ -388,7 +405,7 @@ class Mesh:
         self.ele_nodes.extend(ele_nodes)
         
         # ele_types for paraview export
-        self.ele_types = elements_df['el_type'].values
+        self.ele_types.extend(elements_df['el_type'].values.tolist())
         
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
@@ -411,7 +428,8 @@ class Mesh:
             print('\nPhysical group', i, ':')
             print('Number of Nodes:', len(self.phys_group_dict [i]))
             print('Number of Elements:', len(df[df.phys_group == i]))
-            print('Element types appearing in this group:', pd.unique(df[df.phys_group == i].el_type))
+            print('Element types appearing in this group:', 
+                  pd.unique(df[df.phys_group == i].el_type))
 
     def boundary_information(self):
         '''
@@ -423,6 +441,89 @@ class Mesh:
                   'contains the following', len(self.phys_group_dict[i]), 
                   ' nodes:\n', self.phys_group_dict[i])
 
+    def select_neumann_bc(self, key, val, direct, time_func=None, 
+                          mesh_prop='phys_group',
+                          element_boundary_class_dict=element_boundary_class_dict):
+        '''
+        Add group of mesh to neumann boundary conditions. 
+        
+        Parameters
+        ----------
+        key : int
+            Key of the physical domain to be chosen for the neumann bc
+        val : float
+            value for the pressure/traction onto the element
+        direct : str {'normal', 'x_n', 'y_n', 'z_n', 'x', 'y', 'z'}
+            direction, in which the traction should point at: 
+            
+            'normal'
+                Pressure acting onto the normal face of the deformed configuration
+            'x_n'
+                Traction acting in x-direction proportional to the area 
+            projected onto the y-z surface
+            'y_n'
+                Traction acting in y-direction proportional to the area 
+                projected onto the x-z surface            
+            'z_n'
+                Traction acting in z-direction proportional to the area 
+                projected onto the x-y surface
+            'x'
+                Traction acting in x-direction proportional to the area
+            'y'
+                Traction acting in y-direction proportional to the area
+            'z'
+                Traction acting in z-direction proportional to the area
+            
+        time_func : function object
+            Function object returning a value between -1 and 1 given the 
+            input t: 
+
+            >>> val = time_func(t)
+            
+        mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
+            label of which the element should be chosen from. Default is 
+            phys_group. 
+        element_boundary_class_dict : dict
+            Dictionary containing the skin elements. 
+        Returns
+        -------
+        None
+        '''
+        df = self.el_df
+        while key not in pd.unique(df[mesh_prop]):
+            self.mesh_information()
+            print('\nNo valid', mesh_prop, 'is given.\n(Given', 
+                                                mesh_prop, 'is', key, ')')
+            key = int(input('Please choose a ' + mesh_prop + 
+                ' to be used for the Neumann Boundary conditions: '))
+        
+        # make a pandas dataframe just for the desired elements
+        elements_df = df[df[mesh_prop] == key]
+        
+        # add the nodes of the chosen group
+        ele_nodes = [np.nan for i in range(len(elements_df))]
+        for i, element in enumerate(elements_df.values):
+            ele_nodes[i] = np.array(element[self.node_idx : 
+                    self.node_idx + amfe2no_of_nodes[element[1]]], dtype=int)
+        self.ele_nodes.extend(ele_nodes)
+        
+        self.ele_types.extend(elements_df['el_type'].values.tolist())
+                
+        # make a deep copy of the element class dict and apply the material
+        # then add the element objects to the ele_obj list
+        ele_class_dict = copy.deepcopy(element_boundary_class_dict)
+        for i in ele_class_dict:
+            ele_class_dict[i].__init__(val=val, direct=direct, time_func=time_func)
+        object_series = elements_df['el_type'].map(ele_class_dict)
+        self.ele_obj.extend(object_series.values.tolist())
+        self._update_mesh_props()
+        
+        # print some output stuff
+        print('\n', mesh_prop, key, 'with', len(ele_nodes), 'elements successfully added.')
+        print('Total number of elements in mesh:', len(self.ele_obj))
+        print('*************************************************************')
+
+        
     def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group', output='internal'):
         '''
         Add a group of the mesh to the dirichlet nodes to be fixed. 
@@ -436,8 +537,8 @@ class Mesh:
         coord : str {'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz'}
             coordinates which should be fixed
         mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
-            label of which the element should be chosen from. Standard is 
-            physical group. 
+            label of which the element should be chosen from. Default is 
+            phys_group. 
         output : str {'internal', 'external'}
             key stating, boundary information is stored internally or externally
             
@@ -514,7 +615,7 @@ class Mesh:
         TODO
         '''
         self.timesteps.append(1)
-        self.u = [np.array(u).reshape((-1, self.no_of_dofs_per_node))]
+        self.u.append(np.array(u).reshape((-1, self.no_of_dofs_per_node)))
 
 
     def set_displacement_with_time(self, u, timesteps):
@@ -641,8 +742,10 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                 # Writing the offset for the elements; they are ascending by 
                 # the number of dofs and have to start with the real integer
                 savefile_vtu.write('<DataArray type="Int32" Name="offsets" format="ascii">\n')
+                i_offset = 0
                 for j, el_nodes in enumerate(self.ele_nodes):
-                    savefile_vtu.write(str(len(el_nodes)*j + len(el_nodes)) + ' ')
+                    i_offset += len(el_nodes)
+                    savefile_vtu.write(str(i_offset) + ' ')
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
                 # Elementtyp ueber Zahl gesetzt
@@ -683,7 +786,7 @@ class MeshGenerator:
         self.pos_x0 = pos_x0
         self.pos_y0 = pos_y0
         self.nodes = []
-        self.elements = []
+        self.ele_nodes = []
         # Make mesh 3D, if it is curved in one direction
         if x_curve | y_curve:
             self.flat_mesh = False
@@ -765,13 +868,13 @@ class MeshGenerator:
                     first_node  = y_counter*(self.x_no_elements + 1) + x_counter + 0
                     second_node = y_counter*(self.x_no_elements + 1) + x_counter + 1
                     third_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
-                    self.elements.append([first_node, second_node, third_node])
+                    self.ele_nodes.append([first_node, second_node, third_node])
                     element_number += 1
                     # second the upper triangulars
                     first_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 1
                     second_node = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
                     third_node  = y_counter*(self.x_no_elements + 1) + x_counter + 1
-                    self.elements.append([first_node, second_node, third_node])
+                    self.ele_nodes.append([first_node, second_node, third_node])
                     element_number += 1
 
 
@@ -794,7 +897,7 @@ class MeshGenerator:
                     node2 = counter_x + 1 + (counter_y - 0)*(self.x_no_elements + 1)
                     node3 = counter_x + 1 + (counter_y + 1)*(self.x_no_elements + 1)
                     node4 = counter_x     + (counter_y + 1)*(self.x_no_elements + 1)
-                    self.elements.append([node1, node2, node3, node4])
+                    self.ele_nodes.append([node1, node2, node3, node4])
 
 
         mesh_type_dict = {"Tri": build_tri,
@@ -828,7 +931,7 @@ class MeshGenerator:
 
         with open(filename_elements, 'w') as savefile_elements: # Save elements
             # Header for the file:
-            number_of_nodes = len(self.elements[0])
+            number_of_nodes = len(self.ele_nodes[0])
             if number_of_nodes == 3:
                 savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
             elif number_of_nodes == 4:
@@ -838,6 +941,6 @@ class MeshGenerator:
             else:
                 print("Hier lief etwas falsch. Anzahl der Knoten pro Element konnte nicht bestimmt werden.")
 
-            for elements in self.elements:
+            for elements in self.ele_nodes:
                 savefile_elements.write(delimiter.join(str(x) for x in elements) + newline)
 

@@ -15,7 +15,7 @@ import amfe
 from amfe import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10
 from amfe import material
 
-def jacobian(func, X, u):
+def jacobian(func, X, u, t):
     '''
     Compute the jacobian of func with respect to u using a finite differences scheme. 
     
@@ -23,11 +23,11 @@ def jacobian(func, X, u):
     ndof = X.shape[0]
     jac = np.zeros((ndof, ndof))
     h = np.sqrt(np.finfo(float).eps)
-    f = func(X, u).copy()
+    f = func(X, u, t).copy()
     for i in range(ndof):
         u_tmp = u.copy()
         u_tmp[i] += h
-        f_tmp = func(X, u_tmp)
+        f_tmp = func(X, u_tmp, t)
         jac[:,i] = (f_tmp - f) / h
     return jac
 
@@ -42,8 +42,8 @@ class ElementTest(unittest.TestCase):
     
     @nose.tools.nottest
     def jacobi_test_element(self, rtol=1E-4, atol=1E-6):
-        K, f = self.my_element.k_and_f_int(self.X, self.u)
-        K_finite_diff = jacobian(self.my_element.f_int, self.X, self.u)
+        K, f = self.my_element.k_and_f_int(self.X, self.u, t=0)
+        K_finite_diff = jacobian(self.my_element.f_int, self.X, self.u, t=0)
         np.testing.assert_allclose(K, K_finite_diff, rtol=rtol, atol=atol)
         
 
@@ -195,6 +195,55 @@ class MaterialTest2dPlaneStress(unittest.TestCase):
         S2d, S_v2d, C2d = self.neo.S_Sv_and_C_2d(E[:2, :2])
         np.testing.assert_allclose(S[:2, :2], S2d)
         np.testing.assert_allclose(C[np.ix_([0,1,-1], [0,1,-1])], C2d)
+
+#%%
+def test_tri3_pressure():
+    X = np.array([0,0,0,1,0,0,0,1,0])
+    u = np.zeros_like(X)
+    my_press_ele = amfe.Tri3Boundary(1, 'normal')
+    K, f = my_press_ele.k_and_f_int(X, u)
+    np.testing.assert_array_equal( K, np.zeros((9,9)))
+    np.testing.assert_allclose(np.sum(f), 1/2)
+
+def test_line_pressure():
+    X = np.array([0,0,1,1])
+    u = X
+    my_press_ele = amfe.LineLinearBoundary(1, 'normal')
+    K, f = my_press_ele.k_and_f_int(X, u)
+    np.testing.assert_array_equal( K, np.zeros((4,4)))
+    np.testing.assert_allclose(f, np.array([1,-1,1,-1]))
+
+def test_line_pressure2():
+    X = np.array([0,0,1,1])
+    u = X
+    my_press_ele = amfe.LineLinearBoundary(1, 'x')
+    K, f = my_press_ele.k_and_f_int(X, u)
+    np.testing.assert_array_equal(K, np.zeros((4,4)))
+    np.testing.assert_allclose(f, -np.sqrt(2)*np.array([1,0,1,0]))
+
+@nose.tools.nottest
+def test_tri6_pressure():
+    my_material = amfe.KirchhoffMaterial(rho=1)
+    my_tri6 = amfe.Tri6(my_material)
+    X = np.array([0,0,2,0,0,2,1,0,1,1,0,1.])
+    u = np.zeros(12)
+    X += sp.rand(12)*0.2
+    M = my_tri6.m_int(X, u)
+    t = np.array([ 0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.])
+    f_2d = M @ t
+    f_1d = f_2d[np.ix_([1,3,5,7,9,11])]
+    my_boundary = amfe.Tri6Boundary(val=1., direct='normal', full_integration=True)
+    X_3D = np.array([0,0,0,2,0,0,0,2,0,1,0,0,1,1,0,0,1.,0])
+    u_3D = np.zeros(3*6)
+    K, f = my_boundary.k_and_f_int(X_3D, u_3D)
+    np.testing.assert_equal(K, np.zeros((18,18)))
+    np.testing.assert_allclose(f_1d, f[np.ix_([2,5,8,11,14,17])])
+    
+
+
+
+
+#%%
 
 class TestB_matrix_compuation(unittest.TestCase):
     '''

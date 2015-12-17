@@ -30,9 +30,20 @@ class MechanicalSystem():
     '''
     Mase class for mechanical systems with the goal to black-box the routines
     of assembly and element selection.
+    
+    Attributes
+    ----------
+    mesh_class : instance of Mesh()
+        Class handling the mesh. 
+    assembly_class : instance of Assembly()
+        Class handling the assembly. 
+    dirichlet_class : instance of DirichletBoundary
+        Class handling the Dirichlet boundary conditions. 
+    neumann_class : instance of NeumannBoundary
+        This boundary type is deprecated. 
     '''
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         '''
         '''      
         self.T_output = []
@@ -42,6 +53,8 @@ class MechanicalSystem():
         self.mesh_class = Mesh()
         self.assembly_class = Assembly(self.mesh_class)
         self.dirichlet_class = DirichletBoundary(np.nan)
+        self.neumann_class = NeumannBoundary(self.mesh_class.no_of_dofs, [])
+
         # make syntax a little bit leaner
         self.unconstrain_vec = self.dirichlet_class.unconstrain_vec
         self.constrain_vec = self.dirichlet_class.constrain_vec
@@ -127,16 +140,80 @@ class MechanicalSystem():
 
     def apply_dirichlet_boundaries(self, key, coord, mesh_prop='phys_group'):
         '''
-        Applies dirichlet-boundaries to the system. This needs to be reworked!
-
+        Apply dirichlet-boundaries to the system.
+        
+        Parameters
+        ----------
+        key : int
+            Key for mesh property which is to be chosen. Matches the group given 
+            in the gmsh file. For help, the function mesh_information or 
+            boundary_information gives the groups
+        coord : str {'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz'}
+            coordinates which should be fixed
+        mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
+            label of which the element should be chosen from. Default is 
+            'phys_group'. 
+            
+        Returns
+        -------
+        None
         '''
         self.mesh_class.select_dirichlet_bc(key, coord, mesh_prop)
         self.dirichlet_class.constrain_dofs(self.mesh_class.dofs_dirichlet)
 #         self.no_of_dofs_constrained = self.b_constraints.shape[-1]
 
+    def apply_neumann_boundaries(self, key, val, direct, time_func=None, 
+                                 mesh_prop='phys_group'):
+        '''
+        Apply neumann boundaries to the system via skin elements. 
+        
+        Parameters
+        ----------
+        key : int
+            Key of the physical domain to be chosen for the neumann bc
+        val : float
+            value for the pressure/traction onto the element
+        direct : str {'normal', 'x_n', 'y_n', 'z_n', 'x', 'y', 'z'}
+            direction, in which the traction should point at: 
+            
+            'normal'
+                Pressure acting onto the normal face of the deformed configuration
+            'x_n'
+                Traction acting in x-direction proportional to the area 
+            projected onto the y-z surface
+            'y_n'
+                Traction acting in y-direction proportional to the area 
+                projected onto the x-z surface            
+            'z_n'
+                Traction acting in z-direction proportional to the area 
+                projected onto the x-y surface
+            'x'
+                Traction acting in x-direction proportional to the area
+            'y'
+                Traction acting in y-direction proportional to the area
+            'z'
+                Traction acting in z-direction proportional to the area
+            
+        time_func : function object
+            Function object returning a value between -1 and 1 given the 
+            input t: 
 
-    def apply_neumann_boundaries(self, neumann_boundary_list):
-        '''Applies neumann-boundaries to the system.
+            >>> val = time_func(t)
+            
+        mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
+            label of which the element should be chosen from. Default is 
+            phys_group. 
+            
+        Returns
+        -------
+        None
+        '''
+        self.mesh_class.select_neumann_bc(key=key, val=val, direct=direct, 
+                                          time_func=time_func, mesh_prop=mesh_prop)
+        self.assembly_class.compute_element_indices()
+        
+    def apply_neumann_boundaries_old(self, neumann_boundary_list):
+        '''Apply neumann-boundaries to the system.
 
         Parameters
         ----------
@@ -191,8 +268,8 @@ class MechanicalSystem():
 
 
         '''
-        self.neumann_bc_class = NeumannBoundary(self.no_of_dofs, neumann_boundary_list)
-        self._f_ext_unconstr = self.neumann_bc_class.f_ext()
+        self.neumann_class = NeumannBoundary(self.no_of_dofs, neumann_boundary_list)
+        self._f_ext_unconstr = self.neumann_class.f_ext()
 
 
     def export_paraview(self, filename):
@@ -224,7 +301,7 @@ class MechanicalSystem():
         self._M = self.constrain_matrix(M_unconstr)
         return self._M
 
-    def K(self, u=None):
+    def K(self, u=None, t=0):
         '''
         Compute the stiffness matrix of the mechanical system
         
@@ -242,18 +319,21 @@ class MechanicalSystem():
             u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
         # Assembled stiffness matrix without dirichlet boundary conditions imposed
         K_unconstr, f_unconstr = self.assembly_class.assemble_k_and_f(
-                                    self.unconstrain_vec(u)) 
+                                    self.unconstrain_vec(u), t) 
         # Apply dirichlet boundary conditions by matrix product (B.T @ K @ B)
         self._K = self.constrain_matrix(K_unconstr)
         return self._K
 
-    def f_int(self, u):
+    def f_int(self, u, t=0):
         '''Return the elastic restoring force of the system '''
         K_unconstr, f_unconstr = self.assembly_class.assemble_k_and_f(
-                                    self.unconstrain_vec(u)) 
+                                    self.unconstrain_vec(u), t) 
         self._f = self.constrain_vec(f_unconstr)
         return self._f
 
+    def _f_ext_unconstr(self, t):
+        return np.zeros(self.mesh_class.no_of_dofs)
+        
     def f_ext(self, u, du, t):
         '''
         Return the nonlinear external force of the right hand side 
@@ -261,13 +341,15 @@ class MechanicalSystem():
         '''
         return self.constrain_vec(self._f_ext_unconstr(t))
 
-    def K_and_f(self, u):
+    def K_and_f(self, u=None, t=0):
         '''
         Compute tangential stiffness matrix and nonlinear force vector 
         in one assembly run.
         '''
+        if u is None:
+            u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
         K_unconstr, f_unconstr = self.assembly_class.assemble_k_and_f(
-                                    self.unconstrain_vec(u))
+                                    self.unconstrain_vec(u), t)
         self._K = self.constrain_matrix(K_unconstr)
         self._f = self.constrain_vec(f_unconstr)
         return self._K, self._f

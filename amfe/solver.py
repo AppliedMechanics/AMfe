@@ -54,7 +54,7 @@ class NewmarkIntegrator():
         self.gamma = 1/2 + alpha
         self.delta_t = 1E-3
         self.eps = 1E-8
-        self.newton_damping = 0.8
+        self.newton_damping = 1.0
         self.residual_threshold = 1E6
         self.mechanical_system = None
         self.verbose = verbose
@@ -85,7 +85,8 @@ class NewmarkIntegrator():
         ------
         This function serves basically as a test function. For elaborate finite
         element work the set_mechanical_system interface is more convenient and
-        does everything automatically including the recording of displacements etc.
+        does everything automatically including the recording of displacements 
+        etc.
 
         See Also
         --------
@@ -93,7 +94,8 @@ class NewmarkIntegrator():
 
         '''
         # decorator for the efficient computation of the tangential stiffness
-        # matrix and force in one step; Basic intention is to make assembly process only once.
+        # matrix and force in one step; Basic intention is to make assembly 
+        # process only once.
         def K_and_f_non(q):
             return K(q), f_non(q)
         self.K_and_f_non = K_and_f_non
@@ -104,7 +106,8 @@ class NewmarkIntegrator():
     def set_mechanical_system(self, mechanical_system):
         '''
         hands over the mechanical system as a whole to the integrator.
-        The matrices for the integration routine are then taken right from the mechanical system
+        The matrices for the integration routine are then taken right from the 
+        mechanical system
 
         Parameters
         -----------
@@ -211,7 +214,7 @@ class NewmarkIntegrator():
             ddq *= 0
 
             # checking residual and convergence
-            K, f_non = self.K_and_f_non(q)
+            K, f_non = self.K_and_f_non(q, t)
             res = self._residual(f_non, q, dq, ddq, t)
             res_abs = norm_of_vector(res)
 
@@ -225,7 +228,7 @@ class NewmarkIntegrator():
                 q += delta_q
                 dq += self.gamma/(self.beta*dt)*delta_q
                 ddq += 1/(self.beta*dt**2)*delta_q
-                K, f_non = self.K_and_f_non(q)
+                K, f_non = self.K_and_f_non(q, t)
                 res = self._residual(f_non, q, dq, ddq, t)
                 res_abs = norm_of_vector(res)
                 n_iter += 1
@@ -256,7 +259,7 @@ class NewmarkIntegrator():
 
 
 
-def solve_linear_displacement(mechanical_system, t=0, verbose=True):
+def solve_linear_displacement(mechanical_system, t=1, verbose=True):
     '''
     Solve the linear static problem of the mechanical system and print
     the results directly to the mechanical system
@@ -273,12 +276,14 @@ def solve_linear_displacement(mechanical_system, t=0, verbose=True):
     None
 
     '''
+    if verbose: print('Assembling force and stiffness')
+    K, f_int = mechanical_system.K_and_f(t=t)
     f_ext = mechanical_system.f_ext(None, None, t)
     mechanical_system.write_timestep(0, f_ext*0) # write zeros
 
     if verbose: print('Start solving linear static problem')
 
-    u = linalg.spsolve(mechanical_system.K(), f_ext)
+    u = linalg.spsolve(K, f_ext - f_int)
     mechanical_system.write_timestep(1, u)
 
     if verbose: print('Static problem solved')
@@ -286,7 +291,8 @@ def solve_linear_displacement(mechanical_system, t=0, verbose=True):
 
 def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
                                  t=0, eps=1E-12, newton_damping=1,
-                                 n_max_iter=1000, smplfd_nwtn_itr=1, verbose=True):
+                                 n_max_iter=1000, smplfd_nwtn_itr=1, 
+                                 wrt_iter=False, verbose=True):
     '''
     Solver for the nonlinear system applied directly on the mechanical system.
 
@@ -310,6 +316,8 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     smplfd_nwtn_itr : int, optional
           Number at which the jacobian is updated; if 1, then a full newton scheme is applied;
           if very large, it's a fixpoint iteration with constant jacobian
+    wrt_iter : bool, optional
+        export every iteration step to ParaView. 
     verbose : bool, optional
         print messages if necessary
 
@@ -323,16 +331,17 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
 
     '''
     stepwidth = 1/no_of_load_steps
-    f_ext = mechanical_system.f_ext(None, None, t)
+    f_ext = mechanical_system.f_ext(None, None, t=1)
     ndof = f_ext.shape[0]
     u = np.zeros(ndof)
     mechanical_system.write_timestep(0, u) # initial write
 
-    abs_f_ext = np.sqrt(f_ext.dot(f_ext))
-    for force_factor in np.arange(stepwidth, 1+stepwidth, stepwidth):
+    K, f_int= mechanical_system.K_and_f(u, t=1)
+    abs_f_ext = np.sqrt(f_int @ f_int)
+    for t in np.arange(stepwidth, 1+stepwidth, stepwidth):
         # prediction
-        K, f_int= mechanical_system.K_and_f(u)
-        res = f_int - f_ext*force_factor
+        K, f_int= mechanical_system.K_and_f(u, t)
+        res = f_int
         abs_res = norm_of_vector(res)
 
         # Newton-Loop
@@ -340,14 +349,14 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         while (abs_res > eps*abs_f_ext) and (n_max_iter > n_iter):
             corr = linalg.spsolve(K, res)
             u -= corr*newton_damping
-            K, f_int = mechanical_system.K_and_f(u)
-            res = f_int - f_ext * force_factor
+            K, f_int = mechanical_system.K_and_f(u, t)
+            res = f_int
             abs_res = norm_of_vector(res)
             n_iter += 1
-            if verbose: print('Stufe', force_factor, 'Iteration Nr.', n_iter, \
+            if verbose: print('Stufe', t, 'Iteration Nr.', n_iter, \
                                 'Residuum:', abs_res)
-
-        mechanical_system.write_timestep(force_factor, u)
+            if wrt_iter: mechanical_system.write_timestep(n_iter, u)
+        mechanical_system.write_timestep(t, u)
 
 
 def give_mass_and_stiffness(mechanical_system):

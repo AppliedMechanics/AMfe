@@ -201,21 +201,11 @@ class Assembly():
         print('Preallocating the stiffness matrix')
         t1 = time.clock()
         # computation of all necessary variables:
-        ele_nodes = self.mesh.ele_nodes
-        no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
         no_of_elements = self.mesh.no_of_elements
         no_of_dofs = self.mesh.no_of_dofs
         self.nodes_voigt = self.mesh.nodes.reshape(-1)
         
-#        nodes_per_element = ele_nodes.shape[-1]
-#        dofs_per_element = nodes_per_element*no_of_dofs_per_node
-#        dofs_total = self.node_coords.shape[0]
-#        no_of_local_matrix_entries = dofs_per_element**2
-        # 
-        self.element_indices = \
-        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i) for i in nodes], 
-                   dtype=int).reshape(-1) for nodes in ele_nodes]
-        
+        self.compute_element_indices()
         max_dofs_per_element = np.max([len(i) for i in self.element_indices])
 
 
@@ -242,8 +232,28 @@ class Assembly():
               'and', no_of_dofs, 'dofs.')
         print('Time taken for preallocation:', t2 - t1, 'seconds.')
 
+    def compute_element_indices(self):
+        '''
+        Compute the element indices which are necessary for assembly. 
+        
+        Parameters
+        ----------
+        None
+        
+        Returns
+        -------
+        None
+        '''
+        ele_nodes = self.mesh.ele_nodes
+        no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
 
-    def assemble_matrix_and_vector(self, u, decorated_matrix_func):
+        self.element_indices = \
+        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i) for i in nodes], 
+                   dtype=int).reshape(-1) for nodes in ele_nodes]
+        
+
+    
+    def assemble_matrix_and_vector(self, u, decorated_matrix_func, t):
         '''
         Assembles the matrix and the vector of the decorated matrix func.
 
@@ -276,7 +286,7 @@ class Assembly():
             # Auslesen der localen Elementverschiebungen
             u_local = u[indices] 
             # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
-            K, f = decorated_matrix_func(i, X, u_local) 
+            K, f = decorated_matrix_func(i, X, u_local, t) 
             # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
             f_glob[indices] += f 
             # Einsortieren der lokalen Elementmatrix in die globale Matrix
@@ -284,7 +294,7 @@ class Assembly():
 
         return K_csr, f_glob
 
-    def assemble_k_and_f(self, u):
+    def assemble_k_and_f(self, u, t):
         '''
         Assembles the stiffness matrix of the given mesh and element.
 
@@ -302,12 +312,12 @@ class Assembly():
         '''
         # define the function that returns K, f for (i, X, u)
         # sort of a decorator approach! 
-        def k_and_f_func(i, X, u):
-            return self.mesh.ele_obj[i].k_and_f_int(X, u)
+        def k_and_f_func(i, X, u, t):
+            return self.mesh.ele_obj[i].k_and_f_int(X, u, t)
             
-        return self.assemble_matrix_and_vector(u, k_and_f_func)
+        return self.assemble_matrix_and_vector(u, k_and_f_func, t)
 
-    def assemble_m(self, u=None):
+    def assemble_m(self, u=None, t=0):
         '''
         Assembles the mass matrix of the given mesh and element.
 
@@ -325,11 +335,11 @@ class Assembly():
         ---------
         TODO
         '''
-        def m_and_vec_func(i, X, u):
-            return self.mesh.ele_obj[i].m_and_vec_int(X, u)
+        def m_and_vec_func(i, X, u, t):
+            return self.mesh.ele_obj[i].m_and_vec_int(X, u, t)
             
         if u == None:
             u = np.zeros_like(self.nodes_voigt)
-        M, _ = self.assemble_matrix_and_vector(u, m_and_vec_func) 
+        M, _ = self.assemble_matrix_and_vector(u, m_and_vec_func, t) 
         return M
 
