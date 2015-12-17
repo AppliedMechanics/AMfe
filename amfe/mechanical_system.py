@@ -42,6 +42,8 @@ class MechanicalSystem():
         self.mesh_class = Mesh()
         self.assembly_class = Assembly(self.mesh_class)
         self.dirichlet_class = DirichletBoundary(np.nan)
+        self.neumann_class = NeumannBoundary(self.mesh_class.no_of_dofs, [])
+
         # make syntax a little bit leaner
         self.unconstrain_vec = self.dirichlet_class.unconstrain_vec
         self.constrain_vec = self.dirichlet_class.constrain_vec
@@ -127,16 +129,24 @@ class MechanicalSystem():
 
     def apply_dirichlet_boundaries(self, key, coord, mesh_prop='phys_group'):
         '''
-        Applies dirichlet-boundaries to the system. This needs to be reworked!
+        Apply dirichlet-boundaries to the system. This needs to be reworked!
 
         '''
         self.mesh_class.select_dirichlet_bc(key, coord, mesh_prop)
         self.dirichlet_class.constrain_dofs(self.mesh_class.dofs_dirichlet)
 #         self.no_of_dofs_constrained = self.b_constraints.shape[-1]
 
-
-    def apply_neumann_boundaries(self, neumann_boundary_list):
-        '''Applies neumann-boundaries to the system.
+    def apply_neumann_boundaries(self, key, val, direct, time_func=None, 
+                                 mesh_prop='phys_group'):
+        '''
+        Apply neumann boundaries to the system via pressure elements
+        '''
+        self.mesh_class.select_neumann_bc(key=key, val=val, direct=direct, 
+                                          time_func=time_func, mesh_prop=mesh_prop)
+        self.assembly_class.compute_element_indices()
+        
+    def apply_neumann_boundaries_old(self, neumann_boundary_list):
+        '''Apply neumann-boundaries to the system.
 
         Parameters
         ----------
@@ -191,8 +201,8 @@ class MechanicalSystem():
 
 
         '''
-        self.neumann_bc_class = NeumannBoundary(self.no_of_dofs, neumann_boundary_list)
-        self._f_ext_unconstr = self.neumann_bc_class.f_ext()
+        self.neumann_class = NeumannBoundary(self.no_of_dofs, neumann_boundary_list)
+        self._f_ext_unconstr = self.neumann_class.f_ext()
 
 
     def export_paraview(self, filename):
@@ -254,6 +264,9 @@ class MechanicalSystem():
         self._f = self.constrain_vec(f_unconstr)
         return self._f
 
+    def _f_ext_unconstr(self, t):
+        return np.zeros(self.mesh_class.no_of_dofs)
+        
     def f_ext(self, u, du, t):
         '''
         Return the nonlinear external force of the right hand side 
@@ -261,13 +274,15 @@ class MechanicalSystem():
         '''
         return self.constrain_vec(self._f_ext_unconstr(t))
 
-    def K_and_f(self, u):
+    def K_and_f(self, u=None, t=0):
         '''
         Compute tangential stiffness matrix and nonlinear force vector 
         in one assembly run.
         '''
+        if u is None:
+            u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
         K_unconstr, f_unconstr = self.assembly_class.assemble_k_and_f(
-                                    self.unconstrain_vec(u))
+                                    self.unconstrain_vec(u), t)
         self._K = self.constrain_matrix(K_unconstr)
         self._f = self.constrain_vec(f_unconstr)
         return self._K, self._f

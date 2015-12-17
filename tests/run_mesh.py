@@ -35,8 +35,10 @@ my_material = amfe.material.KirchhoffMaterial()
 my_mesh.load_group_to_mesh(-1, my_material)
 my_assembly = amfe.Assembly(my_mesh)
 my_mesh.select_dirichlet_bc(-1, 'xyz')
-#%%
+my_mesh.select_neumann_bc(-1, -1E10, 'normal')
 my_assembly.preallocate_csr()
+
+#%%
 
 #%%
 t1 = time.clock()
@@ -50,8 +52,10 @@ my_boundary = amfe.DirichletBoundary(my_mesh.no_of_dofs)
 my_boundary.constrain_dofs(my_mesh.dofs_dirichlet)
 B = my_boundary.b_matrix()
 K = B.T.dot(K_unconstr).dot(B)
-
+f = B.T.dot(f_unconstr)
+u = sp.sparse.linalg.spsolve(K, f)
 #%%
+my_mesh.set_displacement(B.dot(u))
 my_mesh.save_mesh_for_paraview(paraview_output_file)
 
 #%%

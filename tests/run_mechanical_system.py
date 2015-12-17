@@ -34,15 +34,20 @@ my_mechanical_system.apply_dirichlet_boundaries(31, 'xyz')
 
 #%%
 print('Choose now the area which will be pushed or pulled:')
-nodes_list, dofs_list = my_mechanical_system.mesh_class.select_dirichlet_bc(30, 'x', output='external')
-NB = [dofs_list, 'static', (8E9, ), None]
-my_mechanical_system.apply_neumann_boundaries([NB, ])
+#my_mechanical_system.apply_dirichlet_boundaries(30, 'yz')
 
-K = my_mechanical_system.K()
+my_mechanical_system.apply_neumann_boundaries(30, -1E11, 'x')
+
+# The old way
+#nodes_list, dofs_list = my_mechanical_system.mesh_class.select_dirichlet_bc(30, 'x', output='external')
+#NB = [dofs_list, 'static', (8E9, ), None]
+#my_mechanical_system.apply_neumann_boundaries([NB, ])
+
+K, f = my_mechanical_system.K_and_f(np.zeros(my_mechanical_system.dirichlet_class.no_of_constrained_dofs))
 M = my_mechanical_system.M()
 
-amfe.solve_nonlinear_displacement(my_mechanical_system, 40, smplfd_nwtn_itr=1)
+amfe.solve_nonlinear_displacement(my_mechanical_system, 1, smplfd_nwtn_itr=1, wrt_iter=True)
 
-amfe.solve_linear_displacement(my_mechanical_system)
+#amfe.solve_linear_displacement(my_mechanical_system)
 my_mechanical_system.export_paraview(paraview_output_file)
 

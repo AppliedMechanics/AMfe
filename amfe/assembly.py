@@ -201,21 +201,11 @@ class Assembly():
         print('Preallocating the stiffness matrix')
         t1 = time.clock()
         # computation of all necessary variables:
-        ele_nodes = self.mesh.ele_nodes
-        no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
         no_of_elements = self.mesh.no_of_elements
         no_of_dofs = self.mesh.no_of_dofs
         self.nodes_voigt = self.mesh.nodes.reshape(-1)
         
-#        nodes_per_element = ele_nodes.shape[-1]
-#        dofs_per_element = nodes_per_element*no_of_dofs_per_node
-#        dofs_total = self.node_coords.shape[0]
-#        no_of_local_matrix_entries = dofs_per_element**2
-        # 
-        self.element_indices = \
-        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i) for i in nodes], 
-                   dtype=int).reshape(-1) for nodes in ele_nodes]
-        
+        self.compute_element_indices()
         max_dofs_per_element = np.max([len(i) for i in self.element_indices])
 
 
@@ -242,7 +232,27 @@ class Assembly():
               'and', no_of_dofs, 'dofs.')
         print('Time taken for preallocation:', t2 - t1, 'seconds.')
 
+    def compute_element_indices(self):
+        '''
+        Compute the element indices which are necessary for assembly. 
+        
+        Parameters
+        ----------
+        None
+        
+        Returns
+        -------
+        None
+        '''
+        ele_nodes = self.mesh.ele_nodes
+        no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
 
+        self.element_indices = \
+        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i) for i in nodes], 
+                   dtype=int).reshape(-1) for nodes in ele_nodes]
+        
+
+    
     def assemble_matrix_and_vector(self, u, decorated_matrix_func):
         '''
         Assembles the matrix and the vector of the decorated matrix func.

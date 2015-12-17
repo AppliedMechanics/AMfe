@@ -256,7 +256,7 @@ class NewmarkIntegrator():
 
 
 
-def solve_linear_displacement(mechanical_system, t=0, verbose=True):
+def solve_linear_displacement(mechanical_system, t=1, verbose=True):
     '''
     Solve the linear static problem of the mechanical system and print
     the results directly to the mechanical system
@@ -273,12 +273,14 @@ def solve_linear_displacement(mechanical_system, t=0, verbose=True):
     None
 
     '''
+    if verbose: print('Assembling force and stiffness')
+    K, f_int = mechanical_system.K_and_f(t)
     f_ext = mechanical_system.f_ext(None, None, t)
     mechanical_system.write_timestep(0, f_ext*0) # write zeros
 
     if verbose: print('Start solving linear static problem')
 
-    u = linalg.spsolve(mechanical_system.K(), f_ext)
+    u = linalg.spsolve(K, f_ext - f_int)
     mechanical_system.write_timestep(1, u)
 
     if verbose: print('Static problem solved')
@@ -286,7 +288,8 @@ def solve_linear_displacement(mechanical_system, t=0, verbose=True):
 
 def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
                                  t=0, eps=1E-12, newton_damping=1,
-                                 n_max_iter=1000, smplfd_nwtn_itr=1, verbose=True):
+                                 n_max_iter=1000, smplfd_nwtn_itr=1, 
+                                 wrt_iter=False, verbose=True):
     '''
     Solver for the nonlinear system applied directly on the mechanical system.
 
@@ -310,6 +313,8 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     smplfd_nwtn_itr : int, optional
           Number at which the jacobian is updated; if 1, then a full newton scheme is applied;
           if very large, it's a fixpoint iteration with constant jacobian
+    wrt_iter : bool, optional
+        export every iteration step to ParaView. 
     verbose : bool, optional
         print messages if necessary
 
@@ -328,11 +333,12 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     u = np.zeros(ndof)
     mechanical_system.write_timestep(0, u) # initial write
 
-    abs_f_ext = np.sqrt(f_ext.dot(f_ext))
+    K, f_int= mechanical_system.K_and_f(u)
+    abs_f_ext = np.sqrt(f_int @ f_int)
     for force_factor in np.arange(stepwidth, 1+stepwidth, stepwidth):
         # prediction
         K, f_int= mechanical_system.K_and_f(u)
-        res = f_int - f_ext*force_factor
+        res = (f_int - f_ext)*force_factor
         abs_res = norm_of_vector(res)
 
         # Newton-Loop
@@ -341,12 +347,12 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
             corr = linalg.spsolve(K, res)
             u -= corr*newton_damping
             K, f_int = mechanical_system.K_and_f(u)
-            res = f_int - f_ext * force_factor
+            res = (f_int - f_ext) * force_factor
             abs_res = norm_of_vector(res)
             n_iter += 1
             if verbose: print('Stufe', force_factor, 'Iteration Nr.', n_iter, \
                                 'Residuum:', abs_res)
-
+            if wrt_iter: mechanical_system.write_timestep(n_iter, u)
         mechanical_system.write_timestep(force_factor, u)
 
 

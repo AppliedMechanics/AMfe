@@ -235,7 +235,7 @@ class Element():
                     (numpy.ndarray of dimension (ndim,ndim))
 
         '''
-        return self._m_int(X, u), np.zeros_like(X)
+        return self._m_int(X, u, t), np.zeros_like(X)
 
     def m_int(self, X, u, t=0):
         return self._m_int(X, u, t)

@@ -12,6 +12,7 @@ import scipy as sp
 import pandas as pd
 
 from amfe.element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
+from amfe.element import LineLinearBoundary, LineQuadraticBoundary, Tri3Boundary, Tri6Boundary
 # Element mapping is described here. If a new element is implemented, the
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
@@ -37,9 +38,15 @@ element_class_dict = {'Tet4'  : Tet4(**kwargs),
                       'Tri6'  : Tri6(**kwargs),
                       'Quad4' : Quad4(**kwargs),
                       'Quad8' : Quad8(**kwargs),
-                      'Bar2Dlumped' : Bar2Dlumped(**kwargs)
+                      'Bar2Dlumped' : Bar2Dlumped(**kwargs),
                               }
-
+kwargs = {'val' : 1., 'direct' : 'normal'}
+element_boundary_class_dict = {'straight_line' : LineLinearBoundary(**kwargs), 
+                               'quadratic_line': LineQuadraticBoundary(**kwargs),
+                               'Tri3'          : Tri3Boundary(**kwargs),
+                               'Tri6'          : Tri6Boundary(**kwargs),
+                              }
+                              
 # actual set of implemented elements
 element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
 element_3d_set = {'Tet4', 'Tet10'}
@@ -112,9 +119,12 @@ class Mesh:
         self.nodes_dirichlet     = np.array([], dtype=int)
         self.dofs_dirichlet      = np.array([], dtype=int)
         # the displacements; They are stored as a list of numpy-arrays with shape (ndof, no_of_dofs_per_node):
-        self.u                   = None
+        self.u                   = []
         self.timesteps           = []
         self.no_of_dofs_per_node = 0
+        self.no_of_dofs = 0
+        self.no_of_nodes = 0
+        self.no_of_elements = 0
 
     def _update_mesh_props(self):
         '''
@@ -383,7 +393,7 @@ class Mesh:
         self.ele_nodes.extend(ele_nodes)
         
         # ele_types for paraview export
-        self.ele_types = elements_df['el_type'].values
+        self.ele_types.extend(elements_df['el_type'].values.tolist())
         
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
@@ -406,7 +416,8 @@ class Mesh:
             print('\nPhysical group', i, ':')
             print('Number of Nodes:', len(self.phys_group_dict [i]))
             print('Number of Elements:', len(df[df.phys_group == i]))
-            print('Element types appearing in this group:', pd.unique(df[df.phys_group == i].el_type))
+            print('Element types appearing in this group:', 
+                  pd.unique(df[df.phys_group == i].el_type))
 
     def boundary_information(self):
         '''
@@ -418,6 +429,49 @@ class Mesh:
                   'contains the following', len(self.phys_group_dict[i]), 
                   ' nodes:\n', self.phys_group_dict[i])
 
+    def select_neumann_bc(self, key, val, direct, mesh_prop='phys_group',
+                          time_func=None, 
+                          element_boundary_class_dict=element_boundary_class_dict):
+        '''
+        Add group of mesh to neumann boundary conditions. 
+        
+        
+        '''
+        df = self.el_df
+        while key not in pd.unique(df[mesh_prop]):
+            self.mesh_information()
+            print('\nNo valid', mesh_prop, 'is given.\n(Given', 
+                                                mesh_prop, 'is', key, ')')
+            key = int(input('Please choose a ' + mesh_prop + 
+                ' to be used for the Neumann Boundary conditions: '))
+        
+        # make a pandas dataframe just for the desired elements
+        elements_df = df[df[mesh_prop] == key]
+        
+        # add the nodes of the chosen group
+        ele_nodes = [np.nan for i in range(len(elements_df))]
+        for i, element in enumerate(elements_df.values):
+            ele_nodes[i] = np.array(element[self.node_idx : 
+                    self.node_idx + amfe2no_of_nodes[element[1]]], dtype=int)
+        self.ele_nodes.extend(ele_nodes)
+        
+        self.ele_types.extend(elements_df['el_type'].values.tolist())
+                
+        # make a deep copy of the element class dict and apply the material
+        # then add the element objects to the ele_obj list
+        ele_class_dict = copy.deepcopy(element_boundary_class_dict)
+        for i in ele_class_dict:
+            ele_class_dict[i].__init__(val=val, direct=direct, time_func=time_func)
+        object_series = elements_df['el_type'].map(ele_class_dict)
+        self.ele_obj.extend(object_series.values.tolist())
+        self._update_mesh_props()
+        
+        # print some output stuff
+        print('\n', mesh_prop, key, 'with', len(ele_nodes), 'elements successfully added.')
+        print('Total number of elements in mesh:', len(self.ele_obj))
+        print('*************************************************************')
+
+        
     def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group', output='internal'):
         '''
         Add a group of the mesh to the dirichlet nodes to be fixed. 
@@ -509,7 +563,7 @@ class Mesh:
         TODO
         '''
         self.timesteps.append(1)
-        self.u = [np.array(u).reshape((-1, self.no_of_dofs_per_node))]
+        self.u.append(np.array(u).reshape((-1, self.no_of_dofs_per_node)))
 
 
     def set_displacement_with_time(self, u, timesteps):
@@ -636,8 +690,10 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                 # Writing the offset for the elements; they are ascending by 
                 # the number of dofs and have to start with the real integer
                 savefile_vtu.write('<DataArray type="Int32" Name="offsets" format="ascii">\n')
+                i_offset = 0
                 for j, el_nodes in enumerate(self.ele_nodes):
-                    savefile_vtu.write(str(len(el_nodes)*j + len(el_nodes)) + ' ')
+                    i_offset += len(el_nodes)
+                    savefile_vtu.write(str(i_offset) + ' ')
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
                 # Elementtyp ueber Zahl gesetzt
