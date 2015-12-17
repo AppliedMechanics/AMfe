@@ -274,7 +274,7 @@ def solve_linear_displacement(mechanical_system, t=1, verbose=True):
 
     '''
     if verbose: print('Assembling force and stiffness')
-    K, f_int = mechanical_system.K_and_f(t)
+    K, f_int = mechanical_system.K_and_f(t=t)
     f_ext = mechanical_system.f_ext(None, None, t)
     mechanical_system.write_timestep(0, f_ext*0) # write zeros
 
@@ -328,17 +328,17 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
 
     '''
     stepwidth = 1/no_of_load_steps
-    f_ext = mechanical_system.f_ext(None, None, t)
+    f_ext = mechanical_system.f_ext(None, None, t=1)
     ndof = f_ext.shape[0]
     u = np.zeros(ndof)
     mechanical_system.write_timestep(0, u) # initial write
 
-    K, f_int= mechanical_system.K_and_f(u)
+    K, f_int= mechanical_system.K_and_f(u, t=1)
     abs_f_ext = np.sqrt(f_int @ f_int)
-    for force_factor in np.arange(stepwidth, 1+stepwidth, stepwidth):
+    for t in np.arange(stepwidth, 1+stepwidth, stepwidth):
         # prediction
-        K, f_int= mechanical_system.K_and_f(u)
-        res = (f_int - f_ext)*force_factor
+        K, f_int= mechanical_system.K_and_f(u, t)
+        res = f_int
         abs_res = norm_of_vector(res)
 
         # Newton-Loop
@@ -346,14 +346,14 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         while (abs_res > eps*abs_f_ext) and (n_max_iter > n_iter):
             corr = linalg.spsolve(K, res)
             u -= corr*newton_damping
-            K, f_int = mechanical_system.K_and_f(u)
-            res = (f_int - f_ext) * force_factor
+            K, f_int = mechanical_system.K_and_f(u, t)
+            res = f_int
             abs_res = norm_of_vector(res)
             n_iter += 1
-            if verbose: print('Stufe', force_factor, 'Iteration Nr.', n_iter, \
+            if verbose: print('Stufe', t, 'Iteration Nr.', n_iter, \
                                 'Residuum:', abs_res)
             if wrt_iter: mechanical_system.write_timestep(n_iter, u)
-        mechanical_system.write_timestep(force_factor, u)
+        mechanical_system.write_timestep(t, u)
 
 
 def give_mass_and_stiffness(mechanical_system):

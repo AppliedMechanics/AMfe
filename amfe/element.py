@@ -1055,7 +1055,9 @@ class Tri3Boundary(BoundaryElement):
         v1 = x_vec[:,2] - x_vec[:,0]
         v2 = x_vec[:,1] - x_vec[:,0]
         n = np.cross(v1, v2)/2
-        self.f = self.f_func(n) * self.val * self.time_func(t)
+        # negative sign as it is internal force on the left hand side of the 
+        # function
+        self.f = -self.f_func(n) * self.val * self.time_func(t)
     
 class Tri6Boundary(BoundaryElement):
     '''
@@ -1103,7 +1105,7 @@ class Tri6Boundary(BoundaryElement):
         v1 = x_vec[:,2] - x_vec[:,0]
         v2 = x_vec[:,1] - x_vec[:,0]
         n = np.cross(v1, v2)/2
-        self.f = self.f_func(n) * self.val * self.time_func(t)
+        self.f = -self.f_func(n) * self.val * self.time_func(t)
 
     def _compute_tensors_full(self, X, u, t):
         '''
@@ -1140,7 +1142,7 @@ class Tri6Boundary(BoundaryElement):
         # correct the contributions of the standard B-matrix with the one 
         # computed with gauss integration
         B_corr = 3 * np.array([(i, i, i) for i in N]).flatten()
-        self.f = B_corr*f
+        self.f = -B_corr*f
         
 
 
@@ -1168,7 +1170,7 @@ class LineLinearBoundary(BoundaryElement):
         x_vec = (X+u).reshape((-1, 2)).T
         v = x_vec[:,1] - x_vec[:,0]
         n = self.rot_mat.dot(v)
-        self.f = self.f_func(n) * self.val * self.time_func(t)
+        self.f = - self.f_func(n) * self.val * self.time_func(t)
         pass
  
 class LineQuadraticBoundary(BoundaryElement):
@@ -1201,7 +1203,7 @@ class LineQuadraticBoundary(BoundaryElement):
         x_vec = (X+u).reshape((-1, 2)).T
         v = x_vec[:,2] - x_vec[:,0]
         n = self.rot_mat.dot(v)
-        self.f = self.f_func(n) * self.val * self.time_func(t)
+        self.f = - self.f_func(n) * self.val * self.time_func(t)
 
 
 #%%

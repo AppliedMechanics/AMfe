@@ -42,7 +42,7 @@ my_assembly.preallocate_csr()
 
 #%%
 t1 = time.clock()
-K_unconstr, f_unconstr = my_assembly.assemble_k_and_f(np.zeros(my_mesh.no_of_dofs))
+K_unconstr, f_unconstr = my_assembly.assemble_k_and_f(np.zeros(my_mesh.no_of_dofs), t=1)
 t2 = time.clock()
 print('Time for assembly:', t2-t1, 's.')
 #%%

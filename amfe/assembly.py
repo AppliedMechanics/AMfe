@@ -253,7 +253,7 @@ class Assembly():
         
 
     
-    def assemble_matrix_and_vector(self, u, decorated_matrix_func):
+    def assemble_matrix_and_vector(self, u, decorated_matrix_func, t):
         '''
         Assembles the matrix and the vector of the decorated matrix func.
 
@@ -286,7 +286,7 @@ class Assembly():
             # Auslesen der localen Elementverschiebungen
             u_local = u[indices] 
             # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
-            K, f = decorated_matrix_func(i, X, u_local) 
+            K, f = decorated_matrix_func(i, X, u_local, t) 
             # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
             f_glob[indices] += f 
             # Einsortieren der lokalen Elementmatrix in die globale Matrix
@@ -294,7 +294,7 @@ class Assembly():
 
         return K_csr, f_glob
 
-    def assemble_k_and_f(self, u):
+    def assemble_k_and_f(self, u, t):
         '''
         Assembles the stiffness matrix of the given mesh and element.
 
@@ -312,12 +312,12 @@ class Assembly():
         '''
         # define the function that returns K, f for (i, X, u)
         # sort of a decorator approach! 
-        def k_and_f_func(i, X, u):
-            return self.mesh.ele_obj[i].k_and_f_int(X, u)
+        def k_and_f_func(i, X, u, t):
+            return self.mesh.ele_obj[i].k_and_f_int(X, u, t)
             
-        return self.assemble_matrix_and_vector(u, k_and_f_func)
+        return self.assemble_matrix_and_vector(u, k_and_f_func, t)
 
-    def assemble_m(self, u=None):
+    def assemble_m(self, u=None, t=0):
         '''
         Assembles the mass matrix of the given mesh and element.
 
@@ -335,11 +335,11 @@ class Assembly():
         ---------
         TODO
         '''
-        def m_and_vec_func(i, X, u):
-            return self.mesh.ele_obj[i].m_and_vec_int(X, u)
+        def m_and_vec_func(i, X, u, t):
+            return self.mesh.ele_obj[i].m_and_vec_int(X, u, t)
             
         if u == None:
             u = np.zeros_like(self.nodes_voigt)
-        M, _ = self.assemble_matrix_and_vector(u, m_and_vec_func) 
+        M, _ = self.assemble_matrix_and_vector(u, m_and_vec_func, t) 
         return M
 

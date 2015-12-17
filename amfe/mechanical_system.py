@@ -234,7 +234,7 @@ class MechanicalSystem():
         self._M = self.constrain_matrix(M_unconstr)
         return self._M
 
-    def K(self, u=None):
+    def K(self, u=None, t=0):
         '''
         Compute the stiffness matrix of the mechanical system
         
@@ -252,15 +252,15 @@ class MechanicalSystem():
             u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
         # Assembled stiffness matrix without dirichlet boundary conditions imposed
         K_unconstr, f_unconstr = self.assembly_class.assemble_k_and_f(
-                                    self.unconstrain_vec(u)) 
+                                    self.unconstrain_vec(u), t) 
         # Apply dirichlet boundary conditions by matrix product (B.T @ K @ B)
         self._K = self.constrain_matrix(K_unconstr)
         return self._K
 
-    def f_int(self, u):
+    def f_int(self, u, t=0):
         '''Return the elastic restoring force of the system '''
         K_unconstr, f_unconstr = self.assembly_class.assemble_k_and_f(
-                                    self.unconstrain_vec(u)) 
+                                    self.unconstrain_vec(u), t) 
         self._f = self.constrain_vec(f_unconstr)
         return self._f
 
