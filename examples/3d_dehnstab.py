@@ -35,12 +35,12 @@ my_mechanical_system.dirichlet_class.update()
 #%%
 
 # static force in y-direction
-my_neumann_boundary_list = [[[dofs[0],], 'static', (1E10, ), None]]
-my_mechanical_system.apply_neumann_boundaries(my_neumann_boundary_list)
+# my_neumann_boundary_list = [[[dofs[0],], 'static', (1E10, ), None]]
+my_mechanical_system.apply_neumann_boundaries(31, 1E12, 'x', lambda t: t)
 
 
 # static solution
-amfe.solve_nonlinear_displacement(my_mechanical_system, 1, smplfd_nwtn_itr=1)
+amfe.solve_nonlinear_displacement(my_mechanical_system, 10, smplfd_nwtn_itr=1)
 #amfe.solve_linear_displacement(my_mechanical_system)
 export_path = '../results/bar_tet10' + time.strftime("_%Y%m%d_%H%M%S") + '/bar_tet4'
 my_mechanical_system.export_paraview(export_path)

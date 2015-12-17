@@ -30,9 +30,20 @@ class MechanicalSystem():
     '''
     Mase class for mechanical systems with the goal to black-box the routines
     of assembly and element selection.
+    
+    Attributes
+    ----------
+    mesh_class : instance of Mesh()
+        Class handling the mesh. 
+    assembly_class : instance of Assembly()
+        Class handling the assembly. 
+    dirichlet_class : instance of DirichletBoundary
+        Class handling the Dirichlet boundary conditions. 
+    neumann_class : instance of NeumannBoundary
+        This boundary type is deprecated. 
     '''
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         '''
         '''      
         self.T_output = []
@@ -155,6 +166,47 @@ class MechanicalSystem():
                                  mesh_prop='phys_group'):
         '''
         Apply neumann boundaries to the system via skin elements. 
+        
+        Parameters
+        ----------
+        key : int
+            Key of the physical domain to be chosen for the neumann bc
+        val : float
+            value for the pressure/traction onto the element
+        direct : str {'normal', 'x_n', 'y_n', 'z_n', 'x', 'y', 'z'}
+            direction, in which the traction should point at: 
+            
+            'normal'
+                Pressure acting onto the normal face of the deformed configuration
+            'x_n'
+                Traction acting in x-direction proportional to the area 
+            projected onto the y-z surface
+            'y_n'
+                Traction acting in y-direction proportional to the area 
+                projected onto the x-z surface            
+            'z_n'
+                Traction acting in z-direction proportional to the area 
+                projected onto the x-y surface
+            'x'
+                Traction acting in x-direction proportional to the area
+            'y'
+                Traction acting in y-direction proportional to the area
+            'z'
+                Traction acting in z-direction proportional to the area
+            
+        time_func : function object
+            Function object returning a value between -1 and 1 given the 
+            input t: 
+
+            >>> val = time_func(t)
+            
+        mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
+            label of which the element should be chosen from. Default is 
+            phys_group. 
+            
+        Returns
+        -------
+        None
         '''
         self.mesh_class.select_neumann_bc(key=key, val=val, direct=direct, 
                                           time_func=time_func, mesh_prop=mesh_prop)

@@ -124,6 +124,11 @@ class Element():
     '''
     this is the baseclass for all elements. It contains the methods needed
     for the computation of the element stuff...
+    
+    Attributes
+    ----------
+    material : Material-Class
+        Class containing the material behavior. 
     '''
 
     def __init__(self, material=None):
@@ -960,6 +965,22 @@ class Bar2Dlumped(Element):
 class BoundaryElement(Element):
     '''
     Class for the application of Neumann Boundary Conditions. 
+    
+    Attributes
+    ----------
+        
+    time_func : func
+        function returning a value between {-1, 1} which is time dependent
+        storing the time dependency of the Neumann Boundary condition. 
+        Example for constant function:
+        
+        >>> def func(t):
+        >>>    return 1
+
+    f_func : func
+        function mapping the normal vector n of the element pointing outwards
+        to the nodes of the element. 
+
     '''
     def __init__(self, val, direct, ndof, time_func=None):
         '''
@@ -970,29 +991,30 @@ class BoundaryElement(Element):
         direct : str {'normal', 'x_n', 'y_n', 'z_n', 'x', 'y', 'z'}
             direction, in which the traction should point at: 
             
-            - 'normal': Pressure acting onto the normal face of the deformed 
-            configuration
-            
-            - 'x_n': Traction acting in x-direction proportional to the area 
+            'normal'
+                Pressure acting onto the normal face of the deformed configuration
+            'x_n'
+                Traction acting in x-direction proportional to the area 
             projected onto the y-z surface
-            
-            - 'y_n': Traction acting in y-direction proportional to the area 
-            projected onto the x-z surface
-            
-            - 'z_n': Traction acting in z-direction proportional to the area 
-            projected onto the x-y surface
-            
-            - 'x': Traction acting in x-direction proportional to the area
-            
-            - 'y': Traction acting in y-direction proportional to the area
-            
-            - 'z': Traction acting in z-direction proportional to the area
+            'y_n'
+                Traction acting in y-direction proportional to the area 
+                projected onto the x-z surface            
+            'z_n'
+                Traction acting in z-direction proportional to the area 
+                projected onto the x-y surface
+            'x'
+                Traction acting in x-direction proportional to the area
+            'y'
+                Traction acting in y-direction proportional to the area
+            'z'
+                Traction acting in z-direction proportional to the area
             
         time_func : function object
             Function object returning a value between -1 and 1 given the 
             input t: 
 
             >>> val = time_func(t)
+            
             
         Returns
         -------

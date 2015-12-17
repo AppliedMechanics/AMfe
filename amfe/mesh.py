@@ -84,22 +84,34 @@ class Mesh:
     '''
     Class for handling the mesh operations.
 
-    Internal variables:
-    - nodes: Ist eine Liste bzw. ein numpy-Array, welches Angibt, wie die 
-        x-y-z-Koordinaten eines Knotens lauten. Es gibt keinen Zaehlindex.
-    - ele_nodes: Ist eine Liste bzw. ein numpy-Array, welches angibt, welche 
-        Knoten zu welchem Element gehoeren. Es gibt keinen Zaehlindex.
-    - ele_obj: numpy.ndarray of element objects
-    - no_of_dofs_per_node: Freiheitsgrade pro Knoten; Sind je nach 
-        Elementformulierung bei reiner Verschiebung bei 2D-Problemen 2, 
-        bei 3D-Problemen 3 dofs; Wenn Rotationen betrachtet werden natuerlich 
-        entsprechend mehr
-    - no_of_elements: Globale Anzahl der Elemente im System
-    - no_of_nodes: Globale Anzahl der Knoten im System
-    
-    Deprecated:
-    - no_of_element_nodes: Anzahl der Knoten pro Element
-    - element_dof: Anzahl der Freiheitsgrade eines Elements
+    Attributes
+    ----------
+    nodes : list
+        List of x-y-z coordinates of the nodes. Dimension is 
+        (no_of_nodes, no_of_dofs_per_node). 
+    ele_nodes : list
+        List of nodes indices belonging to one element. 
+    ele_obj : list
+        List of element objects. The list contains actually only the pointers
+        pointing to the element object
+    ele_types : list
+        List of strings containing the element types. Basically used for export
+        to postprocessing tools. 
+    nodes_dirichlet : ndarray
+        Array containing the nodes involved in Dirichlet Boundary Conditions. 
+    dofs_dirichlet : ndarray
+        Array containing the dofs which are to be blocked by Dirichlet Boundary
+        Conditions. 
+    no_of_dofs_per_node : int
+        Number of dofs per node. Is 3 for 3D-problems, 2 for 2D-problems. If 
+        rotations are considered, this nubmer can be >3. 
+    no_of_elements : int
+        Number of elements in the whole mesh associated with an element object. 
+    no_of_nodes : int
+        Number of nodes of the whole system. 
+    no_of_dofs : int
+        Number of dofs of the whole system (ignoring constrained dofs). 
+        
     '''
 
     def __init__(self):
@@ -429,13 +441,53 @@ class Mesh:
                   'contains the following', len(self.phys_group_dict[i]), 
                   ' nodes:\n', self.phys_group_dict[i])
 
-    def select_neumann_bc(self, key, val, direct, mesh_prop='phys_group',
-                          time_func=None, 
+    def select_neumann_bc(self, key, val, direct, time_func=None, 
+                          mesh_prop='phys_group',
                           element_boundary_class_dict=element_boundary_class_dict):
         '''
         Add group of mesh to neumann boundary conditions. 
         
-        
+        Parameters
+        ----------
+        key : int
+            Key of the physical domain to be chosen for the neumann bc
+        val : float
+            value for the pressure/traction onto the element
+        direct : str {'normal', 'x_n', 'y_n', 'z_n', 'x', 'y', 'z'}
+            direction, in which the traction should point at: 
+            
+            'normal'
+                Pressure acting onto the normal face of the deformed configuration
+            'x_n'
+                Traction acting in x-direction proportional to the area 
+            projected onto the y-z surface
+            'y_n'
+                Traction acting in y-direction proportional to the area 
+                projected onto the x-z surface            
+            'z_n'
+                Traction acting in z-direction proportional to the area 
+                projected onto the x-y surface
+            'x'
+                Traction acting in x-direction proportional to the area
+            'y'
+                Traction acting in y-direction proportional to the area
+            'z'
+                Traction acting in z-direction proportional to the area
+            
+        time_func : function object
+            Function object returning a value between -1 and 1 given the 
+            input t: 
+
+            >>> val = time_func(t)
+            
+        mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
+            label of which the element should be chosen from. Default is 
+            phys_group. 
+        element_boundary_class_dict : dict
+            Dictionary containing the skin elements. 
+        Returns
+        -------
+        None
         '''
         df = self.el_df
         while key not in pd.unique(df[mesh_prop]):

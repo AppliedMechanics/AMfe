@@ -54,7 +54,7 @@ class NewmarkIntegrator():
         self.gamma = 1/2 + alpha
         self.delta_t = 1E-3
         self.eps = 1E-8
-        self.newton_damping = 0.8
+        self.newton_damping = 1.0
         self.residual_threshold = 1E6
         self.mechanical_system = None
         self.verbose = verbose
@@ -85,7 +85,8 @@ class NewmarkIntegrator():
         ------
         This function serves basically as a test function. For elaborate finite
         element work the set_mechanical_system interface is more convenient and
-        does everything automatically including the recording of displacements etc.
+        does everything automatically including the recording of displacements 
+        etc.
 
         See Also
         --------
@@ -93,7 +94,8 @@ class NewmarkIntegrator():
 
         '''
         # decorator for the efficient computation of the tangential stiffness
-        # matrix and force in one step; Basic intention is to make assembly process only once.
+        # matrix and force in one step; Basic intention is to make assembly 
+        # process only once.
         def K_and_f_non(q):
             return K(q), f_non(q)
         self.K_and_f_non = K_and_f_non
@@ -104,7 +106,8 @@ class NewmarkIntegrator():
     def set_mechanical_system(self, mechanical_system):
         '''
         hands over the mechanical system as a whole to the integrator.
-        The matrices for the integration routine are then taken right from the mechanical system
+        The matrices for the integration routine are then taken right from the 
+        mechanical system
 
         Parameters
         -----------
