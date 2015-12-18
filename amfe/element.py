@@ -1200,21 +1200,21 @@ class LineQuadraticBoundary(BoundaryElement):
     
     '''
     B0_dict = {}
-    B0_dict.update({'normal' : np.vstack((np.eye(2), 2*np.eye(2), np.eye(2)))/4})
+    B0_dict.update({'normal' : np.vstack((np.eye(2), 4*np.eye(2), np.eye(2)))/6})
     B0_dict.update({'x_n' : np.array([ [ 1.,  0.],
                                        [ 0.,  0.],
-                                       [ 2.,  0.],
+                                       [ 4.,  0.],
                                        [ 0.,  0.],
                                        [ 1.,  0.],
-                                       [ 0.,  0.]])/4})
+                                       [ 0.,  0.]])/6})
     B0_dict.update({'y_n' : np.array([ [ 0.,  0.],
                                        [ 0.,  1.],
                                        [ 0.,  0.],
-                                       [ 0.,  2.],
+                                       [ 0.,  4.],
                                        [ 0.,  0.],
-                                       [ 0.,  1.]])/4})
-    B0_dict.update({'x' : np.array([1/4, 0, 1/2, 0, 1/4, 0])})
-    B0_dict.update({'y' : np.array([0, 1/4, 0, 1/2, 0, 1/4])})
+                                       [ 0.,  1.]])/6})
+    B0_dict.update({'x' : np.array([1/6, 0, 2/3, 0, 1/6, 0])})
+    B0_dict.update({'y' : np.array([0, 1/6, 0, 2/3, 0, 1/6])})
 
     rot_mat = np.array([[0,-1], [1, 0]])
 
