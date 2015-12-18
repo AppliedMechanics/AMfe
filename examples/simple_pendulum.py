@@ -11,9 +11,7 @@ Something about a tuple out of range given to linalg.spsolve
 
 import numpy as np
 import scipy as sp
-import sys
 
-sys.path.insert(0,'..')
 import amfe
 import matplotlib.pyplot as plt
 l = 1.

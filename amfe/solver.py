@@ -96,8 +96,8 @@ class NewmarkIntegrator():
         # decorator for the efficient computation of the tangential stiffness
         # matrix and force in one step; Basic intention is to make assembly 
         # process only once.
-        def K_and_f_non(q):
-            return K(q), f_non(q)
+        def K_and_f_non(q, t):
+            return K(q, t), f_non(q, t)
         self.K_and_f_non = K_and_f_non
         self.f_non = f_non
         self.M = M
@@ -187,7 +187,7 @@ class NewmarkIntegrator():
             time_index = 0
 
         # predict start values for ddq:
-        ddq = linalg.spsolve(self.M, self.f_non(q))
+        ddq = linalg.spsolve(self.M, self.f_non(q, t))
         no_newton_convergence_flag = False
         while time_index < len(time_range):
             # time tolerance fitting...

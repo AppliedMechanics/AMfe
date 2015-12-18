@@ -25,13 +25,13 @@ def test_intgrator():
                   [-c2 , c2 + c3, -c3],
                   [0, -c3, c3 + c4]])
 
-    def my_k(q):
+    def my_k(q, t):
         return K
 
 
     M = np.diag([3,1,2])
 
-    def f_non(q):
+    def f_non(q, t):
         return K.dot(q) # + np.array([c1*q[0]**3, 0, 0])
 
     omega = 2*np.pi*1
