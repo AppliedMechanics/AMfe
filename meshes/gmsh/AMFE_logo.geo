@@ -131,3 +131,8 @@ Plane Surface(59) = {58};
 Extrude {0, 0, 0.2} {
   Surface{50, 52, 59, 56};
 }
+Physical Surface(298) = {103, 87, 182, 158, 206, 292};
+Physical Volume(299) = {1};
+Physical Volume(300) = {2};
+Physical Volume(301) = {3};
+Physical Volume(302) = {4};
