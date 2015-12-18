@@ -4,7 +4,7 @@ How to run the AMfe Code
 You need the following stuff installed:
 
 - `Python 3.4 <http://www.python.org>`_ or higher
-- `numpy, scipy <http://www.scipy.org>`_
+- `numpy, scipy <http://www.scipy.org>`_ and pandas
 - `ParaView <http://www.paraview.org>`_ for Postprocessing
 - `gmsh <http://geuz.org/gmsh/>`_ for Preprocessing
 - Some Python-Packages in order to build this documentation
@@ -24,6 +24,14 @@ For a Matlab-like Development center we recommend `Spyder <http://spyder-ide.blo
 
 >>> conda install spyder
 
+For installing the code type
+
+>>> python setup.py develop
+
+to install the package with the ability to do changes in the source code right away. If you do not want to do any developments, use
+
+>>> python setup.py install
+
 
 Getting into the code
 """""""""""""""""""""
@@ -32,7 +40,7 @@ For getting started and familiar with the code, we recommend to start with the e
 
 General Notes on the amfe finite element code
 =============================================
-The amfe finite element toolbox has the goal to provide a fast to develop, simple and out of the box usable finite element library for use in research. Therefore the focus is on flexibility to adapt the code to new problems and to easily implement a new method and not on runtime performance. In the future, maybe some element formulations should be implemented in a fast, compiled language as `Cython <http://www.cython.org>`_, FORTRAN or C. By now, the amfe code is fully written in Python. 
+The amfe finite element toolbox has the goal to provide a fast to develop, simple and out of the box usable finite element library for use in research. Therefore the focus is on flexibility to adapt the code to new problems and to easily implement a new method and not on runtime performance. Nonetheless, some time critical methods are implemented in FORTRAN using :code:`f2py`. 
 
 
 Indexing:

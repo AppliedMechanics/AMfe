@@ -9,10 +9,6 @@ import time
 
 import numpy as np
 import scipy as sp
-
-
-# this is the way how to import the amfe-toolbox
-sys.path.insert(0, '..')
 import amfe
 
 
