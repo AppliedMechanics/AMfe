@@ -399,22 +399,24 @@ class ReducedSystem(MechanicalSystem):
         MechanicalSystem.__init__(self, **kwargs)
         self.V = V_basis
 
-    def K_and_f(self, u):
+    def K_and_f(self, u, t=0):
         u_full = self.V.dot(u)
-        self._K_unreduced, self._f_unreduced = MechanicalSystem.K_and_f(self, u_full)
+        self._K_unreduced, self._f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
         self._K_reduced = self.V.T.dot(self._K_unreduced.dot(self.V))
         self._f_int_reduced = self.V.T.dot(self._f_unreduced)
         return self._K_reduced, self._f_int_reduced
 
 
-    def K(self, u):
-        return self.V.T.dot(MechanicalSystem.K(self, self.V.dot(u)).dot(self.V))
+    def K(self, u=None, t=0):
+        if u == None:
+            u = np.zeros(self.V.shape[1])
+        return self.V.T.dot(MechanicalSystem.K(self, self.V.dot(u), t).dot(self.V))
 
     def f_ext(self, u, du, t):
         return self.V.T.dot(MechanicalSystem.f_ext(self, self.V.dot(u), du, t))
 
-    def f_int(self, u):
-        return self.V.T.dot(MechanicalSystem.f_int(self, self.V.dot(u)))
+    def f_int(self, u, t=0):
+        return self.V.T.dot(MechanicalSystem.f_int(self, self.V.dot(u), t))
 
     def M(self):
         return self.V.T.dot(MechanicalSystem.M(self).dot(self.V))
@@ -422,14 +424,14 @@ class ReducedSystem(MechanicalSystem):
     def write_timestep(self, t, u):
         MechanicalSystem.write_timestep(self, t, self.V.dot(u))
 
-    def K_unreduced(self, u=None):
+    def K_unreduced(self, u=None, t=0):
         '''
         unreduced Stiffness Matrix
         '''
-        return MechanicalSystem.K(self, u)
+        return MechanicalSystem.K(self, u, t)
 
-    def f_int_unreduced(self, u):
-        return MechanicalSystem.f_int(self, u)
+    def f_int_unreduced(self, u, t=0):
+        return MechanicalSystem.f_int(self, u, t)
 
     def M_unreduced(self):
         return MechanicalSystem.M(self)

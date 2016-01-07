@@ -7,8 +7,24 @@ Created on Mon Jun  8 17:06:59 2015
 
 import numpy as np
 import scipy as sp
+import copy
 from scipy import linalg
 
+from amfe.mechanical_system import ReducedSystem
+
+def reduce_mechanical_system(mechanical_system, V, overwrite=False):
+    '''
+    Reduce the given mechanical system with the linear basis V.
+    '''
+    
+    if overwrite:
+        reduced_sys = mechanical_system
+    else:
+        reduced_sys = copy.deepcopy(mechanical_system)
+    reduced_sys.__class__ = ReducedSystem
+    reduced_sys.V = V.copy()
+    return reduced_sys
+    
 
 sq_eps = np.sqrt(np.finfo(float).eps)
 

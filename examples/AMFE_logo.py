@@ -40,7 +40,7 @@ def f_ext_unconstr(t=None):
 my_system._f_ext_unconstr = f_ext_unconstr
 
 
-amfe.vibration_modes(my_system)
+amfe.vibration_modes(my_system, 40)
 
 #amfe.solve_linear_displacement(my_system)
 #amfe.solve_nonlinear_displacement(my_system, no_of_load_steps=50)
