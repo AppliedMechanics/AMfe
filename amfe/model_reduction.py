@@ -374,6 +374,50 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
         return V_static, V_dynamic[:, :no_of_modes], omega[:no_of_modes]
 
 
+def vibration_modes(mechanical_system, n=10, save=False):
+    '''
+    Compute the n first vibration modes of the given mechanical system using 
+    a power iteration method. 
+    
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Mechanical system to be analyzed.
+    n : int
+        number of modes to be computed.
+    save : bool
+        Flag for saving the modes in mechanical_system for ParaView export. 
+        Default: True. 
+    
+    Returns
+    -------
+    omega : ndarray
+        vector containing the eigenfrequencies of the mechanical system in 
+        rad / s. 
+    Phi : ndarray
+        Array containing the vibration modes. Phi[:,0] is the first vibration 
+        mode corresponding to eigenfrequency omega[0]
 
+    Example
+    -------
+    
+    Notes
+    -----
+    The core command using the ARPACK library is a little bit tricky. One has 
+    to use the shift inverted mode for the solution of the mechanical 
+    eigenvalue problem with the largest eigenvalues. Generally no convergence 
+    is gained when the smallest eigenvalue is to be found. 
+    '''
+    K = mechanical_system.K()
+    M = mechanical_system.M()
+    
+    lambda_, V = sp.sparse.linalg.eigsh(K, M=M, k=n, sigma=0, which='LM', 
+                                        maxiter=100)
+    omega = np.sqrt(lambda_)
 
+    if save:
+        for i in range(len(omega)):
+            mechanical_system.write_timestep(omega[i], V[:, i])
+    
+    return omega, V
 
