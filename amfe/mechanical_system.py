@@ -13,6 +13,7 @@ my_system = amfe.MechanicalSystem(E_modul=1000.0, poisson_ratio=0.15,
 
 import numpy as np
 import scipy as sp
+import time
 
 from amfe.mesh import *
 from amfe.element import *
@@ -273,15 +274,18 @@ class MechanicalSystem():
 
 
     def export_paraview(self, filename):
-        '''Export the system with the given information to paraview
         '''
+        Export the system with the given information to paraview
+        '''
+        t1 = time.time()
         if len(self.T_output) is 0:
             self.T_output.append(0)
             self.u_output.append(np.zeros(self.no_of_dofs))
         print('Start exporting mesh for paraview to', filename)
         self.mesh_class.set_displacement_with_time(self.u_output, self.T_output)
         self.mesh_class.save_mesh_for_paraview(filename)
-        print('Mesh for paraview successfully exported')
+        t2 = time.time()
+        print('Mesh for paraview successfully exported in ', t2 - t1, 'seconds.')
         pass
 
     def M(self):
