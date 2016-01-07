@@ -21,34 +21,26 @@ import amfe
 gmsh_input_file = '../meshes/gmsh/bogen_grob.msh'
 paraview_output_file = '../results/gmsh_bogen_grob' + time.strftime("_%Y%m%d_%H%M%S") + '/bogen_grob'
 
+my_material = amfe.KirchhoffMaterial()
 my_system = amfe.MechanicalSystem()
-my_system.load_mesh_from_gmsh(gmsh_input_file)
+
+my_system.load_mesh_from_gmsh(gmsh_input_file, 15, my_material)
 # my_system.export_paraview(paraview_output_file)
 
+my_system.apply_dirichlet_boundaries(13, 'xy')
 
-start_index = amfe.node2total(54, 0)
-end_index = amfe.node2total(55, 1)
+harmonic_x = lambda t: np.sin(2*np.pi*t*30)
+harmonic_y = lambda t: np.sin(2*np.pi*t*50)
 
-# fixation
-bottom_bounds_1 = [None, [0,1,2,3], None]
-bottom_bounds_2 = [None, np.arange(start_index, end_index + 1), None]
+my_system.apply_neumann_boundaries(14, 6E6, 'x', harmonic_x)
+my_system.apply_neumann_boundaries(14, 6E6, 'y', harmonic_y)
 
-my_dirichlet_bounds = [bottom_bounds_1, bottom_bounds_2]
-my_system.apply_dirichlet_boundaries(my_dirichlet_bounds)
-
-
-other_side = [2, 3, 24, 25]
-
-neumann_bounds = [  [[amfe.node2total(i,1) for i in other_side], 'harmonic', (6E6, 20), None],
-                    [[amfe.node2total(i,0) for i in other_side], 'harmonic', (2E6, 100), None]]
-my_system.apply_neumann_boundaries(neumann_bounds)
-
-
-ndof = my_system.ndof_global_constrained
 
 ###############################################################################
 ## time integration
 ###############################################################################
+
+ndof = my_system.dirichlet_class.no_of_constrained_dofs
 
 my_newmark = amfe.NewmarkIntegrator()
 my_newmark.set_mechanical_system(my_system)
