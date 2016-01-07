@@ -365,16 +365,10 @@ class MechanicalSystem():
 
 class ReducedSystem(MechanicalSystem):
     '''
-<<<<<<< HEAD
     Class for reduced systems.
     It is directly inherited from MechanicalSystem.
-    Provides the interface for an integration scheme and so on where a basis vector is to be chosen...
-=======
-    Class for reduced systems. It is directyl inherited from MechanicalSystem.
     Provides the interface for an integration scheme and so on where a basis 
     vector is to be chosen...
->>>>>>> new_mesh
-
 
     Parameters
     ----------

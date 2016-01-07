@@ -16,7 +16,7 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*sq_eps, verbose=True):
     '''
     Compute the real modal derivative of the given system using Nelson's formulation.
 
-    The modal derivative computed is dx_i / dx_j, i.e. the change of the
+    The modal derivative computed is :math:`\\frac{dx_i}{dx_j}`, i.e. the change of the
     mode x_i when the system is perturbed along x_j.
 
     Parameters
@@ -66,9 +66,10 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*sq_eps, verbose=True):
 
 
     '''
+    # mass normalization
     x_i /= np.sqrt(x_i.dot(M.dot(x_i)))
     x_j /= np.sqrt(x_j.dot(M.dot(x_j)))
-#    h = np.sqrt(np.finfo(float).eps)*100 # step size length
+
     ndof = x_i.shape[0]
     K = K_func(np.zeros(ndof))
     dK_x_j = (K_func(x_j*h) - K)/h
@@ -307,6 +308,7 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     one_basis : bool, optional
         Flag for setting, if one Craig-Bampton basis should be returned or if
         the static and the dynamic basis is chosen separately
+        
     Returns
     -------
     V : array
