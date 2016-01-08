@@ -459,3 +459,30 @@ def vibration_modes(mechanical_system, n=10, save=False):
     
     return omega, V
 
+def pod(mechanical_system, n):
+    '''
+    Compute the POD basis of a mechanical system. 
+    
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        MechanicalSystem which has run a time simulation and thus displacement 
+        fields stored internally. 
+    n : int
+        Number of POD basis vectors which should be returned. 
+        
+    Returns
+    -------
+    sigma : ndarray
+        Array of the singular values. 
+    V : ndarray
+        Array containing the POD vectors. V[:,0] contains the POD-vector 
+        associated with sigma[0] etc. 
+    
+    Example
+    -------
+    '''
+    # TODO: think about how to store the displacements and eventually the 
+    # stresses internally. 
+    pass
+    
