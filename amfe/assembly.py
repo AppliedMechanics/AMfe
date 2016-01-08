@@ -314,6 +314,29 @@ class Assembly():
         # define the function that returns K, f for (i, X, u)
         # sort of a decorator approach! 
         def k_and_f_func(i, X, u, t):
+            '''
+            Decorated function picking the element object from the mesh and 
+            returning k and f out of it. 
+            
+            Parameters
+            ----------
+            i : int
+                index of the element
+            X : ndarray
+                reference configuration of nodes
+            u : ndarray
+                displacement of nodes
+            t : float
+                time
+                
+            Returns
+            -------
+            K : ndarray
+                Stiffness matrix.
+            f : ndarray
+                Force vector. 
+            
+            '''
             return self.mesh.ele_obj[i].k_and_f_int(X, u, t)
             
         return self.assemble_matrix_and_vector(u, k_and_f_func, t)
@@ -337,6 +360,26 @@ class Assembly():
         TODO
         '''
         def m_and_vec_func(i, X, u, t):
+            '''
+            Decorated function picking the element object from the mesh and 
+            returning m out of it. 
+            
+            Parameters
+            ----------
+            i : int
+                index of the element
+            X : ndarray
+                reference configuration of nodes
+            u : ndarray
+                displacement of nodes
+            t : float
+                time
+                
+            Returns
+            -------
+            M : ndarray
+                Mass matrix of element i.
+            '''
             return self.mesh.ele_obj[i].m_and_vec_int(X, u, t)
             
         if u == None:

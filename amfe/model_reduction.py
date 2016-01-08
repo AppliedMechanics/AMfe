@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=trailing-whitespace, C0103, E1101, E0611
 
 """
 Created on Mon Jun  8 17:06:59 2015
@@ -9,8 +8,8 @@ Created on Mon Jun  8 17:06:59 2015
 
 import numpy as np
 import scipy as sp
-import copy
 from scipy import linalg
+import copy
 
 from amfe.mechanical_system import ReducedSystem
 
@@ -48,9 +47,9 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     return reduced_sys
     
 
-sq_eps = np.sqrt(np.finfo(float).eps)
+SQ_EPS = np.sqrt(np.finfo(float).eps)
 
-def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*sq_eps, verbose=True):
+def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
     '''
     Compute the real modal derivative of the given system using Nelson's formulation.
 
@@ -131,7 +130,7 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*sq_eps, verbose=True):
 
 
 
-def static_correction_derivative(x_i, x_j, K_func, h=500*sq_eps, verbose=True):
+def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     '''
     Computes the static correction vectors.
 
@@ -281,7 +280,8 @@ def principal_angles(V1, V2, cosine=True):
 
 def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
     '''
-    Computes the Krylov Subspace associated with the input matrix b at the frequency omega.
+    Computes the Krylov Subspace associated with the input matrix b at the 
+    frequency omega.
 
     Parameters
     ----------
@@ -485,4 +485,3 @@ def pod(mechanical_system, n):
     # TODO: think about how to store the displacements and eventually the 
     # stresses internally. 
     pass
-    
