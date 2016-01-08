@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=trailing-whitespace, C0103, E1101, E0611
+
 """
 Created on Fri May  8 16:58:03 2015
 
@@ -15,10 +17,9 @@ import numpy as np
 import scipy as sp
 import time
 
-from amfe.mesh import *
-from amfe.element import *
-from amfe.assembly import *
-from amfe.boundary import *
+from amfe.mesh import Mesh
+from amfe.assembly import Assembly
+from amfe.boundary import DirichletBoundary, NeumannBoundary
 
 
 
@@ -42,6 +43,7 @@ class MechanicalSystem():
         Class handling the Dirichlet boundary conditions. 
     neumann_class : instance of NeumannBoundary
         This boundary type is deprecated. 
+    
     '''
 
     def __init__(self):
@@ -60,8 +62,7 @@ class MechanicalSystem():
         self.unconstrain_vec = self.dirichlet_class.unconstrain_vec
         self.constrain_vec = self.dirichlet_class.constrain_vec
         self.constrain_matrix = self.dirichlet_class.constrain_matrix
-        
-        pass
+
 
     def load_mesh_from_gmsh(self, msh_file, phys_group, material):
         '''
@@ -89,12 +90,12 @@ class MechanicalSystem():
         
         self.assembly_class.preallocate_csr()
         self.dirichlet_class.no_of_unconstrained_dofs = self.mesh_class.no_of_dofs
-        
-
 
 
     def load_mesh_from_csv(self, node_list_csv, element_list_csv, 
-                no_of_dofs_per_node=2, explicit_node_numbering=False, ele_type=False):
+                           no_of_dofs_per_node=2, 
+                           explicit_node_numbering=False, 
+                           ele_type=False):
         '''
         Loads the mesh from two csv-files containing the node and the element list.
 
@@ -269,7 +270,8 @@ class MechanicalSystem():
 
 
         '''
-        self.neumann_class = NeumannBoundary(self.no_of_dofs, neumann_boundary_list)
+        self.neumann_class = \
+            NeumannBoundary(self.mesh_class.no_of_dofs, neumann_boundary_list)
         self._f_ext_unconstr = self.neumann_class.f_ext()
 
 
@@ -280,13 +282,12 @@ class MechanicalSystem():
         t1 = time.time()
         if len(self.T_output) is 0:
             self.T_output.append(0)
-            self.u_output.append(np.zeros(self.no_of_dofs))
+            self.u_output.append(np.zeros(self.mesh_class.no_of_dofs))
         print('Start exporting mesh for paraview to', filename)
         self.mesh_class.set_displacement_with_time(self.u_output, self.T_output)
         self.mesh_class.save_mesh_for_paraview(filename)
         t2 = time.time()
         print('Mesh for paraview successfully exported in ', t2 - t1, 'seconds.')
-        pass
 
     def M(self):
         '''
@@ -302,9 +303,8 @@ class MechanicalSystem():
             Mass matrix with applied constraints in sparse csr-format
         '''
         M_unconstr = self.assembly_class.assemble_m()
-        self._M = self.constrain_matrix(M_unconstr)
-        return self._M
-
+        return self.constrain_matrix(M_unconstr)
+        
     def K(self, u=None, t=0):
         '''
         Compute the stiffness matrix of the mechanical system
@@ -321,21 +321,33 @@ class MechanicalSystem():
         '''
         if u is None:
             u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
-        # Assembled stiffness matrix without dirichlet boundary conditions imposed
-        K_unconstr, f_unconstr = self.assembly_class.assemble_k_and_f(
-                                    self.unconstrain_vec(u), t) 
-        # Apply dirichlet boundary conditions by matrix product (B.T @ K @ B)
-        self._K = self.constrain_matrix(K_unconstr)
-        return self._K
 
+        K_unconstr, f_unconstr = \
+            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t) 
+
+        return self.constrain_matrix(K_unconstr)
+        
     def f_int(self, u, t=0):
         '''Return the elastic restoring force of the system '''
-        K_unconstr, f_unconstr = self.assembly_class.assemble_k_and_f(
-                                    self.unconstrain_vec(u), t) 
-        self._f = self.constrain_vec(f_unconstr)
-        return self._f
-
-    def _f_ext_unconstr(self, t):
+        K_unconstr, f_unconstr = \
+            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t) 
+        return self.constrain_vec(f_unconstr)
+        
+    def _f_ext_unconstr(self, t=0):
+        '''
+        External force of unconstrained system. Can be overwritten externally. 
+        
+        Parameters
+        ----------
+        t : float, optional
+            time, default value: 0. 
+        
+        Returns
+        -------
+        f_ext_unconstr : ndarray
+            external force without constraints.
+        
+        '''
         return np.zeros(self.mesh_class.no_of_dofs)
         
     def f_ext(self, u, du, t):
@@ -352,8 +364,8 @@ class MechanicalSystem():
         '''
         if u is None:
             u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
-        K_unconstr, f_unconstr = self.assembly_class.assemble_k_and_f(
-                                    self.unconstrain_vec(u), t)
+        K_unconstr, f_unconstr = \
+            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)
         self._K = self.constrain_matrix(K_unconstr)
         self._f = self.constrain_vec(f_unconstr)
         return self._K, self._f
@@ -400,12 +412,12 @@ class ReducedSystem(MechanicalSystem):
         self.V = V_basis
 
     def K_and_f(self, u, t=0):
-        u_full = self.V.dot(u)
-        self._K_unreduced, self._f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
-        self._K_reduced = self.V.T.dot(self._K_unreduced.dot(self.V))
-        self._f_int_reduced = self.V.T.dot(self._f_unreduced)
-        return self._K_reduced, self._f_int_reduced
-
+        V = self.V
+        u_full = V.dot(u)
+        K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
+        K = V.T.dot(K_unreduced.dot(V))
+        f_int = V.T.dot(f_unreduced)
+        return K, f_int
 
     def K(self, u=None, t=0):
         if u == None:
@@ -426,14 +438,46 @@ class ReducedSystem(MechanicalSystem):
 
     def K_unreduced(self, u=None, t=0):
         '''
-        unreduced Stiffness Matrix
+        Unreduced Stiffness Matrix. 
+        
+        Parameters
+        ----------
+        u : ndarray, optional
+            Displacement of constrained system. Default is zero vector. 
+        t : float, optionial
+            Time. Default is 0. 
+            
+        Returns
+        -------
+        K : sparse csr matrix
+            Stiffness matrix
+        
         '''
         return MechanicalSystem.K(self, u, t)
 
     def f_int_unreduced(self, u, t=0):
+        '''
+        Internal nonlinear force of the unreduced system. 
+        
+        Parameters
+        ----------
+        u : ndarray
+            displacement of unreduces system. 
+        t : float, optional
+            time, default value: 0.
+            
+        Returns
+        -------
+        f_nl : ndarray
+            nonlinear force of unreduced system. 
+        
+        '''
         return MechanicalSystem.f_int(self, u, t)
 
     def M_unreduced(self):
+        '''
+        Unreduced mass matrix. 
+        '''
         return MechanicalSystem.M(self)
 
 
@@ -450,7 +494,6 @@ class ConstrainedMechanicalSystem():
     def __init__(self):
         self.ndof = 0
         self.ndof_const = 0
-        pass
 
     def M(self, q, dq):
         '''

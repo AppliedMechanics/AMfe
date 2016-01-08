@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=trailing-whitespace, C0103, E1101, E0611
 """
 Created on Thu Jan  7 16:38:15 2016
 
 @author: rutzmoser
 """
-
 
 import numpy as np
 import scipy as sp
@@ -17,7 +17,7 @@ import amfe
 no_of_modes = 20
 
 gmsh_input_file = '../meshes/gmsh/bogen_grob.msh'
-paraview_output_file = 'results/test' + \
+paraview_output_file = '../results/test' + \
                         time.strftime("_%Y%m%d_%H%M%S") + '/test'
 
 
@@ -42,6 +42,8 @@ omega, V = amfe.vibration_modes(my_system, n=no_of_modes)
 my_reduced_system = amfe.reduce_mechanical_system(my_system, V)
 #%%
 
+# check, if matrices are (almost) diagonal
+
 K = my_reduced_system.K()
 #plt.matshow(K)
 M = my_reduced_system.M()
@@ -49,10 +51,7 @@ M = my_reduced_system.M()
 
 #%%
 
-###############################################################################
-## time integration
-###############################################################################
-
+# time integration
 
 my_newmark = amfe.NewmarkIntegrator()
 my_newmark.set_mechanical_system(my_reduced_system)
@@ -61,7 +60,7 @@ my_newmark.delta_t = 1E-4
 t1 = time.time()
 
 my_newmark.integrate_nonlinear_system(np.zeros(no_of_modes), 
-                                      np.zeros(no_of_modes), np.arange(0,0.4,1E-4))
+                                      np.zeros(no_of_modes), np.arange(0, 0.4, 1E-4))
 
 t2 = time.time()
 print('Time for computation:', t2 - t1, 'seconds.')

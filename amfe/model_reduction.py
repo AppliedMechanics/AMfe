@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=trailing-whitespace, C0103, E1101, E0611
+
 """
 Created on Mon Jun  8 17:06:59 2015
 
@@ -15,6 +17,26 @@ from amfe.mechanical_system import ReducedSystem
 def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     '''
     Reduce the given mechanical system with the linear basis V.
+    
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Mechanical system which will be transformed to a ReducedSystem. 
+    V : ndarray
+        Reduction Basis for the reduced system
+    overwrite : bool, optional
+        switch, if mechanical system should be overwritten (is less memory 
+        intensive for large systems) or not.
+    
+    Returns
+    -------
+    reduced_system : instance of ReducedSystem
+        Reduced system with same properties of the mechanical system and 
+        reduction basis V
+        
+    Example
+    -------
+
     '''
     
     if overwrite:
@@ -257,7 +279,7 @@ def principal_angles(V1, V2, cosine=True):
     return sigma
 
 
-def krylov_subspace(M, K, b, omega = 0, no_of_moments=3):
+def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
     '''
     Computes the Krylov Subspace associated with the input matrix b at the frequency omega.
 
