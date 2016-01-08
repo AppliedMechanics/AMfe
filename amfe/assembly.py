@@ -1,5 +1,6 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
+# pylint: disable=trailing-whitespace, C0103, E1101
 """
 Basic assembly module for the finite element code. Assumes to have all elements 
 in the inertial frame.
@@ -127,9 +128,9 @@ def compute_csr_assembly_indices(global_element_indices, indptr, indices):
 
 
 if use_fortran:
-    '''
-    Fortran routine that will override the functions above for massive speedup.
-    '''
+    ###########################################################################
+    # Fortran routine that will override the functions above for massive speedup.
+    ###########################################################################
     get_index_of_csr_data = amfe.f90_assembly.get_index_of_csr_data
     fill_csr_matrix = amfe.f90_assembly.fill_csr_matrix
 
@@ -313,6 +314,29 @@ class Assembly():
         # define the function that returns K, f for (i, X, u)
         # sort of a decorator approach! 
         def k_and_f_func(i, X, u, t):
+            '''
+            Decorated function picking the element object from the mesh and 
+            returning k and f out of it. 
+            
+            Parameters
+            ----------
+            i : int
+                index of the element
+            X : ndarray
+                reference configuration of nodes
+            u : ndarray
+                displacement of nodes
+            t : float
+                time
+                
+            Returns
+            -------
+            K : ndarray
+                Stiffness matrix.
+            f : ndarray
+                Force vector. 
+            
+            '''
             return self.mesh.ele_obj[i].k_and_f_int(X, u, t)
             
         return self.assemble_matrix_and_vector(u, k_and_f_func, t)
@@ -336,6 +360,26 @@ class Assembly():
         TODO
         '''
         def m_and_vec_func(i, X, u, t):
+            '''
+            Decorated function picking the element object from the mesh and 
+            returning m out of it. 
+            
+            Parameters
+            ----------
+            i : int
+                index of the element
+            X : ndarray
+                reference configuration of nodes
+            u : ndarray
+                displacement of nodes
+            t : float
+                time
+                
+            Returns
+            -------
+            M : ndarray
+                Mass matrix of element i.
+            '''
             return self.mesh.ele_obj[i].m_and_vec_int(X, u, t)
             
         if u == None:

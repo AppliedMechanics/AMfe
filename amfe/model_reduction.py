@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Created on Mon Jun  8 17:06:59 2015
 
@@ -8,15 +9,51 @@ Created on Mon Jun  8 17:06:59 2015
 import numpy as np
 import scipy as sp
 from scipy import linalg
+import copy
 
+from amfe.mechanical_system import ReducedSystem
 
-sq_eps = np.sqrt(np.finfo(float).eps)
+def reduce_mechanical_system(mechanical_system, V, overwrite=False):
+    '''
+    Reduce the given mechanical system with the linear basis V.
+    
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Mechanical system which will be transformed to a ReducedSystem. 
+    V : ndarray
+        Reduction Basis for the reduced system
+    overwrite : bool, optional
+        switch, if mechanical system should be overwritten (is less memory 
+        intensive for large systems) or not.
+    
+    Returns
+    -------
+    reduced_system : instance of ReducedSystem
+        Reduced system with same properties of the mechanical system and 
+        reduction basis V
+        
+    Example
+    -------
 
-def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*sq_eps, verbose=True):
+    '''
+    
+    if overwrite:
+        reduced_sys = mechanical_system
+    else:
+        reduced_sys = copy.deepcopy(mechanical_system)
+    reduced_sys.__class__ = ReducedSystem
+    reduced_sys.V = V.copy()
+    return reduced_sys
+    
+
+SQ_EPS = np.sqrt(np.finfo(float).eps)
+
+def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
     '''
     Compute the real modal derivative of the given system using Nelson's formulation.
 
-    The modal derivative computed is dx_i / dx_j, i.e. the change of the
+    The modal derivative computed is :math:`\\frac{dx_i}{dx_j}`, i.e. the change of the
     mode x_i when the system is perturbed along x_j.
 
     Parameters
@@ -66,9 +103,10 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*sq_eps, verbose=True):
 
 
     '''
+    # mass normalization
     x_i /= np.sqrt(x_i.dot(M.dot(x_i)))
     x_j /= np.sqrt(x_j.dot(M.dot(x_j)))
-#    h = np.sqrt(np.finfo(float).eps)*100 # step size length
+
     ndof = x_i.shape[0]
     K = K_func(np.zeros(ndof))
     dK_x_j = (K_func(x_j*h) - K)/h
@@ -92,7 +130,7 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*sq_eps, verbose=True):
 
 
 
-def static_correction_derivative(x_i, x_j, K_func, h=500*sq_eps, verbose=True):
+def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     '''
     Computes the static correction vectors.
 
@@ -240,9 +278,10 @@ def principal_angles(V1, V2, cosine=True):
     return sigma
 
 
-def krylov_subspace(M, K, b, omega = 0, no_of_moments=3):
+def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
     '''
-    Computes the Krylov Subspace associated with the input matrix b at the frequency omega.
+    Computes the Krylov Subspace associated with the input matrix b at the 
+    frequency omega.
 
     Parameters
     ----------
@@ -307,6 +346,7 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     one_basis : bool, optional
         Flag for setting, if one Craig-Bampton basis should be returned or if
         the static and the dynamic basis is chosen separately
+        
     Returns
     -------
     V : array
@@ -372,6 +412,76 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
         return V_static, V_dynamic[:, :no_of_modes], omega[:no_of_modes]
 
 
+def vibration_modes(mechanical_system, n=10, save=False):
+    '''
+    Compute the n first vibration modes of the given mechanical system using 
+    a power iteration method. 
+    
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Mechanical system to be analyzed.
+    n : int
+        number of modes to be computed.
+    save : bool
+        Flag for saving the modes in mechanical_system for ParaView export. 
+        Default: True. 
+    
+    Returns
+    -------
+    omega : ndarray
+        vector containing the eigenfrequencies of the mechanical system in 
+        rad / s. 
+    Phi : ndarray
+        Array containing the vibration modes. Phi[:,0] is the first vibration 
+        mode corresponding to eigenfrequency omega[0]
 
+    Example
+    -------
+    
+    Notes
+    -----
+    The core command using the ARPACK library is a little bit tricky. One has 
+    to use the shift inverted mode for the solution of the mechanical 
+    eigenvalue problem with the largest eigenvalues. Generally no convergence 
+    is gained when the smallest eigenvalue is to be found. 
+    '''
+    K = mechanical_system.K()
+    M = mechanical_system.M()
+    
+    lambda_, V = sp.sparse.linalg.eigsh(K, M=M, k=n, sigma=0, which='LM', 
+                                        maxiter=100)
+    omega = np.sqrt(lambda_)
 
+    if save:
+        for i in range(len(omega)):
+            mechanical_system.write_timestep(omega[i], V[:, i])
+    
+    return omega, V
 
+def pod(mechanical_system, n):
+    '''
+    Compute the POD basis of a mechanical system. 
+    
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        MechanicalSystem which has run a time simulation and thus displacement 
+        fields stored internally. 
+    n : int
+        Number of POD basis vectors which should be returned. 
+        
+    Returns
+    -------
+    sigma : ndarray
+        Array of the singular values. 
+    V : ndarray
+        Array containing the POD vectors. V[:,0] contains the POD-vector 
+        associated with sigma[0] etc. 
+    
+    Example
+    -------
+    '''
+    # TODO: think about how to store the displacements and eventually the 
+    # stresses internally. 
+    pass
