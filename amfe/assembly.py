@@ -128,9 +128,9 @@ def compute_csr_assembly_indices(global_element_indices, indptr, indices):
 
 
 if use_fortran:
-    '''
-    Fortran routine that will override the functions above for massive speedup.
-    '''
+    ###########################################################################
+    # Fortran routine that will override the functions above for massive speedup.
+    ###########################################################################
     get_index_of_csr_data = amfe.f90_assembly.get_index_of_csr_data
     fill_csr_matrix = amfe.f90_assembly.fill_csr_matrix
 

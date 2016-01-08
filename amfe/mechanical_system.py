@@ -262,7 +262,8 @@ class MechanicalSystem():
         >>> NB = [[1, 2, 3], 'stepload', (1E3, 0.1), None]
         >>> mysystem.apply_neumann_boundaries([NB, ])
 
-        Harmonic loading on dof 4, 6 and 8 with frequency 8 Hz = 2*2*pi rad and amplitude 100N:
+        Harmonic loading on dof 4, 6 and 8 with frequency 8 Hz = 2*2*pi rad and 
+        amplitude 100N:
 
         >>> mysystem = MechanicalSystem()
         >>> NB = [[1, 2, 3], 'harmonic', (100, 8), None]
@@ -366,9 +367,9 @@ class MechanicalSystem():
             u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
         K_unconstr, f_unconstr = \
             self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)
-        self._K = self.constrain_matrix(K_unconstr)
-        self._f = self.constrain_vec(f_unconstr)
-        return self._K, self._f
+        K = self.constrain_matrix(K_unconstr)
+        f = self.constrain_vec(f_unconstr)
+        return K, f
 
     def write_timestep(self, t, u):
         '''
@@ -411,7 +412,9 @@ class ReducedSystem(MechanicalSystem):
         MechanicalSystem.__init__(self, **kwargs)
         self.V = V_basis
 
-    def K_and_f(self, u, t=0):
+    def K_and_f(self, u=None, t=0):
+        if u == None:
+            u = np.zeros(self.V.shape[1])        
         V = self.V
         u_full = V.dot(u)
         K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
