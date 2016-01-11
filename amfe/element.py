@@ -2,10 +2,17 @@
 """
 Element Module in which the Finite Elements are described on Element level.
 
-This Module is arbitrarily extensible. The idea is to use the basis class Element which provides the functionality for an efficient solution of a time integration by only once calling the internal tensor computation and then extracting the tangential stiffness matrix and the internal force vector in one run.
+This Module is arbitrarily extensible. The idea is to use the basis class 
+Element which provides the functionality for an efficient solution of a time 
+integration by only once calling the internal tensor computation and then 
+extracting the tangential stiffness matrix and the internal force vector in one 
+run.
 
 Some remarks resulting in the observations of the profiler:
-Most of the time is spent with pyhton-functions, when they are used. For instance the kron-function in order to build the scattered geometric stiffness matrix or the trace function are very inefficient. They can be done better when using direct functions.
+Most of the time is spent with pyhton-functions, when they are used. For 
+instance the kron-function in order to build the scattered geometric stiffness 
+matrix or the trace function are very inefficient. They can be done better when 
+using direct functions.
 
 """
 
@@ -79,7 +86,8 @@ def compute_B_matrix(B_tilde, F):
 
     Notes
     -----
-    When the Voigt notation is used in this Reference, the variables are denoted with curly brackets.
+    When the Voigt notation is used in this Reference, the variables are 
+    denoted with curly brackets.
     '''
 
     no_of_nodes = B_tilde.shape[1]
@@ -101,17 +109,17 @@ def compute_B_matrix(B_tilde, F):
     for i in range(no_of_nodes):
         if no_of_dims == 2:
             B[:, i*no_of_dims : (i+1)*no_of_dims] = [
-            [F11*b[0,i], F21*b[0,i]],
-            [F12*b[1,i], F22*b[1,i]],
-            [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i]]]
+                [F11*b[0,i], F21*b[0,i]],
+                [F12*b[1,i], F22*b[1,i]],
+                [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i]]]
         else:
             B[:, i*no_of_dims : (i+1)*no_of_dims] = [
-            [F11*b[0,i], F21*b[0,i], F31*b[0,i]],
-            [F12*b[1,i], F22*b[1,i], F32*b[1,i]],
-            [F13*b[2,i], F23*b[2,i], F33*b[2,i]],
-            [F12*b[2,i] + F13*b[1,i], F22*b[2,i] + F23*b[1,i], F32*b[2,i] + F33*b[1,i]],
-            [F13*b[0,i] + F11*b[2,i], F23*b[0,i] + F21*b[2,i], F33*b[0,i] + F31*b[2,i]],
-            [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i], F31*b[1,i] + F32*b[0,i]]]
+                [F11*b[0,i], F21*b[0,i], F31*b[0,i]],
+                [F12*b[1,i], F22*b[1,i], F32*b[1,i]],
+                [F13*b[2,i], F23*b[2,i], F33*b[2,i]],
+                [F12*b[2,i] + F13*b[1,i], F22*b[2,i] + F23*b[1,i], F32*b[2,i] + F33*b[1,i]],
+                [F13*b[0,i] + F11*b[2,i], F23*b[0,i] + F21*b[2,i], F33*b[0,i] + F31*b[2,i]],
+                [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i], F31*b[1,i] + F32*b[0,i]]]
     return B
 
 
@@ -362,13 +370,13 @@ class Tri6(Element):
 
 
         self.gauss_points2 = ((1/6, 1/6, 2/3, 1/3),
-                             (1/6, 2/3, 1/6, 1/3),
-                             (2/3, 1/6, 1/6, 1/3))
+                              (1/6, 2/3, 1/6, 1/3),
+                              (2/3, 1/6, 1/6, 1/3))
 
         self.gauss_points3 = ((1/3, 1/3, 1/3, -27/48),
-                             (0.6, 0.2, 0.2, 25/48),
-                             (0.2, 0.6, 0.2, 25/48),
-                             (0.2, 0.2, 0.6, 25/48))
+                              (0.6, 0.2, 0.2, 25/48),
+                              (0.2, 0.6, 0.2, 25/48),
+                              (0.2, 0.2, 0.6, 25/48))
 
         alpha1 = 0.0597158717
         beta1 = 0.4701420641 # 1/(np.sqrt(15)-6)
@@ -487,7 +495,6 @@ class Quad4(Element):
         '''
         Compute the tensors.
         '''
-        X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
         X_mat = X.reshape(-1, 2)
         u_e = u.reshape(-1, 2)
         t = self.material.thickness
@@ -520,18 +527,18 @@ class Quad4(Element):
             self.f += B0.T.dot(S_v)*det*t*w
         pass
 
-    def _m_int(self, X, u, t):
+    def _m_int(self, X, u, t=0):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
         self.M_small *= 0
         t = self.material.thickness
         rho = self.material.rho
         
         for xi, eta, w in self.gauss_points:
-            det = 1/8*(-X1*Y2*eta + X1*Y2 + X1*Y3*eta - X1*Y3*xi + X1*Y4*xi
-                        - X1*Y4 + X2*Y1*eta - X2*Y1 + X2*Y3*xi + X2*Y3
-                        - X2*Y4*eta - X2*Y4*xi - X3*Y1*eta + X3*Y1*xi
-                        - X3*Y2*xi - X3*Y2 + X3*Y4*eta + X3*Y4 - X4*Y1*xi
-                        + X4*Y1 + X4*Y2*eta + X4*Y2*xi - X4*Y3*eta - X4*Y3)
+            det = 1/8*(- X1*Y2*eta + X1*Y2 + X1*Y3*eta - X1*Y3*xi + X1*Y4*xi
+                       - X1*Y4 + X2*Y1*eta - X2*Y1 + X2*Y3*xi + X2*Y3
+                       - X2*Y4*eta - X2*Y4*xi - X3*Y1*eta + X3*Y1*xi
+                       - X3*Y2*xi - X3*Y2 + X3*Y4*eta + X3*Y4 - X4*Y1*xi
+                       + X4*Y1 + X4*Y2*eta + X4*Y2*xi - X4*Y3*eta - X4*Y3)
             N = np.array([  [(-eta + 1)*(-xi + 1)/4],
                             [ (-eta + 1)*(xi + 1)/4],
                             [  (eta + 1)*(xi + 1)/4],
@@ -564,10 +571,10 @@ class Quad8(Element):
         g4 = 0.339981043584856
         w4 = 0.652145154862546
         self.gauss_points = (
-                 (-g3, -g3, w3*w3), (-g4, -g3, w4*w3), ( g3,-g3, w3*w3), ( g4,-g3, w4*w3),
-                 (-g3, -g4, w3*w4), (-g4, -g4, w4*w4), ( g3,-g4, w3*w4), ( g4,-g4, w4*w4),
-                 (-g3,  g3, w3*w3), (-g4,  g3, w4*w3), ( g3, g3, w3*w3), ( g4, g3, w4*w3),
-                 (-g3,  g4, w3*w4), (-g4,  g4, w4*w4), ( g3, g4, w3*w4), ( g4, g4, w4*w4))
+            (-g3, -g3, w3*w3), (-g4, -g3, w4*w3), ( g3,-g3, w3*w3), ( g4,-g3, w4*w3),
+            (-g3, -g4, w3*w4), (-g4, -g4, w4*w4), ( g3,-g4, w3*w4), ( g4,-g4, w4*w4),
+            (-g3,  g3, w3*w3), (-g4,  g3, w4*w3), ( g3, g3, w3*w3), ( g4, g3, w4*w3),
+            (-g3,  g4, w3*w4), (-g4,  g4, w4*w4), ( g3, g4, w3*w4), ( g4, g4, w4*w4))
                  
         g2 = 0.577350269189626
         w2 = 1.
@@ -617,7 +624,6 @@ class Quad8(Element):
         '''
         Mass matrix using CAS-System
         '''
-        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
         X_mat = X.reshape(-1, 2)
         t = self.material.thickness
         rho = self.material.rho
@@ -954,11 +960,11 @@ class Bar2Dlumped(Element):
         return self.K, self.M
         
     def _k_int(self, X, u, t):
-        k_el, m_el = self._k_and_m_int(X, u)
+        k_el, m_el = self._k_and_m_int(X, u, t)
         return k_el
 
     def _m_int(self, X, u, t):
-        k_el, m_el = self._k_and_m_int(X, u)
+        k_el, m_el = self._k_and_m_int(X, u, t)
         return m_el
 
 #%%
@@ -1197,7 +1203,7 @@ class LineLinearBoundary(BoundaryElement):
  
 class LineQuadraticBoundary(BoundaryElement):
     '''
-    
+    Quadratic line boundary element for 2D problems. 
     '''
     B0_dict = {}
     B0_dict.update({'normal' : np.vstack((np.eye(2), np.eye(2), 4*np.eye(2)))/6})
