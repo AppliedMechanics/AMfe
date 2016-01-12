@@ -162,7 +162,7 @@ class Element():
         Virtual function for the element specific implementation of the mass
         matrix;
         '''
-        print('The function is not implemented yet...')
+        pass
 
     def k_and_f_int(self, X, u, t=0):
         '''
@@ -594,14 +594,14 @@ class Quad8(Element):
         for xi, eta, w in self.gauss_points:
             # this is now the standard procedure for Total Lagrangian behavior
             dN_dxi = np.array([
-                            [-(eta - 1)*(eta + 2*xi)/4, -(2*eta + xi)*(xi - 1)/4],
-                            [ (eta - 1)*(eta - 2*xi)/4,  (2*eta - xi)*(xi + 1)/4],
-                            [ (eta + 1)*(eta + 2*xi)/4,  (2*eta + xi)*(xi + 1)/4],
-                            [-(eta + 1)*(eta - 2*xi)/4, -(2*eta - xi)*(xi - 1)/4],
-                            [             xi*(eta - 1),            xi**2/2 - 1/2],
-                            [          -eta**2/2 + 1/2,            -eta*(xi + 1)],
-                            [            -xi*(eta + 1),           -xi**2/2 + 1/2],
-                            [           eta**2/2 - 1/2,             eta*(xi - 1)]])
+                [-(eta - 1)*(eta + 2*xi)/4, -(2*eta + xi)*(xi - 1)/4],
+                [ (eta - 1)*(eta - 2*xi)/4,  (2*eta - xi)*(xi + 1)/4],
+                [ (eta + 1)*(eta + 2*xi)/4,  (2*eta + xi)*(xi + 1)/4],
+                [-(eta + 1)*(eta - 2*xi)/4, -(2*eta - xi)*(xi - 1)/4],
+                [             xi*(eta - 1),            xi**2/2 - 1/2],
+                [          -eta**2/2 + 1/2,            -eta*(xi + 1)],
+                [            -xi*(eta + 1),           -xi**2/2 + 1/2],
+                [           eta**2/2 - 1/2,             eta*(xi - 1)]])
             dX_dxi = X_mat.T.dot(dN_dxi)
             det = dX_dxi[0,0]*dX_dxi[1,1] - dX_dxi[1,0]*dX_dxi[0,1]
             dxi_dX = 1/det*np.array([[ dX_dxi[1,1], -dX_dxi[0,1]],
@@ -641,14 +641,14 @@ class Quad8(Element):
                             [             (-eta**2 + 1)*(-xi + 1)/2]])
 
             dN_dxi = np.array([
-                        [-(eta - 1)*(eta + 2*xi)/4, -(2*eta + xi)*(xi - 1)/4],
-                        [ (eta - 1)*(eta - 2*xi)/4,  (2*eta - xi)*(xi + 1)/4],
-                        [ (eta + 1)*(eta + 2*xi)/4,  (2*eta + xi)*(xi + 1)/4],
-                        [-(eta + 1)*(eta - 2*xi)/4, -(2*eta - xi)*(xi - 1)/4],
-                        [             xi*(eta - 1),            xi**2/2 - 1/2],
-                        [          -eta**2/2 + 1/2,            -eta*(xi + 1)],
-                        [            -xi*(eta + 1),           -xi**2/2 + 1/2],
-                        [           eta**2/2 - 1/2,             eta*(xi - 1)]])
+                [-(eta - 1)*(eta + 2*xi)/4, -(2*eta + xi)*(xi - 1)/4],
+                [ (eta - 1)*(eta - 2*xi)/4,  (2*eta - xi)*(xi + 1)/4],
+                [ (eta + 1)*(eta + 2*xi)/4,  (2*eta + xi)*(xi + 1)/4],
+                [-(eta + 1)*(eta - 2*xi)/4, -(2*eta - xi)*(xi - 1)/4],
+                [             xi*(eta - 1),            xi**2/2 - 1/2],
+                [          -eta**2/2 + 1/2,            -eta*(xi + 1)],
+                [            -xi*(eta + 1),           -xi**2/2 + 1/2],
+                [           eta**2/2 - 1/2,             eta*(xi - 1)]])
             dX_dxi = X_mat.T.dot(dN_dxi)
             det = dX_dxi[0,0]*dX_dxi[1,1] - dX_dxi[1,0]*dX_dxi[0,1]
             self.M_small += N.dot(N.T) * det * rho * t * w
@@ -677,18 +677,18 @@ class Tet4(Element):
              + X4*Y1*Z2 - X4*Y1*Z3 - X4*Y2*Z1 + X4*Y2*Z3 + X4*Y3*Z1 - X4*Y3*Z2
 
         B0_tilde = 1/det*np.array([
-                [-Y2*Z3 + Y2*Z4 + Y3*Z2 - Y3*Z4 - Y4*Z2 + Y4*Z3,
-                  X2*Z3 - X2*Z4 - X3*Z2 + X3*Z4 + X4*Z2 - X4*Z3,
-                 -X2*Y3 + X2*Y4 + X3*Y2 - X3*Y4 - X4*Y2 + X4*Y3],
-                [ Y1*Z3 - Y1*Z4 - Y3*Z1 + Y3*Z4 + Y4*Z1 - Y4*Z3,
-                 -X1*Z3 + X1*Z4 + X3*Z1 - X3*Z4 - X4*Z1 + X4*Z3,
-                  X1*Y3 - X1*Y4 - X3*Y1 + X3*Y4 + X4*Y1 - X4*Y3],
-                [-Y1*Z2 + Y1*Z4 + Y2*Z1 - Y2*Z4 - Y4*Z1 + Y4*Z2,
-                  X1*Z2 - X1*Z4 - X2*Z1 + X2*Z4 + X4*Z1 - X4*Z2,
-                 -X1*Y2 + X1*Y4 + X2*Y1 - X2*Y4 - X4*Y1 + X4*Y2],
-                [ Y1*Z2 - Y1*Z3 - Y2*Z1 + Y2*Z3 + Y3*Z1 - Y3*Z2,
-                 -X1*Z2 + X1*Z3 + X2*Z1 - X2*Z3 - X3*Z1 + X3*Z2,
-                  X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2]]).T
+            [-Y2*Z3 + Y2*Z4 + Y3*Z2 - Y3*Z4 - Y4*Z2 + Y4*Z3,
+              X2*Z3 - X2*Z4 - X3*Z2 + X3*Z4 + X4*Z2 - X4*Z3,
+             -X2*Y3 + X2*Y4 + X3*Y2 - X3*Y4 - X4*Y2 + X4*Y3],
+            [ Y1*Z3 - Y1*Z4 - Y3*Z1 + Y3*Z4 + Y4*Z1 - Y4*Z3,
+             -X1*Z3 + X1*Z4 + X3*Z1 - X3*Z4 - X4*Z1 + X4*Z3,
+              X1*Y3 - X1*Y4 - X3*Y1 + X3*Y4 + X4*Y1 - X4*Y3],
+            [-Y1*Z2 + Y1*Z4 + Y2*Z1 - Y2*Z4 - Y4*Z1 + Y4*Z2,
+              X1*Z2 - X1*Z4 - X2*Z1 + X2*Z4 + X4*Z1 - X4*Z2,
+             -X1*Y2 + X1*Y4 + X2*Y1 - X2*Y4 - X4*Y1 + X4*Y2],
+            [ Y1*Z2 - Y1*Z3 - Y2*Z1 + Y2*Z3 + Y3*Z1 - Y3*Z2,
+             -X1*Z2 + X1*Z3 + X2*Z1 - X2*Z3 - X3*Z1 + X3*Z2,
+              X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2]]).T
 
         H = u_e.T.dot(B0_tilde.T)
         F = H + np.eye(3)
@@ -712,7 +712,9 @@ class Tet4(Element):
               - X2*Y1*Z3 + X2*Y1*Z4 + X2*Y3*Z1 - X2*Y3*Z4 - X2*Y4*Z1 + X2*Y4*Z3 \
               + X3*Y1*Z2 - X3*Y1*Z4 - X3*Y2*Z1 + X3*Y2*Z4 + X3*Y4*Z1 - X3*Y4*Z2 \
               - X4*Y1*Z2 + X4*Y1*Z3 + X4*Y2*Z1 - X4*Y2*Z3 - X4*Y3*Z1 + X4*Y3*Z2
-        det *= -1 # same thing as above - it's not clear yet how the node numbering is done.
+        
+        # same thing as above - it's not clear yet how the node numbering is done.        
+        det *= -1 
         self.V = det/6
         self.M = self.V / 20 * rho * np.array([
             [ 2.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.],
@@ -931,7 +933,7 @@ class Bar2Dlumped(Element):
 
 
     def _compute_tensors(self, X, u, t):
-        self._k_and_m_int(X, u)
+        self._k_and_m_int(X, u, t)
         pass
         
     def _k_and_m_int(self, X, u, t):
@@ -1117,8 +1119,8 @@ class Tri6Boundary(BoundaryElement):
                                     0, 0, 1/3, 0, 0, 1/3, 0, 0, 1/3])})
 
     gauss_points = ((1/6, 1/6, 2/3, 1/3),
-                     (1/6, 2/3, 1/6, 1/3),
-                     (2/3, 1/6, 1/6, 1/3))
+                    (1/6, 2/3, 1/6, 1/3),
+                    (2/3, 1/6, 1/6, 1/3))
 
 
     def __init__(self, val, direct, time_func=None, full_integration=False):
@@ -1237,16 +1239,24 @@ class LineQuadraticBoundary(BoundaryElement):
 #%%
 if use_fortran:
     def compute_tri3_tensors(self, X, u, t):
-        self.K, self.f = amfe.f90_element.tri3_k_and_f(X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
+        '''Wrapping funktion for fortran function call.'''
+        self.K, self.f = amfe.f90_element.tri3_k_and_f(\
+            X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
 
     def compute_tri6_tensors(self, X, u, t):
-        self.K, self.f = amfe.f90_element.tri6_k_and_f(X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
+        '''Wrapping funktion for fortran function call.'''
+        self.K, self.f = amfe.f90_element.tri6_k_and_f(\
+            X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
 
     def compute_tet4_tensors(self, X, u, t):
-        self.K, self.f = amfe.f90_element.tet4_k_and_f(X, u, self.material.S_Sv_and_C)
+        '''Wrapping funktion for fortran function call.'''
+        self.K, self.f = amfe.f90_element.tet4_k_and_f( \
+            X, u, self.material.S_Sv_and_C)
 
     def compute_tri6_mass(self, X, u, t):
-        self.M = amfe.f90_element.tri6_m(X, self.material.rho, self.material.thickness)
+        '''Wrapping funktion for fortran function call.'''
+        self.M = amfe.f90_element.tri6_m(\
+            X, self.material.rho, self.material.thickness)
         return self.M
 
     # overloading the routines with fortran routines

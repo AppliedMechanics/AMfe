@@ -1,18 +1,24 @@
 # Files to ignore
-#
+
+# Python specific files
+.spyderworkspace
 *.pyc
 *.so
 *.o
-
 *.vtu
 *.pvd
-docs/
 *~
 
-amfe.egg-info/
-experiments/paper_icoev
 
 # saved numpy-arrays
 *.npy
 *.pdf
 *.dat
+
+
+
+# Folders to ignore
+docs/
+results/
+amfe.egg-info/
+experiments/paper_icoev
