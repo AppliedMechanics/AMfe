@@ -12,7 +12,7 @@ use_fortran = False
 try:
     import amfe.f90_material as f90_material
     use_fortran = True
-except:
+except Exception:
     print('''
 Python was not able to load the fast fortran material routines.
 run the script 
@@ -25,7 +25,9 @@ in order to get the full speed!
 #use_fortran = False
 
 class HyperelasticMaterial():
-    
+    '''
+    Base class for hyperelastic material. 
+    '''
     def __init__(self):
         pass
     
@@ -537,7 +539,8 @@ if use_fortran:
         return f90_material.kirchhoff_s_sv_and_c(E, self.E_modulus, self.nu)
 
     def kirchhoff_S_Sv_and_C_2d(self, E):
-        return f90_material.kirchhoff_s_sv_and_c_2d(E, self.E_modulus, self.nu, self.plane_stress)
+        return f90_material.kirchhoff_s_sv_and_c_2d(E, self.E_modulus, self.nu,
+                                                    self.plane_stress)
         
     def mooney_rivlin_S_Sv_and_C(self, E):
         return f90_material.mooney_rivlin_s_sv_and_c(E, self.A10, self.A01, self.kappa)

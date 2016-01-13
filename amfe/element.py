@@ -24,7 +24,7 @@ use_fortran = False
 try:
     import amfe.f90_element
     use_fortran = True
-except:
+except Exception:
     print('''
 Python was not able to load the fast fortran element routines.
 run the script
@@ -130,12 +130,12 @@ if use_fortran:
 
 class Element():
     '''
-    this is the baseclass for all elements. It contains the methods needed
-    for the computation of the element stuff...
+    Anonymous baseclass for all elements. It contains the methods needed
+    for the computation of the element stuff. 
 
     Attributes
     ----------
-    material : Material-Class
+    material : instance of amfe.HyperelasticMaterial
         Class containing the material behavior.
     '''
 
@@ -144,9 +144,11 @@ class Element():
         Parameters
         ----------
         material : amfe.HyperelasticMaterial - object
-            Object describing the material
+            Object handling the material
         '''
         self.material = material
+        self.K = None
+        self.f = None
 
     def _compute_tensors(self, X, u, t):
         '''
@@ -176,6 +178,8 @@ class Element():
             of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
         u : ndarray
             nodal displacements given in Voigt notation
+        t : float
+            time
 
         Returns
         -------
@@ -198,15 +202,18 @@ class Element():
 
         Parameters
         ----------
-        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
-                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
-
-        u :         nodal displacements given in Voigt notation
+        X : ndarray
+            nodal coordinates given in Voigt notation (i.e. a 1-D-Array of 
+            type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+        u : ndarray
+            nodal displacements given in Voigt notation
+        t : float
+            time
 
         Returns
         -------
-        k_int :     The tangential stiffness matrix (numpy.ndarray of
-                    type ndim x ndim)
+        k_int : ndarray
+            The tangential stiffness matrix (numpy.ndarray of type ndim x ndim)
 
         '''
         self._compute_tensors(X, u, t)
@@ -214,18 +221,22 @@ class Element():
 
     def f_int(self, X, u, t=0):
         '''
-        Returns the tangential stiffness matrix of the Element.
+        Tangential stiffness matrix of the Element.
 
         Parameters
         ----------
-        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
-                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
-
-        u :         nodal displacements given in Voigt notation
+        X : ndarray
+            nodal coordinates given in Voigt notation (i.e. a 1-D-Array of 
+            type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+        u : ndarray
+            nodal displacements given in Voigt notation
+        t : float, optional
+            time, default value: 0.
 
         Returns
         -------
-        f_int :     The nodal force vector (numpy.ndarray of dimension (ndim,))
+        f_int : ndarray
+            The nodal force vector (numpy.ndarray of dimension (ndim,))
 
         '''
         self._compute_tensors(X, u, t)
@@ -233,24 +244,51 @@ class Element():
 
     def m_and_vec_int(self, X, u, t=0):
         '''
-        Returns the tangential stiffness matrix of the Element.
+        Tangential stiffness matrix of the Element and zero vector.
 
+        
         Parameters
-        -----------
-        X :         nodal coordinates given in Voigt notation (i.e. a 1-D-Array
-                    of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
-
-        u :         nodal displacements given in Voigt notation
+        ----------
+        X : ndarray
+            nodal coordinates given in Voigt notation (i.e. a 1-D-Array of 
+            type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+        u : ndarray
+            nodal displacements given in Voigt notation
+        t : float, optional
+            time, default value: 0.
 
         Returns
-        --------
-        m_int :     The consistent mass matrix of the element
-                    (numpy.ndarray of dimension (ndim,ndim))
+        -------
+        m_int : ndarray
+            The consistent mass matrix of the element (numpy.ndarray of
+            dimension (ndim,ndim))
+        vec : ndarray
+            vector (containing zeros) of dimension (ndim,)
 
         '''
         return self._m_int(X, u, t), np.zeros_like(X)
 
     def m_int(self, X, u, t=0):
+        '''
+        Returns the mass matrix of the element. 
+        
+        Parameters
+        ----------
+        X : ndarray
+            nodal coordinates given in Voigt notation (i.e. a 1-D-Array of 
+            type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+        u : ndarray
+            nodal displacements given in Voigt notation
+        t : float, optional
+            time, default value: 0.
+
+        Returns
+        -------
+        m_int : ndarray
+            The consistent mass matrix of the element (numpy.ndarray of
+            dimension (ndim,ndim))   
+
+        '''
         return self._m_int(X, u, t)
 
 
@@ -299,7 +337,8 @@ class Tri3(Element):
             E:          Der Green-Lagrange strain tensor (2x2-Matrix)
             S:          2. Piola-Kirchhoff stress tensor, using Kirchhoff material (2x2-Matrix)
 
-        The thickness information is used later for the internal forces, the mass and the stiffness matrix.
+        The thickness information is used later for the internal forces, the 
+        mass and the stiffness matrix.
         '''
         t = self.material.thickness
         X1, Y1, X2, Y2, X3, Y3 = X
@@ -331,6 +370,8 @@ class Tri3(Element):
             using voigt notation X = (X1, Y1, X2, Y2, X3, Y3)
         u : ndarray
             Displacement of the element using same voigt notation as for X
+        t : float
+            Time
 
         Returns
         -------
@@ -354,14 +395,12 @@ class Tri3(Element):
 class Tri6(Element):
     '''
     6 node second order triangle
-    Triangle Element with 6 dofs; 3 dofs at the corner, 3 dofs in the intermediate point of every face.
+    Triangle Element with 6 dofs; 3 dofs at the corner, 3 dofs in the 
+    intermediate point of every face.
     '''
     plane_stress = True
 
     def __init__(self, *args, **kwargs):
-        '''
-        Definition der Materialgrößen und Dicke, da es sich um 2D-Elemente handelt
-        '''
         super().__init__(*args, **kwargs)
 
         self.M_small = np.zeros((6,6))
@@ -582,7 +621,7 @@ class Quad8(Element):
                              ( g2, -g2, w2), ( g2, g2, w2))
 
     def _compute_tensors(self, X, u, t):
-        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
+#        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
         X_mat = X.reshape(-1, 2)
         u_e = u.reshape(-1, 2)
         t = self.material.thickness
@@ -938,7 +977,7 @@ class Bar2Dlumped(Element):
 
     def _k_and_m_int(self, X, u, t):
 
-        X1, Y1, X2, Y2 = X
+#        X1, Y1, X2, Y2 = X
         X_mat = X.reshape(-1, 2)
         l = np.linalg.norm(X_mat[1,:]-X_mat[0,:])
 
@@ -990,6 +1029,8 @@ class BoundaryElement(Element):
         to the nodes of the element.
 
     '''
+    B0_dict = {}
+    
     def __init__(self, val, direct, ndof, time_func=None):
         '''
         Parameters
@@ -1201,7 +1242,6 @@ class LineLinearBoundary(BoundaryElement):
         v = x_vec[:,1] - x_vec[:,0]
         n = self.rot_mat.dot(v)
         self.f = - self.f_func(n) * self.val * self.time_func(t)
-        pass
 
 class LineQuadraticBoundary(BoundaryElement):
     '''
