@@ -754,8 +754,8 @@ class Tet4(Element):
 
         # same thing as above - it's not clear yet how the node numbering is done.
         det *= -1
-        self.V = det/6
-        self.M = self.V / 20 * rho * np.array([
+        V = det/6
+        self.M = V / 20 * rho * np.array([
             [ 2.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.],
             [ 0.,  2.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.,  0.],
             [ 0.,  0.,  2.,  0.,  0.,  1.,  0.,  0.,  1.,  0.,  0.,  1.],
@@ -1178,43 +1178,43 @@ class Tri6Boundary(BoundaryElement):
         n = np.cross(v1, v2)/2
         self.f = -self.f_func(n) * self.val * self.time_func(t)
 
-    def _compute_tensors_full(self, X, u, t):
-        '''
-        Compute the full pressure contribution by doing gauss integration.
-        TODO: Attention! This function does not work!!!
-
-        '''
-        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
-        N = np.zeros(6)
-        # gauss point evaluation of full pressure field
-        for L1, L2, L3, w in self.gauss_points:
-            # the entries in the jacobian dX_dL
-            Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
-            Jx2 = 4*L1*X4 + 4*L3*X5 + X2*(4*L2 - 1)
-            Jx3 = 4*L1*X6 + 4*L2*X5 + X3*(4*L3 - 1)
-            Jy1 = 4*L2*Y4 + 4*L3*Y6 + Y1*(4*L1 - 1)
-            Jy2 = 4*L1*Y4 + 4*L3*Y5 + Y2*(4*L2 - 1)
-            Jy3 = 4*L1*Y6 + 4*L2*Y5 + Y3*(4*L3 - 1)
-
-            det = Jx1*Jy2 - Jx1*Jy3 - Jx2*Jy1 + Jx2*Jy3 + Jx3*Jy1 - Jx3*Jy2
-            A = det/2
-
-            N_w = np.array([L1*(2*L1 - 1), L2*(2*L2 - 1), L3*(2*L3 - 1),
-                          4*L1*L2, 4*L2*L3, 4*L1*L3])
-            N += N_w * A
-
-        x_vec = (X+u).reshape((-1, 3)).T
-        v1 = x_vec[:,2] - x_vec[:,0]
-        v2 = x_vec[:,1] - x_vec[:,0]
-        n = np.cross(v1, v2)/2
-        # normalize:
-        n /= np.sqrt(n @ n)
-        f = self.f_func(n) * self.val * self.time_func(t)
-        # correct the contributions of the standard B-matrix with the one
-        # computed with gauss integration
-        B_corr = 3 * np.array([(i, i, i) for i in N]).flatten()
-        self.f = -B_corr*f
-
+#    def _compute_tensors_full(self, X, u, t):
+#        '''
+#        Compute the full pressure contribution by doing gauss integration.
+#        TODO: Attention! This function does not work!!!
+#
+#        '''
+#        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
+#        N = np.zeros(6)
+#        # gauss point evaluation of full pressure field
+#        for L1, L2, L3, w in self.gauss_points:
+#            # the entries in the jacobian dX_dL
+#            Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
+#            Jx2 = 4*L1*X4 + 4*L3*X5 + X2*(4*L2 - 1)
+#            Jx3 = 4*L1*X6 + 4*L2*X5 + X3*(4*L3 - 1)
+#            Jy1 = 4*L2*Y4 + 4*L3*Y6 + Y1*(4*L1 - 1)
+#            Jy2 = 4*L1*Y4 + 4*L3*Y5 + Y2*(4*L2 - 1)
+#            Jy3 = 4*L1*Y6 + 4*L2*Y5 + Y3*(4*L3 - 1)
+#
+#            det = Jx1*Jy2 - Jx1*Jy3 - Jx2*Jy1 + Jx2*Jy3 + Jx3*Jy1 - Jx3*Jy2
+#            A = det/2
+#
+#            N_w = np.array([L1*(2*L1 - 1), L2*(2*L2 - 1), L3*(2*L3 - 1),
+#                            4*L1*L2, 4*L2*L3, 4*L1*L3])
+#            N += N_w * A * w
+#
+#        x_vec = (X+u).reshape((-1, 3)).T
+#        v1 = x_vec[:,2] - x_vec[:,0]
+#        v2 = x_vec[:,1] - x_vec[:,0]
+#        n = np.cross(v1, v2)/2
+#        # normalize:
+#        n /= np.sqrt(n @ n)
+#        f = self.f_func(n) * self.val * self.time_func(t)
+#        # correct the contributions of the standard B-matrix with the one
+#        # computed with gauss integration
+#        B_corr = 3 * np.array([(i, i, i) for i in N]).flatten()
+#        self.f = -B_corr*f
+#
 
 
 class LineLinearBoundary(BoundaryElement):
