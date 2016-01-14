@@ -43,7 +43,7 @@ Further documentation to this code is in the folder `docs/`. For building the do
 
     python setup.py build_sphinx
 
-The documentation will be built in the folder `docs/`
+The documentation will be built in the folder `docs/` available as html in `build`. 
 
 3. Fortran-Routines
 -------------------
@@ -56,8 +56,8 @@ In order to use the fast Fortran routines, which are used within the assembly pr
 ### Sphinx:
 
 `sphinx` has to be installed for `python3`. Maybe, `sphinx` was automatically installed for `python2`.
-Using `python3`, one can test which `sphinx`-version is installed:
 ```python
+Using `python3`, one can test which `sphinx`-version is installed:
 python3
 >>> import sphinx
 >>> sphinx.__version__
