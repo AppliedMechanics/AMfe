@@ -1,54 +1,55 @@
 AMfe - Finite Element Research Code at the Chair of Applied Mechanics
 ---------------------------------------------------------------------
-
 (c) 2016 Lehrstuhl für Angewandte Mechanik, Technische Universität München
 
-This Finite Element Research code is developed, maintained and used by a part of the numerics group of AM. 
+
+This Finite Element Research code is developed, maintained and used by a part of the numerics group of AM.
 
 
-Overview: 
+Overview:
 ----------
-1.  [Documentation](#1-documentation)
-2.  [Fortran-Routines](#2-fortran-routines)
-3.  [Hints](#3-hints)
+1.  [Installation](#1-installation)
+2.  [Documentation](#2-documentation)
+3.  [Fortran-Routines](#3-fortran-routines)
+4.  [Hints](#4-hints)
 
 
-1. Documentation
-----------------
-Further documentation to this code is in the folder `docs/`.
-For building the documentation, the following software packages have to be installed:
+1. Installation
+--------------
+
+Before installing the AMfe package, check, if the latest python version and all necessary modules are installed. For managing the python packages, the distribution *Anaconda* is highly recommended. It has a very easy and effective packaging system and can thus handle all Python sources needed for this project. For installation and usage of Anaconda checkout http://docs.continuum.io/anaconda/install#anaconda-install.
 
    - Python version 3.5 or higher
-   - Python package sphinx 1.3 oder higher (potentially has to be installed using pip3). Version 1.2 does not work!
-   - Python-package numpydoc
+   - `numpy`, `scipy` and `pandas`
+   - for fast fortran execution a running fortran compiler (e.g. gcc)
+   - for building the documentation `sphinx` and `numpydoc`
+   - for checking the code: `pylint`
 
-This documentation can be built with entering 
-```bash
-make html
-```
-to the console in folder `docs/`.
-   
+For installing the package type
 
-2. Fortran-Routines
+    python setup.py develop
+
+in the main folder. This should build the fortran routines and install the python module in-place, i.e. when you do changes to the source code they will be used the next time the module is loaded.
+
+2. Documentation
+----------------
+Further documentation to this code is in the folder `docs/`. For building the documentation, type
+
+    python setup.py build_sphinx
+
+The documentation will be built in the folder `docs/`
+
+3. Fortran-Routines
 -------------------
-In order to use the fast Fortran routines, which are used within the assembly process,
-the script `install_fortran_routines.sh` in folder `f2py/` has to be executed.
-A working Fortan compiler (e.g. `gfortran`, `gfortran-4.8`) has to be installed. 
-The script `install_fortran_routines.sh` has to be compiled again if another 
-python version is used, e.g. after a upgrade from Python 3.4 to Python 3.5.
+In order to use the fast Fortran routines, which are used within the assembly process, a working Fortan compiler (e.g. `gfortran`, `gfortran-4.8`) has to be installed.
 
-   
-3. Hints
+
+4. Hints
 -----------
-
-### Anaconda:
-
-See installation details for anaconda on http://docs.continuum.io/anaconda/install#anaconda-install .
-
 
 ### Sphinx:
 
-`sphinx` has to be installed for `pyhton3`. Maybe, `sphinx` was automatically intalled for `python2`. 
+`sphinx` has to be installed for `python3`. Maybe, `sphinx` was automatically installed for `python2`.
 Using `python3`, one can test which `sphinx`-version is installed:
 ```python
 python3
