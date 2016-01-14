@@ -7,6 +7,7 @@ stages:
     - unittest
     - doctest
     - modeltest
+    - linttest
 
 build_code:
     stage: build
@@ -40,4 +41,4 @@ language_quality_test:
     stage: linttest
     script:
         - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
-        - pylint amfe || exit 0 # pylint always exits with nonzero... 
+        - pylint amfe || exit 0 # pylint always exits with nonzero...
