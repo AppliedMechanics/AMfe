@@ -110,7 +110,7 @@ class MaterialTest3D(ElementTest):
         A10, A01, kappa, rho = sp.rand(4)
         my_material = material.MooneyRivlin(A10, A01, kappa, rho)
         self.my_element.material = my_material
-        self.jacobi_test_element(rtol=5E-3)
+        self.jacobi_test_element(rtol=1E-2)
 
     def test_Neo(self):
         mu, kappa, rho = sp.rand(3)
@@ -118,7 +118,7 @@ class MaterialTest3D(ElementTest):
         kappa *= 100
         my_material = material.NeoHookean(mu, kappa, rho)
         self.my_element.material = my_material
-        self.jacobi_test_element(rtol=5E-3)
+        self.jacobi_test_element(rtol=1E-2)
 
 class MaterialTest2D(ElementTest):
     '''

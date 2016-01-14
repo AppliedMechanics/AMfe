@@ -3,7 +3,7 @@ How to run the AMfe Code
 
 You need the following stuff installed:
 
-- `Python 3.4 <http://www.python.org>`_ or higher
+- `Python 3.5 <http://www.python.org>`_ or higher
 - `numpy, scipy <http://www.scipy.org>`_ and pandas
 - `ParaView <http://www.paraview.org>`_ for Postprocessing
 - `gmsh <http://geuz.org/gmsh/>`_ for Preprocessing
@@ -35,12 +35,12 @@ to install the package with the ability to do changes in the source code right a
 
 Getting into the code
 """""""""""""""""""""
-For getting started and familiar with the code, we recommend to start with the examples. They show some cases that are working and are not too complicated. 
+For getting started and familiar with the code, we recommend to start with the examples. They show some cases that are working and are not too complicated.
 
 
 General Notes on the amfe finite element code
 =============================================
-The amfe finite element toolbox has the goal to provide a fast to develop, simple and out of the box usable finite element library for use in research. Therefore the focus is on flexibility to adapt the code to new problems and to easily implement a new method and not on runtime performance. Nonetheless, some time critical methods are implemented in FORTRAN using :code:`f2py`. 
+The amfe finite element toolbox has the goal to provide a fast to develop, simple and out of the box usable finite element library for use in research. Therefore the focus is on flexibility to adapt the code to new problems and to easily implement a new method and not on runtime performance. Nonetheless, some time critical methods are implemented in FORTRAN using :code:`f2py`.
 
 
 Indexing:
@@ -77,7 +77,7 @@ How to show the sparsity pattern of a sparse matrix :code:`A_csr`:
 
 >>> plt.spy(A_csr, marker=',')
 
-You can use different markers, as :code:`','` are pixels and very small, they make sense when large matrices are involved. However, for small matrices, :code:`'.'` gives a good picture. 
+You can use different markers, as :code:`','` are pixels and very small, they make sense when large matrices are involved. However, for small matrices, :code:`'.'` gives a good picture.
 
 Plot on log scales:
 
@@ -96,12 +96,12 @@ Check out more on http://matplotlib.org/examples/color/colormaps_reference.html
 FORTRAN
 =======
 
-It seems that FORTRAN is a very good companion to Python in order to speed the time critical things up. It is possible to write functions in fortran that are executed at lightspeed, especially when loops or matrix-vector-multiplications are heavily involved. 
+It seems that FORTRAN is a very good companion to Python in order to speed the time critical things up. It is possible to write functions in fortran that are executed at lightspeed, especially when loops or matrix-vector-multiplications are heavily involved.
 
-As wrapper the tool `f2py` can be used. It is included in numpy and gives the full support for numpy-arrays. 
+As wrapper the tool `f2py` can be used. It is included in numpy and gives the full support for numpy-arrays.
 
 
 gmsh
 ====
 
-Some information on gmsh would be cool here; how to use it in an efficient way... 
+Some information on gmsh would be cool here; how to use it in an efficient way...

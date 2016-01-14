@@ -2,4 +2,4 @@
 make html
 
 # building class diagram
-pyreverse -o pdf -p AMfe ../amfe
+cd .. && pyreverse -o pdf -p AMfe amfe
