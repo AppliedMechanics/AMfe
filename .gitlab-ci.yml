@@ -7,6 +7,7 @@ stages:
     - unittest
     - doctest
     - modeltest
+    - linttest
 
 build_code:
     stage: build
@@ -34,3 +35,8 @@ documentation_test:
     script:
         - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
         - python setup.py build_sphinx
+
+language_quality_test:
+    stage: linttest
+    script:
+        - pylint amfe
