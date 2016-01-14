@@ -3,6 +3,7 @@
 """
 
 try:
+    from setuptools import setup
     from numpy.distutils.core import Extension, setup
 except ImportError:
     from distutils.core import setup
