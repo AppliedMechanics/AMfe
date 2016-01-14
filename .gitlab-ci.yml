@@ -5,7 +5,9 @@
 stages:
     - build
     - unittest
+    - doctest
     - modeltest
+    - linttest
 
 build_code:
     stage: build
@@ -28,6 +30,15 @@ physical_test:
         - python run_mechanical_system.py
         - python run_mesh.py
 
+documentation_test:
+    stage: doctest
+    script:
+        - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+        - python setup.py build_sphinx
 
 
-# option: only: --> reduce tests or builds to certain branches
+language_quality_test:
+    stage: linttest
+    script:
+        - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+        - pylint amfe || exit 0 # pylint always exits with nonzero...
