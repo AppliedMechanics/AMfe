@@ -9,13 +9,10 @@
 *.pvd
 *~
 
-
 # saved numpy-arrays
 *.npy
 *.pdf
 *.dat
-
-
 
 # Folders to ignore
 docs/
@@ -23,3 +20,6 @@ results/
 build/
 amfe.egg-info/
 experiments/paper_icoev
+
+# specific files to ignore
+amfe/fortran/f90_elementmodule.c

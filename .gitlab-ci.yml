@@ -5,6 +5,7 @@
 stages:
     - build
     - unittest
+    - doctest
     - modeltest
 
 build_code:
@@ -28,6 +29,8 @@ physical_test:
         - python run_mechanical_system.py
         - python run_mesh.py
 
-
-
-# option: only: --> reduce tests or builds to certain branches
+documentation_test:
+    stage: doctest
+    script:
+        - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+        - python setup.py build_sphinx
