@@ -9,17 +9,19 @@ Created on Tue Apr 21 11:13:52 2015
 @author: Johannes Rutzmoser
 """
 
+import time
+
 import numpy as np
 import scipy as sp
+
 from scipy import sparse
 from scipy import linalg
-import time
 
 use_fortran = False
 try:
     import amfe.f90_assembly
     use_fortran = True
-except:
+except Exception:
     print('''
 Python was not able to load the fast fortran assembly routines.
 run the script 
@@ -116,7 +118,8 @@ def compute_csr_assembly_indices(global_element_indices, indptr, indices):
 
     '''
     no_of_elements, dofs_per_element = global_element_indices.shape
-    matrix_assembly_indices = np.zeros((no_of_elements, dofs_per_element, dofs_per_element))
+    matrix_assembly_indices = np.zeros((no_of_elements, dofs_per_element, 
+                                        dofs_per_element))
     for i in range(no_of_elements):
         for j in range(dofs_per_element):
             for k in range(dofs_per_element):
@@ -249,8 +252,9 @@ class Assembly():
         no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
 
         self.element_indices = \
-        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i) for i in nodes], 
-                   dtype=int).reshape(-1) for nodes in ele_nodes]
+        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i) 
+                   for i in nodes], dtype=int).reshape(-1) 
+         for nodes in ele_nodes]
         
 
     
@@ -382,7 +386,7 @@ class Assembly():
             '''
             return self.mesh.ele_obj[i].m_and_vec_int(X, u, t)
             
-        if u == None:
+        if u is None:
             u = np.zeros_like(self.nodes_voigt)
         M, _ = self.assemble_matrix_and_vector(u, m_and_vec_func, t) 
         return M

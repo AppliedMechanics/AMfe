@@ -6,10 +6,10 @@ Created on Mon Jun  8 17:06:59 2015
 @author: johannesr
 """
 
+import copy
 import numpy as np
 import scipy as sp
 from scipy import linalg
-import copy
 
 from amfe.mechanical_system import ReducedSystem
 
@@ -321,7 +321,7 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
         b_new = linalg.lu_solve(lu, f)
         b_new /= linalg.norm(b_new)
         V[:,i*no_of_inputs:(i+1)*no_of_inputs] = b_new.reshape((-1, no_of_inputs))
-        V[:,:(i+1)*no_of_inputs], r = linalg.qr(V[:,:(i+1)*no_of_inputs], mode='economic')
+        V[:,:(i+1)*no_of_inputs], R = linalg.qr(V[:,:(i+1)*no_of_inputs], mode='economic')
         b_new = V[:,i*no_of_inputs:(i+1)*no_of_inputs]
     sigmas = linalg.svdvals(V)
     print('Krylov Basis constructed. The singular values of the basis are', sigmas)
@@ -454,8 +454,8 @@ def vibration_modes(mechanical_system, n=10, save=False):
     omega = np.sqrt(lambda_)
 
     if save:
-        for i in range(len(omega)):
-            mechanical_system.write_timestep(omega[i], V[:, i])
+        for i, om in enumerate(omega):
+            mechanical_system.write_timestep(om, V[:, i])
     
     return omega, V
 

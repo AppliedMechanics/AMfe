@@ -13,9 +13,10 @@ my_system = amfe.MechanicalSystem(E_modul=1000.0, poisson_ratio=0.15,
                                   element_thickness=1.0, density=1.0)
 """
 
+import time
+
 import numpy as np
 import scipy as sp
-import time
 
 from amfe.mesh import Mesh
 from amfe.assembly import Assembly
@@ -62,6 +63,9 @@ class MechanicalSystem():
         self.unconstrain_vec = self.dirichlet_class.unconstrain_vec
         self.constrain_vec = self.dirichlet_class.constrain_vec
         self.constrain_matrix = self.dirichlet_class.constrain_matrix
+        
+        # initializations to be overwritten by loading functions
+        self.no_of_dofs_per_node = None
 
 
     def load_mesh_from_gmsh(self, msh_file, phys_group, material):
@@ -84,8 +88,6 @@ class MechanicalSystem():
         '''
         self.mesh_class.import_msh(msh_file)
         self.mesh_class.load_group_to_mesh(phys_group, material)
-        
-        self.no_of_dofs = self.mesh_class.no_of_dofs
         self.no_of_dofs_per_node = self.mesh_class.no_of_dofs_per_node
         
         self.assembly_class.preallocate_csr()
@@ -125,19 +127,10 @@ class MechanicalSystem():
 
         '''
         self.mesh_class.import_csv(node_list_csv, element_list_csv, 
-                    explicit_node_numbering=explicit_node_numbering, ele_type=ele_type)
-        
-        self.no_of_dofs = self.mesh_class.no_of_dofs
+                                   explicit_node_numbering=explicit_node_numbering,
+                                   ele_type=ele_type)
         self.no_of_dofs_per_node = no_of_dofs_per_node
-        
         self.assembly_class.preallocate_csr()
-
-        # Initialize self.b_constraints here,
-        # It does not make sence to call apply_dirichlet_boundaries() if the 
-        # mechanical system has no dirichlet boundaries but self.b_constraints
-        # has to be initialized since an error will occur later if 
-        # self.b_constraints does not exist 
-        self.b_constraints = sp.sparse.eye(self.no_of_dofs).tocsr()
 
 
     def apply_dirichlet_boundaries(self, key, coord, mesh_prop='phys_group'):
@@ -162,7 +155,6 @@ class MechanicalSystem():
         '''
         self.mesh_class.select_dirichlet_bc(key, coord, mesh_prop)
         self.dirichlet_class.constrain_dofs(self.mesh_class.dofs_dirichlet)
-#         self.no_of_dofs_constrained = self.b_constraints.shape[-1]
 
     def apply_neumann_boundaries(self, key, val, direct, time_func=None, 
                                  mesh_prop='phys_group'):
@@ -314,6 +306,8 @@ class MechanicalSystem():
         ----------
         u : ndarray, optional
             Displacement field in voigt notation
+        t : float, optional
+            Time
         
         Returns
         -------
@@ -387,11 +381,6 @@ class ReducedSystem(MechanicalSystem):
     Provides the interface for an integration scheme and so on where a basis 
     vector is to be chosen...
 
-    Parameters
-    ----------
-    V_basis : ndarray, optional
-        Basis onto which the problem will be projected with an Galerkin-Projection.
-
     Notes
     -----
     The Basis V is a Matrix with x = V*q mapping the reduced set of coordinates 
@@ -409,11 +398,24 @@ class ReducedSystem(MechanicalSystem):
     '''
 
     def __init__(self, V_basis=None, **kwargs):
+        '''
+        Parameters
+        ----------
+        V_basis : ndarray, optional
+            Basis onto which the problem will be projected with an 
+            Galerkin-Projection.
+        **kwargs : dict, optional
+            Keyword arguments to be passed to the mother class MechanicalSystem. 
+
+        Returns
+        -------
+        None
+        '''
         MechanicalSystem.__init__(self, **kwargs)
         self.V = V_basis
 
     def K_and_f(self, u=None, t=0):
-        if u == None:
+        if u is None:
             u = np.zeros(self.V.shape[1])        
         V = self.V
         u_full = V.dot(u)
@@ -423,7 +425,7 @@ class ReducedSystem(MechanicalSystem):
         return K, f_int
 
     def K(self, u=None, t=0):
-        if u == None:
+        if u is None:
             u = np.zeros(self.V.shape[1])
         return self.V.T.dot(MechanicalSystem.K(self, self.V.dot(u), t).dot(self.V))
 
@@ -484,7 +486,7 @@ class ReducedSystem(MechanicalSystem):
         return MechanicalSystem.M(self)
 
 
-
+#pylint: disable=unused-argument
 class ConstrainedMechanicalSystem():
     '''
     Mechanical System with constraints providing the interface for solvers.

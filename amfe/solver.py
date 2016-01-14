@@ -12,22 +12,25 @@ from scipy import sparse
 from scipy.sparse import linalg
 
 def norm_of_vector(array):
+    '''
+    Compute the (2-)norm of a vector.
+    
+    Parameters
+    ----------
+    array : ndarray
+        one dimensional array
+        
+    Returns
+    -------
+    abs : float
+        2-norm of the given array. 
+    '''
     return np.sqrt(array.T.dot(array))
 
 class NewmarkIntegrator():
     '''
     Newmark-integration scheme using generalized alpha routine for nonlinear 
     second order systems
-
-    Parameters
-    -----------
-    alpha : float, optional
-        damping factor of the generalized alpha routine for numerical damping
-    vebose : bool, optional
-        flag for making the integration process verbose, i.e. printing the 
-        residual for every correction in the newton iteration
-    n_iter_max : int, optional
-        number of maximum iteration in the newton correction process
 
     Notes
     ------
@@ -51,6 +54,22 @@ class NewmarkIntegrator():
     '''
 
     def __init__(self, alpha=0, verbose=False, n_iter_max=40):
+        '''
+        Parameters
+        -----------
+        alpha : float, optional
+            damping factor of the generalized alpha routine for numerical damping
+        verbose : bool, optional
+            flag for making the integration process verbose, i.e. printing the 
+            residual for every correction in the newton iteration
+        n_iter_max : int, optional
+            number of maximum iteration in the newton correction process
+
+        Returns
+        -------
+        None
+        
+        '''
         self.beta = 1/4*(1 + alpha)**2
         self.gamma = 1/2 + alpha
         self.delta_t = 1E-3
@@ -60,6 +79,12 @@ class NewmarkIntegrator():
         self.mechanical_system = None
         self.verbose = verbose
         self.n_iter_max = n_iter_max
+        
+        # variables to be overloaded in the setting functions
+        self.K_and_f_non = None
+        self.f_non = None
+        self.M = None
+        self.f_ext = None
 
     def set_nonlinear_model(self, f_non, K, M, f_ext=None):
         '''
@@ -98,6 +123,9 @@ class NewmarkIntegrator():
         # matrix and force in one step; Basic intention is to make assembly 
         # process only once.
         def K_and_f_non(q, t):
+            '''
+            Decorating function for wrapping K() and f() in one function. 
+            '''
             return K(q, t), f_non(q, t)
         self.K_and_f_non = K_and_f_non
         self.f_non = f_non
@@ -242,7 +270,6 @@ class NewmarkIntegrator():
                     dq = dq_old.copy()
                     no_newton_convergence_flag = True
                     break
-                pass
 
             print('Zeit:', t, 'Anzahl an Iterationen:', n_iter, 'Residuum:', res_abs)
             # Writing if necessary:
@@ -254,7 +281,8 @@ class NewmarkIntegrator():
                     q_global.append(q.copy())
                     dq_global.append(dq.copy())
                 write_flag = False
-            pass # end of time loop
+                
+        # end of time loop
 
         return np.array(q_global), np.array(dq_global)
 
@@ -263,31 +291,33 @@ class NewmarkIntegrator():
 def solve_linear_displacement(mechanical_system, t=1, verbose=True):
     '''
     Solve the linear static problem of the mechanical system and print
-    the results directly to the mechanical system
+    the results directly to the mechanical system. 
 
     Parameters
     ----------
-    mechanical_system :   Instance of the class MechanicalSystem
-
+    mechanical_system : Instance of the class MechanicalSystem
+        Mechanical system to be solved. 
     t : float
-        time for the external force call in MechanicalSystem
-
+        time for the external force call in MechanicalSystem.
+    verbose : bool
+        Flag for verbose output. 
+        
     Returns
     -------
     None
 
     '''
-    if verbose: print('Assembling force and stiffness')
+    if verbose: 
+        print('Assembling force and stiffness')
     K, f_int = mechanical_system.K_and_f(t=t)
     f_ext = mechanical_system.f_ext(None, None, t)
     mechanical_system.write_timestep(0, f_ext*0) # write zeros
-
-    if verbose: print('Start solving linear static problem')
-
+    if verbose: 
+        print('Start solving linear static problem')
     u = linalg.spsolve(K, f_ext - f_int)
     mechanical_system.write_timestep(1, u)
-
-    if verbose: print('Static problem solved')
+    if verbose: 
+        print('Static problem solved')
 
 
 def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
@@ -304,7 +334,8 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     mechanical_system : MechanicalSystem
         Instance of the class MechanicalSystem
     no_of_load_steps : int
-        Number of equally spaced load steps which are applied in order to receive the solution
+        Number of equally spaced load steps which are applied in order to 
+        receive the solution
     t : float, optional
         time for the external force call in mechanical_system
     eps : float, optional
@@ -315,8 +346,9 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     n_max_iter : int, optional
         Maximum number of interations in the Newton-Loop
     smplfd_nwtn_itr : int, optional
-          Number at which the jacobian is updated; if 1, then a full newton scheme is applied;
-          if very large, it's a fixpoint iteration with constant jacobian
+          Number at which the jacobian is updated; if 1, then a full newton 
+          scheme is applied; if very large, it's a fixpoint iteration with 
+          constant jacobian
     wrt_iter : bool, optional
         export every iteration step to ParaView. 
     verbose : bool, optional
@@ -350,13 +382,15 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         while (abs_res > eps*abs_f_ext) and (n_max_iter > n_iter):
             corr = linalg.spsolve(K, res)
             u -= corr*newton_damping
-            K, f_int = mechanical_system.K_and_f(u, t)
+            if (n_iter % smplfd_nwtn_itr) is 0:
+                K, f_int = mechanical_system.K_and_f(u, t)
             res = f_int
             abs_res = norm_of_vector(res)
             n_iter += 1
-            if verbose: print('Stufe', t, 'Iteration Nr.', n_iter, \
-                                'Residuum:', abs_res)
-            if wrt_iter: mechanical_system.write_timestep(n_iter, u)
+            if verbose: 
+                print('Stufe', t, 'Iteration Nr.', n_iter, 'Residuum:', abs_res)
+            if wrt_iter: 
+                mechanical_system.write_timestep(n_iter, u)
         mechanical_system.write_timestep(t, u)
 
 
@@ -426,10 +460,14 @@ class HHTConstrained():
         self.delta_t = delta_t
         self.eps = 1E-8
         self.atol = 1E-11
-        self.mechanical_system = None
         self.verbose = verbose
         self.n_iter_max = n_iter_max
 
+        # Stuff which has to be overloaded later on: 
+        self.constrained_system = None
+        self.s = None
+        self.f_non = None
+        
 
     def set_constrained_system(self, constrained_system):
         '''
@@ -474,19 +512,31 @@ class HHTConstrained():
         Returns
         -------
         q : ndarray
-            Matrix of the generalized positions of the system corresponding to the time points given in the time_range array. q[i] is the generalized position of the i-th time step in time_range, i.e. time_range[i].
+            Matrix of the generalized positions of the system corresponding 
+            to the time points given in the time_range array. q[i] is the 
+            generalized position of the i-th time step in time_range, 
+            i.e. time_range[i].
         dq : ndarray
-            Matrix of the generalized velocities of the system corresponding to the time points given in time_range array.
+            Matrix of the generalized velocities of the system corresponding 
+            to the time points given in time_range array.
         lambda : ndarray
-            Matrix of the Lagrange multipliers associated with the constraints of the system. The columns of lambda correspond to the vectors of the time steps given in time_range.
+            Matrix of the Lagrange multipliers associated with the constraints 
+            of the system. The columns of lambda correspond to the vectors of 
+            the time steps given in time_range.
 
         Examples
         --------
         TODO
 
         '''
-        ndof = self.constrained_system.ndof
-        ndof_const = self.constrained_system.ndof_const
+        # some internal variables defined for better readabiltiy of code
+        beta = self.beta
+        gamma = self.gamma
+        s = self.s
+        const_sys = self.constrained_system
+        
+        ndof = const_sys.ndof
+        ndof_const = const_sys.ndof_const
         q = q_start.copy()
         dq = dq_start.copy()
         ddq = np.zeros(ndof)
@@ -510,7 +560,7 @@ class HHTConstrained():
             time_index = 0
 
         # predict start values for ddq:
-#        ddq = linalg.spsolve(self.constrained_system.M(q, dq), self.f_non(q))
+#        ddq = linalg.spsolve(const_sys.M(q, dq), self.f_non(q))
 
         while time_index < len(time_range):
             # time tolerance fitting...
@@ -525,25 +575,25 @@ class HHTConstrained():
 
             t += dt
             # Prediction
-            q += dt*dq + (1/2-self.beta)*dt**2*ddq
-            dq += (1-self.gamma)*dt*ddq
+            q += dt*dq + (1/2 - beta)*dt**2*ddq
+            dq += (1-gamma)*dt*ddq
             ddq *= 0
             lambda_ *= 1 # leave it the way it was...
 
             # checking residual and convergence
-            B = self.constrained_system.B(q, dq, t)
-            K = self.constrained_system.K(q, dq)
-            D = self.constrained_system.D(q, dq)
-            M = self.constrained_system.M(q, dq)
-            K += B.T.dot(B)*self.s # take care of the augmentation term
-            S[:ndof, :ndof] = K + self.gamma/(dt*self.beta)*D + 1/(self.beta*dt**2)*M
-            S[:ndof, ndof:] = self.s/dt**2*B.T
-            S[ndof:, :ndof] = self.s/dt**2*B
-            C = self.constrained_system.C(q, dq, t)
-            f_non= self.constrained_system.f_non(q, dq)
-            f_ext = self.constrained_system.f_ext(q, dq, t)
+            B = const_sys.B(q, dq, t)
+            K = const_sys.K(q, dq)
+            D = const_sys.D(q, dq)
+            M = const_sys.M(q, dq)
+            K += B.T.dot(B) * s # take care of the augmentation term
+            S[:ndof, :ndof] = K + gamma/(dt*beta)*D + 1/(beta*dt**2)*M
+            S[:ndof, ndof:] = s / dt**2 * B.T
+            S[ndof:, :ndof] = s / dt**2 * B
+            C = const_sys.C(q, dq, t)
+            f_non= const_sys.f_non(q, dq)
+            f_ext = const_sys.f_ext(q, dq, t)
             res[:ndof] = M.dot(ddq) + f_non - f_ext
-            res[ndof:] = C*self.s/dt**2
+            res[ndof:] = C * s/dt**2
             res_abs = norm_of_vector(res)
 
             # Newcton-Correction-loop
@@ -557,46 +607,51 @@ class HHTConstrained():
 
                 # update of system state
                 q   += delta_q
-                dq  += self.gamma/(self.beta*dt)*delta_q
-                ddq += 1/(self.beta*dt**2)*delta_q
+                dq  += gamma/(beta*dt)*delta_q
+                ddq += 1/(beta*dt**2)*delta_q
                 lambda_ += delta_lambda
 
                 # make the new calculations
-                B = self.constrained_system.B(q, dq, t)
-                K = self.constrained_system.K(q, dq)
-                D = self.constrained_system.D(q, dq)
-                M = self.constrained_system.M(q, dq)
-                K += B.T.dot(B)*self.s/dt**2 # take care of the augmentation term
-                S[:ndof, :ndof] = K + self.gamma/(self.beta*dt)*D + 1/(self.beta*dt**2)*M
-                S[:ndof, ndof:] = B.T*self.s/dt**2
-                S[ndof:, :ndof] = B*self.s/dt**2
-                C = self.constrained_system.C(q, dq, t)
-                f_non= self.constrained_system.f_non(q, dq)
-                f_ext = self.constrained_system.f_ext(q, dq, t)
-                res[:ndof] = M.dot(ddq) + f_non + self.s/dt**2*B.T.dot(lambda_) - f_ext
-                res[ndof:] = C*self.s/dt**2
+                B = const_sys.B(q, dq, t)
+                K = const_sys.K(q, dq)
+                D = const_sys.D(q, dq)
+                M = const_sys.M(q, dq)
+                K += B.T.dot(B) * s/dt**2 # take care of the augmentation term
+                S[:ndof, :ndof] = K + gamma/(beta*dt)*D + 1/(beta*dt**2)*M
+                S[:ndof, ndof:] = B.T * s/dt**2
+                S[ndof:, :ndof] = B * s/dt**2
+                C = const_sys.C(q, dq, t)
+                f_non= const_sys.f_non(q, dq)
+                f_ext = const_sys.f_ext(q, dq, t)
+                res[:ndof] = M.dot(ddq) + f_non + s/dt**2*B.T.dot(lambda_) - f_ext
+                res[ndof:] = C * s/dt**2
                 res_abs = norm_of_vector(res)
 
                 n_iter += 1
                 if self.verbose:
-                    print('Iteration', n_iter, 'Residual:', res_abs, 'Cond-Nr of S:', np.linalg.cond(S))
+                    print('Iteration', n_iter, 'Residual:', res_abs, 
+                          'Cond-Nr of S:', np.linalg.cond(S))
                 if n_iter > self.n_iter_max:
-                    raise Exception('Maximum number of iterations reached. The process will be aborted. Current time step:', t)
-                pass
+                    raise Exception('Maximum number of iterations reached.'
+                                    'The process will be aborted. Current time step:', t)
 
             print('Time:', t, 'No of iterations:', n_iter, 'residual:', res_abs)
+
+
             # Writing if necessary:
             if write_flag:
-                # writing to the mechanical system, if possible
-                # TODO: the functionality for the mechanical system to read and write timesteps is not implemented yet.
+                # writing to the constrained system, if possible
+                # TODO: the functionality for the constrained system to read 
+                # TODO: and write timesteps is not implemented yet.
                 if False:# self.mechanical_system:
-                    self.mechanical_system.write_timestep(t, q)
+                    self.constrained_system.write_timestep(t, q)
                 else:
                     q_global.append(q.copy())
                     dq_global.append(dq.copy())
                     lambda_global.append(lambda_.copy())
                 write_flag = False
-            pass # end of time loop
+        # end of time loop
+
 
         return np.array(q_global), np.array(dq_global), np.array(lambda_global)
 

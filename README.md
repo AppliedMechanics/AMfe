@@ -1,7 +1,7 @@
 AMfe - Finite Element Research Code at the Chair of Applied Mechanics
 ---------------------------------------------------------------------
 
-(c) 2015 Lehrstuhl für Angewandte Mechanik, Technische Universität München
+(c) 2016 Lehrstuhl für Angewandte Mechanik, Technische Universität München
 
 This Finite Element Research code is developed, maintained and used by a part of the numerics group of AM. 
 
@@ -18,7 +18,7 @@ Overview:
 Further documentation to this code is in the folder `docs/`.
 For building the documentation, the following software packages have to be installed:
 
-   - Python version 3.4 or higher
+   - Python version 3.5 or higher
    - Python package sphinx 1.3 oder higher (potentially has to be installed using pip3). Version 1.2 does not work!
    - Python-package numpydoc
 
