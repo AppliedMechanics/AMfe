@@ -7,7 +7,8 @@ This Finite Element Research code is developed, maintained and used by a part of
 
 
 Overview:
-----------
+---------
+
 1.  [Installation](#1-installation)
 2.  [Documentation](#2-documentation)
 3.  [Fortran-Routines](#3-fortran-routines)
@@ -30,6 +31,11 @@ For installing the package type
     python setup.py develop
 
 in the main folder. This should build the fortran routines and install the python module in-place, i.e. when you do changes to the source code they will be used the next time the module is loaded.
+
+If you do not want to install the FORTRAN-routines, you can add the flag `no_fortran` to your installation command:
+
+    python setup.py develop no_fortran
+
 
 2. Documentation
 ----------------
@@ -59,6 +65,12 @@ python3
 The version shuld be at least `'1.3.1'`.
 
 
-### Spyder:
+### IDEs:
 
-For use within the code, the Integrated Development Environment `spyder3` for `python3` is recommended.
+The best IDE for Python is Spyder, which has sort of a MATLAB-Style look and feel. Other editors integrate very well into Python like Atom, as well as PyCharm, which is an IDE for Python. 
+
+I personally work with Spyder and Atom. Spyder is part of anaconda and can be installed via 
+     
+     conda install spyder
+     
+Spyder also provides nice features like built-in debugging, static code analysis with pylint and a profiling tool to measure the performance of the code. 
