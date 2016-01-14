@@ -39,4 +39,5 @@ documentation_test:
 language_quality_test:
     stage: linttest
     script:
+        - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
         - pylint amfe
