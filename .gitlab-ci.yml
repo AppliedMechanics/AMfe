@@ -17,7 +17,7 @@ unittest:
   stage: unittest
   script:
     - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
-    - nosetest
+    - nosetests
 
 physical_test:
     stage: modeltest
