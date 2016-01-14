@@ -7,18 +7,15 @@ Test the mesh-module
 @author: johannesr
 """
 
+import time
 
 import numpy as np
 import scipy as sp
-import time
 
-# make amfe running
-import sys
-sys.path.insert(0,'..')
 import amfe
 
-# test gmsh input-output functionality
 
+# test gmsh input-output functionality
 gmsh_input_file = '../meshes/test_meshes/bar_3d.msh'
 
 #gmsh_input_file = 'meshes/test_meshes/bar_Tet4_finest_phys_group.msh'
@@ -32,10 +29,10 @@ my_mesh.import_msh(gmsh_input_file)
 my_mesh.mesh_information()
 
 my_material = amfe.material.KirchhoffMaterial()
-my_mesh.load_group_to_mesh(-1, my_material)
+my_mesh.load_group_to_mesh(29, my_material)
 my_assembly = amfe.Assembly(my_mesh)
-my_mesh.select_dirichlet_bc(-1, 'xyz')
-my_mesh.select_neumann_bc(-1, -1E10, 'normal')
+my_mesh.select_dirichlet_bc(30, 'xyz')
+my_mesh.select_neumann_bc(31, -1E10, 'normal')
 my_assembly.preallocate_csr()
 
 #%%
