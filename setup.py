@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
+Setup file for automatic installation and distribution of AMfe. 
 """
+
+import sys
 
 try:
     from setuptools import setup
@@ -11,13 +14,17 @@ except ImportError:
 
 ext_assembly = Extension(name='amfe.f90_assembly',
                          sources=['amfe/fortran/assembly.f90'],
-                         runtime_library_dirs=['amfe',], 
-                         language='fortran')
+                         language='f90',)
 ext_element = Extension(name='amfe.f90_element',
                         sources=['amfe/fortran/element.pyf', 
-                                 'amfe/fortran/element.f90'])
+                                 'amfe/fortran/element.f90'],
+                        language='f90',)
 ext_material = Extension(name='amfe.f90_material',
-                         sources=['amfe/fortran/material.f90'])
+                         sources=['amfe/fortran/material.f90'],
+                         language='f90',)
+                         
+ext_modules = [ext_assembly, ext_element, ext_material]
+
 
 config = {
     'name': 'amfe',
@@ -32,7 +39,20 @@ config = {
     'packages': ['amfe'],
     'scripts': [],
     'entry_points': {},
-    'ext_modules' : [ext_assembly, ext_element, ext_material],
+    # 'ext_modules' : [ext_assembly, ext_element, ext_material],
 }
 
-setup(**config)
+
+no_fortran_str = '''
+
+###############################################################################
+####### Compilation of Fortran sources is disabled!  ########
+###############################################################################
+'''
+
+if 'no_fortran' in sys.argv:
+    sys.argv.remove('no_fortran')
+    print(no_fortran_str)
+    setup(**config)
+else:
+    setup(ext_modules=ext_modules, **config)
