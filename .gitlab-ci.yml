@@ -1,0 +1,31 @@
+# The idea of this CI tool should be to run nosetest for unit tests and
+# additionally to that some test cases using dynamic and static stuff.
+#
+
+stages:
+    - build
+    - unittest
+    - modeltest
+
+build_code:
+	stage: build
+	script:
+		- export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+		- python setup.py develop
+
+unittest:
+  stage: unittest
+  script:
+    - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+    - nosetest
+
+physical_test:
+    stage: modeltest
+    script:
+		- export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+		- python tests/run_mechanical_system.py
+		- python tests/run_mesh.py
+
+
+
+# option: only: --> reduce tests or builds to certain branches
