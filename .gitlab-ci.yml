@@ -23,6 +23,7 @@ physical_test:
     stage: modeltest
     script:
         - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+        - python setup.py develop
         - cd tests
         - python run_mechanical_system.py
         - python run_mesh.py
