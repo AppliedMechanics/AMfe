@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=trailing-whitespace, C0103, E1101, E0611
 
 """
 Created on Fri May  8 16:58:03 2015
@@ -66,6 +65,7 @@ class MechanicalSystem():
         
         # initializations to be overwritten by loading functions
         self.no_of_dofs_per_node = None
+        self._f_ext_unconstr = lambda t: np.zeros(self.mesh_class.no_of_dofs)
 
 
     def load_mesh_from_gmsh(self, msh_file, phys_group, material):
@@ -327,23 +327,6 @@ class MechanicalSystem():
         K_unconstr, f_unconstr = \
             self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t) 
         return self.constrain_vec(f_unconstr)
-        
-    def _f_ext_unconstr(self, t=0):
-        '''
-        External force of unconstrained system. Can be overwritten externally. 
-        
-        Parameters
-        ----------
-        t : float, optional
-            time, default value: 0. 
-        
-        Returns
-        -------
-        f_ext_unconstr : ndarray
-            external force without constraints.
-        
-        '''
-        return np.zeros(self.mesh_class.no_of_dofs)
         
     def f_ext(self, u, du, t):
         '''

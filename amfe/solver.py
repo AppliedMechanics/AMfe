@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=trailing-whitespace, C0103, E1101
 
 '''
 Module for solving static and dynamic problems.
-
 '''
 
 import numpy as np
