@@ -5,6 +5,8 @@ Created on Thu May 21 16:05:50 2015
 @author: johannesr
 """
 
+import scipy as sp
+
 
 def node2total(node_index, coordinate_index, ndof_node=2):
     '''
@@ -108,9 +110,11 @@ def read_hbmat(filename):
     data = sp.zeros(n_data)
     
     indptr[:] = list(map(int, matrix_data[idx_0 : idx_0 + n_indptr]))
-    indices[:] = list(map(int, matrix_data[idx_0 + n_indptr : idx_0 + n_indptr + n_indices]))
+    indices[:] = list(map(int, matrix_data[idx_0 + n_indptr : 
+                                           idx_0 + n_indptr + n_indices]))
     # consider the fortran convention with D instead of E in double precison floats
-    data[:] = [float(x.replace('D', 'E')) for x in matrix_data[idx_0 + n_indptr + n_indices : ]]
+    data[:] = [float(x.replace('D', 'E')) for x in 
+               matrix_data[idx_0 + n_indptr + n_indices : ]]
     
     # take care of the indexing notation of fortran
     indptr -= 1
@@ -129,3 +133,4 @@ def test(*args, **kwargs):
     '''
     import nose
     nose.main(*args, **kwargs)
+    

@@ -53,7 +53,7 @@ class NewmarkIntegrator():
 
     '''
 
-    def __init__(self, alpha=0, verbose=False, n_iter_max=40):
+    def __init__(self, alpha=0, verbose=False, n_iter_max=30):
         '''
         Parameters
         -----------
@@ -75,7 +75,6 @@ class NewmarkIntegrator():
         self.delta_t = 1E-3
         self.eps = 1E-8
         self.newton_damping = 1.0
-        self.residual_threshold = 1E6
         self.mechanical_system = None
         self.verbose = verbose
         self.n_iter_max = n_iter_max
@@ -207,6 +206,7 @@ class NewmarkIntegrator():
         t = 0
         time_index = 0 # index of the timestep in the time_range array
         write_flag = False
+        
         # catch start value 0:
         if time_range[0] < 1E-12:
             q_global.append(q)
@@ -231,13 +231,14 @@ class NewmarkIntegrator():
                 if no_newton_convergence_flag:
                     dt /= 2
                     no_newton_convergence_flag = False
-            # Handling if no convergence is gained:
+                    
+            # saving state for recovery if no convergence is gained
             t_old = t
             q_old = q.copy()
             dq_old = dq.copy()
 
+            # Prediction using state from previous step
             t += dt
-            # Prediction
             q += dt*dq + (1/2-self.beta)*dt**2*ddq
             dq += (1-self.gamma)*dt*ddq
             ddq *= 0
@@ -247,22 +248,28 @@ class NewmarkIntegrator():
             res = self._residual(f_non, q, dq, ddq, t)
             res_abs = norm_of_vector(res)
 
-            # Newcton-Correction-loop
+            # Newton-Correction-loop
             n_iter = 0
             while res_abs > self.eps*norm_of_vector(f_non):
+                
+                # build iteration matrix and solve
                 S = K + 1/(self.beta*dt**2)*self.M
                 delta_q = - linalg.spsolve(S, res)
-                if res_abs > self.residual_threshold:
-                    delta_q *= self.newton_damping
+                
+                # update state variables
                 q += delta_q
                 dq += self.gamma/(self.beta*dt)*delta_q
                 ddq += 1/(self.beta*dt**2)*delta_q
+
+                # update system matrices and vectors
                 K, f_non = self.K_and_f_non(q, t)
                 res = self._residual(f_non, q, dq, ddq, t)
                 res_abs = norm_of_vector(res)
                 n_iter += 1
+
                 if self.verbose:
                     print('Iteration', n_iter, 'Residuum:', res_abs)
+
                 # catch when the newton loop doesn't converge
                 if n_iter > self.n_iter_max:
                     t = t_old
@@ -271,7 +278,7 @@ class NewmarkIntegrator():
                     no_newton_convergence_flag = True
                     break
 
-            print('Zeit:', t, 'Anzahl an Iterationen:', n_iter, 'Residuum:', res_abs)
+            print('Time:', t, 'No of iterations:', n_iter, 'Residual:', res_abs)
             # Writing if necessary:
             if write_flag:
                 # writing to the mechanical system, if possible
@@ -596,7 +603,7 @@ class HHTConstrained():
             res[ndof:] = C * s/dt**2
             res_abs = norm_of_vector(res)
 
-            # Newcton-Correction-loop
+            # Newton-Correction-loop
             n_iter = 0
             while res_abs > self.eps*norm_of_vector(f_non+ f_ext):
 
@@ -611,7 +618,7 @@ class HHTConstrained():
                 ddq += 1/(beta*dt**2)*delta_q
                 lambda_ += delta_lambda
 
-                # make the new calculations
+                # build jacobian
                 B = const_sys.B(q, dq, t)
                 K = const_sys.K(q, dq)
                 D = const_sys.D(q, dq)
@@ -620,6 +627,8 @@ class HHTConstrained():
                 S[:ndof, :ndof] = K + gamma/(beta*dt)*D + 1/(beta*dt**2)*M
                 S[:ndof, ndof:] = B.T * s/dt**2
                 S[ndof:, :ndof] = B * s/dt**2
+                
+                # build right hand side
                 C = const_sys.C(q, dq, t)
                 f_non= const_sys.f_non(q, dq)
                 f_ext = const_sys.f_ext(q, dq, t)

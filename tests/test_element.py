@@ -292,7 +292,7 @@ class TestB_matrix_compuation(unittest.TestCase):
                           [S_v[5], S_v[1], S_v[3]],
                           [S_v[4], S_v[3], S_v[2]]])
 
-        B = amfe.compute_B_matrix(B_tilde, F)
+        B = amfe.element.compute_B_matrix(B_tilde, F)
         self.res1 = B.T.dot(S_v)
         self.res2 = B_tilde.T.dot(S.dot(F.T))
 

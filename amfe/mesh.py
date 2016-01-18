@@ -13,6 +13,7 @@ import pandas as pd
 
 from amfe.element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
 from amfe.element import LineLinearBoundary, LineQuadraticBoundary, Tri3Boundary, Tri6Boundary
+
 # Element mapping is described here. If a new element is implemented, the
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
@@ -40,7 +41,9 @@ element_class_dict = {'Tet4'  : Tet4(**kwargs),
                       'Quad8' : Quad8(**kwargs),
                       'Bar2Dlumped' : Bar2Dlumped(**kwargs),
                               }
+                              
 kwargs = {'val' : 1., 'direct' : 'normal'}
+
 element_boundary_class_dict = {'straight_line' : LineLinearBoundary(**kwargs), 
                                'quadratic_line': LineQuadraticBoundary(**kwargs),
                                'Tri3'          : Tri3Boundary(**kwargs),

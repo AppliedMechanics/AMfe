@@ -22,7 +22,7 @@ def test_index_getter():
     A = sp.sparse.csr_matrix((val, (row, col)))
     # print('row:', row, '\ncol:', col)
     for i in range(N):
-        a = amfe.get_index_of_csr_data(row[i], col[i], A.indptr, A.indices)
+        a = amfe.assembly.get_index_of_csr_data(row[i], col[i], A.indptr, A.indices)
         b = A[row[i], col[i]]
         #    print(val[i] - A.data[b])
         assert_equal(A.data[a], b)
