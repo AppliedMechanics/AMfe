@@ -51,10 +51,12 @@ class NewmarkIntegrator():
 
     '''
 
-    def __init__(self, alpha=0, verbose=False, n_iter_max=30):
+    def __init__(self, mechanical_system, alpha=0, verbose=False, n_iter_max=30):
         '''
         Parameters
-        -----------
+        ----------
+        mechanical_system : instance of amfe.MechanicalSystem
+            mechanical system equipped with an iteration matrix S and a residual. 
         alpha : float, optional
             damping factor of the generalized alpha routine for numerical damping
         verbose : bool, optional
@@ -71,103 +73,14 @@ class NewmarkIntegrator():
         self.beta = 1/4*(1 + alpha)**2
         self.gamma = 1/2 + alpha
         self.delta_t = 1E-3
-        self.eps = 1E-8
+        self.rtol = 1E-8
+        self.atol = 1E-12
         self.newton_damping = 1.0
-        self.mechanical_system = None
         self.verbose = verbose
         self.n_iter_max = n_iter_max
-        
-        # variables to be overloaded in the setting functions
-        self.K_and_f_non = None
-        self.f_non = None
-        self.M = None
-        self.f_ext = None
-
-    def set_nonlinear_model(self, f_non, K, M, f_ext=None):
-        '''
-        Sets the nonlinear model with explicit function metioning.
-
-        Parameters
-        -----------
-        f_non : function
-            function of nonlinear force being called with f_non(q) and 
-            returning the nonlinear force as ndarray
-        K : function
-            function of tangential stiffness matrix being called with K(q) and 
-            returning the nonlinear stiffness matrix as ndarray
-        M : ndarray
-            mass matrix
-        f_ext : function, optional
-            function of external force being called with f_ext(q, dq, t) and 
-            returning the external force as ndarray
-
-        Examples
-        ---------
-
-        Notes
-        ------
-        This function serves basically as a test function. For elaborate finite
-        element work the set_mechanical_system interface is more convenient and
-        does everything automatically including the recording of displacements 
-        etc.
-
-        See Also
-        --------
-        set_mechanical_system
-
-        '''
-        # decorator for the efficient computation of the tangential stiffness
-        # matrix and force in one step; Basic intention is to make assembly 
-        # process only once.
-        def K_and_f_non(q, t):
-            '''
-            Decorating function for wrapping K() and f() in one function. 
-            '''
-            return K(q, t), f_non(q, t)
-        self.K_and_f_non = K_and_f_non
-        self.f_non = f_non
-        self.M = M
-        self.f_ext = f_ext
-
-    def set_mechanical_system(self, mechanical_system):
-        '''
-        hands over the mechanical system as a whole to the integrator.
-        The matrices for the integration routine are then taken right from the 
-        mechanical system
-
-        Parameters
-        -----------
-        mechanical_system : MechanicalSystem
-            instance of MechanicalSystem which should be integrated
-
-        Returns
-        --------
-        None
-
-        Examples
-        ---------
-        TODO
-
-        '''
         self.mechanical_system = mechanical_system
-        # assuming constant mass matrix! 
-        self.M = mechanical_system.M()
-#        self.K = mechanical_system.K
-        self.f_non = mechanical_system.f_int
-        self.f_ext = mechanical_system.f_ext
-        self.K_and_f_non = mechanical_system.K_and_f
 
-
-    def _residual(self, f_non, q, dq, ddq, t):
-        '''computes the residual of the system with the given variables'''
-        if self.f_ext is not None:
-            res = self.M.dot(ddq) + f_non - self.f_ext(q, dq, t)
-        else:
-            res = self.M.dot(ddq) + f_non
-        return res
-
-
-    def integrate_nonlinear_system(self, q_start, dq_start, time_range):
+    def integrate(self, q_start, dq_start, time_range):
         '''
         Integrates the system using generalized alpha method.
 
@@ -178,7 +91,8 @@ class NewmarkIntegrator():
         dq_start : ndarray
             initial velocity of the constrained system in voigt notation
         time_range : ndarray
-            vector containing the time points at which the state is written to the output
+            vector containing the time points at which the state is written to 
+            the output
 
         Returns
         --------
@@ -194,6 +108,8 @@ class NewmarkIntegrator():
         TODO
 
         '''
+        beta = self.beta
+        gamma = self.gamma
         # initialize starting variables
         q = q_start.copy()
         dq = dq_start.copy()
@@ -213,8 +129,8 @@ class NewmarkIntegrator():
         else:
             time_index = 0
 
-        # predict start values for ddq:
-        ddq = linalg.spsolve(self.M, self.f_non(q, t))
+#        # predict start values for ddq:
+#        ddq = linalg.spsolve(self.M, self.f_non(q, t))
         no_newton_convergence_flag = False
         while time_index < len(time_range):
             # time tolerance fitting...
@@ -237,31 +153,30 @@ class NewmarkIntegrator():
 
             # Prediction using state from previous step
             t += dt
-            q += dt*dq + (1/2-self.beta)*dt**2*ddq
-            dq += (1-self.gamma)*dt*ddq
+            q += dt*dq + (1/2-beta)*dt**2*ddq
+            dq += (1-gamma)*dt*ddq
             ddq *= 0
 
-            # checking residual and convergence
-            K, f_non = self.K_and_f_non(q, t)
-            res = self._residual(f_non, q, dq, ddq, t)
-            res_abs = norm_of_vector(res)
+            S, res = self.mechanical_system.S_and_res(q, dq, ddq, dt, t, beta, gamma)
+            res_abs = res_abs_0 = norm_of_vector(res)
 
             # Newton-Correction-loop
             n_iter = 0
-            while res_abs > self.eps*norm_of_vector(f_non):
+            while res_abs > self.rtol*res_abs_0 + self.atol:
                 
-                # build iteration matrix and solve
-                S = K + 1/(self.beta*dt**2)*self.M
-                delta_q = - linalg.spsolve(S, res)
+#                S = K + 1/(self.beta*dt**2)*self.M
+                if sp.sparse.issparse(S):
+                    delta_q = - linalg.spsolve(S, res)
+                else:
+                    delta_q = - sp.linalg.solve(S, res, sym_pos=True)
                 
                 # update state variables
                 q += delta_q
-                dq += self.gamma/(self.beta*dt)*delta_q
-                ddq += 1/(self.beta*dt**2)*delta_q
+                dq += gamma/(beta*dt)*delta_q
+                ddq += 1/(beta*dt**2)*delta_q
 
                 # update system matrices and vectors
-                K, f_non = self.K_and_f_non(q, t)
-                res = self._residual(f_non, q, dq, ddq, t)
+                S, res = self.mechanical_system.S_and_res(q, dq, ddq, dt, t, beta, gamma)
                 res_abs = norm_of_vector(res)
                 n_iter += 1
 
@@ -279,18 +194,9 @@ class NewmarkIntegrator():
             print('Time:', t, 'No of iterations:', n_iter, 'Residual:', res_abs)
             # Writing if necessary:
             if write_flag:
-                # writing to the mechanical system, if possible
-                if self.mechanical_system:
-                    self.mechanical_system.write_timestep(t, q)
-                else:
-                    q_global.append(q.copy())
-                    dq_global.append(dq.copy())
+                self.mechanical_system.write_timestep(t, q.copy())
                 write_flag = False
-                
         # end of time loop
-
-        return np.array(q_global), np.array(dq_global)
-
 
 
 def solve_linear_displacement(mechanical_system, t=1, verbose=True):
@@ -501,7 +407,7 @@ class HHTConstrained():
         self.f_non = self.constrained_system.f_non
 
 
-    def integrate_nonlinear_system(self, q_start, dq_start, time_range):
+    def integrate(self, q_start, dq_start, time_range):
         '''
         Integrates the nonlinear constrained system unsing the HHT-scheme.
 

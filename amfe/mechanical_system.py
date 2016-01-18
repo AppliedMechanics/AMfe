@@ -64,7 +64,9 @@ class MechanicalSystem():
         self.constrain_matrix = self.dirichlet_class.constrain_matrix
         
         # initializations to be overwritten by loading functions
+        self.M_unconstr = None
         self.no_of_dofs_per_node = None
+        # external force to be overwritten by other forces
         self._f_ext_unconstr = lambda t: np.zeros(self.mesh_class.no_of_dofs)
 
 
@@ -295,8 +297,9 @@ class MechanicalSystem():
         M : sp.sparse.sparse_matrix
             Mass matrix with applied constraints in sparse csr-format
         '''
-        M_unconstr = self.assembly_class.assemble_m()
-        return self.constrain_matrix(M_unconstr)
+        self.M_unconstr = self.assembly_class.assemble_m()
+        self.M_constr = self.constrain_matrix(self.M_unconstr)
+        return self.M_constr
         
     def K(self, u=None, t=0):
         '''
@@ -348,6 +351,20 @@ class MechanicalSystem():
         f = self.constrain_vec(f_unconstr)
         return K, f
 
+    def S_and_res(self, u, du, ddu, dt, t, beta, gamma):
+        '''
+        
+        '''
+        # compute mass matrix only once if it hasnt's been computed yet        
+        if self.M_unconstr is None:
+            self.M()
+            
+        K, f = self.K_and_f(u, t)
+        S = K + 1/(beta*dt**2)*self.M_constr
+        res = f + self.f_ext(u, du, t) + self.M_constr.dot(ddu)
+
+        return S, res
+    
     def write_timestep(self, t, u):
         '''
         write the timestep to the mechanical_system class
