@@ -7,11 +7,6 @@ Just a simple test routine for checking if the integration scheme works properly
 import numpy as np
 import scipy as sp
 
-
-# make amfe running
-import sys
-sys.path.insert(0,'..')
-
 import amfe
 
 #%%

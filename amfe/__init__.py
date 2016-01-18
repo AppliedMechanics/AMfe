@@ -18,7 +18,7 @@ from amfe.element import Element, Tri3, Tri6, Quad4, Quad8, Tet4, Tet10, \
     LineLinearBoundary, LineQuadraticBoundary
 from amfe.material import HyperelasticMaterial, KirchhoffMaterial, NeoHookean, \
     MooneyRivlin
-from amfe.mechanical_system import MechanicalSystem, ReducedSystem, QMSystem, \
+from amfe.mechanical_system import MechanicalSystem, ReducedSystem, \
     ConstrainedMechanicalSystem
 from amfe.mesh import Mesh, MeshGenerator
 from amfe.solver import NewmarkIntegrator, solve_linear_displacement, \
