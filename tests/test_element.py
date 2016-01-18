@@ -6,11 +6,9 @@ Test for checking the stiffness matrices.
 import unittest
 import numpy as np
 import scipy as sp
-import sys
-sys.path.insert(0,'..')
-
 import nose
 
+from numpy.testing import assert_allclose, assert_almost_equal
 import amfe
 from amfe import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10
 from amfe import material
@@ -31,25 +29,47 @@ def jacobian(func, X, u, t):
         jac[:,i] = (f_tmp - f) / h
     return jac
 
+X_tri3 = np.array([0,0,3,1,2,2], dtype=float)
+X_tri6 = np.array([0,0,3,1,2,2,1.5,0.5,2.5,1.5,1,1], dtype=float)
+X_quad4 = np.array([0,0,1,0,1,1,0,1], dtype=float)
+X_quad8 = np.array([0,0,1,0,1,1,0,1,0.5,0,1,0.5,0.5,1,0,0.5], dtype=float)
+X_tet4 = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1], dtype=float)
+X_tet10 = np.array([0.,  0.,  0.,  2.,  0.,  0.,  0.,  2.,  0.,  0.,  0.,  2.,  1.,
+                    0.,  0.,  1.,  1.,  0.,  0.,  1.,  0.,  0.,  0.,  1.,  1.,  0.,
+                    1.,  0.,  1.,  1.])
+
 
 class ElementTest(unittest.TestCase):
     '''Base class for testing the elements with the jacobian'''
-    def initialize_element(self, element, no_of_dofs):
-        self.X = sp.rand(no_of_dofs)
+    def initialize_element(self, element, X_def):
+        no_of_dofs = len(X_def)
+        self.X = X_def + 0.5*sp.rand(no_of_dofs)
         self.u = sp.rand(no_of_dofs)
         self.my_material = material.KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
         self.my_element = element(self.my_material)
 
     @nose.tools.nottest
-    def jacobi_test_element(self, rtol=1E-4, atol=1E-6):
+    def jacobi_test_element(self, rtol=2E-4, atol=1E-6):
         K, f = self.my_element.k_and_f_int(self.X, self.u, t=0)
         K_finite_diff = jacobian(self.my_element.f_int, self.X, self.u, t=0)
         np.testing.assert_allclose(K, K_finite_diff, rtol=rtol, atol=atol)
+    
+    @nose.tools.nottest
+    def check_python_vs_fortran(self):
+        # python routine
+        self.my_element._compute_tensors_python(self.X, self.u, t=0)
+        K = self.my_element.K.copy()
+        f = self.my_element.f.copy()
+        # fortran routine
+        self.my_element._compute_tensors(self.X, self.u, t=0)
+        assert_almost_equal(self.my_element.K, K)
+        assert_almost_equal(self.my_element.f, f)
+
 
 
 class Tri3Test(ElementTest):
     def setUp(self):
-        self.initialize_element(Tri3, 6)
+        self.initialize_element(Tri3, X_tri3)
 
     def test_jacobi(self):
         self.jacobi_test_element()
@@ -62,14 +82,14 @@ class Tri3Test(ElementTest):
 
 class Tri6Test(ElementTest):
     def setUp(self):
-        self.initialize_element(Tri6, 12)
+        self.initialize_element(Tri6, X_tri6)
 
     def test_jacobi(self):
-        self.jacobi_test_element(rtol=1E-4, atol=1E-6)
+        self.jacobi_test_element(rtol=1E-3)
 
 class Quad4Test(ElementTest):
     def setUp(self):
-        self.initialize_element(Quad4, 8)
+        self.initialize_element(Quad4, X_quad4)
 
     def test_jacobi(self):
         self.jacobi_test_element()
@@ -77,24 +97,24 @@ class Quad4Test(ElementTest):
 
 class Quad8Test(ElementTest):
     def setUp(self):
-        self.initialize_element(Quad8, 16)
+        self.initialize_element(Quad8, X_quad8)
 
     def test_jacobi(self):
-        self.jacobi_test_element(rtol=1E-4, atol=1E-6)
+        self.jacobi_test_element(rtol=1E-3)
 
 class Tet4Test(ElementTest):
     def setUp(self):
-        self.initialize_element(Tet4, 4*3)
+        self.initialize_element(Tet4, X_tet4)
 
     def test_jacobi(self):
         self.jacobi_test_element()
 
 class Tet10Test(ElementTest):
     def setUp(self):
-        self.initialize_element(Tet10, 10*3)
+        self.initialize_element(Tet10, X_tet10)
 
     def test_jacobi(self):
-        self.jacobi_test_element(rtol=1E-3, atol=1E-5)
+        self.jacobi_test_element(rtol=2E-3)
 
 #%%
 # Test the material consistency:
@@ -104,21 +124,23 @@ class MaterialTest3D(ElementTest):
     Perform a jacobian check to find out, if any inconsistencies are apparent.
     '''
     def setUp(self):
-        self.initialize_element(Tet4, 4*3)
+        self.initialize_element(Tet4, X_tet4)
+        self.u *= 0.1
 
     def test_Mooney(self):
-        A10, A01, kappa, rho = sp.rand(4)
+        A10, A01, kappa, rho = sp.rand(4)*1E3 + 100
+        print('Material parameters A10, A01 and kappa:', A10, A01, kappa)
         my_material = material.MooneyRivlin(A10, A01, kappa, rho)
         self.my_element.material = my_material
-        self.jacobi_test_element(rtol=1E-2)
+        self.jacobi_test_element(rtol=1E-3)
 
     def test_Neo(self):
-        mu, kappa, rho = sp.rand(3)
+        mu, kappa, rho = sp.rand(3)*1E3 + 100
+        print('Material parameters mu, kappa:', mu, kappa)
 #        mu /= 4
-        kappa *= 100
         my_material = material.NeoHookean(mu, kappa, rho)
         self.my_element.material = my_material
-        self.jacobi_test_element(rtol=1E-2)
+        self.jacobi_test_element(rtol=5E-4)
 
 class MaterialTest2D(ElementTest):
     '''
@@ -126,16 +148,17 @@ class MaterialTest2D(ElementTest):
     Perform a jacobian check to find out, if any inconsistencies are apparent.
     '''
     def setUp(self):
-        self.initialize_element(Tri3, 2*3)
+        self.initialize_element(Tri3, X_tri3)
+        self.u *= 0.1
 
     def test_Mooney(self):
-        A10, A01, kappa, rho = sp.rand(4)
+        A10, A01, kappa, rho = sp.rand(4)*1E3 + 100
         my_material = material.MooneyRivlin(A10, A01, kappa, rho)
         self.my_element.material = my_material
-        self.jacobi_test_element()
+        self.jacobi_test_element(rtol=5E-4)
 
     def test_Neo(self):
-        mu, kappa, rho = sp.rand(3)
+        mu, kappa, rho = sp.rand(3)*1E3 + 100
 #        mu /= 4
         kappa *= 100
         my_material = material.NeoHookean(mu, kappa, rho)
@@ -196,6 +219,7 @@ class MaterialTest2dPlaneStress(unittest.TestCase):
         np.testing.assert_allclose(S[:2, :2], S2d)
         np.testing.assert_allclose(C[np.ix_([0,1,-1], [0,1,-1])], C2d)
 
+
 #%%
 def test_tri3_pressure():
     X = np.array([0,0,0,1,0,0,0,1,0])
@@ -223,6 +247,10 @@ def test_line_pressure2():
 
 @nose.tools.nottest
 def test_tri6_pressure():
+    '''
+    The tri6 pressure element is not implemented yet. That's why this test 
+    is disabled! 
+    '''
     my_material = amfe.KirchhoffMaterial(rho=1)
     my_tri6 = amfe.Tri6(my_material)
     X = np.array([0,0,2,0,0,2,1,0,1,1,0,1.])
@@ -277,5 +305,30 @@ class TestB_matrix_compuation(unittest.TestCase):
         np.testing.assert_allclose(self.res1, self.res2.reshape(-1))
 
 
+class Test_fortran_vs_python(ElementTest):
+    '''
+    Compare the python and fortran element computation routines.
+    '''
+    
+    def test_tri3(self):
+        self.initialize_element(Tri3, X_tri3)
+        self.check_python_vs_fortran()
+    
+    def test_tri6(self):
+        self.initialize_element(Tri6, X_tri6)
+        self.check_python_vs_fortran()
+    
+    def test_tet4(self):
+        self.initialize_element(Tet4, X_tet4)
+        self.check_python_vs_fortran()
+        
+    def test_mass_tri6(self):
+        self.initialize_element(Tri6, X_tri6)
+        self.my_element._m_int_python(self.X, self.u, t=0)
+        M_py = self.my_element.M.copy()
+        M_f = self.my_element._m_int(self.X, self.u, t=0)
+        assert_almost_equal(M_f, M_py)
+        
+        
 if __name__ == '__main__':
     unittest.main()

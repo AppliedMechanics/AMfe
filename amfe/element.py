@@ -443,7 +443,7 @@ class Tri6(Element):
 
         self.K *= 0
         self.f *= 0
-        for L1, L2, L3, w in self.gauss_points2:
+        for L1, L2, L3, w in self.gauss_points5:
 
             dN_dL = np.array([  [4*L1 - 1,        0,        0],
                                 [       0, 4*L2 - 1,        0],
@@ -486,7 +486,7 @@ class Tri6(Element):
         t = self.material.thickness
         rho = self.material.rho
         self.M_small *= 0
-        for L1, L2, L3, w in self.gauss_points2:
+        for L1, L2, L3, w in self.gauss_points5:
 
             # the entries in the jacobian dX_dL
             Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
@@ -1300,6 +1300,11 @@ if use_fortran:
         return self.M
 
     # overloading the routines with fortran routines
+    Tri3._compute_tensors_python = Tri3._compute_tensors
+    Tri6._compute_tensors_python = Tri6._compute_tensors 
+    Tet4._compute_tensors_python = Tet4._compute_tensors
+    Tri6._m_int_python = Tri6._m_int
+    
     Tri3._compute_tensors = compute_tri3_tensors
     Tri6._compute_tensors = compute_tri6_tensors
     Tet4._compute_tensors = compute_tet4_tensors
