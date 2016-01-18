@@ -25,6 +25,7 @@ unittest:
   when: always
   script:
     - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+    - python setup.py develop
     - nosetests
 
 physical_test:
