@@ -11,7 +11,7 @@ import numpy as np
 import scipy as sp
 from scipy import linalg
 
-from amfe.mechanical_system import ReducedSystem
+from amfe.mechanical_system import ReducedSystem, QMSystem
 
 def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     '''
@@ -44,6 +44,19 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False):
         reduced_sys = copy.deepcopy(mechanical_system)
     reduced_sys.__class__ = ReducedSystem
     reduced_sys.V = V.copy()
+    return reduced_sys
+
+def qm_reduce_mechanical_system(mechanical_system, V, theta, overwrite=False):
+    '''
+    '''
+    
+    if overwrite:
+        reduced_sys = mechanical_system
+    else:
+        reduced_sys = copy.deepcopy(mechanical_system)
+    reduced_sys.__class__ = QMSystem
+    reduced_sys.V = V.copy()
+    reduced_sys.Theta = theta.copy()
     return reduced_sys
     
 

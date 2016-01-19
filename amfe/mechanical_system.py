@@ -529,6 +529,97 @@ class ReducedSystem(MechanicalSystem):
         return MechanicalSystem.M(self)
 
 
+class QMSystem(MechanicalSystem):
+    '''
+    Quadratic Manifold Finite Element system. 
+    
+    
+    '''
+    
+    def __init__(self, **kwargs):
+        MechanicalSystem.__init__(self, **kwargs)
+        self.V = None
+        self.Theta = None
+        self.no_of_red_dofs = None
+    
+    def M(self, u=None, t=0):
+        # checks, if u is there and M is already computed
+        if u is None:
+            u = np.zeros(self.no_of_red_dofs)
+        if self.M_constr is None:
+            MechanicalSystem.M(self)
+            
+        P = self.V + 2*self.Theta.dot(u)
+        M_red = P.T @ self.M_constr @ P
+        return M_red
+    
+    def K_and_f(self, u=None, t=0):
+        '''
+        Take care here! It is not clear yet how to compute the tangential 
+        stiffness matrix! 
+        
+        It seems to be like the contribution of geometric and material 
+        stiffness. 
+        '''
+        if u is None:
+            u = np.zeros(self.no_of_red_dofs)
+        theta_u = self.Theta @ u
+        u_full = (self.V + theta_u) @ u
+        P = self.V + 2*u_full
+        K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
+        K1 = P.T @ K_unreduced @ P
+        K2 = 2*self.Theta @ f_unreduced
+        K = K1 + K2
+        f = P.T @ f_unreduced
+        return K, f
+    
+    def S_and_res(self, u, du, ddu, dt, t, beta, gamma):
+        '''
+        TODO: checking the contributions of the different parts of the 
+        iteration matrix etc. 
+        
+        '''
+        # checking out that constant unreduced M is built
+        if self.M_constr is None:
+            MechanicalSystem.M(self)
+        M_unreduced = self.M_constr
+        
+        theta = self.Theta        
+        theta_u = theta @ u        
+        u_full = (self.V + theta_u) @ u
+        
+        K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
+        # nonlinear projector P
+        P = self.V + 2*theta_u
+
+        # computing the residual
+        res_accel = M_unreduced @ (P @ ddu)
+        res_gyro = M_unreduced @ (theta @ du) @ du
+        res_full = res_accel + res_gyro + f_unreduced
+        # the different contributions to stiffness
+        K1 = 2 * theta.T @ res_full
+        K2 = 2 * P.T @ M_unreduced @ (theta @ ddu)
+        K3 = P.T @ K_unreduced @ P
+        K = K1 + K2 + K3
+        # gyroscopic matrix and reduced mass matrix
+        G = 2 * P.T @ M_unreduced @ (theta @ du)
+        M = P.T @ M_unreduced @ P
+
+        res = P.T @ res_full
+        S = 1/(dt**2 * beta) * M + gamma/(dt*beta) * G + K
+        return S, res
+        
+    def write_timestep(self, t, u):
+        
+        # take care: This is not made for ParaView output
+        
+        self.T_output.append(t)
+        self.u_output.append(u)
+    
+    
+    
+        
+
 #pylint: disable=unused-argument
 class ConstrainedMechanicalSystem():
     '''

@@ -19,7 +19,7 @@ from amfe.element import Element, Tri3, Tri6, Quad4, Quad8, Tet4, Tet10, \
 from amfe.material import HyperelasticMaterial, KirchhoffMaterial, NeoHookean, \
     MooneyRivlin
 from amfe.mechanical_system import MechanicalSystem, ReducedSystem, \
-    ConstrainedMechanicalSystem
+    ConstrainedMechanicalSystem, QMSystem
 from amfe.mesh import Mesh, MeshGenerator
 from amfe.solver import NewmarkIntegrator, solve_linear_displacement, \
     solve_nonlinear_displacement, give_mass_and_stiffness, HHTConstrained
