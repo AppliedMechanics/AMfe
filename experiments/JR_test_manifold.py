@@ -53,13 +53,12 @@ M = my_reduced_system.M()
 
 # time integration
 
-my_newmark = amfe.NewmarkIntegrator()
-my_newmark.set_mechanical_system(my_reduced_system)
+my_newmark = amfe.NewmarkIntegrator(my_reduced_system)
 my_newmark.delta_t = 1E-4
 
 t1 = time.time()
 
-my_newmark.integrate_nonlinear_system(np.zeros(no_of_modes), 
+my_newmark.integrate(np.zeros(no_of_modes), 
                                       np.zeros(no_of_modes), np.arange(0, 0.4, 1E-4))
 
 t2 = time.time()

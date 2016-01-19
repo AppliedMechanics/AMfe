@@ -164,7 +164,6 @@ class NewmarkIntegrator():
             n_iter = 0
             while res_abs > self.rtol*res_abs_0 + self.atol:
                 
-#                S = K + 1/(self.beta*dt**2)*self.M
                 if sp.sparse.issparse(S):
                     delta_q = - linalg.spsolve(S, res)
                 else:

@@ -297,8 +297,8 @@ class MechanicalSystem():
         M : sp.sparse.sparse_matrix
             Mass matrix with applied constraints in sparse csr-format
         '''
-        self.M_unconstr = self.assembly_class.assemble_m()
-        self.M_constr = self.constrain_matrix(self.M_unconstr)
+        M_unconstr = self.assembly_class.assemble_m()
+        self.M_constr = self.constrain_matrix(M_unconstr)
         return self.M_constr
         
     def K(self, u=None, t=0):
@@ -352,11 +352,63 @@ class MechanicalSystem():
         return K, f
 
     def S_and_res(self, u, du, ddu, dt, t, beta, gamma):
-        '''
+        r'''
+        Compute jacobian and residual for implicit time integration. 
+        
+        Parameters
+        ----------
+        u : ndarray
+            displacement; dimension (ndof,)
+        du : ndarray
+            velocity; dimension (ndof,)
+        ddu : ndarray
+            acceleration; dimension (ndof,)
+        dt : float
+            time step width
+        t : float
+            time of current time step (for time dependent loads)
+        beta : float
+            weighting factor for position in generalized-:math:`\alpha` scheme
+        gamma : float
+            weighting factor for velocity in generalized-:math:`\alpha` scheme
+            
+        Returns
+        -------
+        S : ndarray
+            jacobian matrix of residual; dimension (ndof, ndof)
+        res : ndarray
+            residual; dimension (ndof,)
+        
+        Note
+        ----
+        Time integration scheme: The iteration matrix is composed using the generalized-:math:`\alpha` scheme: 
+        
+        .. math:: \mathbf S = \frac{1}{h^2\beta}\mathbf{M} 
+                  + \frac{\gamma}{h\beta} \mathbf D + \mathbf K
+                
+        which bases on the time discretization of the velocity and the 
+        displacement:
+        
+        .. math:: \mathbf{\dot{q}}_{n+1} & = \mathbf{\dot{q}}_{n} + (1-\gamma)h
+                  \mathbf{\ddot{q}}_{n} + \gamma h \mathbf{\ddot{q}}_{n+1}
+        
+        .. math:: \mathbf{q}_{n+1} & = \mathbf{q}_n + h \mathbf{\dot{q}}_n + 
+                  \left(\frac{1}{2} - \beta\right)h^2\mathbf{\ddot{q}}_n +
+                  h^2\beta\mathbf{\ddot{q}}_{n+1} 
+        
+        This method is using the variables/methods
+        
+            - self.M()
+            - self.M_constr
+            - self.K_and_f()
+            - self.f_ext()
+        
+        If these methods are implemented correctly in a daughter class, the 
+        time integration interface should work properly. 
         
         '''
         # compute mass matrix only once if it hasnt's been computed yet        
-        if self.M_unconstr is None:
+        if self.M_constr is None:
             self.M()
             
         K, f = self.K_and_f(u, t)
@@ -436,7 +488,8 @@ class ReducedSystem(MechanicalSystem):
         return self.V.T.dot(MechanicalSystem.f_int(self, self.V.dot(u), t))
 
     def M(self):
-        return self.V.T.dot(MechanicalSystem.M(self).dot(self.V))
+        self.M_constr = self.V.T.dot(MechanicalSystem.M(self).dot(self.V))
+        return self.M_constr
 
     def write_timestep(self, t, u):
         MechanicalSystem.write_timestep(self, t, self.V.dot(u))
