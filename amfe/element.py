@@ -25,14 +25,7 @@ try:
     import amfe.f90_element
     use_fortran = True
 except Exception:
-    print('''
-Python was not able to load the fast fortran element routines.
-run the script
-
-f2py/install_fortran_routines.sh
-
-in order to get the full speed!
-''')
+    print('''Python was not able to load the fast fortran element routines.''')
 
 #use_fortran = False
 
@@ -117,9 +110,12 @@ def compute_B_matrix(B_tilde, F):
                 [F11*b[0,i], F21*b[0,i], F31*b[0,i]],
                 [F12*b[1,i], F22*b[1,i], F32*b[1,i]],
                 [F13*b[2,i], F23*b[2,i], F33*b[2,i]],
-                [F12*b[2,i] + F13*b[1,i], F22*b[2,i] + F23*b[1,i], F32*b[2,i] + F33*b[1,i]],
-                [F13*b[0,i] + F11*b[2,i], F23*b[0,i] + F21*b[2,i], F33*b[0,i] + F31*b[2,i]],
-                [F11*b[1,i] + F12*b[0,i], F21*b[1,i] + F22*b[0,i], F31*b[1,i] + F32*b[0,i]]]
+                [F12*b[2,i] + F13*b[1,i], 
+                     F22*b[2,i] + F23*b[1,i], F32*b[2,i] + F33*b[1,i]],
+                [F13*b[0,i] + F11*b[2,i], 
+                     F23*b[0,i] + F21*b[2,i], F33*b[0,i] + F31*b[2,i]],
+                [F11*b[1,i] + F12*b[0,i], 
+                     F21*b[1,i] + F22*b[0,i], F31*b[1,i] + F32*b[0,i]]]
     return B
 
 
@@ -329,16 +325,21 @@ class Tri3(Element):
         '''
         Compute the tensors B0_tilde, B0, F, E and S at the Gauss Points.
 
-        The tensors are:
-            B0_tilde:   Die Ableitung der Ansatzfunktionen nach den x- und y-Koordinaten (2x3-Matrix)
-                        In den Zeilein stehen die Koordinatenrichtungen, in den Spalten die Ansatzfunktionen
-            B0:         The mapping matrix of delta E = B0 * u^e
-            F:          Deformation gradient (2x2-Matrix)
-            E:          Der Green-Lagrange strain tensor (2x2-Matrix)
-            S:          2. Piola-Kirchhoff stress tensor, using Kirchhoff material (2x2-Matrix)
-
-        The thickness information is used later for the internal forces, the 
-        mass and the stiffness matrix.
+        Variables
+        ---------
+            B0_tilde: ndarray
+                Die Ableitung der Ansatzfunktionen nach den x- und 
+                y-Koordinaten (2x3-Matrix). In den Zeilein stehen die 
+                Koordinatenrichtungen, in den Spalten die Ansatzfunktionen
+            B0: ndarray
+                The mapping matrix of delta E = B0 * u^e
+            F: ndarray
+                Deformation gradient (2x2-Matrix)
+            E: ndarray
+                Der Green-Lagrange strain tensor (2x2-Matrix)
+            S: ndarray
+                2. Piola-Kirchhoff stress tensor, using Kirchhoff material 
+                (2x2-Matrix)
         '''
         t = self.material.thickness
         X1, Y1, X2, Y2, X3, Y3 = X
@@ -358,7 +359,7 @@ class Tri3(Element):
         self.f = B0.T.dot(S_v)*det/2*t
 
 
-    def _m_int(self, X, u, t):
+    def _m_int(self, X, u, t=0):
         '''
         Compute the mass matrix.
 
@@ -481,7 +482,7 @@ class Tri6(Element):
             self.f += B0.T.dot(S_v)*det/2*t*w
         pass
 
-    def _m_int(self, X, u, t):
+    def _m_int(self, X, u, t=0):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
         t = self.material.thickness
         rho = self.material.rho
@@ -659,7 +660,7 @@ class Quad8(Element):
             self.f += B0.T.dot(S_v)*det*t*w
         pass
 
-    def _m_int(self, X, u, t):
+    def _m_int(self, X, u, t=0):
         '''
         Mass matrix using CAS-System
         '''
@@ -740,7 +741,7 @@ class Tet4(Element):
         self.K = K_geo + K_mat
         self.f = B0.T.dot(S_v)*det/6
 
-    def _m_int(self, X, u, t):
+    def _m_int(self, X, u, t=0):
         '''
         Mass matrix using CAS-System
         '''
@@ -787,7 +788,15 @@ class Tet10(Element):
         self.K = np.zeros((30,30))
         self.f = np.zeros(30)
 
-        self.gauss_points = ((1/4, 1/4, 1/4, 1/4, 1), )
+        gauss_points_1 = ((1/4, 1/4, 1/4, 1/4, 1), )
+
+        a = (5 - np.sqrt(5)) / 20
+        b = (5 + 3*np.sqrt(5)) / 20
+        w = 1/4
+        gauss_points_4 = ((a,a,a,b,w),
+                          (a,a,b,a,w),
+                          (a,b,a,a,w),
+                          (b,a,a,a,w),)
 
         w1 = 0.030283678097089*6
         w2 = 0.006026785714286*6
@@ -802,7 +811,7 @@ class Tet10(Element):
         a4 = 0.066550153573664
         c4 = 0.433449846426336
 
-        self.gauss_points = ((a1, a1, a1, a1, w1),
+        gauss_points_15 = ((a1, a1, a1, a1, w1),
 
                              (a2, b2, b2, b2, w2),
                              (b2, a2, b2, b2, w2),
@@ -820,6 +829,8 @@ class Tet10(Element):
                              (c4, c4, a4, a4, w4),
                              (c4, a4, c4, a4, w4),
                              (c4, a4, a4, c4, w4))
+                             
+        self.gauss_points = gauss_points_4
 
     def _compute_tensors(self, X, u, t):
 
@@ -898,7 +909,7 @@ class Tet10(Element):
             self.f += B0.T.dot(S_v)*det/6 * w
         pass
 
-    def _m_int(self, X, u, t):
+    def _m_int(self, X, u, t=0):
         '''
         Mass matrix using CAS-System
         '''
@@ -973,7 +984,6 @@ class Bar2Dlumped(Element):
 
     def _compute_tensors(self, X, u, t):
         self._k_and_m_int(X, u, t)
-        pass
 
     def _k_and_m_int(self, X, u, t):
 
@@ -1004,7 +1014,7 @@ class Bar2Dlumped(Element):
         k_el, m_el = self._k_and_m_int(X, u, t)
         return k_el
 
-    def _m_int(self, X, u, t):
+    def _m_int(self, X, u, t=0):
         k_el, m_el = self._k_and_m_int(X, u, t)
         return m_el
 
@@ -1094,7 +1104,7 @@ class BoundaryElement(Element):
         else:
             self.time_func = time_func
 
-    def _m_int(self, X, u, t):
+    def _m_int(self, X, u, t=0):
         return self.M
 
 
@@ -1169,7 +1179,8 @@ class Tri6Boundary(BoundaryElement):
         # ovlerloading of _compute_tensors function for case that full
         # integration is valid
         if full_integration:
-            self._compute_tensors = self._compute_tensors_full
+            print('Attention! Full integration not possible yet!')
+#            self._compute_tensors = self._compute_tensors_full
 
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 3)).T
@@ -1293,7 +1304,7 @@ if use_fortran:
         self.K, self.f = amfe.f90_element.tet4_k_and_f( \
             X, u, self.material.S_Sv_and_C)
 
-    def compute_tri6_mass(self, X, u, t):
+    def compute_tri6_mass(self, X, u, t=0):
         '''Wrapping funktion for fortran function call.'''
         self.M = amfe.f90_element.tri6_m(\
             X, self.material.rho, self.material.thickness)

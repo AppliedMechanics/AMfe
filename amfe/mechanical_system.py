@@ -1,15 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Created on Fri May  8 16:58:03 2015
-
-@author: johannesr
-
-Create mechanical system with default material parameters by:
-my_system = amfe.MechanicalSystem()
-If you want to use special material parameter, create mechanical system by e.g:
-my_system = amfe.MechanicalSystem(E_modul=1000.0, poisson_ratio=0.15, 
-                                  element_thickness=1.0, density=1.0)
+Module handling the whole mechanical system, no matter if it's a finite element 
+system, defined by certain parameters or a multibody system. 
 """
 
 import time
@@ -21,11 +14,6 @@ from amfe.mesh import Mesh
 from amfe.assembly import Assembly
 from amfe.boundary import DirichletBoundary, NeumannBoundary
 
-
-
-# Anmerkungen (Fabian):
-# - die Assembly-Klasse wird nach dem Einlesen des Netzes in der jeweiligen 
-#   Netz-Einlese-Methode instanziert
 
 
 class MechanicalSystem():
@@ -64,9 +52,10 @@ class MechanicalSystem():
         self.constrain_matrix = self.dirichlet_class.constrain_matrix
         
         # initializations to be overwritten by loading functions
-        self.M_unconstr = None
+        self.M_constr = None
         self.no_of_dofs_per_node = None
-        # external force to be overwritten by other forces
+
+        # external force to be overwritten by user-defined external forces
         self._f_ext_unconstr = lambda t: np.zeros(self.mesh_class.no_of_dofs)
 
 
@@ -381,7 +370,8 @@ class MechanicalSystem():
         
         Note
         ----
-        Time integration scheme: The iteration matrix is composed using the generalized-:math:`\alpha` scheme: 
+        Time integration scheme: The iteration matrix is composed using the
+        generalized-:math:`\alpha` scheme: 
         
         .. math:: \mathbf S = \frac{1}{h^2\beta}\mathbf{M} 
                   + \frac{\gamma}{h\beta} \mathbf D + \mathbf K
