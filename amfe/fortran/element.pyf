@@ -49,8 +49,8 @@ python module f90_element ! in
             real(kind=8) dimension(no_of_nodes,no_of_dims),intent(in) :: bt
             real(kind=8) dimension(no_of_dims,no_of_dims),intent(in),depend(no_of_dims,no_of_dims) :: f
             real(kind=8) dimension(no_of_dims*(no_of_dims+1)/2,no_of_nodes*no_of_dims),depend(no_of_dims,no_of_nodes,no_of_dims),intent(out) :: b
-            integer, optional,intent(in),check(shape(bt,1)==no_of_nodes),depend(bt) :: no_of_nodes=shape(bt,1)
-            integer, optional,intent(in),check(shape(bt,0)==no_of_dims),depend(bt) :: no_of_dims=shape(bt,0)
+            integer, optional,intent(in),check(shape(bt,0)==no_of_nodes),depend(bt) :: no_of_nodes=shape(bt,0)
+            integer, optional,intent(in),check(shape(bt,1)==no_of_dims),depend(bt) :: no_of_dims=shape(bt,1)
         end subroutine compute_b_matrix
 
         subroutine tri3_k_and_f(x,u,k,f_int,t,s_sv_and_c_2d) ! in :f90_element:element.f90
