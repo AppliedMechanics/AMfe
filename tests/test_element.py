@@ -281,7 +281,7 @@ class TestB_matrix_compuation(unittest.TestCase):
 
         # Routine for testing the compute_B_matrix_routine
         # Try it the hard way:
-        B_tilde = sp.rand(ndim,4)
+        B_tilde = sp.rand(4, ndim)
         F = sp.rand(ndim, ndim)
         S_v = sp.rand(ndim*(ndim+1)//2)
 
@@ -293,8 +293,8 @@ class TestB_matrix_compuation(unittest.TestCase):
                           [S_v[4], S_v[3], S_v[2]]])
 
         B = amfe.element.compute_B_matrix(B_tilde, F)
-        self.res1 = B.T.dot(S_v)
-        self.res2 = B_tilde.T.dot(S.dot(F.T))
+        self.res1 = B.T @ S_v
+        self.res2 = B_tilde @ S @ F.T
 
     def test_2d(self):
         self.produce_numbers(2)
