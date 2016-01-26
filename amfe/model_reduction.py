@@ -144,18 +144,20 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
 
 
 def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
-    '''
-    Computes the static correction vectors.
+    r'''
+    Computes the static correction vectors 
+    :math:`\frac{\partial x_i}{\partial x_j}` of the system with a nonlinear 
+    force.
 
     Parameters
     ----------
     x_i : ndarray
-        displacement vector i
+        displacement vector i; it can also 
     x_j : ndarray
         displacement vector j
     K_func : function
         function for the tangential stiffness matrix to be called in the form 
-        K_tangential = K_func(x_i)
+        K_tangential = K_func(x_j)
     h : float, optional
         step size for the computation of the finite difference scheme. Default 
         value 500 * machine_epsilon
@@ -182,11 +184,11 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     '''
     ndof = x_i.shape[0]
     K = K_func(np.zeros(ndof))
-    dK_x_j = (K_func(x_j*h) - K)/h
-    b = - dK_x_j.dot(x_i) # rigth hand side of equation
+    dK_dx_j = (K_func(x_j*h) - K)/h
+    b = - dK_dx_j.dot(x_i) # rigth hand side of equation
     dx_i_dx_j = linalg.solve(K, b)
     if verbose:
-        res = K.dot(dx_i_dx_j) + dK_x_j.dot(x_i)
+        res = K.dot(dx_i_dx_j) + dK_dx_j.dot(x_i)
         print('\nComputation of static correction derivative. ')
         print('The condition number of the solution procedure is', np.linalg.cond(K))
         print('The residual is', linalg.norm(res),
