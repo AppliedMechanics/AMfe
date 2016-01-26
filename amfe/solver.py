@@ -79,6 +79,7 @@ class NewmarkIntegrator():
         self.verbose = verbose
         self.n_iter_max = n_iter_max
         self.mechanical_system = mechanical_system
+        self.write_iter = False
 
     def integrate(self, q_start, dq_start, time_range):
         '''
@@ -167,7 +168,7 @@ class NewmarkIntegrator():
                 if sp.sparse.issparse(S):
                     delta_q = - linalg.spsolve(S, res)
                 else:
-                    delta_q = - sp.linalg.solve(S, res, sym_pos=True)
+                    delta_q = - sp.linalg.solve(S, res)
                 
                 # update state variables
                 q += delta_q
@@ -180,7 +181,12 @@ class NewmarkIntegrator():
                 n_iter += 1
 
                 if self.verbose:
-                    print('Iteration', n_iter, 'Residuum:', res_abs)
+                    print('Iteration', n_iter, 'Residual:', res_abs, 
+                          'cond# of S:', np.linalg.cond(S))
+                    
+                if self.write_iter:
+                    t_write = t + dt/100*n_iter
+                    self.mechanical_system.write_timestep(t_write, q.copy())
 
                 # catch when the newton loop doesn't converge
                 if n_iter > self.n_iter_max:
