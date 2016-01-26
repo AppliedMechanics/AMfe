@@ -566,10 +566,10 @@ class QMSystem(MechanicalSystem):
             u = np.zeros(self.no_of_red_dofs)
         theta_u = self.Theta @ u
         u_full = (self.V + theta_u) @ u
-        P = self.V + 2*u_full
+        P = self.V + 2*theta_u
         K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
         K1 = P.T @ K_unreduced @ P
-        K2 = 2*self.Theta @ f_unreduced
+        K2 = 2*self.Theta.T @ f_unreduced
         K = K1 + K2
         f = P.T @ f_unreduced
         return K, f

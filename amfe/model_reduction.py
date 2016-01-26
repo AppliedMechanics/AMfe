@@ -49,15 +49,22 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False):
 def qm_reduce_mechanical_system(mechanical_system, V, theta, overwrite=False):
     '''
     '''
-    
+    # consistency check
+    assert(V.shape[-1] == theta.shape[-1])
+    assert(theta.shape[1] == theta.shape[2])
+    assert(theta.shape[0] == V.shape[0])
+    no_of_red_dofs = V.shape[-1]
     if overwrite:
         reduced_sys = mechanical_system
     else:
         reduced_sys = copy.deepcopy(mechanical_system)
+        
     reduced_sys.__class__ = QMSystem
     reduced_sys.V = V.copy()
     reduced_sys.Theta = theta.copy()
+    # define internal variables
     reduced_sys.u_red_output = []
+    reduced_sys.no_of_red_dofs = no_of_red_dofs
     return reduced_sys
     
 
