@@ -541,6 +541,7 @@ class QMSystem(MechanicalSystem):
         self.V = None
         self.Theta = None
         self.no_of_red_dofs = None
+        self.u_red_output = []
     
     def M(self, u=None, t=0):
         # checks, if u is there and M is already computed
@@ -610,11 +611,11 @@ class QMSystem(MechanicalSystem):
         return S, res
         
     def write_timestep(self, t, u):
+        u_full = self.V @ u + (self.Theta @ u) @ u
+        MechanicalSystem.write_timestep(self, t, u_full)
+        # own reduced output
+        self.u_red_output.append(u.copy())
         
-        # take care: This is not made for ParaView output
-        
-        self.T_output.append(t)
-        self.u_output.append(u)
     
     
     

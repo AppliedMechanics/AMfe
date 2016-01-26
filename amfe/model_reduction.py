@@ -57,6 +57,7 @@ def qm_reduce_mechanical_system(mechanical_system, V, theta, overwrite=False):
     reduced_sys.__class__ = QMSystem
     reduced_sys.V = V.copy()
     reduced_sys.Theta = theta.copy()
+    reduced_sys.u_red_output = []
     return reduced_sys
     
 
@@ -152,9 +153,10 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     Parameters
     ----------
     x_i : ndarray
-        displacement vector i; it can also 
+        array containing displacement vectors i in the rows. x_i[:,i] is the 
+        i-th vector
     x_j : ndarray
-        displacement vector j
+        displacement vector j 
     K_func : function
         function for the tangential stiffness matrix to be called in the form 
         K_tangential = K_func(x_j)
@@ -195,6 +197,48 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
               ', the relative residual is', linalg.norm(res)/linalg.norm(b))
     return dx_i_dx_j
 
+
+def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
+    '''
+    Computes the static correction derivatives of the basis V
+    
+    Parameters
+    ----------
+    V : ndarray
+        array containing the linear basis
+    K_func : function
+        function returning the tangential stiffness matrix for a given 
+        displacement. Has to work like K = K_func(u). 
+    h : float, optional
+        step width for finite difference scheme. Default value is 500 * machine 
+        epsilon
+    verbose : bool, optional
+        flag for verbosity. Default value: True        
+        
+    Returns
+    -------
+    Theta : ndarray
+        three dimensional array of static corrections derivatives. Theta[:,i,j] 
+        contains the static derivative dx_i / dx_j. As the static derivatives 
+        are symmetric, Theta[:,i,j] == Theta[:,j,i]. 
+    '''
+    no_of_dofs = V.shape[0]
+    no_of_modes = V.shape[1]
+    Theta = np.zeros((no_of_dofs, no_of_modes, no_of_modes))
+    K = K_func(np.zeros(no_of_dofs))
+    for i in range(no_of_modes):
+        if verbose: print('Computing finite difference K-matrix')
+        dK_dx_i = (K_func(h*V[:,i]) - K)/h
+        b = dK_dx_i @ V
+        if verbose: print('Sovling linear system #', i)
+        Theta[:,:,i] = sp.sparse.linalg.spsolve(K, b)
+        if verbose: print('Done solving linear system #', i)
+    if verbose:
+        residual = np.sum(Theta - Theta.transpose(0,2,1))
+        print('The residual, i.e. the unsymmetric values, are', residual)
+    # make Theta symmetric
+    Theta = 1/2*(Theta + Theta.transpose(0,2,1))
+    return Theta
 
 def principal_angles_and_vectors(V1, V2, cosine=True):
     '''
