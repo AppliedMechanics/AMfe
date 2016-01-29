@@ -644,7 +644,8 @@ class Mesh:
         TODO
         '''
         self.timesteps.append(1)
-        self.u.append(np.array(u).reshape((-1, self.no_of_dofs_per_node)))
+        self.u.append(np.array(u))
+        return
 
 
     def set_displacement_with_time(self, u, timesteps):
@@ -671,7 +672,8 @@ class Mesh:
         self.timesteps = timesteps.copy()
         self.u = []
         for i, timestep in enumerate(self.timesteps):
-            self.u.append(np.array(u[i]).reshape((-1, self.no_of_dofs_per_node)))
+            self.u.append(np.array(u[i]))
+        return
 
 
     def save_mesh_xdmf(self, filename):
@@ -689,7 +691,7 @@ class Mesh:
         
         '''
         if len(self.timesteps) == 0:
-            self.u = [np.zeros((self.no_of_nodes, self.no_of_dofs_per_node))]
+            self.u = [np.zeros((self.no_of_nodes * self.no_of_dofs_per_node,)), ]
             self.timesteps.append(0)
 
         # XDMF-specifications:
@@ -702,15 +704,16 @@ class Mesh:
         el_type_ix = (ele_types == el_type_export)
         # nodes to export        
         ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
+        # Here's still a bug!
 
         # make displacement 3D vector, as paraview only accepts 3D vectors
-        q_array = np.array(self.u, dtype=float).T        
+        q_array = np.array(self.u, dtype=float).T
         if self.no_of_dofs_per_node == 2:
-            q_array.reshape((self.no_of_nodes,2,-1))
-            x, y, z = q_array.shape
-            q_array_new = np.zeros((x,3,z))
-            q_array_new[:,:2,:] = q_array
-            q_array = q_array_new.reshape((-1,z))
+            tmp_2d = q_array.reshape((self.no_of_nodes,2,-1))
+            x, y, z = tmp_2d.shape
+            tmp_3d = np.zeros((x,3,z))
+            tmp_3d[:,:2,:] = tmp_2d
+            q_array = tmp_3d.reshape((-1,z))
                     
         # XDMF-keywords and values
         topology_dim = str(ele_nodes_export.shape[0]) + ' ' + \
@@ -761,8 +764,9 @@ class Mesh:
                                 {'ItemType':'HyperSlab', 
                                  'Dimensions':u_data_dim})
             u_hyperslab = SubElement(u_data, 'DataItem', 
-                                                {'ItemType':'HyperSlab',
-                                                 'Dimensions':'3 2'})
+                                     {'ItemType':'HyperSlab',
+                                     'Dimensions':'3 2'})
+            
             # pick the i-th column via hyperslab 
             u_hyperslab.text = '0 ' + str(i) + ' 1 1 ' + u_hdf_rows + ' 1'
             u_hdf = SubElement(u_data, 'DataItem', 
@@ -883,7 +887,8 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                 savefile_vtu.write('<DataArray type="Float64" Name="displacement" \
                     NumberOfComponents="3" format="ascii">\n')
                 # pick the i-th timestep
-                for j in self.u[i]:
+                u_exp = self.u[i].reshape((-1, self.no_of_dofs_per_node))
+                for j in u_exp:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write(vtu_footer)
