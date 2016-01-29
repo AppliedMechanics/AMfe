@@ -9,7 +9,9 @@ import numpy as np
 import time
 import os
 
-amfe_dir = '/home/rutzmoser/Dokumente/004_AMfe'
+amfe_dir = amfe.__path__[0]
+amfe_dir = os.path.dirname(amfe_dir) # move one folder up
+
 gmsh_input_file_dir_relative = 'meshes/gmsh/bogen_grob.msh'
 paraview_output_file_relative = 'results/test' + \
                         time.strftime("_%Y%m%d_%H%M%S") + '/test'
