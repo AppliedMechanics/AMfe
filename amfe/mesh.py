@@ -6,10 +6,17 @@ Created on Fri Mar 20 15:25:24 2015
 """
 import os
 import copy
+# XML stuff
+from xml.etree.ElementTree import Element, SubElement
+from xml.etree import ElementTree
+from xml.dom import minidom
+
+
 
 import numpy as np
 import scipy as sp
 import pandas as pd
+import h5py
 
 from amfe.element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
 from amfe.element import LineLinearBoundary, LineQuadraticBoundary, Tri3Boundary, Tri6Boundary
@@ -17,17 +24,17 @@ from amfe.element import LineLinearBoundary, LineQuadraticBoundary, Tri3Boundary
 # Element mapping is described here. If a new element is implemented, the
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
-    # internal Name,    gmsh-Key, vtk/ParaView-Key, no_of_nodes, description
-    ['Tet4',             4, 10,  4, 'Linear Tetraeder / nodes on every corner'],
-    ['Tet10',           11, 24, 10, 'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
-    ['Tri6',             9, 22,  6, 'Quadratic triangle / 6 node second order triangle'],
-    ['Tri3',             2,  5,  3, 'Straight triangle / 3 node first order triangle'],
-    ['Tri10',           21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
-    ['Quad4',            3,  9,  4, 'Bilinear rectangle / 4 node first order rectangle'],
-    ['Quad8',           16, 23,  8, 'Biquadratic rectangle / 8 node second order rectangle'],
-    ['straight_line',    1,  3,  2, 'Straight line composed of 2 nodes'],
-    ['quadratic_line',   8, 21,  3, 'Quadratic edge/line composed of 3 nodes'],
-    ['point',       15, np.NAN,  1, 'Single Point'],    
+    # internal Name, XMF Key,   gmsh-Key, vtk/ParaView-Key, no_of_nodes, description
+    ['Tet4',          'Tetrahedron',   4, 10,  4, 'Linear Tetraeder / nodes on every corner'],
+    ['Tet10',         'Tetrahedron_10',  11, 24, 10, 'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
+    ['Tri6',          'Triangle_6',   9, 22,  6, 'Quadratic triangle / 6 node second order triangle'],
+    ['Tri3',          'Triangle',   2,  5,  3, 'Straight triangle / 3 node first order triangle'],
+    ['Tri10',         '',  21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
+    ['Quad4',         'Quadrilateral',   3,  9,  4, 'Bilinear rectangle / 4 node first order rectangle'],
+    ['Quad8',         'Quadrilateral_8',  16, 23,  8, 'Biquadratic rectangle / 8 node second order rectangle'],
+    ['straight_line', 'Edge',   1,  3,  2, 'Straight line composed of 2 nodes'],
+    ['quadratic_line', 'Edge_3',  8, 21,  3, 'Quadratic edge/line composed of 3 nodes'],
+    ['point',       '', 15, np.NAN,  1, 'Single Point'],    
     # Bars are missing, which are used for simple benfield truss
 ]
 
@@ -64,14 +71,15 @@ boundary_3d_set = {'straight_line', 'quadratic_line',
 gmsh2amfe        = dict([])
 amfe2gmsh        = dict([])
 amfe2vtk         = dict([])
+amfe2xmf         = dict([])
 amfe2no_of_nodes = dict([])
 
-
 for element in element_mapping_list:
-    gmsh2amfe.update({element[1] : element[0]})
-    amfe2gmsh.update({element[0] : element[1]})
-    amfe2vtk.update( {element[0] : element[2]})
-    amfe2no_of_nodes.update({element[0] : element[3]})
+    gmsh2amfe.update({element[2] : element[0]})
+    amfe2gmsh.update({element[0] : element[2]})
+    amfe2vtk.update( {element[0] : element[3]})
+    amfe2xmf.update({element[0] : element[1]})
+    amfe2no_of_nodes.update({element[0] : element[4]})
 
 
 
@@ -81,6 +89,24 @@ def check_dir(*filenames):
         if not os.path.exists(os.path.dirname(filename)):   # check if directory does not exists...
             os.makedirs(os.path.dirname(filename))          # then create directory
             print("Created directory: " + os.path.dirname(filename))
+
+def prettify_xml(elem):
+    '''
+    Return a pretty string from an XML Element-Tree
+    
+    Parameters
+    ----------
+    elem : Instance of xml.etree.ElementTree.Element
+        XML element tree
+        
+    Returns
+    -------
+    str : string
+        well formatted xml file string
+    '''
+    rough_string = ElementTree.tostring(elem, 'utf-8')
+    reparsed = minidom.parseString(rough_string)
+    return reparsed.toprettyxml()
 
 
 class Mesh:
@@ -647,13 +673,111 @@ class Mesh:
         for i, timestep in enumerate(self.timesteps):
             self.u.append(np.array(u[i]).reshape((-1, self.no_of_dofs_per_node)))
 
-    def set_nodal_variable_with_time(self, variable_array, variable_name, timesteps):
-        '''
-        Sets the nodal variables with the time history
-        '''
-        # TODO
-        pass
 
+    def save_mesh_xdmf(self, filename):
+        '''
+        Save the mesh in hdf5 and xdmf file format. 
+        
+        Parameters
+        ----------
+        filename : str
+            String constisting the path and the filename
+        
+        Returns
+        -------
+        None
+        
+        '''
+        if len(self.timesteps) == 0:
+            self.u = [np.zeros((self.no_of_nodes, self.no_of_dofs_per_node))]
+            self.timesteps.append(0)
+
+        # XDMF-specifications:
+        # determine the part of the mesh which has most elements
+        # only this part will be exported! 
+        ele_types = np.array(self.ele_types, dtype=object)
+        unique_el_types= np.unique(ele_types)
+        el_type_export = unique_el_types[0]
+        # Boolean matrix giving the indices for the elements to export
+        el_type_ix = (ele_types == el_type_export)
+        # nodes to export        
+        ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
+
+        # make displacement 3D vector, as paraview only accepts 3D vectors
+        q_array = np.array(self.u, dtype=float).T        
+        if self.no_of_dofs_per_node == 2:
+            q_array.reshape((self.no_of_nodes,2,-1))
+            x, y, z = q_array.shape
+            q_array_new = np.zeros((x,3,z))
+            q_array_new[:,:2,:] = q_array
+            q_array = q_array_new.reshape((-1,z))
+                    
+        # XDMF-keywords and values
+        topology_dim = str(ele_nodes_export.shape[0]) + ' ' + \
+                       str(ele_nodes_export.shape[1])
+        topology_type = amfe2xmf[el_type_export]
+        u_data_dim = str(self.no_of_nodes)+' 3'
+        u_hdf_dim = str(q_array.shape[0]) + ' ' + str(q_array.shape[1])
+        u_hdf_rows = str(q_array.shape[0])
+        xdmf_node_type = 'XYZ'
+        if self.no_of_dofs_per_node == 2:
+            xdmf_node_type = 'XY'
+        
+        # write into the hdf5 file
+        check_dir(filename)
+        with h5py.File(filename + '.hdf5', 'w') as f:
+            f.create_dataset('mesh/nodes', data=self.nodes)
+            
+            f.create_dataset('mesh/topology', 
+                             data=ele_nodes_export, 
+                             dtype=np.int)
+            f.create_dataset('time_vals/displacements', 
+                             data=q_array)
+            f.create_dataset('time_vals/time', 
+                             data=np.array(self.timesteps))
+
+        # create xml tree for xdmf file
+        xml_root = Element('Xdmf', {'Version':'2.2'})
+        domain = SubElement(xml_root, 'Domain')
+        time_grid = SubElement(domain, 'Grid', {'GridType':'Collection', 
+                                                'CollectionType':'Temporal'})
+        for i, T in enumerate(self.timesteps):
+            grid = SubElement(time_grid, 'Grid', {'Type':'Uniform'})
+            time = SubElement(grid, 'Time', {'TimeType':'Single', 
+                                             'Value':str(T)})
+            topology = SubElement(grid, 'Topology', 
+                                  {'TopologyType':topology_type,
+                                   'Dimensions':topology_dim})
+            topology.text = filename + '.hdf5:/mesh/topology'
+            
+            geometry = SubElement(grid, 'Geometry', {'GeometryType':xdmf_node_type})
+            geometry.text = filename + '.hdf5:/mesh/nodes'
+            
+            # One attrribute for displacement
+            u_attr = SubElement(grid, 'Attribute', {'Name':'Displacement',
+                                                    'AttributeType':'Vector',
+                                                    'Center':'Node'})
+            u_data = SubElement(u_attr, 'DataItem', 
+                                {'ItemType':'HyperSlab', 
+                                 'Dimensions':u_data_dim})
+            u_hyperslab = SubElement(u_data, 'DataItem', 
+                                                {'ItemType':'HyperSlab',
+                                                 'Dimensions':'3 2'})
+            # pick the i-th column via hyperslab 
+            u_hyperslab.text = '0 ' + str(i) + ' 1 1 ' + u_hdf_rows + ' 1'
+            u_hdf = SubElement(u_data, 'DataItem', 
+                               {'Format':'HDF', 
+                               'NumberType':'Float', 
+                               'Dimensions':u_hdf_dim})
+            u_hdf.text = filename + '.hdf5:/displacement'
+
+        # write xdmf-file
+        xdmf_str = prettify_xml(xml_root)
+        with open(filename + '.xdmf', 'w') as f:
+            f.write(xdmf_str)
+
+        return 
+        
     def save_mesh_for_paraview(self, filename):
         '''
         Saves the mesh and the corresponding displacements to a .pvd file and 
@@ -763,6 +887,7 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write(vtu_footer)
+        return
 
 
 class MeshGenerator:
@@ -793,7 +918,7 @@ class MeshGenerator:
         # Make mesh 3D, if it is curved in one direction
         if x_curve | y_curve:
             self.flat_mesh = False
-        pass
+        return
 
     def _curved_mesh_get_phi_r(self, h, l):
         '''
