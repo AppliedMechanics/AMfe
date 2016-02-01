@@ -15,6 +15,7 @@ from experiments.quadratic_manifold.benchmark_example import benchmark_system, p
 #%%
 
 mesh_class = benchmark_system.mesh_class
+mesh_class.set_displacement_with_time(benchmark_system.u_output, benchmark_system.T_output)
 mesh_class.save_mesh_xdmf('my_xdmf_test/test')
 
 #%%

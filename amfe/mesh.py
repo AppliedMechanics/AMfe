@@ -127,8 +127,8 @@ class Mesh:
 
     Attributes
     ----------
-    nodes : list
-        List of x-y-z coordinates of the nodes. Dimension is 
+    nodes : ndarray
+        Array of x-y-z coordinates of the nodes. Dimension is 
         (no_of_nodes, no_of_dofs_per_node). 
     ele_nodes : list
         List of nodes indices belonging to one element. 
@@ -165,7 +165,7 @@ class Mesh:
         -------
         None
         '''
-        self.nodes         = []
+        self.nodes         = np.array([])
         self.ele_nodes     = []
         self.ele_obj       = []
         self.ele_types     = [] # Element-types for Export
@@ -730,6 +730,9 @@ class Mesh:
         topology_dim = str(ele_nodes_export.shape[0]) + ' ' + \
                        str(ele_nodes_export.shape[1])
         topology_type = amfe2xmf[el_type_export]
+        geometry_dim = str(self.nodes.shape[0]) + ' ' + str(self.nodes.shape[1])
+        no_of_elements = str(ele_nodes_export.shape[0])
+        
         u_data_dim = str(self.no_of_nodes)+' 3'
         u_hdf_dim = str(q_array.shape[0]) + ' ' + str(q_array.shape[1])
         u_hdf_rows = str(q_array.shape[0])
@@ -739,13 +742,15 @@ class Mesh:
         
         # write into the hdf5 file
         check_dir(filename)
+        filename_no_dir = os.path.split(filename)[-1]
+        
         with h5py.File(filename + '.hdf5', 'w') as f:
             f.create_dataset('mesh/nodes', data=self.nodes)
             
             f.create_dataset('mesh/topology', 
                              data=ele_nodes_export, 
                              dtype=np.int)
-            f.create_dataset('time_vals/displacements', 
+            f.create_dataset('time_vals/displacement', 
                              data=q_array)
             f.create_dataset('time_vals/time', 
                              data=np.array(self.timesteps))
@@ -761,11 +766,19 @@ class Mesh:
                                              'Value':str(T)})
             topology = SubElement(grid, 'Topology', 
                                   {'TopologyType':topology_type,
-                                   'Dimensions':topology_dim})
-            topology.text = filename + '.hdf5:/mesh/topology'
+                                   'NumberOfElements':no_of_elements})
+            topology_data = SubElement(topology, 'DataItem', 
+                                       {'NumberType':'Int', 
+                                        'Format':'HDF', 
+                                        'Dimensions':topology_dim})
+            topology_data.text = filename_no_dir + '.hdf5:/mesh/topology'
             
             geometry = SubElement(grid, 'Geometry', {'GeometryType':xdmf_node_type})
-            geometry.text = filename + '.hdf5:/mesh/nodes'
+            geometry_data_item = SubElement(geometry, 'DataItem', 
+                                            {'NumberType':'Float',
+                                             'Format':'HDF',
+                                             'Dimensions':geometry_dim})
+            geometry_data_item.text = filename_no_dir + '.hdf5:/mesh/nodes'
             
             # One attrribute for displacement
             u_attr = SubElement(grid, 'Attribute', {'Name':'Displacement',
@@ -775,8 +788,8 @@ class Mesh:
                                 {'ItemType':'HyperSlab', 
                                  'Dimensions':u_data_dim})
             u_hyperslab = SubElement(u_data, 'DataItem', 
-                                     {'ItemType':'HyperSlab',
-                                     'Dimensions':'3 2'})
+                                     {'Dimensions':'3 2', 
+                                     'Format':'XML'})
             
             # pick the i-th column via hyperslab 
             u_hyperslab.text = '0 ' + str(i) + ' 1 1 ' + u_hdf_rows + ' 1'
@@ -784,7 +797,7 @@ class Mesh:
                                {'Format':'HDF', 
                                'NumberType':'Float', 
                                'Dimensions':u_hdf_dim})
-            u_hdf.text = filename + '.hdf5:/displacement'
+            u_hdf.text = filename_no_dir + '.hdf5:/time_vals/displacement'
 
         # write xdmf-file
         xdmf_str = prettify_xml(xml_root)
