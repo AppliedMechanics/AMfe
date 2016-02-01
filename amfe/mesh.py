@@ -713,7 +713,7 @@ class Mesh:
         el_type_ix = (ele_types == el_type_export)
         # nodes to export        
         ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
-        ele_nodes_export = ele_nodes_export.astype(float)
+        ele_nodes_export = np.array(ele_nodes_export.tolist())
         # Here's still a bug!
         # make displacement 3D vector, as paraview only accepts 3D vectors
         q_array = np.array(self.u, dtype=float).T

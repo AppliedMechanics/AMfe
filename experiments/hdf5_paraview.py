@@ -15,7 +15,7 @@ from experiments.quadratic_manifold.benchmark_example import benchmark_system, p
 #%%
 
 mesh_class = benchmark_system.mesh_class
-mesh_class.save_mesh_xdmf('my_xdmf_test')
+mesh_class.save_mesh_xdmf('my_xdmf_test/test')
 
 #%%
 
