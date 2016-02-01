@@ -19,21 +19,31 @@ import pandas as pd
 import h5py
 
 from amfe.element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
-from amfe.element import LineLinearBoundary, LineQuadraticBoundary, Tri3Boundary, Tri6Boundary
+from amfe.element import LineLinearBoundary, LineQuadraticBoundary, \
+    Tri3Boundary, Tri6Boundary
 
 # Element mapping is described here. If a new element is implemented, the
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
     # internal Name, XMF Key,   gmsh-Key, vtk/ParaView-Key, no_of_nodes, description
-    ['Tet4',          'Tetrahedron',   4, 10,  4, 'Linear Tetraeder / nodes on every corner'],
-    ['Tet10',         'Tetrahedron_10',  11, 24, 10, 'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
-    ['Tri6',          'Triangle_6',   9, 22,  6, 'Quadratic triangle / 6 node second order triangle'],
-    ['Tri3',          'Triangle',   2,  5,  3, 'Straight triangle / 3 node first order triangle'],
-    ['Tri10',         '',  21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
-    ['Quad4',         'Quadrilateral',   3,  9,  4, 'Bilinear rectangle / 4 node first order rectangle'],
-    ['Quad8',         'Quadrilateral_8',  16, 23,  8, 'Biquadratic rectangle / 8 node second order rectangle'],
-    ['straight_line', 'Edge',   1,  3,  2, 'Straight line composed of 2 nodes'],
-    ['quadratic_line', 'Edge_3',  8, 21,  3, 'Quadratic edge/line composed of 3 nodes'],
+    ['Tet4',          'Tetrahedron',   4, 10,  4, 
+     'Linear Tetraeder / nodes on every corner'],
+    ['Tet10',         'Tetrahedron_10',  11, 24, 10, 
+     'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
+    ['Tri6',          'Triangle_6',   9, 22,  6, 
+     'Quadratic triangle / 6 node second order triangle'],
+    ['Tri3',          'Triangle',   2,  5,  3, 
+     'Straight triangle / 3 node first order triangle'],
+    ['Tri10',         '',  21, 35, 10, 
+     'Cubic triangle / 10 node third order triangle'],
+    ['Quad4',         'Quadrilateral',   3,  9,  4, 
+     'Bilinear rectangle / 4 node first order rectangle'],
+    ['Quad8',         'Quadrilateral_8',  16, 23,  8, 
+     'Biquadratic rectangle / 8 node second order rectangle'],
+    ['straight_line', 'Edge',   1,  3,  2, 
+     'Straight line composed of 2 nodes'],
+    ['quadratic_line', 'Edge_3',  8, 21,  3, 
+     'Quadratic edge/line composed of 3 nodes'],
     ['point',       '', 15, np.NAN,  1, 'Single Point'],    
     # Bars are missing, which are used for simple benfield truss
 ]
@@ -696,13 +706,12 @@ class Mesh:
         # determine the part of the mesh which has most elements
         # only this part will be exported! 
         ele_types = np.array(self.ele_types, dtype=object)
-        unique_el_types= np.unique(ele_types)
-        el_type_export = unique_el_types[0]
+        el_type_export = np.unique(ele_types)[0]
         # Boolean matrix giving the indices for the elements to export
         el_type_ix = (ele_types == el_type_export)
         # nodes to export        
         ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
-
+        ele_nodes_export = ele_nodes_export.astype(float)
         # make displacement 3D vector, as paraview only accepts 3D vectors
         q_array = np.array(self.u, dtype=float).T        
         if self.no_of_dofs_per_node == 2:
