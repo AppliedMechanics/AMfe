@@ -95,8 +95,10 @@ for element in element_mapping_list:
 
 def check_dir(*filenames):
     '''Checkt ob Verzeichnis vorliegt; falls nicht, wird Verzeichnis angelegt'''
-    for filename in filenames:                              # loop on files
-        if not os.path.exists(os.path.dirname(filename)):   # check if directory does not exists...
+    for filename in filenames:  # loop on files
+        dir_name = os.path.dirname(filename)
+        # check if directory does not exist; then create directory
+        if not os.path.exists(dir_name) or dir_name == '':            
             os.makedirs(os.path.dirname(filename))          # then create directory
             print("Created directory: " + os.path.dirname(filename))
 
