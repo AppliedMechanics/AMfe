@@ -470,6 +470,7 @@ class ReducedSystem(MechanicalSystem):
         '''
         MechanicalSystem.__init__(self, **kwargs)
         self.V = V_basis
+        self.u_red_output = []
 
     def K_and_f(self, u=None, t=0):
         if u is None:
@@ -498,6 +499,7 @@ class ReducedSystem(MechanicalSystem):
 
     def write_timestep(self, t, u):
         MechanicalSystem.write_timestep(self, t, self.V.dot(u))
+        self.u_red_output.append(u.copy())
 
     def K_unreduced(self, u=None, t=0):
         '''
@@ -542,6 +544,22 @@ class ReducedSystem(MechanicalSystem):
         Unreduced mass matrix. 
         '''
         return MechanicalSystem.M(self)
+    
+    def export_paraview(self, filename, field_list=[]):
+        '''
+        Export the produced results to ParaView via XDMF format. 
+        '''
+        u_red_export = np.array(self.u_red_output).T
+        u_red_dict = {'ParaView':'False', 'Name':'q_red'}
+        field_list.append((u_red_export, u_red_dict))
+        MechanicalSystem.export_paraview(self, filename, field_list)
+        filename_no_ext, ext = os.path.splitext(filename)
+
+        # add V and Theta to the hdf5 file
+        with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
+            f.create_dataset('Reduction/V', data=self.V)
+            
+        return
 
 
 class QMSystem(MechanicalSystem):
@@ -636,15 +654,10 @@ class QMSystem(MechanicalSystem):
         '''
         Export the produced results to ParaView via XDMF format. 
         '''
-        u_red_export = np.array(self.u_red_output).T
-        u_red_dict = {'ParaView':'False', 'Name':'q_red'}
-        field_list.append((u_red_export, u_red_dict))
-        MechanicalSystem.export_paraview(self, filename, field_list)
+        ReducedSystem.export_paraview(self, filename, field_list)
         filename_no_ext, ext = os.path.splitext(filename)
-
         # add V and Theta to the hdf5 file
         with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
-            f.create_dataset('Reduction/V', data=self.V)
             f.create_dataset('Reduction/Theta', data=self.Theta)
         
         return
