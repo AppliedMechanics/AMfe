@@ -735,99 +735,38 @@ class Mesh:
             tmp_3d = np.zeros((x,3,z))
             tmp_3d[:,:2,:] = tmp_2d
             q_array = tmp_3d.reshape((-1,z))
-#                   
-#        # XDMF-keywords and values
-#        topology_dim = str(ele_nodes_export.shape[0]) + ' ' + \
-#                       str(ele_nodes_export.shape[1])
-#        topology_type = amfe2xmf[el_type_export]
-#        geometry_dim = str(self.nodes.shape[0]) + ' ' + str(self.nodes.shape[1])
-#        no_of_elements = str(ele_nodes_export.shape[0])
-#        u_data_dim = str(self.no_of_nodes)+' 3'
-#        u_hdf_dim = str(q_array.shape[0]) + ' ' + str(q_array.shape[1])
-#        u_hdf_rows = str(q_array.shape[0])
-#        
-#        xdmf_node_type = 'XYZ'
-#        if self.no_of_dofs_per_node == 2:
-#            xdmf_node_type = 'XY'
-#        
-        # write into the hdf5 file
-        check_dir(filename)
-#        filename_no_dir = os.path.split(filename)[-1]
         
+        h5_q_dict = {'ParaView':True, 
+                     'AttributeType':'Vector', 
+                     'Center':'Node', 
+                     'Name':'Displacment', 
+                     'NoOfComponents':3}
+        
+        h5_time_dict = {'ParaView':True, 
+                        'Name':'Time'}
+                        
+        check_dir(filename)
+        
+        # write the hdf5 file with the necessary attributes        
         with h5py.File(filename + '.hdf5', 'w') as f:
             h5_nodes = f.create_dataset('mesh/nodes', data=self.nodes)
             h5_nodes.attrs['ParaView'] = True
             h5_topology = f.create_dataset('mesh/topology', 
-                                          data=ele_nodes_export, 
-                                          dtype=np.int)
+                                           data=ele_nodes_export, 
+                                           dtype=np.int)
             h5_topology.attrs['ParaView'] = True
             h5_topology.attrs['TopologyType'] = amfe2xmf[el_type_export]
             
             h5_displacement = f.create_dataset('time_vals/displacement', 
-                                              data=q_array)
-            h5_displacement.attrs['ParaView'] = True
-            h5_displacement.attrs['AttributeType'] = 'Vector'
-            h5_displacement.attrs['Center'] = 'Node'
-            h5_displacement.attrs['Name'] = 'Displacement'
-            h5_displacement.attrs['NoOfComponents'] = 3
+                                               data=q_array)
+            h5_set_attributes(h5_displacement, h5_q_dict)
             
-            h5_time = f.create_dataset('time', 
-                                       data=np.array(self.timesteps))
-            h5_time.attrs['ParaView'] = True
-            h5_time.attrs['Name'] = 'Time'
-                             
+            h5_time = f.create_dataset('time', data=np.array(self.timesteps))
+            h5_set_attributes(h5_time, h5_time_dict)
+            
+        # Create the xdmf from the hdf5 file
         create_xdmf_from_hdf5(filename + '.hdf5')
-#        # create xml tree for xdmf file
-#        xml_root = Element('Xdmf', {'Version':'2.2'})
-#        domain = SubElement(xml_root, 'Domain')
-#        time_grid = SubElement(domain, 'Grid', {'GridType':'Collection', 
-#                                                'CollectionType':'Temporal'})
-#        for i, T in enumerate(self.timesteps):
-#            grid = SubElement(time_grid, 'Grid', {'Type':'Uniform'})
-#            
-#            time = SubElement(grid, 'Time', {'TimeType':'Single', 
-#                                             'Value':str(T)})
-#            topology = SubElement(grid, 'Topology', 
-#                                  {'TopologyType':topology_type,
-#                                   'NumberOfElements':no_of_elements})
-#            topology_data = SubElement(topology, 'DataItem', 
-#                                       {'NumberType':'Int', 
-#                                        'Format':'HDF', 
-#                                        'Dimensions':topology_dim})
-#            topology_data.text = filename_no_dir + '.hdf5:/mesh/topology'
-#            
-#            geometry = SubElement(grid, 'Geometry', 
-#                                  {'GeometryType':xdmf_node_type})
-#            geometry_data_item = SubElement(geometry, 'DataItem', 
-#                                            {'NumberType':'Float',
-#                                             'Format':'HDF',
-#                                             'Dimensions':geometry_dim})
-#            geometry_data_item.text = filename_no_dir + '.hdf5:/mesh/nodes'
-#            
-#            # One attrribute for displacement
-#            u_attr = SubElement(grid, 'Attribute', {'Name':'Displacement',
-#                                                    'AttributeType':'Vector',
-#                                                    'Center':'Node'})
-#            u_data = SubElement(u_attr, 'DataItem', 
-#                                {'ItemType':'HyperSlab', 
-#                                 'Dimensions':u_data_dim})
-#            u_hyperslab = SubElement(u_data, 'DataItem', 
-#                                     {'Dimensions':'3 2', 
-#                                     'Format':'XML'})
-#            
-#            # pick the i-th column via hyperslab 
-#            u_hyperslab.text = '0 ' + str(i) + ' 1 1 ' + u_hdf_rows + ' 1'
-#            u_hdf = SubElement(u_data, 'DataItem', 
-#                               {'Format':'HDF', 
-#                               'NumberType':'Float', 
-#                               'Dimensions':u_hdf_dim})
-#            u_hdf.text = filename_no_dir + '.hdf5:/time_vals/displacement'
-#
-#        # write xdmf-file
-#        xdmf_str = prettify_xml(xml_root)
-#        with open(filename + '.xdmf', 'w') as f:
-#            f.write(xdmf_str)
-
+        
         return 
         
     def save_mesh_for_paraview(self, filename):
@@ -948,8 +887,40 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
 
 
 def shape2str(tupel):
+    '''
+    Convert a tupel to a string containing the numbers of the tupel for xml 
+    export. 
+    
+    Parameters
+    ----------
+    tupel : tupel
+        tupel containing numbers (usually the shape of an array)
+        
+    Returns
+    -------
+    str : string
+        string containing the numbers of the tupel
+    '''
     return ' '.join([str(i) for i in tupel])
     
+def h5_set_attributes(h5_object, attribute_dict):
+    '''
+    Add the attributes from attribute_dict to the h5_object. 
+    
+    Parameters
+    ----------
+    h5_object : instance of h5py File, DataSet or Group
+        hdf5 object openend with h5py
+    attribute_dict : dict
+        dictionary with keys and attributes to be added to the h5_object
+        
+    Returns
+    -------
+    None
+    '''
+    for key in attribute_dict:
+        h5_object.attrs[key] = attribute_dict[key]
+    return
 
 def create_xdmf_from_hdf5(filename):
     '''
