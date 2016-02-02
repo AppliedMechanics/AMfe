@@ -213,7 +213,7 @@ def create_xdmf_from_hdf5(filename):
             # Attribute loop for export of displacements, stresses etc. 
             for key in h5_time_vals.keys():
                 field = h5_time_vals[key]
-                if field.attrs['ParaView']:
+                if field.attrs['ParaView'] == np.True_:
                     field_attr = SubElement(grid, 'Attribute',
                                             {'Name':field.attrs['Name'],
                                              'AttributeType':field.attrs['AttributeType'],
@@ -876,13 +876,13 @@ class Mesh:
         h5_q_dict = {'ParaView':True, 
                      'AttributeType':'Vector', 
                      'Center':'Node', 
-                     'Name':'Displacment', 
+                     'Name':'Displacement', 
                      'NoOfComponents':3}
         
         h5_time_dict = {'ParaView':True, 
                         'Name':'Time'}
-                        
-        field_list.append((q_array, h5_q_dict))
+        new_field_list = field_list.copy() 
+        new_field_list.append((q_array, h5_q_dict))
 
         check_dir(filename)
         
@@ -899,7 +899,7 @@ class Mesh:
             h5_time = f.create_dataset('time', data=np.array(self.timesteps))
             h5_set_attributes(h5_time, h5_time_dict)
             
-            for data_array, data_dict in field_list:
+            for data_array, data_dict in new_field_list:
                 h5_dataset = f.create_dataset('time_vals/' + data_dict['Name'], 
                                               data=data_array)
                 h5_set_attributes(h5_dataset, data_dict)
