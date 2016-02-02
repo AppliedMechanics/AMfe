@@ -700,8 +700,13 @@ class Mesh:
         Returns
         -------
         None
+                
+        Note
+        ----
+        Only the mesh of these elements which occur most ofen are exported. 
         
         '''
+        # generate a zero displacement if no displacements are saved. 
         if len(self.timesteps) == 0:
             self.u = [np.zeros((self.no_of_nodes * self.no_of_dofs_per_node,)), ]
             self.timesteps.append(0)
@@ -713,10 +718,11 @@ class Mesh:
         el_type_export = np.unique(ele_types)[0]
         # Boolean matrix giving the indices for the elements to export
         el_type_ix = (ele_types == el_type_export)
-        # nodes to export        
+
+        # select the nodes to export
         ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
         ele_nodes_export = np.array(ele_nodes_export.tolist())
-        # Here's still a bug!
+        
         # make displacement 3D vector, as paraview only accepts 3D vectors
         q_array = np.array(self.u, dtype=float).T
         if self.no_of_dofs_per_node == 2:
@@ -725,84 +731,98 @@ class Mesh:
             tmp_3d = np.zeros((x,3,z))
             tmp_3d[:,:2,:] = tmp_2d
             q_array = tmp_3d.reshape((-1,z))
-                    
-        # XDMF-keywords and values
-        topology_dim = str(ele_nodes_export.shape[0]) + ' ' + \
-                       str(ele_nodes_export.shape[1])
-        topology_type = amfe2xmf[el_type_export]
-        geometry_dim = str(self.nodes.shape[0]) + ' ' + str(self.nodes.shape[1])
-        no_of_elements = str(ele_nodes_export.shape[0])
-        
-        u_data_dim = str(self.no_of_nodes)+' 3'
-        u_hdf_dim = str(q_array.shape[0]) + ' ' + str(q_array.shape[1])
-        u_hdf_rows = str(q_array.shape[0])
-        xdmf_node_type = 'XYZ'
-        if self.no_of_dofs_per_node == 2:
-            xdmf_node_type = 'XY'
-        
+#                   
+#        # XDMF-keywords and values
+#        topology_dim = str(ele_nodes_export.shape[0]) + ' ' + \
+#                       str(ele_nodes_export.shape[1])
+#        topology_type = amfe2xmf[el_type_export]
+#        geometry_dim = str(self.nodes.shape[0]) + ' ' + str(self.nodes.shape[1])
+#        no_of_elements = str(ele_nodes_export.shape[0])
+#        u_data_dim = str(self.no_of_nodes)+' 3'
+#        u_hdf_dim = str(q_array.shape[0]) + ' ' + str(q_array.shape[1])
+#        u_hdf_rows = str(q_array.shape[0])
+#        
+#        xdmf_node_type = 'XYZ'
+#        if self.no_of_dofs_per_node == 2:
+#            xdmf_node_type = 'XY'
+#        
         # write into the hdf5 file
         check_dir(filename)
-        filename_no_dir = os.path.split(filename)[-1]
+#        filename_no_dir = os.path.split(filename)[-1]
         
         with h5py.File(filename + '.hdf5', 'w') as f:
-            f.create_dataset('mesh/nodes', data=self.nodes)
+            h5_nodes = f.create_dataset('mesh/nodes', data=self.nodes)
+            h5_nodes.attrs['ParaView'] = True
+            h5_topology = f.create_dataset('mesh/topology', 
+                                          data=ele_nodes_export, 
+                                          dtype=np.int)
+            h5_topology.attrs['ParaView'] = True
+            h5_topology.attrs['TopologyType'] = amfe2xmf[el_type_export]
             
-            f.create_dataset('mesh/topology', 
-                             data=ele_nodes_export, 
-                             dtype=np.int)
-            f.create_dataset('time_vals/displacement', 
-                             data=q_array)
-            f.create_dataset('time_vals/time', 
-                             data=np.array(self.timesteps))
-
-        # create xml tree for xdmf file
-        xml_root = Element('Xdmf', {'Version':'2.2'})
-        domain = SubElement(xml_root, 'Domain')
-        time_grid = SubElement(domain, 'Grid', {'GridType':'Collection', 
-                                                'CollectionType':'Temporal'})
-        for i, T in enumerate(self.timesteps):
-            grid = SubElement(time_grid, 'Grid', {'Type':'Uniform'})
-            time = SubElement(grid, 'Time', {'TimeType':'Single', 
-                                             'Value':str(T)})
-            topology = SubElement(grid, 'Topology', 
-                                  {'TopologyType':topology_type,
-                                   'NumberOfElements':no_of_elements})
-            topology_data = SubElement(topology, 'DataItem', 
-                                       {'NumberType':'Int', 
-                                        'Format':'HDF', 
-                                        'Dimensions':topology_dim})
-            topology_data.text = filename_no_dir + '.hdf5:/mesh/topology'
+            h5_displacement = f.create_dataset('time_vals/displacement', 
+                                              data=q_array)
+            h5_displacement.attrs['ParaView'] = True
+            h5_displacement.attrs['AttributeType'] = 'Vector'
+            h5_displacement.attrs['Center'] = 'Node'
+            h5_displacement.attrs['Name'] = 'Displacement'
+            h5_displacement.attrs['NoOfComponents'] = 3
             
-            geometry = SubElement(grid, 'Geometry', {'GeometryType':xdmf_node_type})
-            geometry_data_item = SubElement(geometry, 'DataItem', 
-                                            {'NumberType':'Float',
-                                             'Format':'HDF',
-                                             'Dimensions':geometry_dim})
-            geometry_data_item.text = filename_no_dir + '.hdf5:/mesh/nodes'
-            
-            # One attrribute for displacement
-            u_attr = SubElement(grid, 'Attribute', {'Name':'Displacement',
-                                                    'AttributeType':'Vector',
-                                                    'Center':'Node'})
-            u_data = SubElement(u_attr, 'DataItem', 
-                                {'ItemType':'HyperSlab', 
-                                 'Dimensions':u_data_dim})
-            u_hyperslab = SubElement(u_data, 'DataItem', 
-                                     {'Dimensions':'3 2', 
-                                     'Format':'XML'})
-            
-            # pick the i-th column via hyperslab 
-            u_hyperslab.text = '0 ' + str(i) + ' 1 1 ' + u_hdf_rows + ' 1'
-            u_hdf = SubElement(u_data, 'DataItem', 
-                               {'Format':'HDF', 
-                               'NumberType':'Float', 
-                               'Dimensions':u_hdf_dim})
-            u_hdf.text = filename_no_dir + '.hdf5:/time_vals/displacement'
-
-        # write xdmf-file
-        xdmf_str = prettify_xml(xml_root)
-        with open(filename + '.xdmf', 'w') as f:
-            f.write(xdmf_str)
+            h5_time = f.create_dataset('time', 
+                                       data=np.array(self.timesteps))
+            h5_time.attrs['ParaView'] = True
+            h5_time.attrs['Name'] = 'Time'
+                             
+        create_xdmf_from_hdf5(filename + '.hdf5')
+#        # create xml tree for xdmf file
+#        xml_root = Element('Xdmf', {'Version':'2.2'})
+#        domain = SubElement(xml_root, 'Domain')
+#        time_grid = SubElement(domain, 'Grid', {'GridType':'Collection', 
+#                                                'CollectionType':'Temporal'})
+#        for i, T in enumerate(self.timesteps):
+#            grid = SubElement(time_grid, 'Grid', {'Type':'Uniform'})
+#            
+#            time = SubElement(grid, 'Time', {'TimeType':'Single', 
+#                                             'Value':str(T)})
+#            topology = SubElement(grid, 'Topology', 
+#                                  {'TopologyType':topology_type,
+#                                   'NumberOfElements':no_of_elements})
+#            topology_data = SubElement(topology, 'DataItem', 
+#                                       {'NumberType':'Int', 
+#                                        'Format':'HDF', 
+#                                        'Dimensions':topology_dim})
+#            topology_data.text = filename_no_dir + '.hdf5:/mesh/topology'
+#            
+#            geometry = SubElement(grid, 'Geometry', 
+#                                  {'GeometryType':xdmf_node_type})
+#            geometry_data_item = SubElement(geometry, 'DataItem', 
+#                                            {'NumberType':'Float',
+#                                             'Format':'HDF',
+#                                             'Dimensions':geometry_dim})
+#            geometry_data_item.text = filename_no_dir + '.hdf5:/mesh/nodes'
+#            
+#            # One attrribute for displacement
+#            u_attr = SubElement(grid, 'Attribute', {'Name':'Displacement',
+#                                                    'AttributeType':'Vector',
+#                                                    'Center':'Node'})
+#            u_data = SubElement(u_attr, 'DataItem', 
+#                                {'ItemType':'HyperSlab', 
+#                                 'Dimensions':u_data_dim})
+#            u_hyperslab = SubElement(u_data, 'DataItem', 
+#                                     {'Dimensions':'3 2', 
+#                                     'Format':'XML'})
+#            
+#            # pick the i-th column via hyperslab 
+#            u_hyperslab.text = '0 ' + str(i) + ' 1 1 ' + u_hdf_rows + ' 1'
+#            u_hdf = SubElement(u_data, 'DataItem', 
+#                               {'Format':'HDF', 
+#                               'NumberType':'Float', 
+#                               'Dimensions':u_hdf_dim})
+#            u_hdf.text = filename_no_dir + '.hdf5:/time_vals/displacement'
+#
+#        # write xdmf-file
+#        xdmf_str = prettify_xml(xml_root)
+#        with open(filename + '.xdmf', 'w') as f:
+#            f.write(xdmf_str)
 
         return 
         
@@ -918,6 +938,95 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                 savefile_vtu.write(vtu_footer)
         return
 
+
+def shape2str(tupel):
+    return ' '.join([str(i) for i in tupel])
+    
+
+def create_xdmf_from_hdf5(filename):
+    '''
+    Create an accompanying xdmf file for a given hdmf file.
+    
+    Parameters
+    ----------
+    filename : str
+        filename of the hdf5-file. Produces an XDMF-file of same name with 
+        .xdmf ending. 
+    
+    Returns
+    -------
+    None
+    '''
+    filename_no_dir = os.path.split(filename)[-1]
+    # filename_no_ext = os.path.splitext(filename)[0]
+    
+    with h5py.File(filename, 'r') as f:
+        h5_topology = f['mesh/topology']
+        h5_nodes = f['mesh/nodes']
+        h5_time_vals = f['time_vals']
+        
+        xml_root = Element('Xdmf', {'Version':'2.2'})
+        domain = SubElement(xml_root, 'Domain')
+        time_grid = SubElement(domain, 'Grid', {'GridType':'Collection', 
+                                            'CollectionType':'Temporal'})
+        for i, T in enumerate(f['time']):
+            grid = SubElement(time_grid, 'Grid', {'Type':'Uniform'})
+            
+            time = SubElement(grid, 'Time', {'TimeType':'Single', 
+                                             'Value':str(T)})
+            topology = SubElement(grid, 'Topology', 
+                                  {'TopologyType':h5_topology.attrs['TopologyType'],
+                                   'NumberOfElements':str(h5_topology.shape[0])})
+            topology_data = SubElement(topology, 'DataItem', 
+                                       {'NumberType':'Int', 
+                                        'Format':'HDF', 
+                                        'Dimensions':shape2str(h5_topology.shape)})
+            topology_data.text = filename_no_dir + ':/mesh/topology'
+            
+            # Check, if mesh is 2D or 3D
+            xdmf_node_type = 'XYZ'
+            if h5_nodes.shape[-1] == 2:
+                xdmf_node_type = 'XY'
+                
+            geometry = SubElement(grid, 'Geometry', 
+                                  {'Type':'Uniform', 
+                                   'GeometryType':xdmf_node_type})
+            geometry_data_item = SubElement(geometry, 'DataItem', 
+                                            {'NumberType':'Float',
+                                             'Format':'HDF',
+                                             'Dimensions':shape2str(h5_nodes.shape)})
+            geometry_data_item.text = filename_no_dir + ':/mesh/nodes'
+            
+            for key in h5_time_vals.keys():
+                field = h5_time_vals[key]
+                if field.attrs['ParaView']:
+                    field_attr = SubElement(grid, 'Attribute',
+                                            {'Name':field.attrs['Name'],
+                                             'AttributeType':field.attrs['AttributeType'],
+                                             'Center':field.attrs['Center']})
+                    no_of_components = field.attrs['NoOfComponents']
+                    field_dim = (field.shape[0] // no_of_components, no_of_components)
+                    field_data = SubElement(field_attr, 'DataItem', 
+                                            {'ItemType':'HyperSlab', 
+                                             'Dimensions':shape2str(field_dim)})
+                                             
+                    field_hyperslab = SubElement(field_data, 'DataItem', 
+                                                 {'Dimensions':'3 2', 
+                                                  'Format':'XML'})
+            
+                    # pick the i-th column via hyperslab 
+                    field_hyperslab.text = '0 ' + str(i) + ' 1 1 ' + \
+                                            str(field.shape[0]) + ' 1'
+                    field_hdf = SubElement(field_data, 'DataItem', 
+                                           {'Format':'HDF', 
+                                            'NumberType':'Float', 
+                                            'Dimensions':shape2str(field.shape)})
+                    field_hdf.text = filename_no_dir + ':/time_vals/' + key
+
+        # write xdmf-file
+    xdmf_str = prettify_xml(xml_root)
+    with open(filename + '.xdmf', 'w') as f:
+        f.write(xdmf_str)
 
 class MeshGenerator:
     '''

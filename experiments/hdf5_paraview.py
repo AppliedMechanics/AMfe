@@ -15,56 +15,8 @@ from experiments.quadratic_manifold.benchmark_example import benchmark_system, p
 #%%
 
 mesh_class = benchmark_system.mesh_class
-mesh_class.set_displacement_with_time(benchmark_system.u_output, benchmark_system.T_output)
 mesh_class.save_mesh_xdmf('my_xdmf_test/test')
 
-#%%
-
-# Building the XDMF-File
-
-from xml.etree.ElementTree import Element, SubElement
-from xml.etree import ElementTree
-from xml.dom import minidom
-
-
-
-
-
-
-
-
-filename = 'testfile'
-
-topology_type = 'Triangle'
-dims_connectivity = '546 3'
-
-a, b = 710, 399
-timesteps = [1, ]
-
-
-my_str = prettify_xml(xml_root)
-with open('myfile.xdmf', 'w') as f:
-    f.write(my_str)
-
-#%%
-#
-#x = sp.rand(100,100)
-#f = h5py.File('mesh_file.hdf5', 'w')
-#f.create_dataset('/name/data', data=x)
-#f.close()
-#
-##%%
-#
-#f = h5py.File('my_file.hdf5', 'r')
-## list the keys
-#list(f.keys())
-#list(f.items())
-#list(f.values())
-#
-#dataset = f['name/data']
-#vals = dataset.value
-#
-#f.close()
 #%%
 
 # Try to integrate the system to get some displacements
@@ -81,12 +33,28 @@ q_array = np.array(benchmark_system.u_output)
 
 
 #%%
-nodes = mesh_class.nodes
-
-topology = np.zeros((546,3))
-topology[:,:3] = np.array(mesh_class.ele_nodes[:-4])
 
 
+
+f = h5py.File('hdf5/my_file.hdf5', 'w')
+sepp = f.create_dataset('/Sepp', data=np.zeros((10,10)))
+sepp.attrs['shape'] = (10, 10)
+sepp.attrs['info'] = 'my shape is lovely!'
+sepp.attrs['paraview_export'] = True
+# sepp = f['/Sepp']
+f.close()
+
+
+#%%
+f = h5py.File('hdf5/my_file.hdf5', 'r')
+sepp = f['Sepp']
+sepp.attrs['paraview_export']
+f.close()
+
+
+
+
+#%%
 with h5py.File('hdf5/mesh_file.hdf5', 'w') as f:
     f.create_dataset('/nodes', data=nodes)
     f.create_dataset('/topology', data=topology, dtype=np.int)
