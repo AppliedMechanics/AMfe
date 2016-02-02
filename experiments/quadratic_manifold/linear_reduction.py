@@ -5,6 +5,7 @@ Created on Thu Jan  7 16:38:15 2016
 @author: rutzmoser
 """
 
+import os
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
@@ -12,8 +13,10 @@ import time
 
 import amfe
 
-from benchmark_example import benchmark_system, paraview_output_file
+from benchmark_example import benchmark_system, amfe_dir
 
+paraview_output_file = os.path.join(amfe_dir, 'results/linear_reduction' +
+                                    time.strftime("_%Y%m%d_%H%M%S"))
 
 no_of_modes = 20
 
@@ -33,12 +36,12 @@ M = my_reduced_system.M()
 # time integration
 
 my_newmark = amfe.NewmarkIntegrator(my_reduced_system)
-my_newmark.delta_t = 1E-4
+my_newmark.delta_t = 1E-3
 
 t1 = time.time()
 
 my_newmark.integrate(np.zeros(no_of_modes), 
-                                      np.zeros(no_of_modes), np.arange(0, 0.4, 1E-4))
+                                      np.zeros(no_of_modes), np.arange(0, 0.1, 1E-3))
 
 t2 = time.time()
 print('Time for computation:', t2 - t1, 'seconds.')

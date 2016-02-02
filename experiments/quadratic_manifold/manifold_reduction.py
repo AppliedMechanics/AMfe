@@ -37,7 +37,7 @@ my_newmark.n_iter_max = 100
 t1 = time.time()
 
 my_newmark.integrate(np.zeros(no_of_modes), 
-                                      np.zeros(no_of_modes), np.arange(0, 0.4, 1E-4))
+                                      np.zeros(no_of_modes), np.arange(0, 0.1, 1E-4))
 
 t2 = time.time()
 print('Time for computation:', t2 - t1, 'seconds.')
