@@ -816,7 +816,7 @@ class Mesh:
         return
 
 
-    def save_mesh_xdmf(self, filename):
+    def save_mesh_xdmf(self, filename, field_list = []):
         '''
         Save the mesh in hdf5 and xdmf file format. 
         
@@ -824,6 +824,19 @@ class Mesh:
         ----------
         filename : str
             String constisting the path and the filename
+        field_list : list
+            list containing the fields to be exported. The list is a list of 
+            tupels containing the array with the values in the columns and a 
+            dictionary with the attribute information:
+            
+                >>> # example field list with reduced displacement not to export 
+                >>> # ParaView and strain epsilon to be exported to ParaView 
+                >>> field_list = [(q_red, {'ParaView':False, 'Name':'q_red'}), 
+                                  (eps, {'ParaView':True, 
+                                         'Name':'epsilon', 
+                                         'AttributeType':'Tensor6', 
+                                         'Center':'Node',
+                                         'NoOfComponents':6})]
         
         Returns
         -------
@@ -831,12 +844,14 @@ class Mesh:
                 
         Note
         ----
-        Only the mesh of these elements which occur most ofen are exported. 
-        
+        Only one homogeneous mesh is exported. Thus only the mesh made of the 
+        elements which occur most often is exported. The other meshes are 
+        discarded. 
+                
         '''
         # generate a zero displacement if no displacements are saved. 
         if len(self.timesteps) == 0:
-            self.u = [np.zeros((self.no_of_nodes * self.no_of_dofs_per_node,)), ]
+            self.u = [np.zeros((self.no_of_nodes * self.no_of_dofs_per_node,)),]
             self.timesteps.append(0)
 
         # determine the part of the mesh which has most elements
@@ -845,11 +860,10 @@ class Mesh:
         el_type_export = np.unique(ele_types)[0]
         # Boolean matrix giving the indices for the elements to export
         el_type_ix = (ele_types == el_type_export)
-
         # select the nodes to export an make an array of them
         ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
         ele_nodes_export = np.array(ele_nodes_export.tolist())
-        
+
         # make displacement 3D vector, as paraview only accepts 3D vectors
         q_array = np.array(self.u, dtype=float).T
         if self.no_of_dofs_per_node == 2:
@@ -868,6 +882,8 @@ class Mesh:
         h5_time_dict = {'ParaView':True, 
                         'Name':'Time'}
                         
+        field_list.append((q_array, h5_q_dict))
+
         check_dir(filename)
         
         # write the hdf5 file with the necessary attributes        
@@ -879,13 +895,14 @@ class Mesh:
                                            dtype=np.int)
             h5_topology.attrs['ParaView'] = True
             h5_topology.attrs['TopologyType'] = amfe2xmf[el_type_export]
-            
-            h5_displacement = f.create_dataset('time_vals/displacement', 
-                                               data=q_array)
-            h5_set_attributes(h5_displacement, h5_q_dict)
-            
+
             h5_time = f.create_dataset('time', data=np.array(self.timesteps))
             h5_set_attributes(h5_time, h5_time_dict)
+            
+            for data_array, data_dict in field_list:
+                h5_dataset = f.create_dataset('time_vals/' + data_dict['Name'], 
+                                              data=data_array)
+                h5_set_attributes(h5_dataset, data_dict)
             
         # Create the xdmf from the hdf5 file
         create_xdmf_from_hdf5(filename + '.hdf5')
@@ -985,13 +1002,15 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                 savefile_vtu.write('\n</DataArray>\n')
                 # Writing the offset for the elements; they are ascending by 
                 # the number of dofs and have to start with the real integer
-                savefile_vtu.write('<DataArray type="Int32" Name="offsets" format="ascii">\n')
+                savefile_vtu.write('<DataArray type="Int32" Name="offsets" ' + 
+                                   'format="ascii">\n')
                 i_offset = 0
                 for j, el_nodes in enumerate(self.ele_nodes):
                     i_offset += len(el_nodes)
                     savefile_vtu.write(str(i_offset) + ' ')
                 savefile_vtu.write('\n</DataArray>\n')
-                savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
+                savefile_vtu.write('<DataArray type="Int32" Name="types"' + 
+                                   'format="ascii">\n')
                 # Elementtyp ueber Zahl gesetzt
                 savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) 
                                             for el_ty in self.ele_types)) 
