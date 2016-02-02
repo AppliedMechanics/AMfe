@@ -551,8 +551,9 @@ class ReducedSystem(MechanicalSystem):
         '''
         u_red_export = np.array(self.u_red_output).T
         u_red_dict = {'ParaView':'False', 'Name':'q_red'}
-        field_list.append((u_red_export, u_red_dict))
-        MechanicalSystem.export_paraview(self, filename, field_list)
+        new_field_list = field_list.copy()
+        new_field_list.append((u_red_export, u_red_dict))
+        MechanicalSystem.export_paraview(self, filename, new_field_list)
         filename_no_ext, ext = os.path.splitext(filename)
 
         # add V and Theta to the hdf5 file

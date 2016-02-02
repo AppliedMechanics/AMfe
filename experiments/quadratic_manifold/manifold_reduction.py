@@ -4,6 +4,7 @@ Created on Mon Jan 18 11:52:21 2016
 
 @author: rutzmoser
 """
+import os
 import copy
 import time
 import numpy as np
@@ -13,7 +14,11 @@ import matplotlib as mpl
 import amfe
 
 # % cd experiments/quadratic_manifold/
-from benchmark_example import benchmark_system, paraview_output_file
+from experiments.quadratic_manifold.benchmark_example import benchmark_system, amfe_dir
+# from benchmark_example import benchmark_system, paraview_output_file
+
+paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
+                                    time.strftime("_%Y%m%d_%H%M%S"))
 
 #%%
 dofs_reduced = no_of_modes = 5
@@ -31,13 +36,13 @@ my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 my_newmark = amfe.NewmarkIntegrator(my_qm_sys)
 my_newmark.verbose = True
-my_newmark.delta_t = 1E-4
+my_newmark.delta_t = 5E-4
 my_newmark.n_iter_max = 100
 #my_newmark.write_iter = True
 t1 = time.time()
 
 my_newmark.integrate(np.zeros(no_of_modes), 
-                                      np.zeros(no_of_modes), np.arange(0, 0.1, 1E-4))
+                                      np.zeros(no_of_modes), np.arange(0, 0.3, 1E-3))
 
 t2 = time.time()
 print('Time for computation:', t2 - t1, 'seconds.')
