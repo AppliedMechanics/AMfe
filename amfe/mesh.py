@@ -119,6 +119,129 @@ def prettify_xml(elem):
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml()
 
+def shape2str(tupel):
+    '''
+    Convert a tupel to a string containing the numbers of the tupel for xml 
+    export. 
+    
+    Parameters
+    ----------
+    tupel : tupel
+        tupel containing numbers (usually the shape of an array)
+        
+    Returns
+    -------
+    str : string
+        string containing the numbers of the tupel
+    '''
+    return ' '.join([str(i) for i in tupel])
+    
+def h5_set_attributes(h5_object, attribute_dict):
+    '''
+    Add the attributes from attribute_dict to the h5_object. 
+    
+    Parameters
+    ----------
+    h5_object : instance of h5py File, DataSet or Group
+        hdf5 object openend with h5py
+    attribute_dict : dict
+        dictionary with keys and attributes to be added to the h5_object
+        
+    Returns
+    -------
+    None
+    '''
+    for key in attribute_dict:
+        h5_object.attrs[key] = attribute_dict[key]
+    return
+
+def create_xdmf_from_hdf5(filename):
+    '''
+    Create an accompanying xdmf file for a given hdmf file.
+    
+    Parameters
+    ----------
+    filename : str
+        filename of the hdf5-file. Produces an XDMF-file of same name with 
+        .xdmf ending. 
+    
+    Returns
+    -------
+    None
+    '''
+    filename_no_dir = os.path.split(filename)[-1]
+    # filename_no_ext = os.path.splitext(filename)[0]
+    
+    with h5py.File(filename, 'r') as f:
+        h5_topology = f['mesh/topology']
+        h5_nodes = f['mesh/nodes']
+        h5_time_vals = f['time_vals']
+        
+        xml_root = Element('Xdmf', {'Version':'2.2'})
+        domain = SubElement(xml_root, 'Domain')
+        time_grid = SubElement(domain, 'Grid', {'GridType':'Collection', 
+                                                'CollectionType':'Temporal'})
+        # time loop
+        for i, T in enumerate(f['time']):
+            grid = SubElement(time_grid, 'Grid', {'Type':'Uniform'})
+            
+            time = SubElement(grid, 'Time', {'TimeType':'Single', 
+                                             'Value':str(T)})
+            topology = SubElement(grid, 'Topology', 
+                                  {'TopologyType':h5_topology.attrs['TopologyType'],
+                                   'NumberOfElements':str(h5_topology.shape[0])})
+            topology_data = SubElement(topology, 'DataItem', 
+                                       {'NumberType':'Int', 
+                                        'Format':'HDF', 
+                                        'Dimensions':shape2str(h5_topology.shape)})
+            topology_data.text = filename_no_dir + ':/mesh/topology'
+            
+            # Check, if mesh is 2D or 3D
+            xdmf_node_type = 'XYZ'
+            if h5_nodes.shape[-1] == 2:
+                xdmf_node_type = 'XY'
+                
+            geometry = SubElement(grid, 'Geometry', 
+                                  {'Type':'Uniform', 
+                                   'GeometryType':xdmf_node_type})
+            geometry_data_item = SubElement(geometry, 'DataItem', 
+                                            {'NumberType':'Float',
+                                             'Format':'HDF',
+                                             'Dimensions':shape2str(h5_nodes.shape)})
+            geometry_data_item.text = filename_no_dir + ':/mesh/nodes'
+            
+            # Attribute loop for export of displacements, stresses etc. 
+            for key in h5_time_vals.keys():
+                field = h5_time_vals[key]
+                if field.attrs['ParaView']:
+                    field_attr = SubElement(grid, 'Attribute',
+                                            {'Name':field.attrs['Name'],
+                                             'AttributeType':field.attrs['AttributeType'],
+                                             'Center':field.attrs['Center']})
+                    no_of_components = field.attrs['NoOfComponents']
+                    field_dim = (field.shape[0] // no_of_components, no_of_components)
+                    field_data = SubElement(field_attr, 'DataItem', 
+                                            {'ItemType':'HyperSlab', 
+                                             'Dimensions':shape2str(field_dim)})
+                                             
+                    field_hyperslab = SubElement(field_data, 'DataItem', 
+                                                 {'Dimensions':'3 2', 
+                                                  'Format':'XML'})
+            
+                    # pick the i-th column via hyperslab 
+                    field_hyperslab.text = '0 ' + str(i) + ' 1 1 ' + \
+                                            str(field.shape[0]) + ' 1'
+                    field_hdf = SubElement(field_data, 'DataItem', 
+                                           {'Format':'HDF', 
+                                            'NumberType':'Float', 
+                                            'Dimensions':shape2str(field.shape)})
+                    field_hdf.text = filename_no_dir + ':/time_vals/' + key
+
+    # write xdmf-file
+    xdmf_str = prettify_xml(xml_root)
+    filename_no_ext, ext = os.path.splitext(filename)
+    with open(filename_no_ext + '.xdmf', 'w') as f:
+        f.write(xdmf_str)
 
 class Mesh:
     '''
@@ -885,130 +1008,6 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                 savefile_vtu.write(vtu_footer)
         return
 
-
-def shape2str(tupel):
-    '''
-    Convert a tupel to a string containing the numbers of the tupel for xml 
-    export. 
-    
-    Parameters
-    ----------
-    tupel : tupel
-        tupel containing numbers (usually the shape of an array)
-        
-    Returns
-    -------
-    str : string
-        string containing the numbers of the tupel
-    '''
-    return ' '.join([str(i) for i in tupel])
-    
-def h5_set_attributes(h5_object, attribute_dict):
-    '''
-    Add the attributes from attribute_dict to the h5_object. 
-    
-    Parameters
-    ----------
-    h5_object : instance of h5py File, DataSet or Group
-        hdf5 object openend with h5py
-    attribute_dict : dict
-        dictionary with keys and attributes to be added to the h5_object
-        
-    Returns
-    -------
-    None
-    '''
-    for key in attribute_dict:
-        h5_object.attrs[key] = attribute_dict[key]
-    return
-
-def create_xdmf_from_hdf5(filename):
-    '''
-    Create an accompanying xdmf file for a given hdmf file.
-    
-    Parameters
-    ----------
-    filename : str
-        filename of the hdf5-file. Produces an XDMF-file of same name with 
-        .xdmf ending. 
-    
-    Returns
-    -------
-    None
-    '''
-    filename_no_dir = os.path.split(filename)[-1]
-    # filename_no_ext = os.path.splitext(filename)[0]
-    
-    with h5py.File(filename, 'r') as f:
-        h5_topology = f['mesh/topology']
-        h5_nodes = f['mesh/nodes']
-        h5_time_vals = f['time_vals']
-        
-        xml_root = Element('Xdmf', {'Version':'2.2'})
-        domain = SubElement(xml_root, 'Domain')
-        time_grid = SubElement(domain, 'Grid', {'GridType':'Collection', 
-                                                'CollectionType':'Temporal'})
-        # time loop
-        for i, T in enumerate(f['time']):
-            grid = SubElement(time_grid, 'Grid', {'Type':'Uniform'})
-            
-            time = SubElement(grid, 'Time', {'TimeType':'Single', 
-                                             'Value':str(T)})
-            topology = SubElement(grid, 'Topology', 
-                                  {'TopologyType':h5_topology.attrs['TopologyType'],
-                                   'NumberOfElements':str(h5_topology.shape[0])})
-            topology_data = SubElement(topology, 'DataItem', 
-                                       {'NumberType':'Int', 
-                                        'Format':'HDF', 
-                                        'Dimensions':shape2str(h5_topology.shape)})
-            topology_data.text = filename_no_dir + ':/mesh/topology'
-            
-            # Check, if mesh is 2D or 3D
-            xdmf_node_type = 'XYZ'
-            if h5_nodes.shape[-1] == 2:
-                xdmf_node_type = 'XY'
-                
-            geometry = SubElement(grid, 'Geometry', 
-                                  {'Type':'Uniform', 
-                                   'GeometryType':xdmf_node_type})
-            geometry_data_item = SubElement(geometry, 'DataItem', 
-                                            {'NumberType':'Float',
-                                             'Format':'HDF',
-                                             'Dimensions':shape2str(h5_nodes.shape)})
-            geometry_data_item.text = filename_no_dir + ':/mesh/nodes'
-            
-            # Attribute loop for export of displacements, stresses etc. 
-            for key in h5_time_vals.keys():
-                field = h5_time_vals[key]
-                if field.attrs['ParaView']:
-                    field_attr = SubElement(grid, 'Attribute',
-                                            {'Name':field.attrs['Name'],
-                                             'AttributeType':field.attrs['AttributeType'],
-                                             'Center':field.attrs['Center']})
-                    no_of_components = field.attrs['NoOfComponents']
-                    field_dim = (field.shape[0] // no_of_components, no_of_components)
-                    field_data = SubElement(field_attr, 'DataItem', 
-                                            {'ItemType':'HyperSlab', 
-                                             'Dimensions':shape2str(field_dim)})
-                                             
-                    field_hyperslab = SubElement(field_data, 'DataItem', 
-                                                 {'Dimensions':'3 2', 
-                                                  'Format':'XML'})
-            
-                    # pick the i-th column via hyperslab 
-                    field_hyperslab.text = '0 ' + str(i) + ' 1 1 ' + \
-                                            str(field.shape[0]) + ' 1'
-                    field_hdf = SubElement(field_data, 'DataItem', 
-                                           {'Format':'HDF', 
-                                            'NumberType':'Float', 
-                                            'Dimensions':shape2str(field.shape)})
-                    field_hdf.text = filename_no_dir + ':/time_vals/' + key
-
-    # write xdmf-file
-    xdmf_str = prettify_xml(xml_root)
-    filename_no_ext, ext = os.path.splitext(filename)
-    with open(filename_no_ext + '.xdmf', 'w') as f:
-        f.write(xdmf_str)
 
 class MeshGenerator:
     '''
