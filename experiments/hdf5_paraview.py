@@ -46,7 +46,7 @@ f.close()
 
 
 #%%
-f = h5py.File('hdf5/my_file.hdf5', 'r')
+f = h5py.File('hdf5/my_file.hdf5', 'r+')
 sepp = f['Sepp']
 sepp.attrs['paraview_export']
 f.close()
