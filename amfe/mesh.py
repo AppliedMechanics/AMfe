@@ -978,7 +978,7 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Points>\n<Cells>\n')
-                savefile_vtu.write('<DataArray type="Int32" Name="connectivity" ',
+                savefile_vtu.write('<DataArray type="Int32" Name="connectivity" ' +
                                    'format="ascii">\n')
                 for j in self.ele_nodes:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + '\n')
@@ -998,7 +998,7 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Cells> \n')
                 savefile_vtu.write('<PointData Vectors="displacement">\n')
-                savefile_vtu.write('<DataArray type="Float64" Name="displacement" ',
+                savefile_vtu.write('<DataArray type="Float64" Name="displacement" ' +
                                    'NumberOfComponents="3" format="ascii">\n')
                 # pick the i-th timestep
                 u_exp = self.u[i].reshape((-1, self.no_of_dofs_per_node))
