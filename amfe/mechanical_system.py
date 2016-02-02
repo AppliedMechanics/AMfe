@@ -259,9 +259,21 @@ class MechanicalSystem():
         self._f_ext_unconstr = self.neumann_class.f_ext()
 
 
-    def export_paraview(self, filename):
+    def export_paraview(self, filename, field_list=[]):
         '''
-        Export the system with the given information to paraview
+        Export the system with the given information to paraview. 
+        
+        Parameters
+        ----------
+        filename : str
+            filename to which the xdmf file and the hdf5 file will be saved. 
+        field_list : list
+            list of tuples containing a field to be exported as well as a 
+            dictionary with the attribute information of the hdf5 file. 
+        
+        Returns
+        -------
+        None
         '''
         t1 = time.time()
         if len(self.T_output) is 0:
@@ -269,9 +281,10 @@ class MechanicalSystem():
             self.u_output.append(np.zeros(self.mesh_class.no_of_dofs))
         print('Start exporting mesh for paraview to', filename)
         self.mesh_class.set_displacement_with_time(self.u_output, self.T_output)
-        self.mesh_class.save_mesh_xdmf(filename)
+        self.mesh_class.save_mesh_xdmf(filename, field_list)
         t2 = time.time()
         print('Mesh for paraview successfully exported in ', t2 - t1, 'seconds.')
+        return
 
     def M(self):
         '''
