@@ -13,10 +13,9 @@ from xml.dom import minidom
 
 
 
-import numpy as np
-import scipy as sp
 import pandas as pd
 import h5py
+import numpy as np
 
 from amfe.element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
 from amfe.element import LineLinearBoundary, LineQuadraticBoundary, \
@@ -57,7 +56,7 @@ element_class_dict = {'Tet4'  : Tet4(**kwargs),
                       'Quad4' : Quad4(**kwargs),
                       'Quad8' : Quad8(**kwargs),
                       'Bar2Dlumped' : Bar2Dlumped(**kwargs),
-                              }
+                     }
                               
 kwargs = {'val' : 1., 'direct' : 'normal'}
 
@@ -171,7 +170,8 @@ class Mesh:
         self.ele_types     = [] # Element-types for Export
         self.nodes_dirichlet     = np.array([], dtype=int)
         self.dofs_dirichlet      = np.array([], dtype=int)
-        # the displacements; They are stored as a list of numpy-arrays with shape (ndof, no_of_dofs_per_node):
+        # the displacements; They are stored as a list of numpy-arrays with 
+        # shape (ndof, no_of_dofs_per_node):
         self.u                   = []
         self.timesteps           = []
         self.no_of_dofs_per_node = 0
@@ -181,7 +181,7 @@ class Mesh:
 
     def _update_mesh_props(self):
         '''
-        Update the number properties of nodes and elements when the mesh has changed
+        Update the number properties of nodes and elements when the mesh has 
         '''
         self.no_of_nodes = len(self.nodes)
         self.no_of_dofs = self.no_of_nodes*self.no_of_dofs_per_node
@@ -197,6 +197,8 @@ class Mesh:
         -----------
         filename_nodes : str
             name of the file containing the nodes in csv-format
+        filename_elements : str
+            name of the file containing the elements in csv-format        
         explicit_node_numbering : bool, optional
             Flag stating, if the nodes are explicitly numbered in the csv-file.
             When set to true, the first column is assumed to have the node numbers
@@ -275,9 +277,6 @@ class Mesh:
         ----------
         filename : string
             filename of the .msh-file
-        phys_group : int
-            number of physical group defined in gmsh, which should be 
-            processed
             
         Returns
         -------
@@ -322,8 +321,8 @@ class Mesh:
         # Check inconsistent dimensions
         if (i_nodes_end-i_nodes_start)!=n_nodes \
             or (i_elements_end-i_elements_start)!= n_elements: 
-            raise ValueError(
-            '''Error while processing the file! Dimensions are not consistent.''')
+            raise ValueError('Error while processing the file!', 
+                             'Dimensions are not consistent.')
         
         # extract data from file to lists
         list_imported_mesh_format = data_geometry[i_format_start   : i_format_end]
@@ -404,7 +403,7 @@ class Mesh:
         
 
     def load_group_to_mesh(self, key, material, mesh_prop='phys_group',
-                              element_class_dict=element_class_dict):
+                           element_class_dict=element_class_dict):
         '''
         Add a physical group to the main mesh with given material. 
         
@@ -442,7 +441,8 @@ class Mesh:
         ele_nodes = [np.nan for i in range(len(elements_df))]
         for i, element in enumerate(elements_df.values):
             ele_nodes[i] = np.array(element[self.node_idx : 
-                    self.node_idx + amfe2no_of_nodes[element[1]]], dtype=int)
+                                    self.node_idx + amfe2no_of_nodes[element[1]]],
+                                    dtype=int)
         self.ele_nodes.extend(ele_nodes)
         
         # ele_types for paraview export
@@ -458,13 +458,15 @@ class Mesh:
         self._update_mesh_props()
         
         # print some output stuff
-        print('\n', mesh_prop, key, 'with', len(ele_nodes), 'elements successfully added.')
+        print('\n', mesh_prop, key, 'with', len(ele_nodes), \
+              'elements successfully added.')
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
         
     def mesh_information(self):
         df = self.el_df
-        print('The loaded mesh contains', len(self.phys_group_dict), 'physical groups:')
+        print('The loaded mesh contains', len(self.phys_group_dict), 
+              'physical groups:')
         for i in self.phys_group_dict :
             print('\nPhysical group', i, ':')
             print('Number of Nodes:', len(self.phys_group_dict [i]))
@@ -534,9 +536,9 @@ class Mesh:
         while key not in pd.unique(df[mesh_prop]):
             self.mesh_information()
             print('\nNo valid', mesh_prop, 'is given.\n(Given', 
-                                                mesh_prop, 'is', key, ')')
+                  mesh_prop, 'is', key, ')')
             key = int(input('Please choose a ' + mesh_prop + 
-                ' to be used for the Neumann Boundary conditions: '))
+                            ' to be used for the Neumann Boundary conditions: '))
         
         # make a pandas dataframe just for the desired elements
         elements_df = df[df[mesh_prop] == key]
@@ -545,7 +547,8 @@ class Mesh:
         ele_nodes = [np.nan for i in range(len(elements_df))]
         for i, element in enumerate(elements_df.values):
             ele_nodes[i] = np.array(element[self.node_idx : 
-                    self.node_idx + amfe2no_of_nodes[element[1]]], dtype=int)
+                                            self.node_idx + amfe2no_of_nodes[element[1]]],
+                                    dtype=int)
         self.ele_nodes.extend(ele_nodes)
         
         self.ele_types.extend(elements_df['el_type'].values.tolist())
@@ -560,12 +563,14 @@ class Mesh:
         self._update_mesh_props()
         
         # print some output stuff
-        print('\n', mesh_prop, key, 'with', len(ele_nodes), 'elements successfully added.')
+        print('\n', mesh_prop, key, 'with', len(ele_nodes), 
+              'elements successfully added.')
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
 
         
-    def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group', output='internal'):
+    def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group', 
+                            output='internal'):
         '''
         Add a group of the mesh to the dirichlet nodes to be fixed. 
         
@@ -630,7 +635,7 @@ class Mesh:
         
         # print some output stuff
         print('\n', mesh_prop, key, 'with', len(unique_nodes), 
-                  'nodes successfully added to Dirichlet Boundaries.')
+              'nodes successfully added to Dirichlet Boundaries.')
         print('Total number of nodes with Dirichlet BCs:', len(self.nodes_dirichlet))
         print('Total number of constrained dofs:', len(self.dofs_dirichlet))
         print('*************************************************************')
@@ -711,7 +716,6 @@ class Mesh:
             self.u = [np.zeros((self.no_of_nodes * self.no_of_dofs_per_node,)), ]
             self.timesteps.append(0)
 
-        # XDMF-specifications:
         # determine the part of the mesh which has most elements
         # only this part will be exported! 
         ele_types = np.array(self.ele_types, dtype=object)
@@ -719,7 +723,7 @@ class Mesh:
         # Boolean matrix giving the indices for the elements to export
         el_type_ix = (ele_types == el_type_export)
 
-        # select the nodes to export
+        # select the nodes to export an make an array of them
         ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
         ele_nodes_export = np.array(ele_nodes_export.tolist())
         
@@ -876,7 +880,8 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
             savefile_pvd.write(pvd_header)
             for i, t in enumerate(self.timesteps):
                 savefile_pvd.write(pvd_line_start + str(t) + pvd_line_middle + 
-                    filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
+                                   filename_tail + '_' + str(i).zfill(3) + 
+                                   '.vtu' + pvd_line_end)
             savefile_pvd.write(pvd_footer)
 
         vtu_header = '''<?xml version="1.0"?> \n
@@ -896,7 +901,8 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                 savefile_vtu.write(vtu_header)
                 # Es muss die Anzahl der gesamten Punkte und Elemente angegeben werden
                 savefile_vtu.write('<Piece NumberOfPoints="' + str(len(self.nodes)) 
-                    + '" NumberOfCells="' + str(len(self.ele_nodes)) + '">\n')
+                                   + '" NumberOfCells="' + str(len(self.ele_nodes)) 
+                                   + '">\n')
                 savefile_vtu.write('<Points>\n')
                 savefile_vtu.write('<DataArray type="Float64" Name="Array" \
                     NumberOfComponents="3" format="ascii">\n')
@@ -910,7 +916,8 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Points>\n<Cells>\n')
-                savefile_vtu.write('<DataArray type="Int32" Name="connectivity" format="ascii">\n')
+                savefile_vtu.write('<DataArray type="Int32" Name="connectivity" ',
+                                   'format="ascii">\n')
                 for j in self.ele_nodes:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + '\n')
                 savefile_vtu.write('\n</DataArray>\n')
@@ -924,12 +931,13 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
                 # Elementtyp ueber Zahl gesetzt
-                savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) for el_ty in self.ele_types)) 
+                savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) 
+                                            for el_ty in self.ele_types)) 
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Cells> \n')
                 savefile_vtu.write('<PointData Vectors="displacement">\n')
-                savefile_vtu.write('<DataArray type="Float64" Name="displacement" \
-                    NumberOfComponents="3" format="ascii">\n')
+                savefile_vtu.write('<DataArray type="Float64" Name="displacement" ',
+                                   'NumberOfComponents="3" format="ascii">\n')
                 # pick the i-th timestep
                 u_exp = self.u[i].reshape((-1, self.no_of_dofs_per_node))
                 for j in u_exp:
@@ -968,7 +976,8 @@ def create_xdmf_from_hdf5(filename):
         xml_root = Element('Xdmf', {'Version':'2.2'})
         domain = SubElement(xml_root, 'Domain')
         time_grid = SubElement(domain, 'Grid', {'GridType':'Collection', 
-                                            'CollectionType':'Temporal'})
+                                                'CollectionType':'Temporal'})
+        # time loop
         for i, T in enumerate(f['time']):
             grid = SubElement(time_grid, 'Grid', {'Type':'Uniform'})
             
@@ -997,6 +1006,7 @@ def create_xdmf_from_hdf5(filename):
                                              'Dimensions':shape2str(h5_nodes.shape)})
             geometry_data_item.text = filename_no_dir + ':/mesh/nodes'
             
+            # Attribute loop for export of displacements, stresses etc. 
             for key in h5_time_vals.keys():
                 field = h5_time_vals[key]
                 if field.attrs['ParaView']:
@@ -1023,9 +1033,10 @@ def create_xdmf_from_hdf5(filename):
                                             'Dimensions':shape2str(field.shape)})
                     field_hdf.text = filename_no_dir + ':/time_vals/' + key
 
-        # write xdmf-file
+    # write xdmf-file
     xdmf_str = prettify_xml(xml_root)
-    with open(filename + '.xdmf', 'w') as f:
+    filename_no_ext, ext = os.path.splitext(filename)
+    with open(filename_no_ext + '.xdmf', 'w') as f:
         f.write(xdmf_str)
 
 class MeshGenerator:
@@ -1096,7 +1107,8 @@ class MeshGenerator:
                         self.nodes.append([l_x*x_counter, l_y*y_counter])
                         node_number += 1
             else:
-                # a 3d-mesh will be generated; the meshing has to be done with a little calculation in andvance
+                # a 3d-mesh will be generated; 
+                # the meshing has to be done with a little calculation in andvance
                 r_OO_x = np.array([0, 0, 0])
                 r_OO_y = np.array([0, 0, 0])
                 if self.x_curve:
@@ -1133,12 +1145,15 @@ class MeshGenerator:
                     # first the lower triangulars
                     first_node  = y_counter*(self.x_no_elements + 1) + x_counter + 0
                     second_node = y_counter*(self.x_no_elements + 1) + x_counter + 1
-                    third_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
+                    third_node  = (y_counter + 1)*(self.x_no_elements + 1) + \
+                                  x_counter + 0
                     self.ele_nodes.append([first_node, second_node, third_node])
                     element_number += 1
                     # second the upper triangulars
-                    first_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 1
-                    second_node = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
+                    first_node  = (y_counter + 1)*(self.x_no_elements + 1) + \
+                                  x_counter + 1
+                    second_node = (y_counter + 1)*(self.x_no_elements + 1) + \
+                                  x_counter + 0
                     third_node  = y_counter*(self.x_no_elements + 1) + x_counter + 1
                     self.ele_nodes.append([first_node, second_node, third_node])
                     element_number += 1
@@ -1154,7 +1169,8 @@ class MeshGenerator:
             # nodes coordinates
             for counter_y in range(self.y_no_elements+1):
                 for counter_x in range(self.x_no_elements+1):
-                    self.nodes.append([delta_x*counter_x + self.pos_x0, delta_y*counter_y + self.pos_y0])
+                    self.nodes.append([delta_x*counter_x + self.pos_x0, 
+                                       delta_y*counter_y + self.pos_y0])
 
             # node assignment to quadrilateral elements
             for counter_y in range(self.y_no_elements):
@@ -1190,7 +1206,8 @@ class MeshGenerator:
             if self.flat_mesh:
                 header = 'x_coord' + delimiter + 'y_coord' + newline
             else:
-                header = 'x_coord' + delimiter + 'y_coord' + delimiter + 'z_coord' + newline
+                header = 'x_coord' + delimiter + 'y_coord' + delimiter + \
+                         'z_coord' + newline
             savefile_nodes.write(header)
             for nodes in self.nodes:
                 savefile_nodes.write(delimiter.join(str(x) for x in nodes) + newline)
@@ -1199,14 +1216,19 @@ class MeshGenerator:
             # Header for the file:
             number_of_nodes = len(self.ele_nodes[0])
             if number_of_nodes == 3:
-                savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
+                savefile_elements.write('node_1' + delimiter + 'node_2' + 
+                                        delimiter + 'node_3' + newline)
             elif number_of_nodes == 4:
-                savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + delimiter + 'node_4' + newline)
+                savefile_elements.write('node_1' + delimiter + 'node_2' + 
+                                        delimiter + 'node_3' + delimiter + 
+                                        'node_4' + newline)
             elif number_of_nodes == 2:
                 savefile_elements.write('node_1' + delimiter + 'node_2' + newline)                
             else:
-                print("Hier lief etwas falsch. Anzahl der Knoten pro Element konnte nicht bestimmt werden.")
+                print("Hier lief etwas falsch. Anzahl der Knoten pro Element", 
+                      "konnte nicht bestimmt werden.")
 
             for elements in self.ele_nodes:
-                savefile_elements.write(delimiter.join(str(x) for x in elements) + newline)
+                savefile_elements.write(delimiter.join(str(x) for x in elements) 
+                                        + newline)
 
