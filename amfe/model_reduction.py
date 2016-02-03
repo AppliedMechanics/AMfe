@@ -47,13 +47,40 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     reduced_sys.u_red_output = []
     return reduced_sys
 
-def qm_reduce_mechanical_system(mechanical_system, V, theta, overwrite=False):
+def qm_reduce_mechanical_system(mechanical_system, V, Theta, overwrite=False):
     '''
+    Reduce the given mechanical system to a QM system with the basis V and the  
+    quadratic part Theta. 
+        
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Mechanical system which will be transformed to a ReducedSystem. 
+    V : ndarray
+        Reduction Basis for the reduced system
+    Theta : ndarray
+        Quadratic tensor for the Quadratic manifold. Has to be symmetric with 
+        respect to the last two indices and is of shape (n_full, n_red, n_red). 
+    overwrite : bool, optional
+        switch, if mechanical system should be overwritten (is less memory 
+        intensive for large systems) or not.
+    
+    Returns
+    -------
+    reduced_system : instance of ReducedSystem
+        Quadratic Manifold reduced system with same properties of the 
+        mechanical system and reduction basis V and Theta
+        
+    Example
+    -------
+
+    
     '''
     # consistency check
     assert(V.shape[-1] == theta.shape[-1])
     assert(theta.shape[1] == theta.shape[2])
     assert(theta.shape[0] == V.shape[0])
+    
     no_of_red_dofs = V.shape[-1]
     if overwrite:
         reduced_sys = mechanical_system
@@ -63,6 +90,7 @@ def qm_reduce_mechanical_system(mechanical_system, V, theta, overwrite=False):
     reduced_sys.__class__ = QMSystem
     reduced_sys.V = V.copy()
     reduced_sys.Theta = theta.copy()
+
     # define internal variables
     reduced_sys.u_red_output = []
     reduced_sys.no_of_red_dofs = no_of_red_dofs
@@ -132,14 +160,15 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
     ndof = x_i.shape[0]
     K = K_func(np.zeros(ndof))
     dK_x_j = (K_func(x_j*h) - K)/h
-    d_omega_2_d_x_i = x_i.dot(dK_x_j.dot(x_i))
-    F_i = (d_omega_2_d_x_i*M - dK_x_j).dot(x_i)
+    d_omega_2_d_x_i = x_i @ dK_x_j @ x_i
+    F_i = (d_omega_2_d_x_i*M - dK_x_j) @ x_i
     K_dyn_i = K - omega_i**2 * M
+    # fix the point with the maximum displacement of the vibration mode
     row_index = np.argmax(abs(x_i))
     K_dyn_i[:,row_index], K_dyn_i[row_index,:], K_dyn_i[row_index,row_index] = 0, 0, 1
     F_i[row_index] = 0
     v_i = linalg.solve(K_dyn_i, F_i)
-    c_i = -v_i.dot(M.dot(x_i))
+    c_i = - v_i @ M @ x_i
     dx_i_dx_j = v_i + c_i*x_i
     if verbose:
         print('\nComputation of modal derivatives. ')
