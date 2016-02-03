@@ -10,7 +10,6 @@ import os
 
 import h5py
 import numpy as np
-import scipy as sp
 
 from amfe.mesh import Mesh
 from amfe.assembly import Assembly
@@ -261,7 +260,7 @@ class MechanicalSystem():
         self._f_ext_unconstr = self.neumann_class.f_ext()
 
 
-    def export_paraview(self, filename, field_list=[]):
+    def export_paraview(self, filename, field_list=None):
         '''
         Export the system with the given information to paraview. 
         
@@ -269,7 +268,7 @@ class MechanicalSystem():
         ----------
         filename : str
             filename to which the xdmf file and the hdf5 file will be saved. 
-        field_list : list
+        field_list : list, optional
             list of tuples containing a field to be exported as well as a 
             dictionary with the attribute information of the hdf5 file. 
         
@@ -277,6 +276,8 @@ class MechanicalSystem():
         -------
         None
         '''
+        if field_list is None:
+            field_list = []
         t1 = time.time()
         if len(self.T_output) is 0:
             self.T_output.append(0)
@@ -286,10 +287,10 @@ class MechanicalSystem():
         self.mesh_class.save_mesh_xdmf(filename, field_list)
         t2 = time.time()
         print('Mesh for paraview successfully exported in {0:4.2f} seconds.'.format(
-              t2 - t1))
+            t2 - t1))
         return
 
-    def M(self):
+    def M(self, u=None, t=0):
         '''
         Compute the Mass matrix of the dynamical system. 
         
@@ -325,14 +326,14 @@ class MechanicalSystem():
         if u is None:
             u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
 
-        K_unconstr, f_unconstr = \
+        K_unconstr, _ = \
             self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t) 
 
         return self.constrain_matrix(K_unconstr)
         
     def f_int(self, u, t=0):
         '''Return the elastic restoring force of the system '''
-        K_unconstr, f_unconstr = \
+        _, f_unconstr = \
             self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t) 
         return self.constrain_vec(f_unconstr)
         
@@ -494,8 +495,8 @@ class ReducedSystem(MechanicalSystem):
     def f_int(self, u, t=0):
         return self.V.T.dot(MechanicalSystem.f_int(self, self.V.dot(u), t))
 
-    def M(self):
-        self.M_constr = self.V.T.dot(MechanicalSystem.M(self).dot(self.V))
+    def M(self, u=None, t=0):
+        self.M_constr = self.V.T.dot(MechanicalSystem.M(self, u, t).dot(self.V))
         return self.M_constr
 
     def write_timestep(self, t, u):
@@ -546,16 +547,22 @@ class ReducedSystem(MechanicalSystem):
         '''
         return MechanicalSystem.M(self)
     
-    def export_paraview(self, filename, field_list=[]):
+    def export_paraview(self, filename, field_list=None):
         '''
         Export the produced results to ParaView via XDMF format. 
         '''
         u_red_export = np.array(self.u_red_output).T
         u_red_dict = {'ParaView':'False', 'Name':'q_red'}
-        new_field_list = field_list.copy()
+
+        if field_list is None:
+            new_field_list = []
+        else:
+            new_field_list = field_list.copy()
+
         new_field_list.append((u_red_export, u_red_dict))
+
         MechanicalSystem.export_paraview(self, filename, new_field_list)
-        filename_no_ext, ext = os.path.splitext(filename)
+        filename_no_ext, _ = os.path.splitext(filename)
 
         # add V and Theta to the hdf5 file
         with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
@@ -652,13 +659,14 @@ class QMSystem(MechanicalSystem):
         self.u_red_output.append(u.copy())
         return
         
-    def export_paraview(self, filename, field_list=[]):
+    def export_paraview(self, filename, field_list=None):
         '''
         Export the produced results to ParaView via XDMF format. 
         '''
         ReducedSystem.export_paraview(self, filename, field_list)
-        filename_no_ext, ext = os.path.splitext(filename)
-        # add V and Theta to the hdf5 file
+        filename_no_ext, _ = os.path.splitext(filename)
+        
+        # add Theta to the hdf5 file
         with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
             f.create_dataset('Reduction/Theta', data=self.Theta)
         
