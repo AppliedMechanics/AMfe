@@ -14,7 +14,7 @@ import matplotlib as mpl
 import amfe
 
 # % cd experiments/quadratic_manifold/
-from experiments.quadratic_manifold.benchmark_example import benchmark_system, amfe_dir
+from experiments.quadratic_manifold.benchmark_u import benchmark_system, amfe_dir
 # from benchmark_example import benchmark_system, paraview_output_file
 
 paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
