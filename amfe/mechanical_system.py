@@ -281,11 +281,12 @@ class MechanicalSystem():
         if len(self.T_output) is 0:
             self.T_output.append(0)
             self.u_output.append(np.zeros(self.mesh_class.no_of_dofs))
-        print('Start exporting mesh for paraview to', filename)
+        print('Start exporting mesh for paraview to:\n    ', filename)
         self.mesh_class.set_displacement_with_time(self.u_output, self.T_output)
         self.mesh_class.save_mesh_xdmf(filename, field_list)
         t2 = time.time()
-        print('Mesh for paraview successfully exported in ', t2 - t1, 'seconds.')
+        print('Mesh for paraview successfully exported in {0:4.2f} seconds.'.format(
+              t2 - t1))
         return
 
     def M(self):

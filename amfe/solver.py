@@ -4,6 +4,7 @@
 Module for solving static and dynamic problems.
 '''
 
+import time
 import numpy as np
 import scipy as sp
 from scipy import sparse
@@ -109,6 +110,7 @@ class NewmarkIntegrator():
         TODO
 
         '''
+        t_clock_1 = time.time()
         beta = self.beta
         gamma = self.gamma
         # initialize starting variables
@@ -202,6 +204,10 @@ class NewmarkIntegrator():
                 self.mechanical_system.write_timestep(t, q.copy())
                 write_flag = False
         # end of time loop
+        t_clock_2 = time.time()
+        print('Time for time marching integration {0:4.2f} seconds'.format(
+              t_clock_2 - t_clock_1))
+        return
 
 
 def solve_linear_displacement(mechanical_system, t=1, verbose=True):
