@@ -13,7 +13,8 @@ import time
 
 import amfe
 
-from benchmark_u import benchmark_system, amfe_dir
+from experiments.quadratic_manifold.benchmark_bar import benchmark_system, amfe_dir
+#from benchmark_u import benchmark_system, amfe_dir
 
 paraview_output_file = os.path.join(amfe_dir, 'results/linear_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
