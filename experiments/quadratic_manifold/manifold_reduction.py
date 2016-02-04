@@ -24,8 +24,8 @@ dofs_reduced = no_of_modes = 5
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
 
-#print('Take care! Theta is multiplied by 2!')
-theta = amfe.static_correction_theta(V, benchmark_system.K)
+print('Take care! Theta is divided by 2 and multiplied with -1 !')
+theta = - amfe.static_correction_theta(V, benchmark_system.K)/2
 # theta = sp.zeros((dofs_full, dofs_reduced, dofs_reduced))
 
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
@@ -33,11 +33,21 @@ my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 
 #%%
-
+i_mode = 2
 # plot the modal derivatives:
+for t in np.arange(0,20,0.1):
+    u = np.zeros(no_of_modes)
+    u[i_mode] = t
+    my_qm_sys.write_timestep(t, u)
 
+#%%
+# Export to paraview
+my_qm_sys.export_paraview(paraview_output_file)
 
 #%% 
+#
+# Perform some time integration
+# 
 
 my_newmark = amfe.NewmarkIntegrator(my_qm_sys)
 my_newmark.verbose = True
@@ -50,9 +60,6 @@ my_newmark.integrate(np.zeros(no_of_modes),
 
 my_qm_sys.export_paraview(paraview_output_file)
 
-#%%
-# Export to paraview
-my_qm_sys.export_paraview(paraview_output_file)
 #%%
 # plot the stuff
 q_red = np.array(my_qm_sys.u_red_output)
