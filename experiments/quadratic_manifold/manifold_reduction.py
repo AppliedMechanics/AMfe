@@ -20,12 +20,10 @@ paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
 
 #%%
-# Check the eigenmodes of the system
-amfe.
 
 #%%
 # create a regular QM system
-dofs_reduced = no_of_modes = 20
+dofs_reduced = no_of_modes = 5
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
 
@@ -34,6 +32,26 @@ theta = amfe.static_correction_theta(V, benchmark_system.K)
 # theta = sp.zeros((dofs_full, dofs_reduced, dofs_reduced))
 
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
+
+#%%
+# Try on a purging algorithm
+A = np.zeros((no_of_modes, no_of_modes))
+for i in range(no_of_modes):
+    for j in range(i+1):
+        v = V[:,i]
+        v /= np.sqrt(v @ v)
+        th = theta[:,i,j]
+        th /= np.sqrt(th @ th)
+        A[i,j] = A[j,i] = abs(th @ v)
+        
+        # print('Inner product of i {0:d} and j {1:d} is {2:4.4f}'.format(i, j, th @ v))
+
+plt.matshow(A)
+
+#%%
+# Other type of purging by setting stuff in theta to zero
+theta[:,:,3] = 0
+theta[:,3,:] = 0
 
 #%%
 # Build a QM system which is purged of the in-plane modes:
