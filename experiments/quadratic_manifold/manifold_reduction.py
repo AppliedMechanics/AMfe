@@ -24,8 +24,8 @@ dofs_reduced = no_of_modes = 5
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
 
-print('Take care! Theta is multiplied by 2!')
-theta = amfe.static_correction_theta(V, benchmark_system.K) * 2
+#print('Take care! Theta is multiplied by 2!')
+theta = amfe.static_correction_theta(V, benchmark_system.K)
 # theta = sp.zeros((dofs_full, dofs_reduced, dofs_reduced))
 
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
@@ -33,6 +33,11 @@ my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 
 #%%
+
+# plot the modal derivatives:
+
+
+#%% 
 
 my_newmark = amfe.NewmarkIntegrator(my_qm_sys)
 my_newmark.verbose = True
