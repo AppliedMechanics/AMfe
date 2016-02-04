@@ -183,8 +183,9 @@ class NewmarkIntegrator():
                 n_iter += 1
 
                 if self.verbose:
-                    print('Iteration', n_iter, 'Residual:', res_abs, 
-                          'cond# of S:', np.linalg.cond(S))
+                    print('Iteration', n_iter, 
+                          'Residual: {0:4.1E}, cond# of S: {1:4.2E}'.format(
+                          res_abs, np.linalg.cond(S)))
                     
                 if self.write_iter:
                     t_write = t + dt/100*n_iter
@@ -198,7 +199,8 @@ class NewmarkIntegrator():
                     no_newton_convergence_flag = True
                     break
 
-            print('Time:', t, 'No of iterations:', n_iter, 'Residual:', res_abs)
+            print('Time:', t, 'No of iterations:', n_iter, 
+                  'Residual: {0:4.2E}'.format(res_abs))
             # Writing if necessary:
             if write_flag:
                 self.mechanical_system.write_timestep(t, q.copy())
