@@ -20,9 +20,11 @@ paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
 
 #%%
-dofs_reduced = no_of_modes = 5
+dofs_reduced = no_of_modes = 20
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
+
+#print('Take care! The density is put 10 times higher!')
 
 print('Take care! Theta is divided by 2 and multiplied with -1 !')
 theta = - amfe.static_correction_theta(V, benchmark_system.K)/2
@@ -30,10 +32,15 @@ theta = - amfe.static_correction_theta(V, benchmark_system.K)/2
 
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
+#%%
+# plot the modes of the system
 
+for t, phi in enumerate(V.T):
+    benchmark_system.write_timestep(t, phi)
+benchmark_system.export_paraview(paraview_output_file)
 
 #%%
-i_mode = 2
+i_mode = 4
 # plot the modal derivatives:
 for t in np.arange(0,20,0.1):
     u = np.zeros(no_of_modes)
@@ -56,16 +63,32 @@ my_newmark.n_iter_max = 100
 #my_newmark.write_iter = True
 
 my_newmark.integrate(np.zeros(no_of_modes), 
-                                      np.zeros(no_of_modes), np.arange(0, 0.4, 2E-4))
+                                      np.zeros(no_of_modes), np.arange(0, 0.4, 1E-4))
 
 my_qm_sys.export_paraview(paraview_output_file)
 
 #%%
 # plot the stuff
 q_red = np.array(my_qm_sys.u_red_output)
-plt.plot(q_red[:,:])
+t = np.array(my_qm_sys.T_output)
+plt.plot(t, q_red[:,:])
 plt.grid()
 
+#%%
+# Check the condition of the projector P
+conds = np.zeros_like(q_red[:,0])
+for i, q in enumerate(q_red):
+    P = V + 2*(theta @ q)
+    conds[i] = np.linalg.cond(P)
+
+plt.semilogy(t, conds); plt.grid()
+
+#%%
+# Check, how the modes in P look like
+for t, phi in enumerate(P.T):
+    benchmark_system.write_timestep(t, phi)
+
+benchmark_system.export_paraview(paraview_output_file)
 #%%
 def jacobian(func, u):
     '''
