@@ -24,7 +24,8 @@ dofs_reduced = no_of_modes = 5
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
 
-theta = amfe.static_correction_theta(V, benchmark_system.K)
+print('Take care! Theta is multiplied by 2!')
+theta = amfe.static_correction_theta(V, benchmark_system.K) * 2
 # theta = sp.zeros((dofs_full, dofs_reduced, dofs_reduced))
 
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
@@ -35,21 +36,14 @@ my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 my_newmark = amfe.NewmarkIntegrator(my_qm_sys)
 my_newmark.verbose = True
-my_newmark.delta_t = 2E-4
+my_newmark.delta_t = 1E-4
 my_newmark.n_iter_max = 100
 #my_newmark.write_iter = True
-t1 = time.time()
 
 my_newmark.integrate(np.zeros(no_of_modes), 
                                       np.zeros(no_of_modes), np.arange(0, 0.4, 2E-4))
 
-t2 = time.time()
-print('Time for computation:', t2 - t1, 'seconds.')
-
 my_qm_sys.export_paraview(paraview_output_file)
-
-t3 = time.time()
-print('Time for export:', t3 - t2, 'seconds.')
 
 #%%
 # Export to paraview

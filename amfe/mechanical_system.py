@@ -566,7 +566,7 @@ class ReducedSystem(MechanicalSystem):
 
         # add V and Theta to the hdf5 file
         with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
-            f.create_dataset('Reduction/V', data=self.V)
+            f.create_dataset('reduction/V', data=self.V)
             
         return
 
@@ -668,7 +668,7 @@ class QMSystem(MechanicalSystem):
         
         # add Theta to the hdf5 file
         with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
-            f.create_dataset('Reduction/Theta', data=self.Theta)
+            f.create_dataset('reduction/Theta', data=self.Theta)
         
         return
     

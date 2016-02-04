@@ -19,7 +19,7 @@ from experiments.quadratic_manifold.benchmark_bar import benchmark_system, amfe_
 paraview_output_file = os.path.join(amfe_dir, 'results/linear_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
 
-no_of_modes = 20
+no_of_modes = 5
 
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 my_reduced_system = amfe.reduce_mechanical_system(benchmark_system, V)
@@ -39,15 +39,7 @@ M = my_reduced_system.M()
 my_newmark = amfe.NewmarkIntegrator(my_reduced_system)
 my_newmark.delta_t = 1E-3
 
-t1 = time.time()
-
 my_newmark.integrate(np.zeros(no_of_modes), 
-                                      np.zeros(no_of_modes), np.arange(0, 0.1, 1E-3))
-
-t2 = time.time()
-print('Time for computation:', t2 - t1, 'seconds.')
+                                      np.zeros(no_of_modes), np.arange(0, 0.4, 1E-3))
 
 my_reduced_system.export_paraview(paraview_output_file)
-
-t3 = time.time()
-print('Time for export:', t3 - t2, 'seconds.')
