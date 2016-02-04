@@ -266,7 +266,7 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
     for i in range(no_of_modes):
         if verbose: print('Computing finite difference K-matrix')
         dK_dx_i = (K_func(h*V[:,i]) - K)/h
-        b = dK_dx_i @ V
+        b = - dK_dx_i @ V
         if verbose: print('Sovling linear system #', i)
         Theta[:,:,i] = sp.sparse.linalg.spsolve(K, b)
         if verbose: print('Done solving linear system #', i)
@@ -274,7 +274,7 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
         residual = np.sum(Theta - Theta.transpose(0,2,1))
         print('The residual, i.e. the unsymmetric values, are', residual)
     # make Theta symmetric
-    Theta = 1/2*(Theta + Theta.transpose(0,2,1))
+    Theta = 1/4*(Theta + Theta.transpose(0,2,1))
     return Theta
 
 def principal_angles_and_vectors(V1, V2, cosine=True):

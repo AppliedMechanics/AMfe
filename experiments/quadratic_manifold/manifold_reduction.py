@@ -20,16 +20,33 @@ paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
 
 #%%
+# Check the eigenmodes of the system
+amfe.
+
+#%%
+# create a regular QM system
 dofs_reduced = no_of_modes = 20
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
 
-#print('Take care! The density is put 10 times higher!')
 
-print('Take care! Theta is divided by 2 and multiplied with -1 !')
-theta = - amfe.static_correction_theta(V, benchmark_system.K)/2
+theta = amfe.static_correction_theta(V, benchmark_system.K)
 # theta = sp.zeros((dofs_full, dofs_reduced, dofs_reduced))
 
+my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
+
+#%%
+# Build a QM system which is purged of the in-plane modes:
+dofs_reduced = no_of_modes = 20
+omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
+
+select = np.ones((no_of_modes), dtype=bool)
+# columns to purge
+select[np.ix_((3,7,10,13,15,18))] = False
+V = V[:,select]
+
+dofs_full, dofs_reduced = V.shape
+theta = amfe.static_correction_theta(V, benchmark_system.K)
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 #%%
@@ -40,8 +57,8 @@ for t, phi in enumerate(V.T):
 benchmark_system.export_paraview(paraview_output_file)
 
 #%%
-i_mode = 4
 # plot the modal derivatives:
+i_mode = 4
 for t in np.arange(0,20,0.1):
     u = np.zeros(no_of_modes)
     u[i_mode] = t
@@ -62,13 +79,13 @@ my_newmark.delta_t = 1E-4
 my_newmark.n_iter_max = 100
 #my_newmark.write_iter = True
 
-my_newmark.integrate(np.zeros(no_of_modes), 
-                                      np.zeros(no_of_modes), np.arange(0, 0.4, 1E-4))
+my_newmark.integrate(np.zeros(dofs_reduced), 
+                                      np.zeros(dofs_reduced), np.arange(0, 0.4, 1E-4))
 
 my_qm_sys.export_paraview(paraview_output_file)
 
 #%%
-# plot the stuff
+# plot the time line of the reduced variable 
 q_red = np.array(my_qm_sys.u_red_output)
 t = np.array(my_qm_sys.T_output)
 plt.plot(t, q_red[:,:])
