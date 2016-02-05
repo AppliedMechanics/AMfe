@@ -14,19 +14,29 @@ import matplotlib as mpl
 import amfe
 
 # % cd experiments/quadratic_manifold/
-from experiments.quadratic_manifold.benchmark_bar import benchmark_system, amfe_dir
+from experiments.quadratic_manifold.benchmark_u import benchmark_system, amfe_dir
 
 paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
 
 #%%
 
+def check_orthogonality(u,v):
+    '''
+    Check the orthogonality of two vectors, no matter what their length is. 
+    '''
+    u_n = u / np.sqrt(u @ u)
+    v_n = v / np.sqrt(v @ v)
+    return u_n @ v_n
+    
 #%%
 # create a regular QM system
 dofs_reduced = no_of_modes = 5
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
 
+# try to make one guy smaller!
+# V[:,3] = V[:,3]/100
 
 theta = amfe.static_correction_theta(V, benchmark_system.K)
 # theta = sp.zeros((dofs_full, dofs_reduced, dofs_reduced))
@@ -35,18 +45,27 @@ my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 #%%
 # Try on a purging algorithm
+# So first the inner products of the mds are shown
 A = np.zeros((no_of_modes, no_of_modes))
 for i in range(no_of_modes):
-    for j in range(i+1):
-        v = V[:,i]
+    for j in range(no_of_modes):
+        v = V[:,i].copy()
         v /= np.sqrt(v @ v)
-        th = theta[:,i,j]
+        th = theta[:,i,j].copy()
         th /= np.sqrt(th @ th)
-        A[i,j] = A[j,i] = abs(th @ v)
+        A[i,j] = abs(th @ v)
         
         # print('Inner product of i {0:d} and j {1:d} is {2:4.4f}'.format(i, j, th @ v))
 
-plt.matshow(A)
+plt.matshow(A, norm=mpl.colors.LogNorm());plt.colorbar()
+plt.title('Inner product of V with theta')
+
+#%% Second approach: Show the norm of the vector in theta
+
+L = np.einsum('ijk,ijk->jk', theta, theta)
+L = np.sqrt(L)
+plt.matshow(L);plt.colorbar()
+plt.title('Length of the vectors in theta')
 
 #%%
 # Other type of purging by setting stuff in theta to zero
@@ -74,13 +93,22 @@ for t, phi in enumerate(V.T):
     benchmark_system.write_timestep(t, phi)
 benchmark_system.export_paraview(paraview_output_file)
 
+#%% 
+# plot the modal derivatives of the system
+for i in range(no_of_modes):
+    for j in range(i + 1):
+        benchmark_system.write_timestep(i*100 + j, theta[:,i,j])
+
+benchmark_system.export_paraview(paraview_output_file)
+
 #%%
-# plot the modal derivatives:
-i_mode = 4
+# plot the modes growing with the modal derivatives 
+i_mode = 3
 for t in np.arange(0,20,0.1):
     u = np.zeros(no_of_modes)
     u[i_mode] = t
     my_qm_sys.write_timestep(t, u)
+
 
 #%%
 # Export to paraview
@@ -124,6 +152,9 @@ for t, phi in enumerate(P.T):
     benchmark_system.write_timestep(t, phi)
 
 benchmark_system.export_paraview(paraview_output_file)
+
+#%%
+
 #%%
 def jacobian(func, u):
     '''
