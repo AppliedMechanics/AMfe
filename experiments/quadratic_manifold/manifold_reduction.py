@@ -30,7 +30,7 @@ def check_orthogonality(u,v):
     return u_n @ v_n
     
 #%%
-# create a regular QM system
+# create a regular static QM system
 dofs_reduced = no_of_modes = 10
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
@@ -52,6 +52,7 @@ dofs_full = V.shape[0]
 M = benchmark_system.M()
 theta = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M)
 
+my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 #%%
 # Show the inner products of theta with respect to the modes
 A = np.zeros((no_of_modes, no_of_modes))
