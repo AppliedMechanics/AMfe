@@ -179,6 +179,72 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
               ', the relative residual is', np.sqrt(res.dot(res))/np.sqrt(F_i.dot(F_i)))
     return dx_i_dx_j
 
+def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True, 
+                           symmetric=True):
+    r'''
+    Compute the basis theta based on real modal derivatives. 
+    
+    Parameters
+    ----------
+    V : ndarray
+        array containing the linear basis
+    omega : ndarray
+        eigenfrequencies of the system in rad/s.
+    K_func : function
+        function returning the tangential stiffness matrix for a given 
+        displacement. Has to work like K = K_func(u). 
+    M : ndarray or sparse matrix
+        Mass matrix of the system. 
+    h : float, optional
+        step width for finite difference scheme. Default value is 500 * machine 
+        epsilon
+    verbose : bool, optional
+        flag for verbosity. Default value: True        
+        
+    Returns
+    -------
+    Theta : ndarray
+        three dimensional array of modal derivatives. Theta[:,i,j] contains 
+        the modal derivative 1/2 * dx_i / dx_j. The basis Theta is made symmetric, so 
+        that Theta[:,i,j] == Theta[:,j,i]. 
+    
+    '''
+    no_of_dofs = V.shape[0]
+    no_of_modes = V.shape[1]
+    Theta = np.zeros((no_of_dofs, no_of_modes, no_of_modes))
+
+    # Check, if V is mass normalized:
+    if not np.allclose(np.eye(no_of_modes), V.T @ M @ V, rtol=1E-5, atol=1E-8):
+        Exception('The given modes are not mass normalized!')
+        
+    K = K_func(np.zeros(no_of_dofs))
+    
+    for i in range(no_of_modes): # looping over the columns
+        x_i = V[:,i]        
+        K_dyn_i = K - omega[i]**2 * M
+        # fix the point with the maximum displacement of the vibration mode
+        fix_idx = np.argmax(abs(x_i))
+        K_dyn_i[:,fix_idx], K_dyn_i[fix_idx,:], K_dyn_i[fix_idx, fix_idx] = 0, 0, 1
+        # factorization of the dynamic stiffness matrix
+        if verbose: 
+            print('Factorizing the dynamic stiffness matrix for eigenfrequency',
+                  '{0:d} with {1:4.2f} rad/s.'.format(i, omega[i]) )
+        LU_object = sp.sparse.linalg.splu(K_dyn_i)
+
+        for j in range(no_of_modes): # looping over the rows
+            x_j = V[:,j]
+            # finite difference scheme
+            dK_x_j = (K_func(x_j*h) - K)/h
+            d_omega_2_d_x_i = x_i @ dK_x_j @ x_i
+            F_i = (d_omega_2_d_x_i*M - dK_x_j) @ x_i
+            F_i[fix_idx] = 0
+            v_i = LU_object.solve(F_i)
+            c_i = - v_i @ M @ x_i
+            Theta[:,i,j] = v_i + c_i*x_i
+
+    if symmetric:
+        Theta = 1/4*(Theta + Theta.transpose((0,2,1)))
+    return Theta
 
 
 def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
@@ -256,7 +322,7 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
     -------
     Theta : ndarray
         three dimensional array of static corrections derivatives. Theta[:,i,j] 
-        contains the static derivative dx_i / dx_j. As the static derivatives 
+        contains the static derivative 1/2 * dx_i / dx_j. As the static derivatives 
         are symmetric, Theta[:,i,j] == Theta[:,j,i]. 
     '''
     no_of_dofs = V.shape[0]
