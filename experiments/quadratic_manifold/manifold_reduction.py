@@ -14,7 +14,7 @@ import matplotlib as mpl
 import amfe
 
 # % cd experiments/quadratic_manifold/
-from experiments.quadratic_manifold.benchmark_u import benchmark_system, amfe_dir
+from experiments.quadratic_manifold.benchmark_bar import benchmark_system, amfe_dir
 
 paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
@@ -44,8 +44,7 @@ theta = amfe.static_correction_theta(V, benchmark_system.K)
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 #%%
-# Try on a purging algorithm
-# So first the inner products of the mds are shown
+# Show the inner products of theta with respect to the modes
 A = np.zeros((no_of_modes, no_of_modes))
 for i in range(no_of_modes):
     for j in range(no_of_modes):
@@ -59,6 +58,16 @@ for i in range(no_of_modes):
 
 plt.matshow(A, norm=mpl.colors.LogNorm());plt.colorbar()
 plt.title('Inner product of V with theta')
+
+#%%
+# Purging algorithm where theta is kept orthogonal to V
+for i in range(no_of_modes):
+    v_norm = V[:,i] / np.sqrt(V[:,i] @ V[:,i])            
+    for j in range(no_of_modes):
+        theta[:,i,j] -= v_norm * (theta[:,i,j] @ v_norm)
+        theta[:,j,i] = theta[:,i,j]
+        # theta[:,i,j] -= V[:,j]*(V[:,j] @ theta[:,i,j])
+        
 
 #%% Second approach: Show the norm of the vector in theta
 
@@ -119,7 +128,7 @@ my_qm_sys.export_paraview(paraview_output_file)
 # Perform some time integration
 # 
 
-my_newmark = amfe.NewmarkIntegrator(my_qm_sys)
+my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=0.1)
 my_newmark.verbose = True
 my_newmark.delta_t = 1E-4
 my_newmark.n_iter_max = 100
