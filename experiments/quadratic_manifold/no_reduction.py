@@ -23,9 +23,9 @@ paraview_output_file = os.path.join(amfe_dir, 'results/no_reduction' +
 # time integration
 ndof = benchmark_system.dirichlet_class.no_of_constrained_dofs
 
-my_newmark = amfe.NewmarkIntegrator(benchmark_system)
-my_newmark.delta_t = 2E-4
+my_newmark = amfe.NewmarkIntegrator(benchmark_system, alpha=0.1)
+my_newmark.delta_t = 1E-4
 
-my_newmark.integrate(np.zeros(ndof), np.zeros(ndof), np.arange(0, 0.01, 2E-4))
+my_newmark.integrate(np.zeros(ndof), np.zeros(ndof), np.arange(0, 0.4, 1E-4))
 
 benchmark_system.export_paraview(paraview_output_file)
