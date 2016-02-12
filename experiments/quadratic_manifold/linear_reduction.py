@@ -48,9 +48,9 @@ my_reduced_system = amfe.reduce_mechanical_system(benchmark_system, V)
 
 # check, if matrices are (almost) diagonal
 
-K = my_reduced_system.K()
+# K = my_reduced_system.K()
 #plt.matshow(K)
-M = my_reduced_system.M()
+# M = my_reduced_system.M()
 #plt.matshow(M)
 
 #%%
