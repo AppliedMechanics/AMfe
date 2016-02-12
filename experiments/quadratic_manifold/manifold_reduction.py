@@ -14,7 +14,8 @@ import matplotlib as mpl
 import amfe
 
 # % cd experiments/quadratic_manifold/
-from experiments.quadratic_manifold.benchmark_bar import benchmark_system, amfe_dir
+from experiments.quadratic_manifold.benchmark_bar import benchmark_system, \
+    amfe_dir, alpha
 
 paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
@@ -28,7 +29,8 @@ def check_orthogonality(u,v):
     u_n = u / np.sqrt(u @ u)
     v_n = v / np.sqrt(v @ v)
     return u_n @ v_n
-    
+
+
 #%%
 # create a regular static QM system
 dofs_reduced = no_of_modes = 10
@@ -138,7 +140,7 @@ my_qm_sys.export_paraview(paraview_output_file)
 # Perform some time integration
 # 
 
-my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=0.1)
+my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=alpha)
 my_newmark.verbose = True
 my_newmark.delta_t = 1E-4
 my_newmark.n_iter_max = 100

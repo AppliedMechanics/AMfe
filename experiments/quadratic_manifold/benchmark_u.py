@@ -34,3 +34,6 @@ my_system.apply_neumann_boundaries(14, 6E7, 'x', harmonic_x)
 my_system.apply_neumann_boundaries(14, 6E7, 'y', harmonic_y)
 
 benchmark_system = my_system
+
+# Time integration parameters
+alpha = 0.1

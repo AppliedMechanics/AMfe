@@ -33,3 +33,5 @@ harmonic_y = lambda t: np.sin(2*np.pi*t*20)
 my_system.apply_neumann_boundaries(9, 2E7, 'y', harmonic_y)
 
 benchmark_system = my_system
+
+alpha = 0.1

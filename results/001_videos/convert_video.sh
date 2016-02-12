@@ -1,4 +1,7 @@
 
+# Save the files as png-files with the correct resolution
+
+
 # Standard resolutions:
 # 720 HD = 1280x720
 # 1080 HD = 1920x1080
