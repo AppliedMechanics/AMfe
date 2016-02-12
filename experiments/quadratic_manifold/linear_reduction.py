@@ -22,7 +22,27 @@ paraview_output_file = os.path.join(amfe_dir, 'results/linear_reduction' +
 
 no_of_modes = 10
 
-omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
+omega, Phi = amfe.vibration_modes(benchmark_system, n=no_of_modes)
+V = Phi
+#%% 
+# Reduce mechanical system using static correction derivatives
+theta = amfe.static_correction_theta(Phi, benchmark_system.K, )
+# Build new basis
+ndof, n = Phi.shape
+V = np.zeros((ndof, n*(n+3)//2))
+V[:,:n] = Phi[:,:]
+for i in range(n):
+    for j in range(i+1):
+        idx = n + i*(i+1)//2 + j
+        V[:,idx] = theta[:,i,j] / np.sqrt(theta[:,i,j] @ theta[:,i,j])
+
+# Deflation algorithm
+U, s, V_svd = sp.linalg.svd(V, full_matrices=False)
+deflating_tol = 1E-6
+idx_defl = s > s[0]*deflating_tol
+V = U[:,idx_defl]
+ndof, no_of_modes = V.shape
+#%%
 my_reduced_system = amfe.reduce_mechanical_system(benchmark_system, V)
 #%%
 
@@ -38,9 +58,9 @@ M = my_reduced_system.M()
 # time integration
 
 my_newmark = amfe.NewmarkIntegrator(my_reduced_system, alpha=alpha)
-my_newmark.delta_t = 1E-3
+my_newmark.delta_t = 1E-4
 
 my_newmark.integrate(np.zeros(no_of_modes), np.zeros(no_of_modes), 
-                     np.arange(0, 0.4, 1E-3))
+                     np.arange(0, 0.4, 1E-4))
 
 my_reduced_system.export_paraview(paraview_output_file)
