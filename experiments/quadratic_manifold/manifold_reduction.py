@@ -57,14 +57,17 @@ theta = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M)
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 #%%
 # Show the inner products of theta with respect to the modes
+M = benchmark_system.M()
 A = np.zeros((no_of_modes, no_of_modes))
+norm_mat = np.eye(V.shape[0])
+norm_mat = M
 for i in range(no_of_modes):
     for j in range(no_of_modes):
         v = V[:,i].copy()
-        v /= np.sqrt(v @ v)
+        v /= np.sqrt(v @ norm_mat @ v)
         th = theta[:,i,j].copy()
-        th /= np.sqrt(th @ th)
-        A[i,j] = abs(th @ v)
+        th /= np.sqrt(th @ norm_mat @ th)
+        A[i,j] = abs(th @ norm_mat @ v)
         
         # print('Inner product of i {0:d} and j {1:d} is {2:4.4f}'.format(i, j, th @ v))
 
@@ -72,11 +75,12 @@ plt.matshow(A, norm=mpl.colors.LogNorm());plt.colorbar()
 plt.title('Inner product of V with theta')
 
 #%%
-# Purging algorithm where theta is kept orthogonal to V
+# Purging algorithm where theta is kept mass orthogonal to V
+M = benchmark_system.M()
 for i in range(no_of_modes):
-    v_norm = V[:,i] / np.sqrt(V[:,i] @ V[:,i])            
+    v_norm = V[:,i]
     for j in range(no_of_modes):
-        theta[:,i,j] -= v_norm * (theta[:,i,j] @ v_norm)
+        theta[:,i,j] -= v_norm * (theta[:,i,j] @ M @ v_norm)
         theta[:,j,i] = theta[:,i,j]
         # theta[:,i,j] -= V[:,j]*(V[:,j] @ theta[:,i,j])
         
@@ -85,7 +89,7 @@ for i in range(no_of_modes):
 
 L = np.einsum('ijk,ijk->jk', theta, theta)
 L = np.sqrt(L)
-plt.matshow(L);plt.colorbar()
+plt.matshow(L, norm=mpl.colors.LogNorm());plt.colorbar()
 plt.title('Length of the vectors in theta')
 
 #%%
@@ -124,7 +128,7 @@ benchmark_system.export_paraview(paraview_output_file)
 
 #%%
 # plot the modes growing with the modal derivatives 
-i_mode = 3
+i_mode = 1
 for t in np.arange(0,20,0.1):
     u = np.zeros(no_of_modes)
     u[i_mode] = t
@@ -146,8 +150,8 @@ my_newmark.delta_t = 1E-4
 my_newmark.n_iter_max = 100
 #my_newmark.write_iter = True
 
-my_newmark.integrate(np.zeros(dofs_reduced), 
-                                      np.zeros(dofs_reduced), np.arange(0, 0.4, 1E-4))
+my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), 
+                     np.arange(0, 0.4, 1E-4))
 
 my_qm_sys.export_paraview(paraview_output_file)
 
@@ -155,6 +159,7 @@ my_qm_sys.export_paraview(paraview_output_file)
 # plot the time line of the reduced variable 
 q_red = np.array(my_qm_sys.u_red_output)
 t = np.array(my_qm_sys.T_output)
+plt.figure()
 plt.plot(t, q_red[:,:])
 plt.grid()
 
@@ -165,6 +170,7 @@ for i, q in enumerate(q_red):
     P = V + 2*(theta @ q)
     conds[i] = np.linalg.cond(P)
 
+plt.figure()
 plt.semilogy(t, conds); plt.grid()
 
 #%%
