@@ -84,6 +84,7 @@ for i in range(no_of_modes):
         theta[:,j,i] = theta[:,i,j]
         # theta[:,i,j] -= V[:,j]*(V[:,j] @ theta[:,i,j])
         
+my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 #%% Second approach: Show the norm of the vector in theta
 
@@ -96,6 +97,10 @@ plt.title('Length of the vectors in theta')
 # Other type of purging by setting stuff in theta to zero
 theta[:,:,3] = 0
 theta[:,3,:] = 0
+
+theta[:,:,7] = 0
+theta[:,7,:] = 0
+my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 #%%
 # Build a QM system which is purged of the in-plane modes:
@@ -165,13 +170,36 @@ plt.grid()
 
 #%%
 # Check the condition of the projector P
-conds = np.zeros_like(q_red[:,0])
+# first column is condition number, second scaling, third orthogonality
+conds = np.zeros_like(q_red[:,:3])
 for i, q in enumerate(q_red):
     P = V + 2*(theta @ q)
-    conds[i] = np.linalg.cond(P)
+    conds[i,0] = np.linalg.cond(P)
+    diag = np.diag(P.T @ P)
+    diag = np.sqrt(diag)
+    conds[i,1] = np.max(diag)/np.min(diag)
+    P_normal = np.einsum('ij,j->ij', P,1/diag)
+    conds[i,2] = np.linalg.cond(P_normal)
+    
+
+plt.figure()
+plt.semilogy(t, conds[:,0], label='cond P')
+plt.semilogy(t, conds[:,1], label='cond P scaling')
+plt.semilogy(t, conds[:,2], label='cond P vecs')
+plt.legend()
+plt.grid()
+
+
+#%% 
+# Check condition number due to bad lengthes in scaling
+conds_scaling = np.zeros_like(q_red[:,0])
+for i, q in enumerate(q_red):
+    P = V + 2*(theta @ q)
+    conds_scaling[i] = np.linalg.cond(P)
 
 plt.figure()
 plt.semilogy(t, conds); plt.grid()
+
 
 #%%
 # Check, how the modes in P look like
