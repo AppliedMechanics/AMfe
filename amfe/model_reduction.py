@@ -45,6 +45,7 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     reduced_sys.__class__ = ReducedSystem
     reduced_sys.V = V.copy()
     reduced_sys.u_red_output = []
+    reduced_sys.M_constr = None
     return reduced_sys
 
 def qm_reduce_mechanical_system(mechanical_system, V, Theta, overwrite=False):

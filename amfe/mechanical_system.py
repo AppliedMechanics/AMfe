@@ -420,7 +420,7 @@ class MechanicalSystem():
             
         K, f = self.K_and_f(u, t)
         S = K + 1/(beta*dt**2)*self.M_constr
-        res = f + self.f_ext(u, du, t) + self.M_constr.dot(ddu)
+        res = f + self.f_ext(u, du, t) + self.M_constr @ ddu
 
         return S, res
     
