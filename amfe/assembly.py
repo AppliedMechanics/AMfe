@@ -107,27 +107,27 @@ def fill_csr_matrix(indptr, indices, vals, K, k_indices):
             vals[l] += K[i,j]
     pass
 
-
-def compute_csr_assembly_indices(global_element_indices, indptr, indices):
-    '''
-    Computes the assembly-indices for matrices in andvance.
-
-    This function is deprecated. It is not clear, if the function will be used
-    in the future, but it seems that it could make sense for small systems
-    when FORTRAN is not aviailible.
-
-    '''
-    no_of_elements, dofs_per_element = global_element_indices.shape
-    matrix_assembly_indices = np.zeros((no_of_elements, dofs_per_element, 
-                                        dofs_per_element))
-    for i in range(no_of_elements):
-        for j in range(dofs_per_element):
-            for k in range(dofs_per_element):
-                row_idx = global_element_indices[i,j]
-                col_idx = global_element_indices[i,k]
-                matrix_assembly_indices[i, j, k] = \
-                    get_index_of_csr_data(row_idx, col_idx, indptr, indices)
-    return matrix_assembly_indices
+## This function is deprecated!!!
+#def compute_csr_assembly_indices(global_element_indices, indptr, indices):
+#    '''
+#    Computes the assembly-indices for matrices in andvance.
+#
+#    This function is deprecated. It is not clear, if the function will be used
+#    in the future, but it seems that it could make sense for small systems
+#    when FORTRAN is not aviailible.
+#
+#    '''
+#    no_of_elements, dofs_per_element = global_element_indices.shape
+#    matrix_assembly_indices = np.zeros((no_of_elements, dofs_per_element, 
+#                                        dofs_per_element))
+#    for i in range(no_of_elements):
+#        for j in range(dofs_per_element):
+#            for k in range(dofs_per_element):
+#                row_idx = global_element_indices[i,j]
+#                col_idx = global_element_indices[i,k]
+#                matrix_assembly_indices[i, j, k] = \
+#                    get_index_of_csr_data(row_idx, col_idx, indptr, indices)
+#    return matrix_assembly_indices
 
 
 if use_fortran:
@@ -190,9 +190,9 @@ class Assembly():
             of the local stiffness matrix of the i-th element.
             The dimension is (n_elements, ndof_element, ndof_element).
         element_indices : list
-            List containing the global indices for the local variables of an 
-            element. The entry [i,j] gives the index in the global vector of 
-            element i with dof j
+            Ragged list containing the global indices for the local variables 
+            of an element. The entry [i,j] gives the index in the global vector 
+            of element i with dof j
         nodes_voigt : np.ndarray
             vector of all nodal coordinates in voigt-notation. 
             Dimension is (ndofs_total, )
