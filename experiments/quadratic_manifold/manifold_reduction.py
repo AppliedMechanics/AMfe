@@ -145,9 +145,9 @@ for t in np.arange(0,20,0.1):
 my_qm_sys.export_paraview(paraview_output_file)
 
 #%% 
-#
+###############################################################################
 # Perform some time integration
-# 
+###############################################################################
 
 my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=alpha)
 my_newmark.verbose = True
