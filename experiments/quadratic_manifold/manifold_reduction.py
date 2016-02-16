@@ -20,6 +20,7 @@ from experiments.quadratic_manifold.benchmark_bar import benchmark_system, \
 paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
 
+SQ_EPS = amfe.model_reduction.SQ_EPS
 #%%
 
 def check_orthogonality(u,v):
@@ -52,8 +53,9 @@ omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 
 dofs_full = V.shape[0]
 M = benchmark_system.M()
-theta = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M)
-
+theta = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M, h=SQ_EPS,\
+                                    symmetric=True)
+# theta = 1/2*(theta * theta.transpose(0,2,1))
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 #%%
 # Show the inner products of theta with respect to the modes

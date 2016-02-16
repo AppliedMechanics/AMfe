@@ -41,6 +41,12 @@ V[:,-1] = q
 Theta = amfe.static_correction_theta(V, benchmark_system.K)
 
 #%%
+# Restoring the force for mode 2
+f = K @ V[:,-1]
+benchmark_system.write_timestep(1, f)
+benchmark_system.export_paraview(paraview_output_file)
+
+#%%
 # plot the modal derivatives of the system
 no_of_dofs, no_of_modes = V.shape
 for i in range(no_of_modes):
