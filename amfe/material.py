@@ -15,11 +15,6 @@ try:
 except Exception:
     print('''
 Python was not able to load the fast fortran material routines.
-run the script 
-
-f2py/install_fortran_routines.sh 
-
-in order to get the full speed! 
 ''')
 
 #use_fortran = False

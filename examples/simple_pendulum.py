@@ -53,7 +53,7 @@ my_constrained_solver.set_constrained_system(my_pendulum)
 q0 = np.array([l, 0.])
 dq0 = np.array([0, 0.])
 T = sp.arange(0, 10, 0.01)
-q, dq, lambda_ = my_constrained_solver.integrate_nonlinear_system(q0, dq0, T)
+q, dq, lambda_ = my_constrained_solver.integrate(q0, dq0, T)
 
 #plt.plot(q)
 plt.plot(q[:,0], q[:,1])

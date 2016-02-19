@@ -1,6 +1,6 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
-# pylint: disable=trailing-whitespace, C0103, E1101
+
 """
 Basic assembly module for the finite element code. Assumes to have all elements 
 in the inertial frame.

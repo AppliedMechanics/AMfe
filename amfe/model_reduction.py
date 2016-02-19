@@ -11,7 +11,7 @@ import numpy as np
 import scipy as sp
 from scipy import linalg
 
-from amfe.mechanical_system import ReducedSystem
+from amfe.mechanical_system import ReducedSystem, QMSystem
 
 def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     '''
@@ -44,6 +44,27 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False):
         reduced_sys = copy.deepcopy(mechanical_system)
     reduced_sys.__class__ = ReducedSystem
     reduced_sys.V = V.copy()
+    return reduced_sys
+
+def qm_reduce_mechanical_system(mechanical_system, V, theta, overwrite=False):
+    '''
+    '''
+    # consistency check
+    assert(V.shape[-1] == theta.shape[-1])
+    assert(theta.shape[1] == theta.shape[2])
+    assert(theta.shape[0] == V.shape[0])
+    no_of_red_dofs = V.shape[-1]
+    if overwrite:
+        reduced_sys = mechanical_system
+    else:
+        reduced_sys = copy.deepcopy(mechanical_system)
+        
+    reduced_sys.__class__ = QMSystem
+    reduced_sys.V = V.copy()
+    reduced_sys.Theta = theta.copy()
+    # define internal variables
+    reduced_sys.u_red_output = []
+    reduced_sys.no_of_red_dofs = no_of_red_dofs
     return reduced_sys
     
 
@@ -131,18 +152,21 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
 
 
 def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
-    '''
-    Computes the static correction vectors.
+    r'''
+    Computes the static correction vectors 
+    :math:`\frac{\partial x_i}{\partial x_j}` of the system with a nonlinear 
+    force.
 
     Parameters
     ----------
     x_i : ndarray
-        displacement vector i
+        array containing displacement vectors i in the rows. x_i[:,i] is the 
+        i-th vector
     x_j : ndarray
-        displacement vector j
+        displacement vector j 
     K_func : function
         function for the tangential stiffness matrix to be called in the form 
-        K_tangential = K_func(x_i)
+        K_tangential = K_func(x_j)
     h : float, optional
         step size for the computation of the finite difference scheme. Default 
         value 500 * machine_epsilon
@@ -169,17 +193,59 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     '''
     ndof = x_i.shape[0]
     K = K_func(np.zeros(ndof))
-    dK_x_j = (K_func(x_j*h) - K)/h
-    b = - dK_x_j.dot(x_i) # rigth hand side of equation
+    dK_dx_j = (K_func(x_j*h) - K)/h
+    b = - dK_dx_j.dot(x_i) # rigth hand side of equation
     dx_i_dx_j = linalg.solve(K, b)
     if verbose:
-        res = K.dot(dx_i_dx_j) + dK_x_j.dot(x_i)
+        res = K.dot(dx_i_dx_j) + dK_dx_j.dot(x_i)
         print('\nComputation of static correction derivative. ')
         print('The condition number of the solution procedure is', np.linalg.cond(K))
         print('The residual is', linalg.norm(res),
               ', the relative residual is', linalg.norm(res)/linalg.norm(b))
     return dx_i_dx_j
 
+
+def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
+    '''
+    Computes the static correction derivatives of the basis V
+    
+    Parameters
+    ----------
+    V : ndarray
+        array containing the linear basis
+    K_func : function
+        function returning the tangential stiffness matrix for a given 
+        displacement. Has to work like K = K_func(u). 
+    h : float, optional
+        step width for finite difference scheme. Default value is 500 * machine 
+        epsilon
+    verbose : bool, optional
+        flag for verbosity. Default value: True        
+        
+    Returns
+    -------
+    Theta : ndarray
+        three dimensional array of static corrections derivatives. Theta[:,i,j] 
+        contains the static derivative dx_i / dx_j. As the static derivatives 
+        are symmetric, Theta[:,i,j] == Theta[:,j,i]. 
+    '''
+    no_of_dofs = V.shape[0]
+    no_of_modes = V.shape[1]
+    Theta = np.zeros((no_of_dofs, no_of_modes, no_of_modes))
+    K = K_func(np.zeros(no_of_dofs))
+    for i in range(no_of_modes):
+        if verbose: print('Computing finite difference K-matrix')
+        dK_dx_i = (K_func(h*V[:,i]) - K)/h
+        b = dK_dx_i @ V
+        if verbose: print('Sovling linear system #', i)
+        Theta[:,:,i] = sp.sparse.linalg.spsolve(K, b)
+        if verbose: print('Done solving linear system #', i)
+    if verbose:
+        residual = np.sum(Theta - Theta.transpose(0,2,1))
+        print('The residual, i.e. the unsymmetric values, are', residual)
+    # make Theta symmetric
+    Theta = 1/2*(Theta + Theta.transpose(0,2,1))
+    return Theta
 
 def principal_angles_and_vectors(V1, V2, cosine=True):
     '''

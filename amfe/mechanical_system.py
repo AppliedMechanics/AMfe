@@ -1,16 +1,8 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=trailing-whitespace, C0103, E1101, E0611
 
 """
-Created on Fri May  8 16:58:03 2015
-
-@author: johannesr
-
-Create mechanical system with default material parameters by:
-my_system = amfe.MechanicalSystem()
-If you want to use special material parameter, create mechanical system by e.g:
-my_system = amfe.MechanicalSystem(E_modul=1000.0, poisson_ratio=0.15, 
-                                  element_thickness=1.0, density=1.0)
+Module handling the whole mechanical system, no matter if it's a finite element 
+system, defined by certain parameters or a multibody system. 
 """
 
 import time
@@ -22,11 +14,6 @@ from amfe.mesh import Mesh
 from amfe.assembly import Assembly
 from amfe.boundary import DirichletBoundary, NeumannBoundary
 
-
-
-# Anmerkungen (Fabian):
-# - die Assembly-Klasse wird nach dem Einlesen des Netzes in der jeweiligen 
-#   Netz-Einlese-Methode instanziert
 
 
 class MechanicalSystem():
@@ -65,7 +52,11 @@ class MechanicalSystem():
         self.constrain_matrix = self.dirichlet_class.constrain_matrix
         
         # initializations to be overwritten by loading functions
+        self.M_constr = None
         self.no_of_dofs_per_node = None
+
+        # external force to be overwritten by user-defined external forces
+        self._f_ext_unconstr = lambda t: np.zeros(self.mesh_class.no_of_dofs)
 
 
     def load_mesh_from_gmsh(self, msh_file, phys_group, material):
@@ -268,9 +259,21 @@ class MechanicalSystem():
         self._f_ext_unconstr = self.neumann_class.f_ext()
 
 
-    def export_paraview(self, filename):
+    def export_paraview(self, filename, field_list=[]):
         '''
-        Export the system with the given information to paraview
+        Export the system with the given information to paraview. 
+        
+        Parameters
+        ----------
+        filename : str
+            filename to which the xdmf file and the hdf5 file will be saved. 
+        field_list : list
+            list of tuples containing a field to be exported as well as a 
+            dictionary with the attribute information of the hdf5 file. 
+        
+        Returns
+        -------
+        None
         '''
         t1 = time.time()
         if len(self.T_output) is 0:
@@ -278,9 +281,10 @@ class MechanicalSystem():
             self.u_output.append(np.zeros(self.mesh_class.no_of_dofs))
         print('Start exporting mesh for paraview to', filename)
         self.mesh_class.set_displacement_with_time(self.u_output, self.T_output)
-        self.mesh_class.save_mesh_for_paraview(filename)
+        self.mesh_class.save_mesh_xdmf(filename, field_list)
         t2 = time.time()
         print('Mesh for paraview successfully exported in ', t2 - t1, 'seconds.')
+        return
 
     def M(self):
         '''
@@ -296,7 +300,8 @@ class MechanicalSystem():
             Mass matrix with applied constraints in sparse csr-format
         '''
         M_unconstr = self.assembly_class.assemble_m()
-        return self.constrain_matrix(M_unconstr)
+        self.M_constr = self.constrain_matrix(M_unconstr)
+        return self.M_constr
         
     def K(self, u=None, t=0):
         '''
@@ -328,23 +333,6 @@ class MechanicalSystem():
             self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t) 
         return self.constrain_vec(f_unconstr)
         
-    def _f_ext_unconstr(self, t=0):
-        '''
-        External force of unconstrained system. Can be overwritten externally. 
-        
-        Parameters
-        ----------
-        t : float, optional
-            time, default value: 0. 
-        
-        Returns
-        -------
-        f_ext_unconstr : ndarray
-            external force without constraints.
-        
-        '''
-        return np.zeros(self.mesh_class.no_of_dofs)
-        
     def f_ext(self, u, du, t):
         '''
         Return the nonlinear external force of the right hand side 
@@ -365,6 +353,73 @@ class MechanicalSystem():
         f = self.constrain_vec(f_unconstr)
         return K, f
 
+    def S_and_res(self, u, du, ddu, dt, t, beta, gamma):
+        r'''
+        Compute jacobian and residual for implicit time integration. 
+        
+        Parameters
+        ----------
+        u : ndarray
+            displacement; dimension (ndof,)
+        du : ndarray
+            velocity; dimension (ndof,)
+        ddu : ndarray
+            acceleration; dimension (ndof,)
+        dt : float
+            time step width
+        t : float
+            time of current time step (for time dependent loads)
+        beta : float
+            weighting factor for position in generalized-:math:`\alpha` scheme
+        gamma : float
+            weighting factor for velocity in generalized-:math:`\alpha` scheme
+            
+        Returns
+        -------
+        S : ndarray
+            jacobian matrix of residual; dimension (ndof, ndof)
+        res : ndarray
+            residual; dimension (ndof,)
+        
+        Note
+        ----
+        Time integration scheme: The iteration matrix is composed using the
+        generalized-:math:`\alpha` scheme: 
+        
+        .. math:: \mathbf S = \frac{1}{h^2\beta}\mathbf{M} 
+                  + \frac{\gamma}{h\beta} \mathbf D + \mathbf K
+                
+        which bases on the time discretization of the velocity and the 
+        displacement:
+        
+        .. math:: \mathbf{\dot{q}}_{n+1} & = \mathbf{\dot{q}}_{n} + (1-\gamma)h
+                  \mathbf{\ddot{q}}_{n} + \gamma h \mathbf{\ddot{q}}_{n+1}
+        
+        .. math:: \mathbf{q}_{n+1} & = \mathbf{q}_n + h \mathbf{\dot{q}}_n + 
+                  \left(\frac{1}{2} - \beta\right)h^2\mathbf{\ddot{q}}_n +
+                  h^2\beta\mathbf{\ddot{q}}_{n+1} 
+        
+        This method is using the variables/methods
+        
+            - self.M()
+            - self.M_constr
+            - self.K_and_f()
+            - self.f_ext()
+        
+        If these methods are implemented correctly in a daughter class, the 
+        time integration interface should work properly. 
+        
+        '''
+        # compute mass matrix only once if it hasnt's been computed yet        
+        if self.M_constr is None:
+            self.M()
+            
+        K, f = self.K_and_f(u, t)
+        S = K + 1/(beta*dt**2)*self.M_constr
+        res = f + self.f_ext(u, du, t) + self.M_constr.dot(ddu)
+
+        return S, res
+    
     def write_timestep(self, t, u):
         '''
         write the timestep to the mechanical_system class
@@ -436,7 +491,8 @@ class ReducedSystem(MechanicalSystem):
         return self.V.T.dot(MechanicalSystem.f_int(self, self.V.dot(u), t))
 
     def M(self):
-        return self.V.T.dot(MechanicalSystem.M(self).dot(self.V))
+        self.M_constr = self.V.T.dot(MechanicalSystem.M(self).dot(self.V))
+        return self.M_constr
 
     def write_timestep(self, t, u):
         MechanicalSystem.write_timestep(self, t, self.V.dot(u))
@@ -485,6 +541,98 @@ class ReducedSystem(MechanicalSystem):
         '''
         return MechanicalSystem.M(self)
 
+
+class QMSystem(MechanicalSystem):
+    '''
+    Quadratic Manifold Finite Element system. 
+    
+    
+    '''
+    
+    def __init__(self, **kwargs):
+        MechanicalSystem.__init__(self, **kwargs)
+        self.V = None
+        self.Theta = None
+        self.no_of_red_dofs = None
+        self.u_red_output = []
+    
+    def M(self, u=None, t=0):
+        # checks, if u is there and M is already computed
+        if u is None:
+            u = np.zeros(self.no_of_red_dofs)
+        if self.M_constr is None:
+            MechanicalSystem.M(self)
+            
+        P = self.V + 2*self.Theta.dot(u)
+        M_red = P.T @ self.M_constr @ P
+        return M_red
+    
+    def K_and_f(self, u=None, t=0):
+        '''
+        Take care here! It is not clear yet how to compute the tangential 
+        stiffness matrix! 
+        
+        It seems to be like the contribution of geometric and material 
+        stiffness. 
+        '''
+        if u is None:
+            u = np.zeros(self.no_of_red_dofs)
+        theta_u = self.Theta @ u
+        u_full = (self.V + theta_u) @ u
+        P = self.V + 2*theta_u
+        K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
+        K1 = P.T @ K_unreduced @ P
+        K2 = 2*self.Theta.T @ f_unreduced
+        K = K1 + K2
+        f = P.T @ f_unreduced
+        return K, f
+    
+    def S_and_res(self, u, du, ddu, dt, t, beta, gamma):
+        '''
+        TODO: checking the contributions of the different parts of the 
+        iteration matrix etc. 
+        
+        '''
+        # checking out that constant unreduced M is built
+        if self.M_constr is None:
+            MechanicalSystem.M(self)
+        M_unreduced = self.M_constr
+        
+        theta = self.Theta        
+        theta_u = theta @ u        
+        u_full = (self.V + theta_u) @ u
+        
+        K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
+        # nonlinear projector P
+        P = self.V + 2*theta_u
+
+        # computing the residual
+        res_accel = M_unreduced @ (P @ ddu)
+        res_gyro = M_unreduced @ (theta @ du) @ du
+        res_full = res_accel + res_gyro + f_unreduced
+        # the different contributions to stiffness
+        K1 = 2 * theta.T @ res_full
+        K2 = 2 * P.T @ M_unreduced @ (theta @ ddu)
+        K3 = P.T @ K_unreduced @ P
+        K = K1 + K2 + K3
+        # gyroscopic matrix and reduced mass matrix
+        G = 2 * P.T @ M_unreduced @ (theta @ du)
+        M = P.T @ M_unreduced @ P
+
+        res = P.T @ res_full
+        S = 1/(dt**2 * beta) * M + gamma/(dt*beta) * G + K
+        return S, res
+        
+    def write_timestep(self, t, u):
+        u_full = self.V @ u + (self.Theta @ u) @ u
+        MechanicalSystem.write_timestep(self, t, u_full)
+        # own reduced output
+        self.u_red_output.append(u.copy())
+        
+    
+    
+    
+        
 
 #pylint: disable=unused-argument
 class ConstrainedMechanicalSystem():

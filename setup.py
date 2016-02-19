@@ -34,7 +34,7 @@ config = {
     'url': 'No URL provided yet',
     'download_url': 'Where to download it.',
     'author_email': 'johannes.rutzmoser@tum.de',
-    'install_requires': ['numpy', 'scipy', 'pandas'],
+    'install_requires': ['numpy', 'scipy', 'pandas', 'h5py'],
     'tests_require': ['nose', 'sphinx>=1.3.0'],
     'packages': ['amfe'],
     'scripts': [],

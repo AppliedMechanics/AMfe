@@ -2,6 +2,7 @@
 
 # Python specific files
 .spyderworkspace
+.spyderproject
 *.pyc
 *.so
 *.o

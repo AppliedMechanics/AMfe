@@ -6,27 +6,44 @@ Created on Fri Mar 20 15:25:24 2015
 """
 import os
 import copy
+# XML stuff
+from xml.etree.ElementTree import Element, SubElement
+from xml.etree import ElementTree
+from xml.dom import minidom
 
-import numpy as np
-import scipy as sp
+
+
 import pandas as pd
+import h5py
+import numpy as np
 
 from amfe.element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
-from amfe.element import LineLinearBoundary, LineQuadraticBoundary, Tri3Boundary, Tri6Boundary
+from amfe.element import LineLinearBoundary, LineQuadraticBoundary, \
+    Tri3Boundary, Tri6Boundary
+
 # Element mapping is described here. If a new element is implemented, the
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
-    # internal Name,    gmsh-Key, vtk/ParaView-Key, no_of_nodes, description
-    ['Tet4',             4, 10,  4, 'Linear Tetraeder / nodes on every corner'],
-    ['Tet10',           11, 24, 10, 'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
-    ['Tri6',             9, 22,  6, 'Quadratic triangle / 6 node second order triangle'],
-    ['Tri3',             2,  5,  3, 'Straight triangle / 3 node first order triangle'],
-    ['Tri10',           21, 35, 10, 'Cubic triangle / 10 node third order triangle'],
-    ['Quad4',            3,  9,  4, 'Bilinear rectangle / 4 node first order rectangle'],
-    ['Quad8',           16, 23,  8, 'Biquadratic rectangle / 8 node second order rectangle'],
-    ['straight_line',    1,  3,  2, 'Straight line composed of 2 nodes'],
-    ['quadratic_line',   8, 21,  3, 'Quadratic edge/line composed of 3 nodes'],
-    ['point',       15, np.NAN,  1, 'Single Point'],    
+    # internal Name, XMF Key,   gmsh-Key, vtk/ParaView-Key, no_of_nodes, description
+    ['Tet4',          'Tetrahedron',   4, 10,  4, 
+     'Linear Tetraeder / nodes on every corner'],
+    ['Tet10',         'Tetrahedron_10',  11, 24, 10, 
+     'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
+    ['Tri6',          'Triangle_6',   9, 22,  6, 
+     'Quadratic triangle / 6 node second order triangle'],
+    ['Tri3',          'Triangle',   2,  5,  3, 
+     'Straight triangle / 3 node first order triangle'],
+    ['Tri10',         '',  21, 35, 10, 
+     'Cubic triangle / 10 node third order triangle'],
+    ['Quad4',         'Quadrilateral',   3,  9,  4, 
+     'Bilinear rectangle / 4 node first order rectangle'],
+    ['Quad8',         'Quadrilateral_8',  16, 23,  8, 
+     'Biquadratic rectangle / 8 node second order rectangle'],
+    ['straight_line', 'Edge',   1,  3,  2, 
+     'Straight line composed of 2 nodes'],
+    ['quadratic_line', 'Edge_3',  8, 21,  3, 
+     'Quadratic edge/line composed of 3 nodes'],
+    ['point',       '', 15, np.NAN,  1, 'Single Point'],    
     # Bars are missing, which are used for simple benfield truss
 ]
 
@@ -39,8 +56,10 @@ element_class_dict = {'Tet4'  : Tet4(**kwargs),
                       'Quad4' : Quad4(**kwargs),
                       'Quad8' : Quad8(**kwargs),
                       'Bar2Dlumped' : Bar2Dlumped(**kwargs),
-                              }
+                     }
+                              
 kwargs = {'val' : 1., 'direct' : 'normal'}
+
 element_boundary_class_dict = {'straight_line' : LineLinearBoundary(**kwargs), 
                                'quadratic_line': LineQuadraticBoundary(**kwargs),
                                'Tri3'          : Tri3Boundary(**kwargs),
@@ -61,24 +80,168 @@ boundary_3d_set = {'straight_line', 'quadratic_line',
 gmsh2amfe        = dict([])
 amfe2gmsh        = dict([])
 amfe2vtk         = dict([])
+amfe2xmf         = dict([])
 amfe2no_of_nodes = dict([])
 
-
 for element in element_mapping_list:
-    gmsh2amfe.update({element[1] : element[0]})
-    amfe2gmsh.update({element[0] : element[1]})
-    amfe2vtk.update( {element[0] : element[2]})
-    amfe2no_of_nodes.update({element[0] : element[3]})
+    gmsh2amfe.update({element[2] : element[0]})
+    amfe2gmsh.update({element[0] : element[2]})
+    amfe2vtk.update( {element[0] : element[3]})
+    amfe2xmf.update({element[0] : element[1]})
+    amfe2no_of_nodes.update({element[0] : element[4]})
 
 
 
 def check_dir(*filenames):
     '''Checkt ob Verzeichnis vorliegt; falls nicht, wird Verzeichnis angelegt'''
-    for filename in filenames:                              # loop on files
-        if not os.path.exists(os.path.dirname(filename)):   # check if directory does not exists...
+    for filename in filenames:  # loop on files
+        dir_name = os.path.dirname(filename)
+        # check if directory does not exist; then create directory
+        if not os.path.exists(dir_name) or dir_name == '':            
             os.makedirs(os.path.dirname(filename))          # then create directory
             print("Created directory: " + os.path.dirname(filename))
 
+def prettify_xml(elem):
+    '''
+    Return a pretty string from an XML Element-Tree
+    
+    Parameters
+    ----------
+    elem : Instance of xml.etree.ElementTree.Element
+        XML element tree
+        
+    Returns
+    -------
+    str : string
+        well formatted xml file string
+    '''
+    rough_string = ElementTree.tostring(elem, 'utf-8')
+    reparsed = minidom.parseString(rough_string)
+    return reparsed.toprettyxml()
+
+def shape2str(tupel):
+    '''
+    Convert a tupel to a string containing the numbers of the tupel for xml 
+    export. 
+    
+    Parameters
+    ----------
+    tupel : tupel
+        tupel containing numbers (usually the shape of an array)
+        
+    Returns
+    -------
+    str : string
+        string containing the numbers of the tupel
+    '''
+    return ' '.join([str(i) for i in tupel])
+    
+def h5_set_attributes(h5_object, attribute_dict):
+    '''
+    Add the attributes from attribute_dict to the h5_object. 
+    
+    Parameters
+    ----------
+    h5_object : instance of h5py File, DataSet or Group
+        hdf5 object openend with h5py
+    attribute_dict : dict
+        dictionary with keys and attributes to be added to the h5_object
+        
+    Returns
+    -------
+    None
+    '''
+    for key in attribute_dict:
+        h5_object.attrs[key] = attribute_dict[key]
+    return
+
+def create_xdmf_from_hdf5(filename):
+    '''
+    Create an accompanying xdmf file for a given hdmf file.
+    
+    Parameters
+    ----------
+    filename : str
+        filename of the hdf5-file. Produces an XDMF-file of same name with 
+        .xdmf ending. 
+    
+    Returns
+    -------
+    None
+    '''
+    filename_no_dir = os.path.split(filename)[-1]
+    # filename_no_ext = os.path.splitext(filename)[0]
+    
+    with h5py.File(filename, 'r') as f:
+        h5_topology = f['mesh/topology']
+        h5_nodes = f['mesh/nodes']
+        h5_time_vals = f['time_vals']
+        
+        xml_root = Element('Xdmf', {'Version':'2.2'})
+        domain = SubElement(xml_root, 'Domain')
+        time_grid = SubElement(domain, 'Grid', {'GridType':'Collection', 
+                                                'CollectionType':'Temporal'})
+        # time loop
+        for i, T in enumerate(f['time']):
+            grid = SubElement(time_grid, 'Grid', {'Type':'Uniform'})
+            
+            time = SubElement(grid, 'Time', {'TimeType':'Single', 
+                                             'Value':str(T)})
+            topology = SubElement(grid, 'Topology', 
+                                  {'TopologyType':h5_topology.attrs['TopologyType'],
+                                   'NumberOfElements':str(h5_topology.shape[0])})
+            topology_data = SubElement(topology, 'DataItem', 
+                                       {'NumberType':'Int', 
+                                        'Format':'HDF', 
+                                        'Dimensions':shape2str(h5_topology.shape)})
+            topology_data.text = filename_no_dir + ':/mesh/topology'
+            
+            # Check, if mesh is 2D or 3D
+            xdmf_node_type = 'XYZ'
+            if h5_nodes.shape[-1] == 2:
+                xdmf_node_type = 'XY'
+                
+            geometry = SubElement(grid, 'Geometry', 
+                                  {'Type':'Uniform', 
+                                   'GeometryType':xdmf_node_type})
+            geometry_data_item = SubElement(geometry, 'DataItem', 
+                                            {'NumberType':'Float',
+                                             'Format':'HDF',
+                                             'Dimensions':shape2str(h5_nodes.shape)})
+            geometry_data_item.text = filename_no_dir + ':/mesh/nodes'
+            
+            # Attribute loop for export of displacements, stresses etc. 
+            for key in h5_time_vals.keys():
+                field = h5_time_vals[key]
+                if field.attrs['ParaView']:
+                    field_attr = SubElement(grid, 'Attribute',
+                                            {'Name':field.attrs['Name'],
+                                             'AttributeType':field.attrs['AttributeType'],
+                                             'Center':field.attrs['Center']})
+                    no_of_components = field.attrs['NoOfComponents']
+                    field_dim = (field.shape[0] // no_of_components, no_of_components)
+                    field_data = SubElement(field_attr, 'DataItem', 
+                                            {'ItemType':'HyperSlab', 
+                                             'Dimensions':shape2str(field_dim)})
+                                             
+                    field_hyperslab = SubElement(field_data, 'DataItem', 
+                                                 {'Dimensions':'3 2', 
+                                                  'Format':'XML'})
+            
+                    # pick the i-th column via hyperslab 
+                    field_hyperslab.text = '0 ' + str(i) + ' 1 1 ' + \
+                                            str(field.shape[0]) + ' 1'
+                    field_hdf = SubElement(field_data, 'DataItem', 
+                                           {'Format':'HDF', 
+                                            'NumberType':'Float', 
+                                            'Dimensions':shape2str(field.shape)})
+                    field_hdf.text = filename_no_dir + ':/time_vals/' + key
+
+    # write xdmf-file
+    xdmf_str = prettify_xml(xml_root)
+    filename_no_ext, ext = os.path.splitext(filename)
+    with open(filename_no_ext + '.xdmf', 'w') as f:
+        f.write(xdmf_str)
 
 class Mesh:
     '''
@@ -86,8 +249,8 @@ class Mesh:
 
     Attributes
     ----------
-    nodes : list
-        List of x-y-z coordinates of the nodes. Dimension is 
+    nodes : ndarray
+        Array of x-y-z coordinates of the nodes. Dimension is 
         (no_of_nodes, no_of_dofs_per_node). 
     ele_nodes : list
         List of nodes indices belonging to one element. 
@@ -124,13 +287,14 @@ class Mesh:
         -------
         None
         '''
-        self.nodes         = []
+        self.nodes         = np.array([])
         self.ele_nodes     = []
         self.ele_obj       = []
         self.ele_types     = [] # Element-types for Export
         self.nodes_dirichlet     = np.array([], dtype=int)
         self.dofs_dirichlet      = np.array([], dtype=int)
-        # the displacements; They are stored as a list of numpy-arrays with shape (ndof, no_of_dofs_per_node):
+        # the displacements; They are stored as a list of numpy-arrays with 
+        # shape (ndof, no_of_dofs_per_node):
         self.u                   = []
         self.timesteps           = []
         self.no_of_dofs_per_node = 0
@@ -140,7 +304,7 @@ class Mesh:
 
     def _update_mesh_props(self):
         '''
-        Update the number properties of nodes and elements when the mesh has changed
+        Update the number properties of nodes and elements when the mesh has 
         '''
         self.no_of_nodes = len(self.nodes)
         self.no_of_dofs = self.no_of_nodes*self.no_of_dofs_per_node
@@ -156,6 +320,8 @@ class Mesh:
         -----------
         filename_nodes : str
             name of the file containing the nodes in csv-format
+        filename_elements : str
+            name of the file containing the elements in csv-format        
         explicit_node_numbering : bool, optional
             Flag stating, if the nodes are explicitly numbered in the csv-file.
             When set to true, the first column is assumed to have the node numbers
@@ -234,9 +400,6 @@ class Mesh:
         ----------
         filename : string
             filename of the .msh-file
-        phys_group : int
-            number of physical group defined in gmsh, which should be 
-            processed
             
         Returns
         -------
@@ -281,8 +444,8 @@ class Mesh:
         # Check inconsistent dimensions
         if (i_nodes_end-i_nodes_start)!=n_nodes \
             or (i_elements_end-i_elements_start)!= n_elements: 
-            raise ValueError(
-            '''Error while processing the file! Dimensions are not consistent.''')
+            raise ValueError('Error while processing the file!', 
+                             'Dimensions are not consistent.')
         
         # extract data from file to lists
         list_imported_mesh_format = data_geometry[i_format_start   : i_format_end]
@@ -363,7 +526,7 @@ class Mesh:
         
 
     def load_group_to_mesh(self, key, material, mesh_prop='phys_group',
-                              element_class_dict=element_class_dict):
+                           element_class_dict=element_class_dict):
         '''
         Add a physical group to the main mesh with given material. 
         
@@ -401,7 +564,8 @@ class Mesh:
         ele_nodes = [np.nan for i in range(len(elements_df))]
         for i, element in enumerate(elements_df.values):
             ele_nodes[i] = np.array(element[self.node_idx : 
-                    self.node_idx + amfe2no_of_nodes[element[1]]], dtype=int)
+                                    self.node_idx + amfe2no_of_nodes[element[1]]],
+                                    dtype=int)
         self.ele_nodes.extend(ele_nodes)
         
         # ele_types for paraview export
@@ -417,13 +581,15 @@ class Mesh:
         self._update_mesh_props()
         
         # print some output stuff
-        print('\n', mesh_prop, key, 'with', len(ele_nodes), 'elements successfully added.')
+        print('\n', mesh_prop, key, 'with', len(ele_nodes), \
+              'elements successfully added.')
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
         
     def mesh_information(self):
         df = self.el_df
-        print('The loaded mesh contains', len(self.phys_group_dict), 'physical groups:')
+        print('The loaded mesh contains', len(self.phys_group_dict), 
+              'physical groups:')
         for i in self.phys_group_dict :
             print('\nPhysical group', i, ':')
             print('Number of Nodes:', len(self.phys_group_dict [i]))
@@ -493,9 +659,9 @@ class Mesh:
         while key not in pd.unique(df[mesh_prop]):
             self.mesh_information()
             print('\nNo valid', mesh_prop, 'is given.\n(Given', 
-                                                mesh_prop, 'is', key, ')')
+                  mesh_prop, 'is', key, ')')
             key = int(input('Please choose a ' + mesh_prop + 
-                ' to be used for the Neumann Boundary conditions: '))
+                            ' to be used for the Neumann Boundary conditions: '))
         
         # make a pandas dataframe just for the desired elements
         elements_df = df[df[mesh_prop] == key]
@@ -504,7 +670,8 @@ class Mesh:
         ele_nodes = [np.nan for i in range(len(elements_df))]
         for i, element in enumerate(elements_df.values):
             ele_nodes[i] = np.array(element[self.node_idx : 
-                    self.node_idx + amfe2no_of_nodes[element[1]]], dtype=int)
+                                            self.node_idx + amfe2no_of_nodes[element[1]]],
+                                    dtype=int)
         self.ele_nodes.extend(ele_nodes)
         
         self.ele_types.extend(elements_df['el_type'].values.tolist())
@@ -519,12 +686,14 @@ class Mesh:
         self._update_mesh_props()
         
         # print some output stuff
-        print('\n', mesh_prop, key, 'with', len(ele_nodes), 'elements successfully added.')
+        print('\n', mesh_prop, key, 'with', len(ele_nodes), 
+              'elements successfully added.')
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
 
         
-    def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group', output='internal'):
+    def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group', 
+                            output='internal'):
         '''
         Add a group of the mesh to the dirichlet nodes to be fixed. 
         
@@ -589,7 +758,7 @@ class Mesh:
         
         # print some output stuff
         print('\n', mesh_prop, key, 'with', len(unique_nodes), 
-                  'nodes successfully added to Dirichlet Boundaries.')
+              'nodes successfully added to Dirichlet Boundaries.')
         print('Total number of nodes with Dirichlet BCs:', len(self.nodes_dirichlet))
         print('Total number of constrained dofs:', len(self.dofs_dirichlet))
         print('*************************************************************')
@@ -615,7 +784,8 @@ class Mesh:
         TODO
         '''
         self.timesteps.append(1)
-        self.u.append(np.array(u).reshape((-1, self.no_of_dofs_per_node)))
+        self.u.append(np.array(u))
+        return
 
 
     def set_displacement_with_time(self, u, timesteps):
@@ -642,15 +812,103 @@ class Mesh:
         self.timesteps = timesteps.copy()
         self.u = []
         for i, timestep in enumerate(self.timesteps):
-            self.u.append(np.array(u[i]).reshape((-1, self.no_of_dofs_per_node)))
+            self.u.append(np.array(u[i]))
+        return
 
-    def set_nodal_variable_with_time(self, variable_array, variable_name, timesteps):
-        '''
-        Sets the nodal variables with the time history
-        '''
-        # TODO
-        pass
 
+    def save_mesh_xdmf(self, filename, field_list = []):
+        '''
+        Save the mesh in hdf5 and xdmf file format. 
+        
+        Parameters
+        ----------
+        filename : str
+            String constisting the path and the filename
+        field_list : list
+            list containing the fields to be exported. The list is a list of 
+            tupels containing the array with the values in the columns and a 
+            dictionary with the attribute information:
+            
+                >>> # example field list with reduced displacement not to export 
+                >>> # ParaView and strain epsilon to be exported to ParaView 
+                >>> field_list = [(q_red, {'ParaView':False, 'Name':'q_red'}), 
+                                  (eps, {'ParaView':True, 
+                                         'Name':'epsilon', 
+                                         'AttributeType':'Tensor6', 
+                                         'Center':'Node',
+                                         'NoOfComponents':6})]
+        
+        Returns
+        -------
+        None
+                
+        Note
+        ----
+        Only one homogeneous mesh is exported. Thus only the mesh made of the 
+        elements which occur most often is exported. The other meshes are 
+        discarded. 
+                
+        '''
+        # generate a zero displacement if no displacements are saved. 
+        if len(self.timesteps) == 0:
+            self.u = [np.zeros((self.no_of_nodes * self.no_of_dofs_per_node,)),]
+            self.timesteps.append(0)
+
+        # determine the part of the mesh which has most elements
+        # only this part will be exported! 
+        ele_types = np.array(self.ele_types, dtype=object)
+        el_type_export = np.unique(ele_types)[0]
+        # Boolean matrix giving the indices for the elements to export
+        el_type_ix = (ele_types == el_type_export)
+        # select the nodes to export an make an array of them
+        ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
+        ele_nodes_export = np.array(ele_nodes_export.tolist())
+
+        # make displacement 3D vector, as paraview only accepts 3D vectors
+        q_array = np.array(self.u, dtype=float).T
+        if self.no_of_dofs_per_node == 2:
+            tmp_2d = q_array.reshape((self.no_of_nodes,2,-1))
+            x, y, z = tmp_2d.shape
+            tmp_3d = np.zeros((x,3,z))
+            tmp_3d[:,:2,:] = tmp_2d
+            q_array = tmp_3d.reshape((-1,z))
+        
+        h5_q_dict = {'ParaView':True, 
+                     'AttributeType':'Vector', 
+                     'Center':'Node', 
+                     'Name':'Displacment', 
+                     'NoOfComponents':3}
+        
+        h5_time_dict = {'ParaView':True, 
+                        'Name':'Time'}
+                        
+        field_list.append((q_array, h5_q_dict))
+
+        check_dir(filename)
+        
+        # write the hdf5 file with the necessary attributes        
+        with h5py.File(filename + '.hdf5', 'w') as f:
+            h5_nodes = f.create_dataset('mesh/nodes', data=self.nodes)
+            h5_nodes.attrs['ParaView'] = True
+            h5_topology = f.create_dataset('mesh/topology', 
+                                           data=ele_nodes_export, 
+                                           dtype=np.int)
+            h5_topology.attrs['ParaView'] = True
+            h5_topology.attrs['TopologyType'] = amfe2xmf[el_type_export]
+
+            h5_time = f.create_dataset('time', data=np.array(self.timesteps))
+            h5_set_attributes(h5_time, h5_time_dict)
+            
+            for data_array, data_dict in field_list:
+                h5_dataset = f.create_dataset('time_vals/' + data_dict['Name'], 
+                                              data=data_array)
+                h5_set_attributes(h5_dataset, data_dict)
+            
+        # Create the xdmf from the hdf5 file
+        create_xdmf_from_hdf5(filename + '.hdf5')
+        
+        return 
+        
     def save_mesh_for_paraview(self, filename):
         '''
         Saves the mesh and the corresponding displacements to a .pvd file and 
@@ -701,7 +959,8 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
             savefile_pvd.write(pvd_header)
             for i, t in enumerate(self.timesteps):
                 savefile_pvd.write(pvd_line_start + str(t) + pvd_line_middle + 
-                    filename_tail + '_' + str(i).zfill(3) + '.vtu' + pvd_line_end)
+                                   filename_tail + '_' + str(i).zfill(3) + 
+                                   '.vtu' + pvd_line_end)
             savefile_pvd.write(pvd_footer)
 
         vtu_header = '''<?xml version="1.0"?> \n
@@ -721,7 +980,8 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                 savefile_vtu.write(vtu_header)
                 # Es muss die Anzahl der gesamten Punkte und Elemente angegeben werden
                 savefile_vtu.write('<Piece NumberOfPoints="' + str(len(self.nodes)) 
-                    + '" NumberOfCells="' + str(len(self.ele_nodes)) + '">\n')
+                                   + '" NumberOfCells="' + str(len(self.ele_nodes)) 
+                                   + '">\n')
                 savefile_vtu.write('<Points>\n')
                 savefile_vtu.write('<DataArray type="Float64" Name="Array" \
                     NumberOfComponents="3" format="ascii">\n')
@@ -735,31 +995,37 @@ version="0.1" byte_order="LittleEndian">  \n <Collection> \n '''
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Points>\n<Cells>\n')
-                savefile_vtu.write('<DataArray type="Int32" Name="connectivity" format="ascii">\n')
+                savefile_vtu.write('<DataArray type="Int32" Name="connectivity" ' +
+                                   'format="ascii">\n')
                 for j in self.ele_nodes:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + '\n')
                 savefile_vtu.write('\n</DataArray>\n')
                 # Writing the offset for the elements; they are ascending by 
                 # the number of dofs and have to start with the real integer
-                savefile_vtu.write('<DataArray type="Int32" Name="offsets" format="ascii">\n')
+                savefile_vtu.write('<DataArray type="Int32" Name="offsets" ' + 
+                                   'format="ascii">\n')
                 i_offset = 0
                 for j, el_nodes in enumerate(self.ele_nodes):
                     i_offset += len(el_nodes)
                     savefile_vtu.write(str(i_offset) + ' ')
                 savefile_vtu.write('\n</DataArray>\n')
-                savefile_vtu.write('<DataArray type="Int32" Name="types" format="ascii">\n')
+                savefile_vtu.write('<DataArray type="Int32" Name="types"' + 
+                                   'format="ascii">\n')
                 # Elementtyp ueber Zahl gesetzt
-                savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) for el_ty in self.ele_types)) 
+                savefile_vtu.write(' '.join(str(amfe2vtk[el_ty]) 
+                                            for el_ty in self.ele_types)) 
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write('</Cells> \n')
                 savefile_vtu.write('<PointData Vectors="displacement">\n')
-                savefile_vtu.write('<DataArray type="Float64" Name="displacement" \
-                    NumberOfComponents="3" format="ascii">\n')
+                savefile_vtu.write('<DataArray type="Float64" Name="displacement" ' +
+                                   'NumberOfComponents="3" format="ascii">\n')
                 # pick the i-th timestep
-                for j in self.u[i]:
+                u_exp = self.u[i].reshape((-1, self.no_of_dofs_per_node))
+                for j in u_exp:
                     savefile_vtu.write(' '.join(str(x) for x in list(j)) + endflag)
                 savefile_vtu.write('\n</DataArray>\n')
                 savefile_vtu.write(vtu_footer)
+        return
 
 
 class MeshGenerator:
@@ -790,7 +1056,7 @@ class MeshGenerator:
         # Make mesh 3D, if it is curved in one direction
         if x_curve | y_curve:
             self.flat_mesh = False
-        pass
+        return
 
     def _curved_mesh_get_phi_r(self, h, l):
         '''
@@ -830,7 +1096,8 @@ class MeshGenerator:
                         self.nodes.append([l_x*x_counter, l_y*y_counter])
                         node_number += 1
             else:
-                # a 3d-mesh will be generated; the meshing has to be done with a little calculation in andvance
+                # a 3d-mesh will be generated; 
+                # the meshing has to be done with a little calculation in andvance
                 r_OO_x = np.array([0, 0, 0])
                 r_OO_y = np.array([0, 0, 0])
                 if self.x_curve:
@@ -867,12 +1134,15 @@ class MeshGenerator:
                     # first the lower triangulars
                     first_node  = y_counter*(self.x_no_elements + 1) + x_counter + 0
                     second_node = y_counter*(self.x_no_elements + 1) + x_counter + 1
-                    third_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
+                    third_node  = (y_counter + 1)*(self.x_no_elements + 1) + \
+                                  x_counter + 0
                     self.ele_nodes.append([first_node, second_node, third_node])
                     element_number += 1
                     # second the upper triangulars
-                    first_node  = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 1
-                    second_node = (y_counter + 1)*(self.x_no_elements + 1) + x_counter + 0
+                    first_node  = (y_counter + 1)*(self.x_no_elements + 1) + \
+                                  x_counter + 1
+                    second_node = (y_counter + 1)*(self.x_no_elements + 1) + \
+                                  x_counter + 0
                     third_node  = y_counter*(self.x_no_elements + 1) + x_counter + 1
                     self.ele_nodes.append([first_node, second_node, third_node])
                     element_number += 1
@@ -888,7 +1158,8 @@ class MeshGenerator:
             # nodes coordinates
             for counter_y in range(self.y_no_elements+1):
                 for counter_x in range(self.x_no_elements+1):
-                    self.nodes.append([delta_x*counter_x + self.pos_x0, delta_y*counter_y + self.pos_y0])
+                    self.nodes.append([delta_x*counter_x + self.pos_x0, 
+                                       delta_y*counter_y + self.pos_y0])
 
             # node assignment to quadrilateral elements
             for counter_y in range(self.y_no_elements):
@@ -924,7 +1195,8 @@ class MeshGenerator:
             if self.flat_mesh:
                 header = 'x_coord' + delimiter + 'y_coord' + newline
             else:
-                header = 'x_coord' + delimiter + 'y_coord' + delimiter + 'z_coord' + newline
+                header = 'x_coord' + delimiter + 'y_coord' + delimiter + \
+                         'z_coord' + newline
             savefile_nodes.write(header)
             for nodes in self.nodes:
                 savefile_nodes.write(delimiter.join(str(x) for x in nodes) + newline)
@@ -933,14 +1205,19 @@ class MeshGenerator:
             # Header for the file:
             number_of_nodes = len(self.ele_nodes[0])
             if number_of_nodes == 3:
-                savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + newline)
+                savefile_elements.write('node_1' + delimiter + 'node_2' + 
+                                        delimiter + 'node_3' + newline)
             elif number_of_nodes == 4:
-                savefile_elements.write('node_1' + delimiter + 'node_2' + delimiter + 'node_3' + delimiter + 'node_4' + newline)
+                savefile_elements.write('node_1' + delimiter + 'node_2' + 
+                                        delimiter + 'node_3' + delimiter + 
+                                        'node_4' + newline)
             elif number_of_nodes == 2:
                 savefile_elements.write('node_1' + delimiter + 'node_2' + newline)                
             else:
-                print("Hier lief etwas falsch. Anzahl der Knoten pro Element konnte nicht bestimmt werden.")
+                print("Hier lief etwas falsch. Anzahl der Knoten pro Element", 
+                      "konnte nicht bestimmt werden.")
 
             for elements in self.ele_nodes:
-                savefile_elements.write(delimiter.join(str(x) for x in elements) + newline)
+                savefile_elements.write(delimiter.join(str(x) for x in elements) 
+                                        + newline)
 

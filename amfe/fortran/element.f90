@@ -25,7 +25,7 @@ subroutine compute_B_matrix(Bt, F, B, no_of_nodes, no_of_dims)
     implicit none
 
     integer, intent(in)  :: no_of_nodes, no_of_dims
-    real(8), intent(in)  :: F(no_of_dims,no_of_dims), Bt(no_of_dims, no_of_nodes)
+    real(8), intent(in)  :: F(no_of_dims,no_of_dims), Bt(no_of_nodes, no_of_dims)
     real(8), intent(out) :: B(no_of_dims*(no_of_dims + 1)/2, no_of_nodes*no_of_dims)
     integer :: i
 
@@ -33,17 +33,17 @@ subroutine compute_B_matrix(Bt, F, B, no_of_nodes, no_of_dims)
     if (no_of_dims.eq.2) then
 !        here the counting starts at 1 in order to make indexing for Bt easier
         do i=1,no_of_nodes
-            B(:,(i-1)*2+1)   = (/ F(1,1)*Bt(1,i), F(1,2)*Bt(2,i), F(1,1)*Bt(2,i) + F(1,2)*Bt(1,i) /)
-            B(:,(i-1)*2+2) = (/ F(2,1)*Bt(1,i), F(2,2)*Bt(2,i), F(2,1)*Bt(2,i) + F(2,2)*Bt(1,i) /)
+            B(:,(i-1)*2+1)   = (/ F(1,1)*Bt(i,1), F(1,2)*Bt(i,2), F(1,1)*Bt(i,2) + F(1,2)*Bt(i,1) /)
+            B(:,(i-1)*2+2) = (/ F(2,1)*Bt(i,1), F(2,2)*Bt(i,2), F(2,1)*Bt(i,2) + F(2,2)*Bt(i,1) /)
         end do
     elseif (no_of_dims.eq.3) then
         do i=1,no_of_nodes
-            B(:,(i-1)*3+1) = (/ F(1,1)*Bt(1,i), F(1,2)*Bt(2,i), F(1,3)*Bt(3,i), &
-               F(1,2)*Bt(3,i) + F(1,3)*Bt(2,i), F(1,3)*Bt(1,i) + F(1,1)*Bt(3,i), F(1,1)*Bt(2,i) + F(1,2)*Bt(1,i) /)
-            B(:,(i-1)*3+2) = (/ F(2,1)*Bt(1,i), F(2,2)*Bt(2,i), F(2,3)*Bt(3,i), &
-               F(2,2)*Bt(3,i) + F(2,3)*Bt(2,i), F(2,3)*Bt(1,i) + F(2,1)*Bt(3,i), F(2,1)*Bt(2,i) + F(2,2)*Bt(1,i) /)
-            B(:,(i-1)*3+3) = (/ F(3,1)*Bt(1,i), F(3,2)*Bt(2,i), F(3,3)*Bt(3,i), &
-               F(3,2)*Bt(3,i) + F(3,3)*Bt(2,i), F(3,3)*Bt(1,i) + F(3,1)*Bt(3,i), F(3,1)*Bt(2,i) + F(3,2)*Bt(1,i) /)
+            B(:,(i-1)*3+1) = (/ F(1,1)*Bt(i,1), F(1,2)*Bt(i,2), F(1,3)*Bt(i,3), &
+               F(1,2)*Bt(i,3) + F(1,3)*Bt(i,2), F(1,3)*Bt(i,1) + F(1,1)*Bt(i,3), F(1,1)*Bt(i,2) + F(1,2)*Bt(i,1) /)
+            B(:,(i-1)*3+2) = (/ F(2,1)*Bt(i,1), F(2,2)*Bt(i,2), F(2,3)*Bt(i,3), &
+               F(2,2)*Bt(i,3) + F(2,3)*Bt(i,2), F(2,3)*Bt(i,1) + F(2,1)*Bt(i,3), F(2,1)*Bt(i,2) + F(2,2)*Bt(i,1) /)
+            B(:,(i-1)*3+3) = (/ F(3,1)*Bt(i,1), F(3,2)*Bt(i,2), F(3,3)*Bt(i,3), &
+               F(3,2)*Bt(i,3) + F(3,3)*Bt(i,2), F(3,3)*Bt(i,1) + F(3,1)*Bt(i,3), F(3,1)*Bt(i,2) + F(3,2)*Bt(i,1) /)
         end do
     else
         B = B*0
@@ -59,9 +59,9 @@ subroutine tri3_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     real(8), intent(in) :: X(6), u(6), t
     real(8), intent(out) :: K(6, 6), f_int(6)
     real(8) :: X1, X2, X3, Y1, Y2, Y3, A0
-    real(8) :: u_e(3,2), C_SE(3,3) 
+    real(8) :: u_e(3,2), C_SE(3,3)
     real(8) :: K_geo_sm(3,3), K_mat(6,6), K_geo(6,6)
-    real(8) :: B0_tilde(2,3),  B0(3,6)
+    real(8) :: B0_tilde(3,2),  B0(3,6)
     real(8) :: E(2,2), H(2,2), F(2,2), EYE(2,2), S(2,2), S_v(3)
 !   External functions that will be used afterwards
     external :: scatter_matrix
@@ -84,15 +84,15 @@ subroutine tri3_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     EYE = reshape((/1, 0, 0, 1/), shape(EYE))
 
     B0_tilde(1,1) = (Y2-Y3) / (2*A0)
-    B0_tilde(1,2) = (Y3-Y1) / (2*A0)
-    B0_tilde(1,3) = (Y1-Y2) / (2*A0)
-    B0_tilde(2,1) = (X3-X2) / (2*A0)
+    B0_tilde(2,1) = (Y3-Y1) / (2*A0)
+    B0_tilde(3,1) = (Y1-Y2) / (2*A0)
+    B0_tilde(1,2) = (X3-X2) / (2*A0)
     B0_tilde(2,2) = (X1-X3) / (2*A0)
-    B0_tilde(2,3) = (X2-X1) / (2*A0)
+    B0_tilde(3,2) = (X2-X1) / (2*A0)
 
 !    The standard procedure for doing Total Lagrangian
 !   computing the 'help' matrix H
-    H = matmul(transpose(u_e), transpose(B0_tilde))
+    H = matmul(transpose(u_e), B0_tilde)
 !     The deformation gradient F
     F = H + EYE
 !     The Green-Lagrange-Strain tensor
@@ -104,7 +104,7 @@ subroutine tri3_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
 !     The material stiffness
     K_mat = matmul(transpose(B0), matmul(C_SE, B0))*A0*t
 !     And the geometric stiffness
-    K_geo_sm = matmul(transpose(B0_tilde), matmul(S, B0_tilde))*A0*t
+    K_geo_sm = matmul(B0_tilde, matmul(S, transpose(B0_tilde)))*A0*t
     call scatter_matrix(K_geo_sm, K_geo, 2, 3, 3)
     K = K_mat + K_geo
 !     and last but not least the internal force
@@ -123,7 +123,7 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     real(8) :: Jx1 ,Jx2 ,Jx3 ,Jy1 ,Jy2 ,Jy3, w
     real(8) :: u_e(6,2), C_SE(3,3)
     real(8) :: K_geo_sm(6,6), K_mat(12,12), K_geo(12,12)
-    real(8) :: B0_tilde(2,6), B0(3,12)
+    real(8) :: B0_tilde(6,2), B0(3,12)
     real(8) :: E(2,2), H(2,2), F(2,2), EYE(2,2), S(2,2), S_v(3)
 
     real(8) :: gauss_points(7,3), weights(7)
@@ -195,14 +195,14 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
        det = Jx1*Jy2 - Jx1*Jy3 - Jx2*Jy1 + Jx2*Jy3 + Jx3*Jy1 - Jx3*Jy2
        A0 = det/2
 
-       B0_tilde(1,:) = (/            (Jy2 - Jy3)*(4*L1 - 1), &
+       B0_tilde(:,1) = (/            (Jy2 - Jy3)*(4*L1 - 1), &
                                     (-Jy1 + Jy3)*(4*L2 - 1), &
                                      (Jy1 - Jy2)*(4*L3 - 1), &
                        4*L1*(-Jy1 + Jy3) + 4*L2*(Jy2 - Jy3), &
                        4*L2*(Jy1 - Jy2) + 4*L3*(-Jy1 + Jy3), &
                         4*L1*(Jy1 - Jy2) + 4*L3*(Jy2 - Jy3) /)
 
-       B0_tilde(2,:) = (/           (-Jx2 + Jx3)*(4*L1 - 1), &
+       B0_tilde(:,2) = (/           (-Jx2 + Jx3)*(4*L1 - 1), &
                                      (Jx1 - Jx3)*(4*L2 - 1), &
                                     (-Jx1 + Jx2)*(4*L3 - 1), &
                        4*L1*(Jx1 - Jx3) + 4*L2*(-Jx2 + Jx3), &
@@ -211,7 +211,7 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
 
        B0_tilde = B0_tilde/det
 
-       H = matmul(transpose(u_e), transpose(B0_tilde))
+       H = matmul(transpose(u_e), B0_tilde)
        F = H + EYE
        E = 0.5*(H + transpose(H) + matmul(transpose(H), H))
 
@@ -220,7 +220,7 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
        call compute_b_matrix(B0_tilde, F, B0, 6, 2)
 
        K_mat = matmul(transpose(B0), matmul(C_SE, B0)) * A0 * t
-       K_geo_sm = matmul(transpose(B0_tilde), matmul(S, B0_tilde)) * A0 * t
+       K_geo_sm = matmul(B0_tilde, matmul(S, transpose(B0_tilde))) * A0 * t
 
        call scatter_matrix(K_geo_sm, K_geo, 2, 6, 6)
 
@@ -317,7 +317,7 @@ subroutine tet4_k_and_f(X, u, K, f_int, S_Sv_and_C)
     real(8) :: X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4
     real(8) :: u_e(4,3), C_SE(6,6)
     real(8) :: K_geo_sm(4,4), K_mat(12,12), K_geo(12,12)
-    real(8) :: B0_tilde(3,4), B0(6,12)
+    real(8) :: B0_tilde(4,3), B0(6,12)
     real(8) :: E(3,3), H(3,3), F(3,3), EYE(3,3), S(3,3), S_v(6)
     real(8) :: det
 
@@ -350,21 +350,21 @@ subroutine tet4_k_and_f(X, u, K, f_int, S_Sv_and_C)
          - X3*Y1*Z2 + X3*Y1*Z4 + X3*Y2*Z1 - X3*Y2*Z4 - X3*Y4*Z1 + X3*Y4*Z2 &
          + X4*Y1*Z2 - X4*Y1*Z3 - X4*Y2*Z1 + X4*Y2*Z3 + X4*Y3*Z1 - X4*Y3*Z2
 
-    B0_tilde(:,1) = (/ -Y2*Z3 + Y2*Z4 + Y3*Z2 - Y3*Z4 - Y4*Z2 + Y4*Z3, &
+    B0_tilde(1,:) = (/ -Y2*Z3 + Y2*Z4 + Y3*Z2 - Y3*Z4 - Y4*Z2 + Y4*Z3, &
                         X2*Z3 - X2*Z4 - X3*Z2 + X3*Z4 + X4*Z2 - X4*Z3, &
                        -X2*Y3 + X2*Y4 + X3*Y2 - X3*Y4 - X4*Y2 + X4*Y3 /)
-    B0_tilde(:,2) = (/  Y1*Z3 - Y1*Z4 - Y3*Z1 + Y3*Z4 + Y4*Z1 - Y4*Z3, &
+    B0_tilde(2,:) = (/  Y1*Z3 - Y1*Z4 - Y3*Z1 + Y3*Z4 + Y4*Z1 - Y4*Z3, &
                        -X1*Z3 + X1*Z4 + X3*Z1 - X3*Z4 - X4*Z1 + X4*Z3, &
                         X1*Y3 - X1*Y4 - X3*Y1 + X3*Y4 + X4*Y1 - X4*Y3 /)
-    B0_tilde(:,3) = (/ -Y1*Z2 + Y1*Z4 + Y2*Z1 - Y2*Z4 - Y4*Z1 + Y4*Z2, &
+    B0_tilde(3,:) = (/ -Y1*Z2 + Y1*Z4 + Y2*Z1 - Y2*Z4 - Y4*Z1 + Y4*Z2, &
                         X1*Z2 - X1*Z4 - X2*Z1 + X2*Z4 + X4*Z1 - X4*Z2, &
                        -X1*Y2 + X1*Y4 + X2*Y1 - X2*Y4 - X4*Y1 + X4*Y2 /)
-    B0_tilde(:,4) = (/ Y1*Z2 - Y1*Z3 - Y2*Z1 + Y2*Z3 + Y3*Z1 - Y3*Z2, &
+    B0_tilde(4,:) = (/ Y1*Z2 - Y1*Z3 - Y2*Z1 + Y2*Z3 + Y3*Z1 - Y3*Z2, &
                       -X1*Z2 + X1*Z3 + X2*Z1 - X2*Z3 - X3*Z1 + X3*Z2, &
                        X1*Y2 - X1*Y3 - X2*Y1 + X2*Y3 + X3*Y1 - X3*Y2 /)
 
     B0_tilde = B0_tilde/det
-    H = matmul(transpose(u_e), transpose(B0_tilde))
+    H = matmul(transpose(u_e), B0_tilde)
     F = H + EYE
     E = 0.5*(H + transpose(H) + matmul(transpose(H), H))
 
@@ -372,7 +372,7 @@ subroutine tet4_k_and_f(X, u, K, f_int, S_Sv_and_C)
     call compute_b_matrix(B0_tilde, F, B0, 4, 3)
 
     K_mat = matmul(transpose(B0), matmul(C_SE, B0)) * det/6
-    K_geo_sm = matmul(transpose(B0_tilde), matmul(S, B0_tilde)) * det/6
+    K_geo_sm = matmul(B0_tilde, matmul(S, transpose(B0_tilde))) * det/6
 
     call scatter_matrix(K_geo_sm, K_geo, 3, 4, 4)
 
@@ -380,4 +380,3 @@ subroutine tet4_k_and_f(X, u, K, f_int, S_Sv_and_C)
     f_int = matmul(transpose(B0), S_v) * det/6
 
 end subroutine
-

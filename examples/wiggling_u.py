@@ -38,14 +38,12 @@ my_system.apply_neumann_boundaries(14, 6E7, 'y', harmonic_y)
 
 ndof = my_system.dirichlet_class.no_of_constrained_dofs
 
-my_newmark = amfe.NewmarkIntegrator()
-my_newmark.set_mechanical_system(my_system)
-my_newmark.delta_t = 1E-4
+my_newmark = amfe.NewmarkIntegrator(my_system)
+my_newmark.delta_t = 1E-3
 
 t1 = time.time()
 
-my_newmark.integrate_nonlinear_system(np.zeros(ndof), 
-                                      np.zeros(ndof), np.arange(0,0.4,1E-4))
+my_newmark.integrate(np.zeros(ndof), np.zeros(ndof), np.arange(0,0.2,1E-3))
 
 t2 = time.time()
 print('Time for computation:', t2 - t1, 'seconds.')
