@@ -592,7 +592,7 @@ class QMSystem(MechanicalSystem):
         if self.M_constr is None:
             MechanicalSystem.M(self)
             
-        P = self.V + 2*self.Theta.dot(u)
+        P = self.V + self.Theta @ u
         M_red = P.T @ self.M_constr @ P
         return M_red
     
@@ -607,11 +607,11 @@ class QMSystem(MechanicalSystem):
         if u is None:
             u = np.zeros(self.no_of_red_dofs)
         theta_u = self.Theta @ u
-        u_full = (self.V + theta_u) @ u
-        P = self.V + 2*theta_u
+        u_full = (self.V + 1/2*theta_u) @ u
+        P = self.V + theta_u
         K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
         K1 = P.T @ K_unreduced @ P
-        K2 = 2*self.Theta.T @ f_unreduced
+        K2 = self.Theta.T @ f_unreduced
         K = K1 + K2
         f = P.T @ f_unreduced
         return K, f
@@ -629,23 +629,23 @@ class QMSystem(MechanicalSystem):
         
         theta = self.Theta        
         theta_u = theta @ u        
-        u_full = (self.V + theta_u) @ u
+        u_full = (self.V + 1/2*theta_u) @ u
         
         K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
         # nonlinear projector P
-        P = self.V + 2*theta_u
+        P = self.V + theta_u
 
         # computing the residual
         res_accel = M_unreduced @ (P @ ddu)
-        res_gyro = M_unreduced @ (theta @ du) @ du
+        res_gyro = 1/2*M_unreduced @ (theta @ du) @ du
         res_full = res_accel + res_gyro + f_unreduced
         # the different contributions to stiffness
-        K1 = 2 * theta.T @ res_full
-        K2 = 2 * P.T @ M_unreduced @ (theta @ ddu)
+        K1 = theta.T @ res_full
+        K2 = P.T @ M_unreduced @ (theta @ ddu)
         K3 = P.T @ K_unreduced @ P
         K = K1 + K2 + K3
         # gyroscopic matrix and reduced mass matrix
-        G = 2 * P.T @ M_unreduced @ (theta @ du)
+        G = P.T @ M_unreduced @ (theta @ du)
         M = P.T @ M_unreduced @ P
 
         res = P.T @ res_full

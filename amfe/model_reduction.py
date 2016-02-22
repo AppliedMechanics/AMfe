@@ -244,7 +244,7 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
             Theta[:,i,j] = v_i + c_i*x_i
 
     if symmetric:
-        Theta = 1/4*(Theta + Theta.transpose((0,2,1)))
+        Theta = 1/2*(Theta + Theta.transpose((0,2,1)))
     return Theta
 
 
@@ -341,7 +341,7 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
         residual = np.sum(Theta - Theta.transpose(0,2,1))
         print('The residual, i.e. the unsymmetric values, are', residual)
     # make Theta symmetric
-    Theta = 1/4*(Theta + Theta.transpose(0,2,1))
+    Theta = 1/2*(Theta + Theta.transpose(0,2,1))
     return Theta
 
 def principal_angles_and_vectors(V1, V2, cosine=True):
