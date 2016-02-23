@@ -22,6 +22,7 @@ paraview_output_file = os.path.join(amfe_dir, 'results/print_paper' +
 
 #%%
 M = benchmark_system.M()
+K = benchmark_system.K()
 benchmark_system.u_output = []
 benchmark_system.T_output = []
 amfe.solve_linear_displacement(benchmark_system, t=1/80)

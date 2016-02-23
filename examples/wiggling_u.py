@@ -41,14 +41,5 @@ ndof = my_system.dirichlet_class.no_of_constrained_dofs
 my_newmark = amfe.NewmarkIntegrator(my_system)
 my_newmark.delta_t = 2E-4
 
-t1 = time.time()
-
 my_newmark.integrate(np.zeros(ndof), np.zeros(ndof), np.arange(0,0.4,1E-3))
-
-t2 = time.time()
-print('Time for computation:', t2 - t1, 'seconds.')
-
 my_system.export_paraview(paraview_output_file)
-
-t3 = time.time()
-print('Time for export:', t3 - t2, 'seconds.')
