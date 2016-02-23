@@ -160,12 +160,14 @@ class NewmarkIntegrator():
             dq += (1-gamma)*dt*ddq
             ddq *= 0
 
-            S, res = self.mechanical_system.S_and_res(q, dq, ddq, dt, t, beta, gamma)
-            res_abs = res_abs_0 = norm_of_vector(res)
+            S, res, f_ext = self.mechanical_system.S_and_res(q, dq, ddq, dt, 
+                                                             t, beta, gamma)
+            abs_f_ext = norm_of_vector(f_ext)
+            res_abs = norm_of_vector(res)
 
             # Newton-Correction-loop
             n_iter = 0
-            while res_abs > self.rtol*res_abs_0 + self.atol:
+            while res_abs > self.rtol*abs_f_ext + self.atol:
                 
                 if sp.sparse.issparse(S):
                     delta_q = - linalg.spsolve(S, res)
@@ -178,8 +180,10 @@ class NewmarkIntegrator():
                 ddq += 1/(beta*dt**2)*delta_q
 
                 # update system matrices and vectors
-                S, res = self.mechanical_system.S_and_res(q, dq, ddq, dt, t, beta, gamma)
+                S, res, f_ext = self.mechanical_system.S_and_res(q, dq, ddq, dt, 
+                                                                 t, beta, gamma)
                 res_abs = norm_of_vector(res)
+                abs_f_ext = norm_of_vector(f_ext)
                 n_iter += 1
 
                 if self.verbose:
@@ -245,7 +249,7 @@ def solve_linear_displacement(mechanical_system, t=1, verbose=True):
 
 
 def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
-                                 t=0, eps=1E-12, newton_damping=1,
+                                 t=0, rtol=1E-8, atol=1E-14, newton_damping=1,
                                  n_max_iter=1000, smplfd_nwtn_itr=1, 
                                  wrt_iter=False, verbose=True):
     '''
@@ -262,8 +266,11 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         receive the solution
     t : float, optional
         time for the external force call in mechanical_system
-    eps : float, optional
-        Epsilon for assessment, when a loadstep has converged
+    rtol : float, optional
+        Relative tolerance to external force for estimation, when a loadstep 
+        has converged
+    atol : float, optional
+        Absolute tolerance for estimation, of loadstep has converged
     newton_damping : float, optional
         Newton-Damping factor applied in the solution routine; 1 means no damping,
         0 < newton_damping < 1 means damping
@@ -288,27 +295,32 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
 
     '''
     stepwidth = 1/no_of_load_steps
-    f_ext = mechanical_system.f_ext(None, None, t=1)
-    ndof = f_ext.shape[0]
+    ndof = mechanical_system.dirichlet_class.no_of_constrained_dofs
     u = np.zeros(ndof)
+    du = np.zeros(ndof)
+    # f_ext = mechanical_system.f_ext(u, du, t=1)
+    
     mechanical_system.write_timestep(0, u) # initial write
 
-    K, f_int= mechanical_system.K_and_f(u, t=1)
-    abs_f_ext = np.sqrt(f_int @ f_int)
+#    K, f_int= mechanical_system.K_and_f(u, t=1)
+#    abs_f_ext = np.sqrt(f_int @ f_int)
     for t in np.arange(stepwidth, 1+stepwidth, stepwidth):
         # prediction
         K, f_int= mechanical_system.K_and_f(u, t)
-        res = f_int
+        f_ext = mechanical_system.f_ext(u, du, t)
+        res = - f_int + f_ext
         abs_res = norm_of_vector(res)
-
+        abs_f_ext = np.sqrt(f_ext @ f_ext)
         # Newton-Loop
         n_iter = 0
-        while (abs_res > eps*abs_f_ext) and (n_max_iter > n_iter):
+        while (abs_res > rtol*abs_f_ext + atol) and (n_max_iter > n_iter):
             corr = linalg.spsolve(K, res)
-            u -= corr*newton_damping
+            u += corr*newton_damping
             if (n_iter % smplfd_nwtn_itr) is 0:
                 K, f_int = mechanical_system.K_and_f(u, t)
-            res = f_int
+                f_ext = mechanical_system.f_ext(u, du, t)
+            res = - f_int + f_ext
+            abs_f_ext = np.sqrt(f_ext @ f_ext)
             abs_res = norm_of_vector(res)
             n_iter += 1
             if verbose: 

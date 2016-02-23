@@ -57,7 +57,7 @@ class MechanicalSystem():
         self.no_of_dofs_per_node = None
 
         # external force to be overwritten by user-defined external forces
-        self._f_ext_unconstr = lambda t: np.zeros(self.mesh_class.no_of_dofs)
+        # self._f_ext_unconstr = lambda t: np.zeros(self.mesh_class.no_of_dofs)
 
 
     def load_mesh_from_gmsh(self, msh_file, phys_group, material):
@@ -145,7 +145,7 @@ class MechanicalSystem():
         -------
         None
         '''
-        self.mesh_class.select_dirichlet_bc(key, coord, mesh_prop)
+        self.mesh_class.set_dirichlet_bc(key, coord, mesh_prop)
         self.dirichlet_class.constrain_dofs(self.mesh_class.dofs_dirichlet)
 
     def apply_neumann_boundaries(self, key, val, direct, time_func=None, 
@@ -194,7 +194,7 @@ class MechanicalSystem():
         -------
         None
         '''
-        self.mesh_class.select_neumann_bc(key=key, val=val, direct=direct, 
+        self.mesh_class.set_neumann_bc(key=key, val=val, direct=direct, 
                                           time_func=time_func, mesh_prop=mesh_prop)
         self.assembly_class.compute_element_indices()
         
@@ -337,12 +337,25 @@ class MechanicalSystem():
             self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t) 
         return self.constrain_vec(f_unconstr)
         
+    def _f_ext_unconstr(self, u, t):
+        '''
+        Return the unconstrained external force coming from the Neumann BCs.
+        
+        This function may be monkeypatched if necessary, for instance, when a
+        global external force, e.g. gravity, should be applied.
+        '''
+        __, f_unconstr = \
+            self.assembly_class.assemble_k_and_f_neumann(self.unconstrain_vec(u), t)
+        return f_unconstr
+        
     def f_ext(self, u, du, t):
         '''
         Return the nonlinear external force of the right hand side 
         of the equation, i.e. the excitation.
         '''
-        return self.constrain_vec(self._f_ext_unconstr(t))
+        if u is None:
+            u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
+        return self.constrain_vec(self._f_ext_unconstr(u, t))
 
     def K_and_f(self, u=None, t=0):
         '''
@@ -419,10 +432,11 @@ class MechanicalSystem():
             self.M()
             
         K, f = self.K_and_f(u, t)
+        f_ext = self.f_ext(u, du, t)
         S = K + 1/(beta*dt**2)*self.M_constr
-        res = f + self.f_ext(u, du, t) + self.M_constr @ ddu
+        res = f - f_ext + self.M_constr @ ddu
 
-        return S, res
+        return S, res, f_ext
     
     def write_timestep(self, t, u):
         '''
@@ -714,6 +728,7 @@ class ConstrainedMechanicalSystem():
 
         The tangential damping matrix is the jacobian matrix of the nonlinear 
         forces with respect to the generalized velocities q.
+        
         Parameters
         ----------
         q : ndarray

@@ -259,7 +259,11 @@ class Mesh:
         pointing to the element object
     ele_types : list
         List of strings containing the element types. Basically used for export
-        to postprocessing tools. 
+        to postprocessing tools, where the element type is needed. 
+    neumann_nodes : list
+        list of nodes indices belonging to one element for neumann BCs.
+    neumann_obj : list
+        List of element objects for the neumann boundary conditions. 
     nodes_dirichlet : ndarray
         Array containing the nodes involved in Dirichlet Boundary Conditions. 
     dofs_dirichlet : ndarray
@@ -273,7 +277,7 @@ class Mesh:
     no_of_nodes : int
         Number of nodes of the whole system. 
     no_of_dofs : int
-        Number of dofs of the whole system (ignoring constrained dofs). 
+        Number of dofs of the whole system (including constrained dofs). 
         
     '''
 
@@ -291,6 +295,8 @@ class Mesh:
         self.ele_nodes     = []
         self.ele_obj       = []
         self.ele_types     = [] # Element-types for Export
+        self.neumann_nodes = []
+        self.neumann_obj   = []
         self.nodes_dirichlet     = np.array([], dtype=int)
         self.dofs_dirichlet      = np.array([], dtype=int)
         # the displacements; They are stored as a list of numpy-arrays with 
@@ -448,9 +454,9 @@ class Mesh:
                              'Dimensions are not consistent.')
         
         # extract data from file to lists
-        list_imported_mesh_format = data_geometry[i_format_start   : i_format_end]
-        list_imported_nodes       = data_geometry[i_nodes_start    : i_nodes_end]
-        list_imported_elements    = data_geometry[i_elements_start : i_elements_end]
+        list_imported_mesh_format = data_geometry[i_format_start : i_format_end]
+        list_imported_nodes = data_geometry[i_nodes_start : i_nodes_end]
+        list_imported_elements = data_geometry[i_elements_start : i_elements_end]
         
         # conversion of the read strings to integer and floats
         for j in range(len(list_imported_mesh_format)):
@@ -607,7 +613,7 @@ class Mesh:
                   'contains the following', len(self.phys_group_dict[i]), 
                   ' nodes:\n', self.phys_group_dict[i])
 
-    def select_neumann_bc(self, key, val, direct, time_func=None, 
+    def set_neumann_bc(self, key, val, direct, time_func=None, 
                           mesh_prop='phys_group',
                           element_boundary_class_dict=element_boundary_class_dict):
         '''
@@ -667,14 +673,14 @@ class Mesh:
         elements_df = df[df[mesh_prop] == key]
         
         # add the nodes of the chosen group
-        ele_nodes = [np.nan for i in range(len(elements_df))]
+        nm_nodes = [np.nan for i in range(len(elements_df))]
         for i, element in enumerate(elements_df.values):
-            ele_nodes[i] = np.array(element[self.node_idx : 
+            nm_nodes[i] = np.array(element[self.node_idx : 
                                             self.node_idx + amfe2no_of_nodes[element[1]]],
                                     dtype=int)
-        self.ele_nodes.extend(ele_nodes)
+        self.neumann_nodes.extend(nm_nodes)
         
-        self.ele_types.extend(elements_df['el_type'].values.tolist())
+        # self.ele_types.extend(elements_df['el_type'].values.tolist())
                 
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
@@ -682,18 +688,19 @@ class Mesh:
         for i in ele_class_dict:
             ele_class_dict[i].__init__(val=val, direct=direct, time_func=time_func)
         object_series = elements_df['el_type'].map(ele_class_dict)
-        self.ele_obj.extend(object_series.values.tolist())
+        self.neumann_obj.extend(object_series.values.tolist())
         self._update_mesh_props()
         
         # print some output stuff
-        print('\n', mesh_prop, key, 'with', len(ele_nodes), 
-              'elements successfully added.')
+        print('\n', mesh_prop, key, 'with', len(nm_nodes), 
+              'elements successfully added to Neumann Boundary.')
+        print('Total number of neumann elements in mesh:', len(self.neumann_obj))        
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
 
         
-    def select_dirichlet_bc(self, key, coord, mesh_prop='phys_group', 
-                            output='internal'):
+    def set_dirichlet_bc(self, key, coord, mesh_prop='phys_group', 
+                         output='internal'):
         '''
         Add a group of the mesh to the dirichlet nodes to be fixed. 
         
@@ -724,8 +731,10 @@ class Mesh:
         df = self.el_df
         while key not in pd.unique(df[mesh_prop]):
             self.mesh_information()
-            print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop, 'is', key, ')')
-            key = int(input('Please choose a ' + mesh_prop + ' to be chosen for Dirichlet BCs: '))
+            print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop, 
+                  'is', key, ')')
+            key = int(input('Please choose a ' + mesh_prop + 
+                            ' to be chosen for Dirichlet BCs: '))
         
         # make a pandas dataframe just for the desired elements
         elements_df = df[df[mesh_prop] == key]
@@ -792,7 +801,8 @@ class Mesh:
         '''
         Set the displacement of the mesh with the corresponding timesteps.
 
-        expects for the timesteps a list containing the displacement vector in any shape.
+        expects for the timesteps a list containing the displacement vector in 
+        any shape.
 
         Parameters
         -----------

@@ -31,15 +31,17 @@ my_mesh.mesh_information()
 my_material = amfe.material.KirchhoffMaterial()
 my_mesh.load_group_to_mesh(29, my_material)
 my_assembly = amfe.Assembly(my_mesh)
-my_mesh.select_dirichlet_bc(30, 'xyz')
-my_mesh.select_neumann_bc(31, -1E10, 'normal')
+my_mesh.set_dirichlet_bc(30, 'xyz')
+my_mesh.set_neumann_bc(31, -1E10, 'normal')
 my_assembly.preallocate_csr()
 
 #%%
 
 #%%
 t1 = time.clock()
-K_unconstr, f_unconstr = my_assembly.assemble_k_and_f(np.zeros(my_mesh.no_of_dofs), t=1)
+u0 = np.zeros(my_mesh.no_of_dofs)
+K_unconstr, f_unconstr = my_assembly.assemble_k_and_f(u=u0, t=1)
+K_nm_unconstr, f_nm_unconstr = my_assembly.assemble_k_and_f_neumann(u0, t=1)
 t2 = time.clock()
 print('Time for assembly:', t2-t1, 's.')
 #%%
@@ -50,10 +52,11 @@ my_boundary.constrain_dofs(my_mesh.dofs_dirichlet)
 B = my_boundary.b_matrix()
 K = B.T.dot(K_unconstr).dot(B)
 f = B.T.dot(f_unconstr)
+f_ext = B.T @ f_nm_unconstr
 u = sp.sparse.linalg.spsolve(K, f)
 #%%
 my_mesh.set_displacement(B.dot(u))
-my_mesh.save_mesh_for_paraview(paraview_output_file)
+# my_mesh.save_mesh_for_paraview(paraview_output_file)
 my_mesh.save_mesh_xdmf(paraview_output_file)
 #%%
 #

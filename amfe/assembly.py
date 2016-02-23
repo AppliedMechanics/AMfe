@@ -162,6 +162,7 @@ class Assembly():
         # TODO: implement stress assembly
         self.save_stresses = False
         self.element_indices = []
+        self.neumann_indices = []
         self.C_csr = sp.sparse.csr_matrix([[]])
         self.nodes_voigt = sp.array([])
 
@@ -193,6 +194,9 @@ class Assembly():
             Ragged list containing the global indices for the local variables 
             of an element. The entry [i,j] gives the index in the global vector 
             of element i with dof j
+        neumann_indices : list
+            Ragged list equivalently to element_indices for the neumann 
+            boundary skin elements. 
         nodes_voigt : np.ndarray
             vector of all nodal coordinates in voigt-notation. 
             Dimension is (ndofs_total, )
@@ -249,6 +253,7 @@ class Assembly():
         None
         '''
         ele_nodes = self.mesh.ele_nodes
+        nm_nodes = self.mesh.neumann_nodes
         no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
 
         self.element_indices = \
@@ -256,9 +261,15 @@ class Assembly():
                    for i in nodes], dtype=int).reshape(-1) 
          for nodes in ele_nodes]
         
+        self.neumann_indices = \
+        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i) 
+                   for i in nodes], dtype=int).reshape(-1) 
+         for nodes in nm_nodes]
+        
 
     
-    def assemble_matrix_and_vector(self, u, decorated_matrix_func, t):
+    def assemble_matrix_and_vector(self, u, decorated_matrix_func, 
+                                   element_indices, t):
         '''
         Assembles the matrix and the vector of the decorated matrix func.
 
@@ -270,8 +281,13 @@ class Assembly():
         decorated_matrix_func : function
             function which works like
 
-            K_local, f_local = func(index, X_local, u_local)
-
+                >>> K_local, f_local = func(index, X_local, u_local)
+            
+        element_indices : list
+            List containing the indices mappint the local dofs to the global dofs. 
+            element_indices[i][j] returns the global dof of element i's dof j.
+        t : float
+            Time
         Returns
         -------
 
@@ -285,7 +301,7 @@ class Assembly():
 
         # Schleife ueber alle Elemente 
         # (i - Elementnummer, indices - DOF-Nummern des Elements)
-        for i, indices in enumerate(self.element_indices): 
+        for i, indices in enumerate(element_indices): 
             # X - zu den DOF-Nummern zugehoerige Koordinaten (Positionen)
             X = self.nodes_voigt[indices] 
             # Auslesen der localen Elementverschiebungen
@@ -343,7 +359,8 @@ class Assembly():
             '''
             return self.mesh.ele_obj[i].k_and_f_int(X, u, t)
             
-        return self.assemble_matrix_and_vector(u, k_and_f_func, t)
+        return self.assemble_matrix_and_vector(u, k_and_f_func, 
+                                               self.element_indices, t)
 
     def assemble_m(self, u=None, t=0):
         '''
@@ -388,6 +405,57 @@ class Assembly():
             
         if u is None:
             u = np.zeros_like(self.nodes_voigt)
-        M, _ = self.assemble_matrix_and_vector(u, m_and_vec_func, t) 
+        M, _ = self.assemble_matrix_and_vector(u, m_and_vec_func, 
+                                               self.element_indices, t) 
         return M
 
+    def assemble_k_and_f_neumann(self, u=None, t=0):
+        '''
+        Assembles the stiffness matrix and the force of the Neumann skin 
+        elements. 
+        
+        Parameters
+        -----------
+        u : ndarray
+            nodal displacement of the nodes in Voigt-notation
+
+        Returns
+        --------
+        K : sparse.csr_matrix
+            unconstrained assembled stiffness matrix in sparse matrix csr format.
+        f : ndarray
+            unconstrained assembled force vector
+        '''
+        # define the function that returns K, f for (i, X, u)
+        # sort of a decorator approach! 
+        def k_and_f_func(i, X, u, t):
+            '''
+            Decorated function picking the element object from the mesh and 
+            returning k and f out of it. 
+            
+            Parameters
+            ----------
+            i : int
+                index of the element
+            X : ndarray
+                reference configuration of nodes
+            u : ndarray
+                displacement of nodes
+            t : float
+                time
+                
+            Returns
+            -------
+            K : ndarray
+                Stiffness matrix.
+            f : ndarray
+                Force vector. 
+            
+            '''
+            return self.mesh.neumann_obj[i].k_and_f_int(X, u, t)
+        
+        if u is None:
+            u = np.zeros_like(self.nodes_voigt)
+            
+        return self.assemble_matrix_and_vector(u, k_and_f_func, 
+                                               self.neumann_indices, t)

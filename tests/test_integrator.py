@@ -22,8 +22,9 @@ class DynamicalSystem():
     
     def S_and_res(self, q, dq, ddq, dt, t, beta, gamma):
         S = self.K + 1/(beta*dt**2)*self.M
-        res = self.M @ ddq + self.K @ q - self.f_ext(q, dq, t)
-        return S, res
+        f_ext = self.f_ext(q, dq, t)
+        res = self.M @ ddq + self.K @ q - f_ext
+        return S, res, f_ext
     
     def write_timestep(self, t, q):
         self.t.append(t)
