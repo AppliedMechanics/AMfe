@@ -526,7 +526,8 @@ class Mesh:
 
         self._update_mesh_props()
         # printing some information regarding the physical groups
-        print('Mesh', filename, 'successfully imported. \nAssign a material to a physical group.')
+        print('Mesh', filename, 'successfully imported.',  
+              '\nAssign a material to a physical group.')
         print('*************************************************************')
     
         
@@ -632,7 +633,7 @@ class Mesh:
                 Pressure acting onto the normal face of the deformed configuration
             'x_n'
                 Traction acting in x-direction proportional to the area 
-            projected onto the y-z surface
+                projected onto the y-z surface
             'y_n'
                 Traction acting in y-direction proportional to the area 
                 projected onto the x-z surface            

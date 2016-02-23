@@ -22,14 +22,7 @@ try:
     import amfe.f90_assembly
     use_fortran = True
 except Exception:
-    print('''
-Python was not able to load the fast fortran assembly routines.
-run the script 
-
-f2py/install_fortran_routines.sh 
-
-in order to get the full speed! 
-''')
+    print('Python was not able to load the fast fortran assembly routines.')
 #use_fortran = False
 
 
