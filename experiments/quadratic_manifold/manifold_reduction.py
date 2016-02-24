@@ -123,16 +123,18 @@ my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 for t, phi in enumerate(V.T):
     benchmark_system.write_timestep(t, phi)
-benchmark_system.export_paraview(paraview_output_file)
+out_file = amfe.append_to_filename(paraview_output_file)
+benchmark_system.export_paraview(out_file)
 
 #%% 
 # plot the modal derivatives of the system
 for i in range(no_of_modes):
-    for j in range(i + 1):
+    #for j in range(i + 1):
+    for j in range(no_of_modes):
         benchmark_system.write_timestep(i*100 + j, theta[:,i,j])
 
-benchmark_system.export_paraview(paraview_output_file)
-
+out_file = amfe.append_to_filename(paraview_output_file)
+benchmark_system.export_paraview(out_file)
 #%%
 # plot the modes growing with the modal derivatives 
 i_mode = 1
@@ -144,8 +146,8 @@ for t in np.arange(0,20,0.1):
 
 #%%
 # Export to paraview
-my_qm_sys.export_paraview(paraview_output_file)
-
+out_file = amfe.append_to_filename(paraview_output_file)
+benchmark_system.export_paraview(out_file)
 #%% 
 ###############################################################################
 # Perform some time integration
@@ -155,13 +157,14 @@ my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=alpha)
 my_newmark.verbose = True
 my_newmark.delta_t = 1E-4
 my_newmark.n_iter_max = 100
+my_newmark.atol = 1E-7
 #my_newmark.write_iter = True
 
 my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), 
                      np.arange(0, 0.4, 1E-4))
 
-my_qm_sys.export_paraview(paraview_output_file)
-
+out_file = amfe.append_to_filename(paraview_output_file)
+benchmark_system.export_paraview(out_file)
 #%%
 # plot the time line of the reduced variable 
 q_red = np.array(my_qm_sys.u_red_output)
@@ -208,8 +211,8 @@ plt.semilogy(t, conds); plt.grid()
 for t, phi in enumerate(P.T):
     benchmark_system.write_timestep(t, phi)
 
-benchmark_system.export_paraview(paraview_output_file)
-
+out_file = amfe.append_to_filename(paraview_output_file)
+benchmark_system.export_paraview(out_file)
 #%%
 
 #%%

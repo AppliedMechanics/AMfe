@@ -87,6 +87,20 @@ def read_hbmat(filename):
     ----
     Information on the Harwell Boeing format: 
     http://people.sc.fsu.edu/~jburkardt/data/hb/hb.html
+    
+    Note
+    ----
+    When the hbmat file is exported as an ASCII-file, the truncation of the 
+    numerical values can cause issues, for example 
+    
+    - eigenvalues change 
+    - zero eigenvalues vanish
+    - stiffness matrix becomes indefinite
+    - etc.
+    
+    Thus do not trust matrices which are imported with this method. The method 
+    is correct, but the truncation error in the hbmat file of the floating 
+    point digits might cause some issues. 
     '''
     with open(filename, 'r') as infile:
         matrix_data = infile.read().splitlines()
@@ -126,6 +140,37 @@ def read_hbmat(filename):
         matrix = matrix + matrix.T
         matrix.setdiag(diagonal)
     return matrix
+
+
+def append_to_filename(filename):
+    '''
+    Ask, if a certain string should be appended to the filename. 
+    
+    This filename function should make it easy to save output files from 
+    numerical experiments containing a time stamp with an additonal tag 
+    requested at time of saving. 
+    
+    Parameters
+    ----------
+    filename : string
+        filename path, e.g. for saving
+        
+    Returns
+    -------
+    filename : string
+        filename path with additional stuff, maybe added for convenience or 
+        better understanding 
+    '''
+    print('The filename is:', filename)
+    raw = input('You can now add a string to the output file name:\n')
+    
+    if raw is not '':
+        string = '_' + raw.replace(' ', '_')
+    else: 
+        string = ''
+
+    return filename + string
+
 
 def test(*args, **kwargs):
     '''
