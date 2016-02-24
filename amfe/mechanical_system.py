@@ -492,29 +492,29 @@ class ReducedSystem(MechanicalSystem):
         if u is None:
             u = np.zeros(self.V.shape[1])        
         V = self.V
-        u_full = V.dot(u)
+        u_full = V @ u
         K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
-        K = V.T.dot(K_unreduced.dot(V))
-        f_int = V.T.dot(f_unreduced)
+        K = V.T @ K_unreduced @ V
+        f_int = V.T @ f_unreduced
         return K, f_int
 
     def K(self, u=None, t=0):
         if u is None:
             u = np.zeros(self.V.shape[1])
-        return self.V.T.dot(MechanicalSystem.K(self, self.V.dot(u), t).dot(self.V))
+        return self.V.T @ MechanicalSystem.K(self, self.V @ u, t) @ self.V
 
     def f_ext(self, u, du, t):
-        return self.V.T.dot(MechanicalSystem.f_ext(self, self.V.dot(u), du, t))
+        return self.V.T @ MechanicalSystem.f_ext(self, self.V @ u, du, t)
 
     def f_int(self, u, t=0):
-        return self.V.T.dot(MechanicalSystem.f_int(self, self.V.dot(u), t))
+        return self.V.T @ MechanicalSystem.f_int(self, self.V @ u, t)
 
     def M(self, u=None, t=0):
-        self.M_constr = self.V.T.dot(MechanicalSystem.M(self, u, t).dot(self.V))
+        self.M_constr = self.V.T @ MechanicalSystem.M(self, u, t) @ self.V
         return self.M_constr
 
     def write_timestep(self, t, u):
-        MechanicalSystem.write_timestep(self, t, self.V.dot(u))
+        MechanicalSystem.write_timestep(self, t, self.V @ u)
         self.u_red_output.append(u.copy())
 
     def K_unreduced(self, u=None, t=0):
