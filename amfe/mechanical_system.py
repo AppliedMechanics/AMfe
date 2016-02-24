@@ -664,7 +664,7 @@ class QMSystem(MechanicalSystem):
         M = P.T @ M_unreduced @ P
 
         res = P.T @ res_full
-        f_ext = P.T @ f_ext
+        f_ext = P.T @ f_ext_unred
         S = 1/(dt**2 * beta) * M + gamma/(dt*beta) * G + K
         return S, res, f_ext
     
