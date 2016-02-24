@@ -646,13 +646,14 @@ class QMSystem(MechanicalSystem):
         u_full = (self.V + 1/2*theta_u) @ u
         
         K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
+        f_ext_unred = MechanicalSystem.f_ext(self, u_full, None, t)
         # nonlinear projector P
         P = self.V + theta_u
 
         # computing the residual
         res_accel = M_unreduced @ (P @ ddu)
         res_gyro = 1/2*M_unreduced @ (theta @ du) @ du
-        res_full = res_accel + res_gyro + f_unreduced
+        res_full = res_accel + res_gyro + f_unreduced - f_ext_unred
         # the different contributions to stiffness
         K1 = theta.T @ res_full
         K2 = P.T @ M_unreduced @ (theta @ ddu)
@@ -663,9 +664,21 @@ class QMSystem(MechanicalSystem):
         M = P.T @ M_unreduced @ P
 
         res = P.T @ res_full
+        f_ext = P.T @ f_ext
         S = 1/(dt**2 * beta) * M + gamma/(dt*beta) * G + K
-        return S, res
-        
+        return S, res, f_ext
+    
+    def f_ext(u, du, t):
+        '''
+        Return the reduced external force. The velocity du is by now ignored. 
+        '''
+        theta_u = self.Theta @ u        
+        u_full = (self.V + 1/2*theta_u) @ u
+        P = self.V + theta_u
+        f_ext_unred = MechanicalSystem.f_ext(self, u_full, None, t)
+        f_ext = P.T @ f_ext_unred
+        return f_ext
+    
     def write_timestep(self, t, u):
         u_full = self.V @ u + (self.Theta @ u) @ u
         MechanicalSystem.write_timestep(self, t, u_full)

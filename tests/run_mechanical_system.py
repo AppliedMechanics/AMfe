@@ -47,7 +47,7 @@ my_mechanical_system.apply_neumann_boundaries(30, -1E11, 'normal', time_func=tim
 K, f = my_mechanical_system.K_and_f(np.zeros(my_mechanical_system.dirichlet_class.no_of_constrained_dofs), t=1)
 M = my_mechanical_system.M()
 
-amfe.solve_nonlinear_displacement(my_mechanical_system, 10, smplfd_nwtn_itr=1, wrt_iter=False, rtol=1E-10)
+amfe.solve_nonlinear_displacement(my_mechanical_system, 10, smplfd_nwtn_itr=1, wrt_iter=False, rtol=1E-7)
 
 # amfe.solve_linear_displacement(my_mechanical_system)
 my_mechanical_system.export_paraview(paraview_output_file)

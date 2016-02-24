@@ -75,7 +75,7 @@ class NewmarkIntegrator():
         self.gamma = 1/2 + alpha
         self.delta_t = 1E-3
         self.rtol = 1E-8
-        self.atol = 1E-12
+        self.atol = 1E-10
         self.newton_damping = 1.0
         self.verbose = verbose
         self.n_iter_max = n_iter_max
