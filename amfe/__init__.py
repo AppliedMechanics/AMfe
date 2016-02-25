@@ -9,7 +9,6 @@ Technische Universität München.
 Authors:
 Johannes Rutzmoser, Fabian Gruber
 """
-__author__ = 'Johannes Rutzmoser, Fabian Gruber'
 
 # Finite Element stuff
 from amfe.assembly import Assembly
@@ -32,3 +31,5 @@ from amfe.model_reduction import reduce_mechanical_system, \
     qm_reduce_mechanical_system, modal_derivative, modal_derivative_theta, \
     static_correction_derivative, static_correction_theta, principal_angles, \
     krylov_subspace, craig_bampton, vibration_modes, pod
+
+__author__ = 'Johannes Rutzmoser, Fabian Gruber'
