@@ -59,7 +59,7 @@ my_reduced_system = amfe.reduce_mechanical_system(benchmark_system, V)
 
 my_newmark = amfe.NewmarkIntegrator(my_reduced_system, alpha=alpha)
 my_newmark.delta_t = 1E-4
-
+my_newmark.atol = 1E-3
 my_newmark.integrate(np.zeros(no_of_modes), np.zeros(no_of_modes), 
                      np.arange(0, 0.4, 1E-4))
 

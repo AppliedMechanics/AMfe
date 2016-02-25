@@ -227,9 +227,11 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
     for i in range(no_of_modes): # looping over the columns
         x_i = V[:,i]
         K_dyn_i = K - omega[i]**2 * M
+
         # fix the point with the maximum displacement of the vibration mode
         fix_idx = np.argmax(abs(x_i))
         K_dyn_i[:,fix_idx], K_dyn_i[fix_idx,:], K_dyn_i[fix_idx, fix_idx] = 0, 0, 1
+        
         # factorization of the dynamic stiffness matrix
         if verbose:
             print('Factorizing the dynamic stiffness matrix for eigenfrequency',
@@ -316,7 +318,7 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
         array containing the linear basis
     K_func : function
         function returning the tangential stiffness matrix for a given
-        displacement. Has to work like K = K_func(u).
+        displacement. Has to work like `K = K_func(u)`.
     h : float, optional
         step width for finite difference scheme. Default value is 500 * machine
         epsilon
