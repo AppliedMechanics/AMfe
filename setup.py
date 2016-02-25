@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Setup file for automatic installation and distribution of AMfe. 
+Setup file for automatic installation and distribution of AMfe.
 """
 
 import sys
@@ -16,13 +16,13 @@ ext_assembly = Extension(name='amfe.f90_assembly',
                          sources=['amfe/fortran/assembly.f90'],
                          language='f90',)
 ext_element = Extension(name='amfe.f90_element',
-                        sources=['amfe/fortran/element.pyf', 
+                        sources=['amfe/fortran/element.pyf',
                                  'amfe/fortran/element.f90'],
                         language='f90',)
 ext_material = Extension(name='amfe.f90_material',
                          sources=['amfe/fortran/material.f90'],
                          language='f90',)
-                         
+
 ext_modules = [ext_assembly, ext_element, ext_material]
 
 
@@ -39,9 +39,7 @@ config = {
     'packages': ['amfe'],
     'scripts': [],
     'entry_points': {},
-    # 'ext_modules' : [ext_assembly, ext_element, ext_material],
 }
-
 
 no_fortran_str = '''
 

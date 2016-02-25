@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu May 21 16:05:50 2015
+A collection of tools which to not fit to one topic of the other modules.
 
-@author: johannesr
+Some tools here are experimental. 
 """
 
 import scipy as sp
@@ -71,44 +71,44 @@ def inherit_docs(cls):
 
 def read_hbmat(filename):
     '''
-    Reads the hbmat file and returns it in the csc format. 
-    
+    Reads the hbmat file and returns it in the csc format.
+
     Parameters
     ----------
     filename : string
         string of the filename
-    
+
     Returns
     -------
     matrix : sp.sparse.csc_matrix
         matrix which is saved in harwell-boeing format
-    
+
     Info
     ----
-    Information on the Harwell Boeing format: 
+    Information on the Harwell Boeing format:
     http://people.sc.fsu.edu/~jburkardt/data/hb/hb.html
-    
+
     Note
     ----
-    When the hbmat file is exported as an ASCII-file, the truncation of the 
-    numerical values can cause issues, for example 
-    
-    - eigenvalues change 
+    When the hbmat file is exported as an ASCII-file, the truncation of the
+    numerical values can cause issues, for example
+
+    - eigenvalues change
     - zero eigenvalues vanish
     - stiffness matrix becomes indefinite
     - etc.
-    
-    Thus do not trust matrices which are imported with this method. The method 
-    is correct, but the truncation error in the hbmat file of the floating 
-    point digits might cause some issues. 
+
+    Thus do not trust matrices which are imported with this method. The method
+    is correct, but the truncation error in the hbmat file of the floating
+    point digits might cause some issues.
     '''
     with open(filename, 'r') as infile:
         matrix_data = infile.read().splitlines()
-    
+
     # Analsysis of further line indices
     n_total, n_indptr, n_indices, n_data, n_rhs = map(int, matrix_data[1].split())
     matrix_keys, n_rows, n_cols, _, _ = matrix_data[2].split()
-    
+
     n_rows, n_cols = int(n_rows), int(n_cols)
 
     symmetric = False
@@ -122,14 +122,14 @@ def read_hbmat(filename):
     indptr = sp.zeros(n_indptr, dtype=int)
     indices = sp.zeros(n_indices, dtype=int)
     data = sp.zeros(n_data)
-    
+
     indptr[:] = list(map(int, matrix_data[idx_0 : idx_0 + n_indptr]))
-    indices[:] = list(map(int, matrix_data[idx_0 + n_indptr : 
+    indices[:] = list(map(int, matrix_data[idx_0 + n_indptr :
                                            idx_0 + n_indptr + n_indices]))
     # consider the fortran convention with D instead of E in double precison floats
-    data[:] = [float(x.replace('D', 'E')) for x in 
+    data[:] = [float(x.replace('D', 'E')) for x in
                matrix_data[idx_0 + n_indptr + n_indices : ]]
-    
+
     # take care of the indexing notation of fortran
     indptr -= 1
     indices -= 1
@@ -144,29 +144,29 @@ def read_hbmat(filename):
 
 def append_to_filename(filename):
     '''
-    Ask, if a certain string should be appended to the filename. 
-    
-    This filename function should make it easy to save output files from 
-    numerical experiments containing a time stamp with an additonal tag 
-    requested at time of saving. 
-    
+    Ask, if a certain string should be appended to the filename.
+
+    This filename function should make it easy to save output files from
+    numerical experiments containing a time stamp with an additonal tag
+    requested at time of saving.
+
     Parameters
     ----------
     filename : string
         filename path, e.g. for saving
-        
+
     Returns
     -------
     filename : string
-        filename path with additional stuff, maybe added for convenience or 
-        better understanding 
+        filename path with additional stuff, maybe added for convenience or
+        better understanding
     '''
     print('The filename is:', filename)
     raw = input('You can now add a string to the output file name:\n')
-    
+
     if raw is not '':
         string = '_' + raw.replace(' ', '_')
-    else: 
+    else:
         string = ''
 
     return filename + string
@@ -174,8 +174,7 @@ def append_to_filename(filename):
 
 def test(*args, **kwargs):
     '''
-    Run all tests for AMfe. 
+    Run all tests for AMfe.
     '''
     import nose
     nose.main(*args, **kwargs)
-    
