@@ -171,7 +171,7 @@ class NewmarkIntegrator():
             while res_abs > self.rtol*abs_f_ext + self.atol:
 
                 if sp.sparse.issparse(S):
-                    delta_q = - linalg.spsolve(S, res)
+                    delta_q = - sp.sparse.linalg.spsolve(S, res)
                 else:
                     delta_q = - sp.linalg.solve(S, res)
 
@@ -190,7 +190,7 @@ class NewmarkIntegrator():
                 if self.verbose:
                     print('Iteration', n_iter,
                           'Residual: {0:4.1E}, cond# of S: {1:4.2E}'.format(
-                          res_abs, np.linalg.cond(S)))
+                              res_abs, np.linalg.cond(S)))
 
                 if self.write_iter:
                     t_write = t + dt/100*n_iter
@@ -213,7 +213,7 @@ class NewmarkIntegrator():
         # end of time loop
         t_clock_2 = time.time()
         print('Time for time marching integration {0:4.2f} seconds'.format(
-              t_clock_2 - t_clock_1))
+            t_clock_2 - t_clock_1))
         return
 
 
@@ -466,7 +466,8 @@ class HHTConstrained():
 
         Note
         ----
-        This is a deprecated function. The constraint handling is better handled within the `MechanicalSystem` class. 
+        This is a deprecated function. The constraint handling is better 
+        handled within the `MechanicalSystem` class. 
         '''
         # some internal variables defined for better readabiltiy of code
         beta = self.beta
