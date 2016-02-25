@@ -138,6 +138,7 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
     See Also
     --------
     static_correction_derivative
+    modal_derivative_theta
 
     Examples
     --------
@@ -145,12 +146,12 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
 
     References
     ---------
-    S. R. Idelsohn and A. Cardona. A reduction method for nonlinear structural
-    dynamic analysis. Computer Methods in Applied Mechanics and Engineering,
-    49(3):253–279, 1985.
-
-    S. R. Idelsohn and A. Cardona. A load-dependent basis for reduced nonlinear
-    structural dynamics. Computers & Structures, 20(1):203–210, 1985.
+    .. [1]  S. R. Idelsohn and A. Cardona. A reduction method for nonlinear 
+            structural dynamic analysis. Computer Methods in Applied Mechanics 
+            and Engineering, 49(3):253–279, 1985.
+    .. [2]  S. R. Idelsohn and A. Cardona. A load-dependent basis for reduced 
+            nonlinear structural dynamics. Computers & Structures, 
+            20(1):203–210, 1985.
 
 
     '''
