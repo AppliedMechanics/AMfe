@@ -47,33 +47,6 @@ element_mapping_list = [
     # Bars are missing, which are used for simple benfield truss
 ]
 
-# Element Class dictionary with all available elements
-kwargs = { }
-element_class_dict = {'Tet4'  : Tet4(**kwargs),
-                      'Tet10' : Tet10(**kwargs),
-                      'Tri3'  : Tri3(**kwargs),
-                      'Tri6'  : Tri6(**kwargs),
-                      'Quad4' : Quad4(**kwargs),
-                      'Quad8' : Quad8(**kwargs),
-                      'Bar2Dlumped' : Bar2Dlumped(**kwargs),
-                     }
-                              
-kwargs = {'val' : 1., 'direct' : 'normal'}
-
-element_boundary_class_dict = {'straight_line' : LineLinearBoundary(**kwargs), 
-                               'quadratic_line': LineQuadraticBoundary(**kwargs),
-                               'Tri3'          : Tri3Boundary(**kwargs),
-                               'Tri6'          : Tri6Boundary(**kwargs),
-                              }
-                              
-# actual set of implemented elements
-element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
-element_3d_set = {'Tet4', 'Tet10'}
-
-boundary_2d_set = {'straight_line', 'quadratic_line'}
-boundary_3d_set = {'straight_line', 'quadratic_line',
-                   'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8'}
-
 #
 # Building the conversion dicts from the element_mapping_list
 #
@@ -278,6 +251,10 @@ class Mesh:
         Number of nodes of the whole system. 
     no_of_dofs : int
         Number of dofs of the whole system (including constrained dofs). 
+    element_class_dict : dict
+        Dictionary containing objects of elements. 
+    element_boundary_class_dict : dict
+        Dictionary containing objects of skin elements.
         
     '''
 
@@ -307,6 +284,33 @@ class Mesh:
         self.no_of_dofs = 0
         self.no_of_nodes = 0
         self.no_of_elements = 0
+        
+        # Element Class dictionary with all available elements
+        kwargs = { }
+        self.element_class_dict = {'Tet4'  : Tet4(**kwargs),
+                                   'Tet10' : Tet10(**kwargs),
+                                   'Tri3'  : Tri3(**kwargs),
+                                   'Tri6'  : Tri6(**kwargs),
+                                   'Quad4' : Quad4(**kwargs),
+                                   'Quad8' : Quad8(**kwargs),
+                                   'Bar2Dlumped' : Bar2Dlumped(**kwargs),
+                                  }
+                              
+        kwargs = {'val' : 1., 'direct' : 'normal'}
+
+        self.element_boundary_class_dict = {
+            'straight_line' : LineLinearBoundary(**kwargs), 
+            'quadratic_line': LineQuadraticBoundary(**kwargs),
+            'Tri3'          : Tri3Boundary(**kwargs),
+            'Tri6'          : Tri6Boundary(**kwargs),}
+                              
+        # actual set of implemented elements
+        self.element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
+        self.element_3d_set = {'Tet4', 'Tet10'}
+
+        self.boundary_2d_set = {'straight_line', 'quadratic_line'}
+        self.boundary_3d_set = {'straight_line', 'quadratic_line',
+                                'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8'}
 
     def _update_mesh_props(self):
         '''
@@ -469,12 +473,12 @@ class Mesh:
         # Construct Pandas Dataframe for the elements (self.el_df and df for shorter code)
         self.el_df = df = pd.DataFrame(list_imported_elements)
         df.rename(copy=False, inplace=True, 
-                 columns={0 : 'idx_gmsh', 
-                          1 : 'el_type', 
-                          2 : 'no_of_tags', 
-                          3 : 'phys_group', 
-                          4 : 'geom_entity'})
-        
+                  columns={0 : 'idx_gmsh', 
+                           1 : 'el_type', 
+                           2 : 'no_of_tags', 
+                           3 : 'phys_group', 
+                           4 : 'geom_entity'})
+         
         # determine the index, where the nodes of the element start in the dataframe 
         if len(df[df['no_of_tags'] != 2]) == 0:
             self.node_idx = node_idx = 5
@@ -497,7 +501,7 @@ class Mesh:
         # Check, if there is one 3D-Element in the mesh! 
         self.no_of_dofs_per_node = 2
         for i in element_types:
-            if i in element_3d_set:
+            if i in self.element_3d_set:
                 self.no_of_dofs_per_node = 3
                 
         # fill the nodes of the selected physical group to the array
@@ -519,8 +523,10 @@ class Mesh:
             # make them unique, remove nan (resulting from non-existing entries in pandas)
             # cast and sort the array and put into dict
             gr_nodes = np.unique(gr_nodes)
-            gr_nodes = gr_nodes[np.isfinite(gr_nodes)] # remove nan from non-existing entries
-            gr_nodes = np.array(gr_nodes, dtype=int) # recast to int as somewhere a float is casted
+            # remove nan from non-existing entries
+            gr_nodes = gr_nodes[np.isfinite(gr_nodes)] 
+            # recast to int as somewhere a float is casted
+            gr_nodes = np.array(gr_nodes, dtype=int) 
             gr_nodes.sort()
             nodes_phys_group[idx] = gr_nodes
 
@@ -532,8 +538,7 @@ class Mesh:
     
         
 
-    def load_group_to_mesh(self, key, material, mesh_prop='phys_group',
-                           element_class_dict=element_class_dict):
+    def load_group_to_mesh(self, key, material, mesh_prop='phys_group'):
         '''
         Add a physical group to the main mesh with given material. 
         
@@ -548,9 +553,6 @@ class Mesh:
         mesh_prop : {'phys_group', 'geom_entity', 'el_type'}, optional
             label of which the element should be chosen from. Standard is 
             physical group. 
-        element_class_dict : dict, optional
-            Dictionary of elements, where the element keys are mapped to the 
-            element objects. 
             
         Returns
         -------
@@ -569,9 +571,9 @@ class Mesh:
         
         # add the nodes of the chosen group
         ele_nodes = [np.nan for i in range(len(elements_df))]
-        for i, element in enumerate(elements_df.values):
-            ele_nodes[i] = np.array(element[self.node_idx : 
-                                    self.node_idx + amfe2no_of_nodes[element[1]]],
+        for i, ele in enumerate(elements_df.values):
+            ele_nodes[i] = np.array(ele[self.node_idx : 
+                                    self.node_idx + amfe2no_of_nodes[ele[1]]],
                                     dtype=int)
         self.ele_nodes.extend(ele_nodes)
         
@@ -580,7 +582,7 @@ class Mesh:
         
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
-        ele_class_dict = copy.deepcopy(element_class_dict)
+        ele_class_dict = copy.deepcopy(self.element_class_dict)
         for i in ele_class_dict:
             ele_class_dict[i].material = material
         object_series = elements_df.el_type.map(ele_class_dict)
@@ -615,8 +617,7 @@ class Mesh:
                   ' nodes:\n', self.phys_group_dict[i])
 
     def set_neumann_bc(self, key, val, direct, time_func=None, 
-                          mesh_prop='phys_group',
-                          element_boundary_class_dict=element_boundary_class_dict):
+                          mesh_prop='phys_group'):
         '''
         Add group of mesh to neumann boundary conditions. 
         
@@ -656,8 +657,7 @@ class Mesh:
         mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
             label of which the element should be chosen from. Default is 
             phys_group. 
-        element_boundary_class_dict : dict
-            Dictionary containing the skin elements. 
+            
         Returns
         -------
         None
@@ -675,17 +675,17 @@ class Mesh:
         
         # add the nodes of the chosen group
         nm_nodes = [np.nan for i in range(len(elements_df))]
-        for i, element in enumerate(elements_df.values):
-            nm_nodes[i] = np.array(element[self.node_idx : 
-                                            self.node_idx + amfe2no_of_nodes[element[1]]],
-                                    dtype=int)
+        for i, ele in enumerate(elements_df.values):
+            nm_nodes[i] = np.array(ele[self.node_idx : 
+                                   self.node_idx + amfe2no_of_nodes[ele[1]]],
+                                   dtype=int)
         self.neumann_nodes.extend(nm_nodes)
         
         # self.ele_types.extend(elements_df['el_type'].values.tolist())
                 
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
-        ele_class_dict = copy.deepcopy(element_boundary_class_dict)
+        ele_class_dict = copy.deepcopy(self.element_boundary_class_dict)
         for i in ele_class_dict:
             ele_class_dict[i].__init__(val=val, direct=direct, time_func=time_func)
         object_series = elements_df['el_type'].map(ele_class_dict)

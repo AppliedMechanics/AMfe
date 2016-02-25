@@ -195,7 +195,7 @@ class MechanicalSystem():
         None
         '''
         self.mesh_class.set_neumann_bc(key=key, val=val, direct=direct, 
-                                          time_func=time_func, mesh_prop=mesh_prop)
+                                       time_func=time_func, mesh_prop=mesh_prop)
         self.assembly_class.compute_element_indices()
         
     def apply_neumann_boundaries_old(self, neumann_boundary_list):
@@ -296,14 +296,22 @@ class MechanicalSystem():
         
         Parameters
         ----------
-        None
+        u : ndarray, optional
+            array of the displacement
+        t : float
+            time
         
         Returns
         -------
         M : sp.sparse.sparse_matrix
             Mass matrix with applied constraints in sparse csr-format
         '''
-        M_unconstr = self.assembly_class.assemble_m()
+        if u is not None:
+            u_unconstr = self.unconstrain_vec(u)
+        else:
+            u_unconstr = None
+            
+        M_unconstr = self.assembly_class.assemble_m(u_unconstr, t)
         self.M_constr = self.constrain_matrix(M_unconstr)
         return self.M_constr
         
@@ -668,7 +676,7 @@ class QMSystem(MechanicalSystem):
         S = 1/(dt**2 * beta) * M + gamma/(dt*beta) * G + K
         return S, res, f_ext
     
-    def f_ext(u, du, t):
+    def f_ext(self, u, du, t):
         '''
         Return the reduced external force. The velocity du is by now ignored. 
         '''
