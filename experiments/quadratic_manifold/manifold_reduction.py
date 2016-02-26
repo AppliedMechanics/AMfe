@@ -31,6 +31,39 @@ def check_orthogonality(u,v):
     return u_n @ v_n
 
 
+def theta_m_orth_v(Theta, V, M):
+    '''
+    Make Theta mass orthogonal with respect to the parent modes via a 
+    Gram-Schmid-Process. 
+    
+    Parameters
+    ----------
+    Theta : ndarray
+        Third order Tensor describing the quadratic part of the basis
+    V : ndarray
+        Linear Basis 
+    M : ndarray or scipy.sparse matrix
+        Mass Matrix
+    
+    Returns
+    -------
+    Theta_orth : ndarray
+        Third order tensor Theta mass orthogonalized, such that 
+        Theta_orth[:,i,j] is mass orthogonal to V[:,i] and V[:,j]:
+
+            >>> Theta_orth[:,i,j] @ M @ V[:,i] == np.zeros(ndim)
+        
+    '''
+    __, no_of_modes = V.shape
+    # Make sure, that V is M-normalized
+    np.testing.assert_allclose(V.T @ M @ V, np.eye(no_of_modes), atol=1E-14)
+    Theta_ret = Theta.copy()
+    for i in range(no_of_modes):
+        for j in range(no_of_modes):
+            Theta_ret[:,i,j] -= V[:,i] * (Theta[:,i,j] @ M @ V[:,i])
+            Theta_ret[:,i,j] -= V[:,j] * (Theta[:,i,j] @ M @ V[:,j])
+    return Theta
+
 #%% Create a static MD QM system
 
 dofs_reduced = no_of_modes = 10
@@ -59,6 +92,7 @@ theta = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M, h=SQ_EPS,\
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 #%% Show the inner products of theta with respect to the modes
+
 M = benchmark_system.M()
 A = np.zeros((no_of_modes, no_of_modes))
 norm_mat = np.eye(V.shape[0])
@@ -78,14 +112,10 @@ plt.title('Inner product of V with theta')
 
 #%% Purging algorithm where theta is kept mass orthogonal to V
 
+
+
 M = benchmark_system.M()
-for i in range(no_of_modes):
-    v_norm = V[:,i]
-    for j in range(no_of_modes):
-        theta[:,i,j] -= v_norm * (theta[:,i,j] @ M @ v_norm)
-        theta[:,j,i] = theta[:,i,j]
-        # theta[:,i,j] -= V[:,j]*(V[:,j] @ theta[:,i,j])
-        
+theta = make_theta_mass_orthogonal(theta, V, M)
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 #%% Second approach: Show the norm of the vector in theta
@@ -215,6 +245,34 @@ for t, phi in enumerate(P.T):
 out_file = amfe.append_to_filename(paraview_output_file)
 benchmark_system.export_paraview(out_file)
 
+#%% Show the difference of MDs and SMDs of the system
+
+ndim, nred = V.shape
+symmetric = False
+orthogonal = True
+print('Pay attention. The MDs are NOT symmetric.')
+Theta_MD = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M, \
+                                       h=SQ_EPS, symmetric=symmetric)
+Theta_SMD = amfe.static_correction_theta(V, benchmark_system.K)
+
+# orthogonalization:
+if orthogonal:
+    Theta_MD = theta_m_orth_v(Theta_MD, V, M)
+    Theta_SMD = theta_m_orth_v(Theta_SMD, V, M)
+
+# norming
+norm_Theta_MD = np.sqrt(np.einsum('ijk,ijk->jk', Theta_MD, Theta_MD))
+norm_Theta_SMD = np.sqrt(np.einsum('ijk,ijk->jk', Theta_SMD, Theta_SMD))
+
+A = np.einsum('ijk, ijk->jk', Theta_MD, Theta_SMD)/(norm_Theta_MD*norm_Theta_SMD)
+
+plt.matshow(A); plt.colorbar()
+
+amfe.matshow_3d(1 - np.abs(A), thickness=0.4, alpha=0.3)
+# matshow_bar(np.arccos(A)/(np.pi))
+
+#%%
+plt.matshow(norm_Theta_MD);plt.colorbar()
 #%%
 #%% Try to perform some tests on the QM system
 #%%
