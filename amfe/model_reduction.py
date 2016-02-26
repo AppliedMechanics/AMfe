@@ -210,6 +210,11 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
         three dimensional array of modal derivatives. Theta[:,i,j] contains
         the modal derivative 1/2 * dx_i / dx_j. The basis Theta is made symmetric, so
         that `Theta[:,i,j] == Theta[:,j,i]` if `symmetic=True`.
+        
+    See Also
+    --------
+    static_correction_theta : modal derivative with mass neglection.
+    modal_derivative : modal derivative for only two vectors.
 
     '''
     no_of_dofs = V.shape[0]
@@ -329,6 +334,12 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
         three dimensional array of static corrections derivatives. Theta[:,i,j]
         contains the static derivative 1/2 * dx_i / dx_j. As the static derivatives
         are symmetric, Theta[:,i,j] == Theta[:,j,i].
+    
+    See Also
+    --------
+    modal_derivative_theta
+    static_correction_derivative
+    
     '''
     no_of_dofs = V.shape[0]
     no_of_modes = V.shape[1]

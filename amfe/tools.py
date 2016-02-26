@@ -5,7 +5,10 @@ A collection of tools which to not fit to one topic of the other modules.
 Some tools here are experimental. 
 """
 
+import numpy as np
 import scipy as sp
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 
 def node2total(node_index, coordinate_index, ndof_node=2):
@@ -171,6 +174,46 @@ def append_to_filename(filename):
 
     return filename + string
 
+def matshow_bar(A, thickness=0.8, cmap=mpl.cm.jet, alpha=1.0):
+    '''
+    Show a matrix as bar-plot using matplotlib.bar3d plotting tools similar to 
+    `pyplot.matshow`. 
+    
+    Parameters
+    ----------
+    A : ndarray
+        Array to be plotted
+    thickness : float, optional
+        thickness of the bar. Default: 0.8
+    cmap : matplotlib.cm function, optional
+        Colormap-function of matplotlib. Default. mpl.cm.jet
+    alpha : float
+        alpha channel value (transparency): alpha=1.0 is not transparent at all, 
+        alpha=0.0 is full transparent and thus invisible. 
+    
+    Returns
+    -------
+    barplot : instance of mpl_toolkits.mplot3d.art3d.Poly3DCollection
+    
+    See Also
+    --------
+    matplotlib.pyplot.matshow
+    
+    '''
+    xdim, ydim = A.shape
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    xx, yy = np.meshgrid(np.arange(xdim), np.arange(ydim))
+    xx = xx.flatten() + 1 - thickness/2
+    yy = yy.flatten() + 1 - thickness/2
+    zz = np.zeros_like(xx)
+    dx = np.ones_like(xx)*thickness
+    dy = np.ones_like(xx)*thickness
+    dz = A.flatten()
+    colors = cmap(dz)
+    barplot = ax.bar3d(xx, yy, zz, dx, dy, dz, color=colors, alpha=alpha)
+    # fig.colorbar(barplot)
+    return barplot
 
 def test(*args, **kwargs):
     '''
