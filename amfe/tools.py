@@ -174,7 +174,7 @@ def append_to_filename(filename):
 
     return filename + string
 
-def matshow_3d(A, thickness=0.8, cmap=mpl.cm.jet, alpha=1.0):
+def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
     '''
     Show a matrix as bar-plot using matplotlib.bar3d plotting tools similar to 
     `pyplot.matshow`. 
