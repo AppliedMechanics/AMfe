@@ -64,14 +64,16 @@ def theta_m_orth_v(Theta, V, M):
             Theta_ret[:,i,j] -= V[:,j] * (Theta[:,i,j] @ M @ V[:,j])
     return Theta
 
-#%% Create a static MD QM system
+#%% Create the stuff for the system
 
 dofs_reduced = no_of_modes = 10
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
+M = benchmark_system.M()
+K = benchmark_system.K()
 
-# try to make one guy smaller!
-# V[:,3] = V[:,3]/100
+
+#%% Create a static MD QM system
 
 theta = amfe.static_correction_theta(V, benchmark_system.K)
 # theta = sp.zeros((dofs_full, dofs_reduced, dofs_reduced))
@@ -80,11 +82,6 @@ my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 #%% create a MD QM system
  
-dofs_reduced = no_of_modes = 10
-omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
-
-dofs_full = V.shape[0]
-M = benchmark_system.M()
 print('Take care! Theta is not symmetric now!')
 theta = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M, h=SQ_EPS,\
                                     symmetric=False)
@@ -93,7 +90,6 @@ my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 #%% Show the inner products of theta with respect to the modes
 
-M = benchmark_system.M()
 A = np.zeros((no_of_modes, no_of_modes))
 norm_mat = np.eye(V.shape[0])
 norm_mat = M
@@ -266,9 +262,9 @@ norm_Theta_SMD = np.sqrt(np.einsum('ijk,ijk->jk', Theta_SMD, Theta_SMD))
 
 A = np.einsum('ijk, ijk->jk', Theta_MD, Theta_SMD)/(norm_Theta_MD*norm_Theta_SMD)
 
-plt.matshow(A); plt.colorbar()
+plt.matshow(A, cmap=mpl.cm.viridis); plt.colorbar()
 
-amfe.matshow_3d(1 - np.abs(A), thickness=0.4, alpha=0.3)
+amfe.matshow_3d(1 - np.abs(A), thickness=0.4, alpha=0.3, cmap=mpl.cm.inferno)
 # matshow_bar(np.arccos(A)/(np.pi))
 
 #%%
