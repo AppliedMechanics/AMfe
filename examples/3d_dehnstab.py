@@ -24,7 +24,7 @@ my_mechanical_system.apply_dirichlet_boundaries(30, 'xyz')
 my_mechanical_system.apply_dirichlet_boundaries(31, 'yz')
 
 # make master-slave approach to fix x-direction
-nodes, dofs = my_mechanical_system.mesh_class.select_dirichlet_bc(31, 'x', output='external')
+nodes, dofs = my_mechanical_system.mesh_class.set_dirichlet_bc(31, 'x', output='external')
 my_mechanical_system.dirichlet_class.master_slave_list.append([dofs[0], dofs, None])
 my_mechanical_system.dirichlet_class.update()
 

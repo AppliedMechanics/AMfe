@@ -11,12 +11,9 @@
 # Specify a configuration file.
 #rcfile=
 
-# Profiled execution.
-profile=no
-
 # Add <file or directory> to the black list. It should be a base name, not a
 # path. You may set this option multiple times.
-ignore=.svn
+# ignore=.svn
 
 # Pickle collected data for later comparisons.
 persistent=yes
@@ -57,10 +54,7 @@ disable=C0103,C0303,C0326
 
 # set the output format. Available formats are text, parseable, colorized and
 # html
-output-format=text
-
-# Include message's id in output
-include-ids=yes
+output-format=parseable
 
 # Put messages in a separate file for each module / package specified on the
 # command line instead of printing them on stdout. Reports (if any) will be
@@ -77,9 +71,6 @@ reports=yes
 # (R0004).
 evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
 
-# Add a comment according to your evaluation note. This is used by the global
-# evaluation report (R0004).
-comment=no
 
 # Enable the report(s) with the given id(s).
 #enable-report=
@@ -117,9 +108,6 @@ ignored-modules=numpy,scipy,matplotlib,scipy.linalg,numpy.linalg,amfe.f90_materi
 # mixin class is detected if its name ends with "mixin" (case insensitive).
 ignore-mixin-members=yes
 
-# When zope mode is activated, consider the acquired-members option to ignore
-# access to some undefined attributes.
-zope=no
 
 # List of members which are usually get through zope's acquisition mecanism and
 # so shouldn't trigger E0201 when accessed (need zope=yes to be considered).
@@ -137,9 +125,6 @@ acquired-members=REQUEST,acl_users,aq_parent
 # * uses of the global statement
 #
 [BASIC]
-
-# Required attributes for module, separated by a comma
-required-attributes=
 
 # Regular expression which should only match functions or classes name which do
 # not require a docstring
@@ -180,7 +165,7 @@ good-names=i,j,k,ex,Run,_
 bad-names=foo,bar,baz,toto,tutu,tata
 
 # List of builtins function names that should not be used, separated by a comma
-bad-functions=apply,input
+bad-functions=apply,map,filter
 
 
 # checks for sign of poor/misdesign:
@@ -251,9 +236,7 @@ int-import-graph=
 #
 [CLASSES]
 
-# List of interface methods to ignore, separated by a comma. This is used for
-# instance to not check methods defines in Zope's Interface base class.
-ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
+
 
 # List of method names used to declare (i.e. assign) instance attributes.
 defining-attr-methods=__init__,__new__,setUp

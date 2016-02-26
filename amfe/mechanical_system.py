@@ -6,9 +6,10 @@ system, defined by certain parameters or a multibody system.
 """
 
 import time
+import os
 
+import h5py
 import numpy as np
-import scipy as sp
 
 from amfe.mesh import Mesh
 from amfe.assembly import Assembly
@@ -56,7 +57,7 @@ class MechanicalSystem():
         self.no_of_dofs_per_node = None
 
         # external force to be overwritten by user-defined external forces
-        self._f_ext_unconstr = lambda t: np.zeros(self.mesh_class.no_of_dofs)
+        # self._f_ext_unconstr = lambda t: np.zeros(self.mesh_class.no_of_dofs)
 
 
     def load_mesh_from_gmsh(self, msh_file, phys_group, material):
@@ -144,7 +145,7 @@ class MechanicalSystem():
         -------
         None
         '''
-        self.mesh_class.select_dirichlet_bc(key, coord, mesh_prop)
+        self.mesh_class.set_dirichlet_bc(key, coord, mesh_prop)
         self.dirichlet_class.constrain_dofs(self.mesh_class.dofs_dirichlet)
 
     def apply_neumann_boundaries(self, key, val, direct, time_func=None, 
@@ -193,8 +194,8 @@ class MechanicalSystem():
         -------
         None
         '''
-        self.mesh_class.select_neumann_bc(key=key, val=val, direct=direct, 
-                                          time_func=time_func, mesh_prop=mesh_prop)
+        self.mesh_class.set_neumann_bc(key=key, val=val, direct=direct, 
+                                       time_func=time_func, mesh_prop=mesh_prop)
         self.assembly_class.compute_element_indices()
         
     def apply_neumann_boundaries_old(self, neumann_boundary_list):
@@ -259,7 +260,7 @@ class MechanicalSystem():
         self._f_ext_unconstr = self.neumann_class.f_ext()
 
 
-    def export_paraview(self, filename, field_list=[]):
+    def export_paraview(self, filename, field_list=None):
         '''
         Export the system with the given information to paraview. 
         
@@ -267,7 +268,7 @@ class MechanicalSystem():
         ----------
         filename : str
             filename to which the xdmf file and the hdf5 file will be saved. 
-        field_list : list
+        field_list : list, optional
             list of tuples containing a field to be exported as well as a 
             dictionary with the attribute information of the hdf5 file. 
         
@@ -275,31 +276,42 @@ class MechanicalSystem():
         -------
         None
         '''
+        if field_list is None:
+            field_list = []
         t1 = time.time()
         if len(self.T_output) is 0:
             self.T_output.append(0)
             self.u_output.append(np.zeros(self.mesh_class.no_of_dofs))
-        print('Start exporting mesh for paraview to', filename)
+        print('Start exporting mesh for paraview to:\n    ', filename)
         self.mesh_class.set_displacement_with_time(self.u_output, self.T_output)
         self.mesh_class.save_mesh_xdmf(filename, field_list)
         t2 = time.time()
-        print('Mesh for paraview successfully exported in ', t2 - t1, 'seconds.')
+        print('Mesh for paraview successfully exported in {0:4.2f} seconds.'.format(
+            t2 - t1))
         return
 
-    def M(self):
+    def M(self, u=None, t=0):
         '''
         Compute the Mass matrix of the dynamical system. 
         
         Parameters
         ----------
-        None
+        u : ndarray, optional
+            array of the displacement
+        t : float
+            time
         
         Returns
         -------
         M : sp.sparse.sparse_matrix
             Mass matrix with applied constraints in sparse csr-format
         '''
-        M_unconstr = self.assembly_class.assemble_m()
+        if u is not None:
+            u_unconstr = self.unconstrain_vec(u)
+        else:
+            u_unconstr = None
+            
+        M_unconstr = self.assembly_class.assemble_m(u_unconstr, t)
         self.M_constr = self.constrain_matrix(M_unconstr)
         return self.M_constr
         
@@ -322,23 +334,36 @@ class MechanicalSystem():
         if u is None:
             u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
 
-        K_unconstr, f_unconstr = \
+        K_unconstr, _ = \
             self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t) 
 
         return self.constrain_matrix(K_unconstr)
         
     def f_int(self, u, t=0):
         '''Return the elastic restoring force of the system '''
-        K_unconstr, f_unconstr = \
+        _, f_unconstr = \
             self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t) 
         return self.constrain_vec(f_unconstr)
+        
+    def _f_ext_unconstr(self, u, t):
+        '''
+        Return the unconstrained external force coming from the Neumann BCs.
+        
+        This function may be monkeypatched if necessary, for instance, when a
+        global external force, e.g. gravity, should be applied.
+        '''
+        __, f_unconstr = \
+            self.assembly_class.assemble_k_and_f_neumann(self.unconstrain_vec(u), t)
+        return f_unconstr
         
     def f_ext(self, u, du, t):
         '''
         Return the nonlinear external force of the right hand side 
         of the equation, i.e. the excitation.
         '''
-        return self.constrain_vec(self._f_ext_unconstr(t))
+        if u is None:
+            u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
+        return self.constrain_vec(self._f_ext_unconstr(u, t))
 
     def K_and_f(self, u=None, t=0):
         '''
@@ -415,10 +440,11 @@ class MechanicalSystem():
             self.M()
             
         K, f = self.K_and_f(u, t)
+        f_ext = self.f_ext(u, du, t)
         S = K + 1/(beta*dt**2)*self.M_constr
-        res = f + self.f_ext(u, du, t) + self.M_constr.dot(ddu)
+        res = f - f_ext + self.M_constr @ ddu
 
-        return S, res
+        return S, res, f_ext
     
     def write_timestep(self, t, u):
         '''
@@ -468,34 +494,36 @@ class ReducedSystem(MechanicalSystem):
         '''
         MechanicalSystem.__init__(self, **kwargs)
         self.V = V_basis
+        self.u_red_output = []
 
     def K_and_f(self, u=None, t=0):
         if u is None:
             u = np.zeros(self.V.shape[1])        
         V = self.V
-        u_full = V.dot(u)
+        u_full = V @ u
         K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
-        K = V.T.dot(K_unreduced.dot(V))
-        f_int = V.T.dot(f_unreduced)
+        K = V.T @ K_unreduced @ V
+        f_int = V.T @ f_unreduced
         return K, f_int
 
     def K(self, u=None, t=0):
         if u is None:
             u = np.zeros(self.V.shape[1])
-        return self.V.T.dot(MechanicalSystem.K(self, self.V.dot(u), t).dot(self.V))
+        return self.V.T @ MechanicalSystem.K(self, self.V @ u, t) @ self.V
 
     def f_ext(self, u, du, t):
-        return self.V.T.dot(MechanicalSystem.f_ext(self, self.V.dot(u), du, t))
+        return self.V.T @ MechanicalSystem.f_ext(self, self.V @ u, du, t)
 
     def f_int(self, u, t=0):
-        return self.V.T.dot(MechanicalSystem.f_int(self, self.V.dot(u), t))
+        return self.V.T @ MechanicalSystem.f_int(self, self.V @ u, t)
 
-    def M(self):
-        self.M_constr = self.V.T.dot(MechanicalSystem.M(self).dot(self.V))
+    def M(self, u=None, t=0):
+        self.M_constr = self.V.T @ MechanicalSystem.M(self, u, t) @ self.V
         return self.M_constr
 
     def write_timestep(self, t, u):
-        MechanicalSystem.write_timestep(self, t, self.V.dot(u))
+        MechanicalSystem.write_timestep(self, t, self.V @ u)
+        self.u_red_output.append(u.copy())
 
     def K_unreduced(self, u=None, t=0):
         '''
@@ -540,6 +568,29 @@ class ReducedSystem(MechanicalSystem):
         Unreduced mass matrix. 
         '''
         return MechanicalSystem.M(self)
+    
+    def export_paraview(self, filename, field_list=None):
+        '''
+        Export the produced results to ParaView via XDMF format. 
+        '''
+        u_red_export = np.array(self.u_red_output).T
+        u_red_dict = {'ParaView':'False', 'Name':'q_red'}
+
+        if field_list is None:
+            new_field_list = []
+        else:
+            new_field_list = field_list.copy()
+
+        new_field_list.append((u_red_export, u_red_dict))
+
+        MechanicalSystem.export_paraview(self, filename, new_field_list)
+        filename_no_ext, _ = os.path.splitext(filename)
+
+        # add V and Theta to the hdf5 file
+        with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
+            f.create_dataset('reduction/V', data=self.V)
+            
+        return
 
 
 class QMSystem(MechanicalSystem):
@@ -563,7 +614,7 @@ class QMSystem(MechanicalSystem):
         if self.M_constr is None:
             MechanicalSystem.M(self)
             
-        P = self.V + 2*self.Theta.dot(u)
+        P = self.V + self.Theta @ u
         M_red = P.T @ self.M_constr @ P
         return M_red
     
@@ -578,11 +629,11 @@ class QMSystem(MechanicalSystem):
         if u is None:
             u = np.zeros(self.no_of_red_dofs)
         theta_u = self.Theta @ u
-        u_full = (self.V + theta_u) @ u
-        P = self.V + 2*theta_u
+        u_full = (self.V + 1/2*theta_u) @ u
+        P = self.V + theta_u
         K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
         K1 = P.T @ K_unreduced @ P
-        K2 = 2*self.Theta.T @ f_unreduced
+        K2 = self.Theta.T @ f_unreduced
         K = K1 + K2
         f = P.T @ f_unreduced
         return K, f
@@ -600,35 +651,61 @@ class QMSystem(MechanicalSystem):
         
         theta = self.Theta        
         theta_u = theta @ u        
-        u_full = (self.V + theta_u) @ u
+        u_full = (self.V + 1/2*theta_u) @ u
         
         K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
+        f_ext_unred = MechanicalSystem.f_ext(self, u_full, None, t)
         # nonlinear projector P
-        P = self.V + 2*theta_u
+        P = self.V + theta_u
 
         # computing the residual
         res_accel = M_unreduced @ (P @ ddu)
-        res_gyro = M_unreduced @ (theta @ du) @ du
-        res_full = res_accel + res_gyro + f_unreduced
+        res_gyro = 1/2*M_unreduced @ (theta @ du) @ du
+        res_full = res_accel + res_gyro + f_unreduced - f_ext_unred
         # the different contributions to stiffness
-        K1 = 2 * theta.T @ res_full
-        K2 = 2 * P.T @ M_unreduced @ (theta @ ddu)
+        K1 = theta.T @ res_full
+        K2 = P.T @ M_unreduced @ (theta @ ddu)
         K3 = P.T @ K_unreduced @ P
         K = K1 + K2 + K3
         # gyroscopic matrix and reduced mass matrix
-        G = 2 * P.T @ M_unreduced @ (theta @ du)
+        G = P.T @ M_unreduced @ (theta @ du)
         M = P.T @ M_unreduced @ P
 
         res = P.T @ res_full
+        f_ext = P.T @ f_ext_unred
         S = 1/(dt**2 * beta) * M + gamma/(dt*beta) * G + K
-        return S, res
-        
+        return S, res, f_ext
+    
+    def f_ext(self, u, du, t):
+        '''
+        Return the reduced external force. The velocity du is by now ignored. 
+        '''
+        theta_u = self.Theta @ u        
+        u_full = (self.V + 1/2*theta_u) @ u
+        P = self.V + theta_u
+        f_ext_unred = MechanicalSystem.f_ext(self, u_full, None, t)
+        f_ext = P.T @ f_ext_unred
+        return f_ext
+    
     def write_timestep(self, t, u):
         u_full = self.V @ u + (self.Theta @ u) @ u
         MechanicalSystem.write_timestep(self, t, u_full)
         # own reduced output
         self.u_red_output.append(u.copy())
+        return
         
+    def export_paraview(self, filename, field_list=None):
+        '''
+        Export the produced results to ParaView via XDMF format. 
+        '''
+        ReducedSystem.export_paraview(self, filename, field_list)
+        filename_no_ext, _ = os.path.splitext(filename)
+        
+        # add Theta to the hdf5 file
+        with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
+            f.create_dataset('reduction/Theta', data=self.Theta)
+        
+        return
     
     
     
@@ -672,6 +749,7 @@ class ConstrainedMechanicalSystem():
 
         The tangential damping matrix is the jacobian matrix of the nonlinear 
         forces with respect to the generalized velocities q.
+        
         Parameters
         ----------
         q : ndarray

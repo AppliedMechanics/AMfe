@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Created on Mon Jun  8 17:06:59 2015
-
-@author: johannesr
+Module of AMfe which handles the reduced order models.
 """
 
 import copy
@@ -16,57 +14,87 @@ from amfe.mechanical_system import ReducedSystem, QMSystem
 def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     '''
     Reduce the given mechanical system with the linear basis V.
-    
+
     Parameters
     ----------
     mechanical_system : instance of MechanicalSystem
-        Mechanical system which will be transformed to a ReducedSystem. 
+        Mechanical system which will be transformed to a ReducedSystem.
     V : ndarray
         Reduction Basis for the reduced system
     overwrite : bool, optional
-        switch, if mechanical system should be overwritten (is less memory 
+        switch, if mechanical system should be overwritten (is less memory
         intensive for large systems) or not.
-    
+
     Returns
     -------
     reduced_system : instance of ReducedSystem
-        Reduced system with same properties of the mechanical system and 
+        Reduced system with same properties of the mechanical system and
         reduction basis V
-        
+
     Example
     -------
 
     '''
-    
+
     if overwrite:
         reduced_sys = mechanical_system
     else:
         reduced_sys = copy.deepcopy(mechanical_system)
     reduced_sys.__class__ = ReducedSystem
     reduced_sys.V = V.copy()
+    reduced_sys.u_red_output = []
+    reduced_sys.M_constr = None
     return reduced_sys
 
-def qm_reduce_mechanical_system(mechanical_system, V, theta, overwrite=False):
+def qm_reduce_mechanical_system(mechanical_system, V, Theta, overwrite=False):
     '''
+    Reduce the given mechanical system to a QM system with the basis V and the
+    quadratic part Theta.
+
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Mechanical system which will be transformed to a ReducedSystem.
+    V : ndarray
+        Reduction Basis for the reduced system
+    Theta : ndarray
+        Quadratic tensor for the Quadratic manifold. Has to be symmetric with
+        respect to the last two indices and is of shape (n_full, n_red, n_red).
+    overwrite : bool, optional
+        switch, if mechanical system should be overwritten (is less memory
+        intensive for large systems) or not.
+
+    Returns
+    -------
+    reduced_system : instance of ReducedSystem
+        Quadratic Manifold reduced system with same properties of the
+        mechanical system and reduction basis V and Theta
+
+    Example
+    -------
+
+
     '''
     # consistency check
-    assert(V.shape[-1] == theta.shape[-1])
-    assert(theta.shape[1] == theta.shape[2])
-    assert(theta.shape[0] == V.shape[0])
+    assert V.shape[-1] == Theta.shape[-1]
+    assert Theta.shape[1] == Theta.shape[2]
+    assert Theta.shape[0] == V.shape[0]
+
     no_of_red_dofs = V.shape[-1]
     if overwrite:
         reduced_sys = mechanical_system
     else:
         reduced_sys = copy.deepcopy(mechanical_system)
-        
+
     reduced_sys.__class__ = QMSystem
     reduced_sys.V = V.copy()
-    reduced_sys.Theta = theta.copy()
+    reduced_sys.Theta = Theta.copy()
+
     # define internal variables
     reduced_sys.u_red_output = []
     reduced_sys.no_of_red_dofs = no_of_red_dofs
     return reduced_sys
-    
+
 
 SQ_EPS = np.sqrt(np.finfo(float).eps)
 
@@ -91,7 +119,7 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
     omega_i : float
         eigenfrequency corresponding to the modeshape x_i
     h : float, optional
-        step size for the computation of the finite difference scheme. Default 
+        step size for the computation of the finite difference scheme. Default
         value 500 * machine_epsilon
     verbose : bool
         additional output provided; Default value True.
@@ -108,6 +136,7 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
     See Also
     --------
     static_correction_derivative
+    modal_derivative_theta
 
     Examples
     --------
@@ -115,12 +144,12 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
 
     References
     ---------
-    S. R. Idelsohn and A. Cardona. A reduction method for nonlinear structural
-    dynamic analysis. Computer Methods in Applied Mechanics and Engineering,
-    49(3):253–279, 1985.
-
-    S. R. Idelsohn and A. Cardona. A load-dependent basis for reduced nonlinear
-    structural dynamics. Computers & Structures, 20(1):203–210, 1985.
+    .. [1]  S. R. Idelsohn and A. Cardona. A reduction method for nonlinear
+            structural dynamic analysis. Computer Methods in Applied Mechanics
+            and Engineering, 49(3):253–279, 1985.
+    .. [2]  S. R. Idelsohn and A. Cardona. A load-dependent basis for reduced
+            nonlinear structural dynamics. Computers & Structures,
+            20(1):203–210, 1985.
 
 
     '''
@@ -131,14 +160,15 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
     ndof = x_i.shape[0]
     K = K_func(np.zeros(ndof))
     dK_x_j = (K_func(x_j*h) - K)/h
-    d_omega_2_d_x_i = x_i.dot(dK_x_j.dot(x_i))
-    F_i = (d_omega_2_d_x_i*M - dK_x_j).dot(x_i)
+    d_omega_2_d_x_i = x_i @ dK_x_j @ x_i
+    F_i = (d_omega_2_d_x_i*M - dK_x_j) @ x_i
     K_dyn_i = K - omega_i**2 * M
+    # fix the point with the maximum displacement of the vibration mode
     row_index = np.argmax(abs(x_i))
     K_dyn_i[:,row_index], K_dyn_i[row_index,:], K_dyn_i[row_index,row_index] = 0, 0, 1
     F_i[row_index] = 0
     v_i = linalg.solve(K_dyn_i, F_i)
-    c_i = -v_i.dot(M.dot(x_i))
+    c_i = - v_i @ M @ x_i
     dx_i_dx_j = v_i + c_i*x_i
     if verbose:
         print('\nComputation of modal derivatives. ')
@@ -149,26 +179,102 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
               ', the relative residual is', np.sqrt(res.dot(res))/np.sqrt(F_i.dot(F_i)))
     return dx_i_dx_j
 
+def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
+                           symmetric=True):
+    r'''
+    Compute the basis theta based on real modal derivatives.
+
+    Parameters
+    ----------
+    V : ndarray
+        array containing the linear basis
+    omega : ndarray
+        eigenfrequencies of the system in rad/s.
+    K_func : function
+        function returning the tangential stiffness matrix for a given
+        displacement. Has to work like K = K_func(u).
+    M : ndarray or sparse matrix
+        Mass matrix of the system.
+    h : float, optional
+        step width for finite difference scheme. Default value is 500 * machine
+        epsilon
+    verbose : bool, optional
+        flag for verbosity. Default value: True
+    symmetric : bool, optional
+        flag for making the modal derivative matrix theta symmetric. Default is
+        `True`.
+
+    Returns
+    -------
+    Theta : ndarray
+        three dimensional array of modal derivatives. Theta[:,i,j] contains
+        the modal derivative 1/2 * dx_i / dx_j. The basis Theta is made symmetric, so
+        that `Theta[:,i,j] == Theta[:,j,i]` if `symmetic=True`.
+        
+    See Also
+    --------
+    static_correction_theta : modal derivative with mass neglection.
+    modal_derivative : modal derivative for only two vectors.
+
+    '''
+    no_of_dofs = V.shape[0]
+    no_of_modes = V.shape[1]
+    Theta = np.zeros((no_of_dofs, no_of_modes, no_of_modes))
+
+    # Check, if V is mass normalized:
+    if not np.allclose(np.eye(no_of_modes), V.T @ M @ V, rtol=1E-5, atol=1E-8):
+        Exception('The given modes are not mass normalized!')
+
+    K = K_func(np.zeros(no_of_dofs))
+
+    for i in range(no_of_modes): # looping over the columns
+        x_i = V[:,i]
+        K_dyn_i = K - omega[i]**2 * M
+
+        # fix the point with the maximum displacement of the vibration mode
+        fix_idx = np.argmax(abs(x_i))
+        K_dyn_i[:,fix_idx], K_dyn_i[fix_idx,:], K_dyn_i[fix_idx, fix_idx] = 0, 0, 1
+
+        # factorization of the dynamic stiffness matrix
+        if verbose:
+            print('Factorizing the dynamic stiffness matrix for eigenfrequency',
+                  '{0:d} with {1:4.2f} rad/s.'.format(i, omega[i]) )
+        LU_object = sp.sparse.linalg.splu(K_dyn_i)
+
+        for j in range(no_of_modes): # looping over the rows
+            x_j = V[:,j]
+            # finite difference scheme
+            dK_x_j = (K_func(x_j*h) - K)/h
+            d_omega_2_d_x_i = x_i @ dK_x_j @ x_i
+            F_i = (d_omega_2_d_x_i*M - dK_x_j) @ x_i
+            F_i[fix_idx] = 0
+            v_i = LU_object.solve(F_i)
+            c_i = - v_i @ M @ x_i
+            Theta[:,i,j] = v_i + c_i*x_i
+
+    if symmetric:
+        Theta = 1/2*(Theta + Theta.transpose((0,2,1)))
+    return Theta
 
 
 def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     r'''
-    Computes the static correction vectors 
-    :math:`\frac{\partial x_i}{\partial x_j}` of the system with a nonlinear 
+    Computes the static correction vectors
+    :math:`\frac{\partial x_i}{\partial x_j}` of the system with a nonlinear
     force.
 
     Parameters
     ----------
     x_i : ndarray
-        array containing displacement vectors i in the rows. x_i[:,i] is the 
+        array containing displacement vectors i in the rows. x_i[:,i] is the
         i-th vector
     x_j : ndarray
-        displacement vector j 
+        displacement vector j
     K_func : function
-        function for the tangential stiffness matrix to be called in the form 
+        function for the tangential stiffness matrix to be called in the form
         K_tangential = K_func(x_j)
     h : float, optional
-        step size for the computation of the finite difference scheme. Default 
+        step size for the computation of the finite difference scheme. Default
         value 500 * machine_epsilon
     verbose : bool
         additional output provided; Default value True.
@@ -176,14 +282,14 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     Returns
     -------
     dx_i_dx_j : ndarray
-        static correction derivative (if x_i and x_j is a modal vector it's 
-        the modal derivative neglecting mass terms) of displacement x_i with 
+        static correction derivative (if x_i and x_j is a modal vector it's
+        the modal derivative neglecting mass terms) of displacement x_i with
         respect to displacement x_j
 
     Notes
     -----
-    The static correction is done purely on the arrays x_i and x_j, so there is 
-    no mass normalization. This is a difference in contrast to the technique 
+    The static correction is done purely on the arrays x_i and x_j, so there is
+    no mass normalization. This is a difference in contrast to the technique
     used in the related function modal_derivative.
 
     See Also
@@ -208,38 +314,47 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
 def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
     '''
     Computes the static correction derivatives of the basis V
-    
+
     Parameters
     ----------
     V : ndarray
         array containing the linear basis
     K_func : function
-        function returning the tangential stiffness matrix for a given 
-        displacement. Has to work like K = K_func(u). 
+        function returning the tangential stiffness matrix for a given
+        displacement. Has to work like `K = K_func(u)`.
     h : float, optional
-        step width for finite difference scheme. Default value is 500 * machine 
+        step width for finite difference scheme. Default value is 500 * machine
         epsilon
     verbose : bool, optional
-        flag for verbosity. Default value: True        
-        
+        flag for verbosity. Default value: True
+
     Returns
     -------
     Theta : ndarray
-        three dimensional array of static corrections derivatives. Theta[:,i,j] 
-        contains the static derivative dx_i / dx_j. As the static derivatives 
-        are symmetric, Theta[:,i,j] == Theta[:,j,i]. 
+        three dimensional array of static corrections derivatives. Theta[:,i,j]
+        contains the static derivative 1/2 * dx_i / dx_j. As the static derivatives
+        are symmetric, Theta[:,i,j] == Theta[:,j,i].
+    
+    See Also
+    --------
+    modal_derivative_theta
+    static_correction_derivative
+    
     '''
     no_of_dofs = V.shape[0]
     no_of_modes = V.shape[1]
     Theta = np.zeros((no_of_dofs, no_of_modes, no_of_modes))
     K = K_func(np.zeros(no_of_dofs))
     for i in range(no_of_modes):
-        if verbose: print('Computing finite difference K-matrix')
+        if verbose:
+            print('Computing finite difference K-matrix')
         dK_dx_i = (K_func(h*V[:,i]) - K)/h
-        b = dK_dx_i @ V
-        if verbose: print('Sovling linear system #', i)
+        b = - dK_dx_i @ V
+        if verbose:
+            print('Sovling linear system #', i)
         Theta[:,:,i] = sp.sparse.linalg.spsolve(K, b)
-        if verbose: print('Done solving linear system #', i)
+        if verbose:
+            print('Done solving linear system #', i)
     if verbose:
         residual = np.sum(Theta - Theta.transpose(0,2,1))
         print('The residual, i.e. the unsymmetric values, are', residual)
@@ -247,7 +362,7 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
     Theta = 1/2*(Theta + Theta.transpose(0,2,1))
     return Theta
 
-def principal_angles_and_vectors(V1, V2, cosine=True):
+def principal_angles(V1, V2, cosine=True, principal_vectors=False):
     '''
     Return the cosine of the principal angles of the two bases V1 and V2.
 
@@ -259,6 +374,8 @@ def principal_angles_and_vectors(V1, V2, cosine=True):
         array denoting subspace 2. Dimension is (MxO)
     cosine : bool, optional
         flag stating, if the cosine of the angles is to be used
+    principal_vectors : bool, optional
+        Option flag for returning principal vectors. Default is False.
 
     Returns
     -------
@@ -267,86 +384,44 @@ def principal_angles_and_vectors(V1, V2, cosine=True):
     F1 : ndarray
         array of principal vectors of subspace spanned by V1. The columns give
         the principal vectors, i.e. F1[:,0] is the first principal vector
-        associated with theta[0] and so on.
+        associated with theta[0] and so on. Only returned, if
+        ``principal_vectors=True``.
     F2 : ndarray
-        array of principal vectors of subspace spanned by V2.
+        array of principal vectors of subspace spanned by V2. Only returned if
+        ``principal_vectors=True``.
 
     Note
     ----
     Both matrices V1 and V2 have live in the same vector space, i.e. they have
-    to have the same number of rows
+    to have the same number of rows.
 
     Examples
     --------
     TODO
 
-    See Also
-    --------
-    principal_angles
-
     References
     ----------
-    G. H. Golub and C. F. Van Loan. Matrix computations, volume 3. JHU Press, 2012.
+    ..  [1] G. H. Golub and C. F. Van Loan. Matrix computations, volume 3. JHU
+        Press, 2012.
 
     '''
-    Q1, R1 = linalg.qr(V1, mode='economic')
-    Q2, R2 = linalg.qr(V2, mode='economic')
-    U, sigma, V = linalg.svd(Q1.T.dot(Q2))
-    F1 = Q1.dot(U)
-    F2 = Q2.dot(V)
-    if not cosine:
-        sigma = np.arccos(sigma)
-    return sigma, F1, F2
+    Q1, __ = linalg.qr(V1, mode='economic')
+    Q2, __ = linalg.qr(V2, mode='economic')
+    U, sigma, V = linalg.svd(Q1.T @ Q2)
 
-
-def principal_angles(V1, V2, cosine=True):
-    '''
-    Return the cosine of the principal angles of V1 and V2 in the vectornorm M.
-
-    Parameters
-    ----------
-    V1 : ndarray
-        array denoting n-dimensional subspace spanned by V1 (Mxn)
-    V2 : ndarray
-        array denoting subspace 2. Dimension is (MxO)
-    cosine : bool, optional
-        flag stating, if the cosine of the angles is to be used
-
-    Returns
-    -------
-    sigma : ndarray
-        cosine of subspace angles
-
-    Examples
-    --------
-    TODO
-
-    Note
-    ----
-    Both matrices V1 and V2 have live in the same vector space, i.e. they have
-    to have the same number of rows
-
-    See Also
-    --------
-    principal_angles_and_vectors
-
-    References
-    ----------
-    G. H. Golub and C. F. Van Loan. Matrix computations, volume 3. JHU Press, 2012.
-
-    '''
-    Q1, R1 = linalg.qr(V1, mode='economic')
-    Q2, R2 = linalg.qr(V2, mode='economic')
-    sigma = linalg.svdvals(Q1.T.dot(Q2))
     if not cosine:
         sigma = np.arccos(sigma)
 
-    return sigma
-
+    if principal_vectors is True:
+        F1 = Q1.dot(U)
+        F2 = Q2.dot(V)
+        return sigma, F1, F2
+    else:
+        return sigma
 
 def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
     '''
-    Computes the Krylov Subspace associated with the input matrix b at the 
+    Computes the Krylov Subspace associated with the input matrix b at the
     frequency omega.
 
     Parameters
@@ -396,7 +471,8 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
 
 def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     '''
-    Computes the Craig-Bampton basis for the System M and K with the input Matrix b.
+    Computes the Craig-Bampton basis for the System M and K with the input
+    Matrix b.
 
     Parameters
     ----------
@@ -412,17 +488,21 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     one_basis : bool, optional
         Flag for setting, if one Craig-Bampton basis should be returned or if
         the static and the dynamic basis is chosen separately
-        
+
     Returns
     -------
+    if `one_basis=True` is chosen:
+    
     V : array
-        Basis constisting of static displacement modes and internal vibration modes
+        Basis constisting of static displacement modes and internal vibration
+        modes
 
-    if one_basis=True is chosen:
+    if `one_basis=False` is chosen:
 
     V_static : ndarray
         Static displacement modes corresponding to the input vectors b with
-        V_static[:,i] being the corresponding static displacement vector to b[:,i].
+        V_static[:,i] being the corresponding static displacement vector to
+        b[:,i].
     V_dynamic : ndarray
         Internal vibration modes with the boundaries fixed.
     omega : ndarray
@@ -434,11 +514,13 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
 
     Note
     ----
-    There is a filter-out command to remove the interface eigenvalues of the system.
+    There is a filter-out command to remove the interface eigenvalues of the
+    system.
 
     References
     ----------
     TODO
+
     '''
     # boundaries
     ndof = M.shape[0]
@@ -480,9 +562,9 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
 
 def vibration_modes(mechanical_system, n=10, save=False):
     '''
-    Compute the n first vibration modes of the given mechanical system using 
-    a power iteration method. 
-    
+    Compute the n first vibration modes of the given mechanical system using
+    a power iteration method.
+
     Parameters
     ----------
     mechanical_system : instance of MechanicalSystem
@@ -490,64 +572,67 @@ def vibration_modes(mechanical_system, n=10, save=False):
     n : int
         number of modes to be computed.
     save : bool
-        Flag for saving the modes in mechanical_system for ParaView export. 
-        Default: True. 
-    
+        Flag for saving the modes in mechanical_system for ParaView export.
+        Default: True.
+
     Returns
     -------
     omega : ndarray
-        vector containing the eigenfrequencies of the mechanical system in 
-        rad / s. 
+        vector containing the eigenfrequencies of the mechanical system in
+        rad / s.
     Phi : ndarray
-        Array containing the vibration modes. Phi[:,0] is the first vibration 
+        Array containing the vibration modes. Phi[:,0] is the first vibration
         mode corresponding to eigenfrequency omega[0]
 
     Example
     -------
-    
+
     Notes
     -----
-    The core command using the ARPACK library is a little bit tricky. One has 
-    to use the shift inverted mode for the solution of the mechanical 
-    eigenvalue problem with the largest eigenvalues. Generally no convergence 
-    is gained when the smallest eigenvalue is to be found. 
+    The core command using the ARPACK library is a little bit tricky. One has
+    to use the shift inverted mode for the solution of the mechanical
+    eigenvalue problem with the largest eigenvalues. Generally no convergence
+    is gained when the smallest eigenvalue is to be found.
     '''
     K = mechanical_system.K()
     M = mechanical_system.M()
-    
-    lambda_, V = sp.sparse.linalg.eigsh(K, M=M, k=n, sigma=0, which='LM', 
+
+    lambda_, V = sp.sparse.linalg.eigsh(K, M=M, k=n, sigma=0, which='LM',
                                         maxiter=100)
     omega = np.sqrt(lambda_)
 
     if save:
         for i, om in enumerate(omega):
             mechanical_system.write_timestep(om, V[:, i])
-    
+
     return omega, V
 
-def pod(mechanical_system, n):
+def pod(mechanical_system, n=None):
     '''
-    Compute the POD basis of a mechanical system. 
-    
+    Compute the POD basis of a mechanical system.
+
     Parameters
     ----------
     mechanical_system : instance of MechanicalSystem
-        MechanicalSystem which has run a time simulation and thus displacement 
-        fields stored internally. 
-    n : int
-        Number of POD basis vectors which should be returned. 
-        
+        MechanicalSystem which has run a time simulation and thus displacement
+        fields stored internally.
+    n : int, optional
+        Number of POD basis vectors which should be returned. Default is `None`
+        returning all POD vectors.
+
     Returns
     -------
     sigma : ndarray
-        Array of the singular values. 
+        Array of the singular values.
     V : ndarray
-        Array containing the POD vectors. V[:,0] contains the POD-vector 
-        associated with sigma[0] etc. 
-    
+        Array containing the POD vectors. V[:,0] contains the POD-vector
+        associated with sigma[0] etc.
+
     Example
     -------
+    TODO
+
     '''
-    # TODO: think about how to store the displacements and eventually the 
-    # stresses internally. 
-    pass
+    S = np.array(mechanical_system.u_output).T
+    U, sigma, __ = sp.linalg.svd(S, full_matrices=False)
+    return U[:,:n], sigma[:n]
