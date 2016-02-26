@@ -9,7 +9,7 @@ import numpy as np
 import scipy as sp
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
+from mpl_toolkits.mplot3d import Axes3D
 
 def node2total(node_index, coordinate_index, ndof_node=2):
     '''
@@ -174,7 +174,7 @@ def append_to_filename(filename):
 
     return filename + string
 
-def matshow_bar(A, thickness=0.8, cmap=mpl.cm.jet, alpha=1.0):
+def matshow_3d(A, thickness=0.8, cmap=mpl.cm.jet, alpha=1.0):
     '''
     Show a matrix as bar-plot using matplotlib.bar3d plotting tools similar to 
     `pyplot.matshow`. 
@@ -202,7 +202,7 @@ def matshow_bar(A, thickness=0.8, cmap=mpl.cm.jet, alpha=1.0):
     '''
     xdim, ydim = A.shape
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = Axes3D(fig)
     xx, yy = np.meshgrid(np.arange(xdim), np.arange(ydim))
     xx = xx.flatten() + 1 - thickness/2
     yy = yy.flatten() + 1 - thickness/2
