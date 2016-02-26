@@ -23,6 +23,7 @@ def norm_of_vector(array):
     -------
     abs : float
         2-norm of the given array.
+        
     '''
     return np.sqrt(array.T.dot(array))
 
@@ -466,8 +467,8 @@ class HHTConstrained():
 
         Note
         ----
-        This is a deprecated function. The constraint handling is better 
-        handled within the `MechanicalSystem` class. 
+        This is a deprecated function. The constraint handling is better
+        handled within the `MechanicalSystem` class.
         '''
         # some internal variables defined for better readabiltiy of code
         beta = self.beta

@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Created on Mon Jun  8 17:06:59 2015
-
-@author: johannesr
+Module of AMfe which handles the reduced order models.
 """
 
 import copy
@@ -146,11 +144,11 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
 
     References
     ---------
-    .. [1]  S. R. Idelsohn and A. Cardona. A reduction method for nonlinear 
-            structural dynamic analysis. Computer Methods in Applied Mechanics 
+    .. [1]  S. R. Idelsohn and A. Cardona. A reduction method for nonlinear
+            structural dynamic analysis. Computer Methods in Applied Mechanics
             and Engineering, 49(3):253–279, 1985.
-    .. [2]  S. R. Idelsohn and A. Cardona. A load-dependent basis for reduced 
-            nonlinear structural dynamics. Computers & Structures, 
+    .. [2]  S. R. Idelsohn and A. Cardona. A load-dependent basis for reduced
+            nonlinear structural dynamics. Computers & Structures,
             20(1):203–210, 1985.
 
 
@@ -231,7 +229,7 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
         # fix the point with the maximum displacement of the vibration mode
         fix_idx = np.argmax(abs(x_i))
         K_dyn_i[:,fix_idx], K_dyn_i[fix_idx,:], K_dyn_i[fix_idx, fix_idx] = 0, 0, 1
-        
+
         # factorization of the dynamic stiffness matrix
         if verbose:
             print('Factorizing the dynamic stiffness matrix for eigenfrequency',
@@ -482,11 +480,13 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
 
     Returns
     -------
+    if `one_basis=True` is chosen:
+    
     V : array
         Basis constisting of static displacement modes and internal vibration
         modes
 
-    if one_basis=True is chosen:
+    if `one_basis=False` is chosen:
 
     V_static : ndarray
         Static displacement modes corresponding to the input vectors b with
@@ -607,7 +607,7 @@ def pod(mechanical_system, n=None):
         fields stored internally.
     n : int, optional
         Number of POD basis vectors which should be returned. Default is `None`
-        returning all POD vectors. 
+        returning all POD vectors.
 
     Returns
     -------
@@ -619,6 +619,7 @@ def pod(mechanical_system, n=None):
 
     Example
     -------
+    TODO
 
     '''
     S = np.array(mechanical_system.u_output).T

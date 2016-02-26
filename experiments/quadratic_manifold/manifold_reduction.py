@@ -14,14 +14,13 @@ import matplotlib as mpl
 import amfe
 
 # % cd experiments/quadratic_manifold/
-from experiments.quadratic_manifold.benchmark_bar import benchmark_system, \
+from experiments.quadratic_manifold.benchmark_u import benchmark_system, \
     amfe_dir, alpha
 
 paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
 
 SQ_EPS = amfe.model_reduction.SQ_EPS
-#%%
 
 def check_orthogonality(u,v):
     '''
@@ -32,8 +31,8 @@ def check_orthogonality(u,v):
     return u_n @ v_n
 
 
-#%%
-# create a regular static QM system
+#%% Create a static MD QM system
+
 dofs_reduced = no_of_modes = 10
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
@@ -46,19 +45,20 @@ theta = amfe.static_correction_theta(V, benchmark_system.K)
 
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
-#%% 
-# create a real MD QM system
+#%% create a MD QM system
+ 
 dofs_reduced = no_of_modes = 10
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 
 dofs_full = V.shape[0]
 M = benchmark_system.M()
+print('Take care! Theta is not symmetric now!')
 theta = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M, h=SQ_EPS,\
-                                    symmetric=True)
+                                    symmetric=False)
 # theta = 1/2*(theta * theta.transpose(0,2,1))
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
-#%%
-# Show the inner products of theta with respect to the modes
+
+#%% Show the inner products of theta with respect to the modes
 M = benchmark_system.M()
 A = np.zeros((no_of_modes, no_of_modes))
 norm_mat = np.eye(V.shape[0])
@@ -76,8 +76,8 @@ for i in range(no_of_modes):
 plt.matshow(A, norm=mpl.colors.LogNorm());plt.colorbar()
 plt.title('Inner product of V with theta')
 
-#%%
-# Purging algorithm where theta is kept mass orthogonal to V
+#%% Purging algorithm where theta is kept mass orthogonal to V
+
 M = benchmark_system.M()
 for i in range(no_of_modes):
     v_norm = V[:,i]
@@ -95,8 +95,8 @@ L = np.sqrt(L)
 plt.matshow(L, norm=mpl.colors.LogNorm());plt.colorbar()
 plt.title('Length of the vectors in theta')
 
-#%%
-# Other type of purging by setting stuff in theta to zero
+#%% Other type of purging by setting stuff in theta to zero
+
 theta[:,:,3] = 0
 theta[:,3,:] = 0
 
@@ -104,8 +104,8 @@ theta[:,:,7] = 0
 theta[:,7,:] = 0
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
-#%%
-# Build a QM system which is purged of the in-plane modes:
+#%% Build a QM system which is purged of the in-plane modes:
+
 dofs_reduced = no_of_modes = 20
 omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 
@@ -118,16 +118,14 @@ dofs_full, dofs_reduced = V.shape
 theta = amfe.static_correction_theta(V, benchmark_system.K)
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
-#%%
-# plot the modes of the system
+#%% export the modes of the system to ParaView
 
 for t, phi in enumerate(V.T):
     benchmark_system.write_timestep(t, phi)
 out_file = amfe.append_to_filename(paraview_output_file)
 benchmark_system.export_paraview(out_file)
 
-#%% 
-# plot the modal derivatives of the system
+#%% exprot the modal derivatives of the system
 for i in range(no_of_modes):
     #for j in range(i + 1):
     for j in range(no_of_modes):
@@ -135,8 +133,9 @@ for i in range(no_of_modes):
 
 out_file = amfe.append_to_filename(paraview_output_file)
 benchmark_system.export_paraview(out_file)
-#%%
-# plot the modes growing with the modal derivatives 
+
+#%%plot the modes growing with the modal derivatives 
+
 i_mode = 1
 for t in np.arange(0,20,0.1):
     u = np.zeros(no_of_modes)
@@ -144,11 +143,12 @@ for t in np.arange(0,20,0.1):
     my_qm_sys.write_timestep(t, u)
 
 
-#%%
-# Export to paraview
+#%% Export the benchmark system to paravew
+
 out_file = amfe.append_to_filename(paraview_output_file)
 benchmark_system.export_paraview(out_file)
-#%% 
+
+#%% Perform some time integration
 ###############################################################################
 # Perform some time integration
 ###############################################################################
@@ -165,17 +165,18 @@ my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced),
 
 out_file = amfe.append_to_filename(paraview_output_file)
 benchmark_system.export_paraview(out_file)
-#%%
-# plot the time line of the reduced variable 
+
+#%% plot the time line of the reduced variable 
+
 q_red = np.array(my_qm_sys.u_red_output)
 t = np.array(my_qm_sys.T_output)
 plt.figure()
 plt.plot(t, q_red[:,:])
 plt.grid()
 
-#%%
-# Check the condition of the projector P
+#%% Check the condition of the projector P
 # first column is condition number, second scaling, third orthogonality
+
 conds = np.zeros_like(q_red[:,:3])
 for i, q in enumerate(q_red):
     P = V + 2*(theta @ q)
@@ -195,8 +196,8 @@ plt.legend()
 plt.grid()
 
 
-#%% 
-# Check condition number due to bad lengthes in scaling
+#%% Check condition number due to bad lengthes in scaling
+
 conds_scaling = np.zeros_like(q_red[:,0])
 for i, q in enumerate(q_red):
     P = V + 2*(theta @ q)
@@ -206,15 +207,17 @@ plt.figure()
 plt.semilogy(t, conds); plt.grid()
 
 
-#%%
-# Check, how the modes in P look like
+#%% Check, how the modes in P look like by export to ParaView
+
 for t, phi in enumerate(P.T):
     benchmark_system.write_timestep(t, phi)
 
 out_file = amfe.append_to_filename(paraview_output_file)
 benchmark_system.export_paraview(out_file)
-#%%
 
+#%%
+#%% Try to perform some tests on the QM system
+#%%
 #%%
 def jacobian(func, u):
     '''

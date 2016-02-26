@@ -11,7 +11,7 @@ import numpy as np
 
 import amfe
 
-from experiments.quadratic_manifold.benchmark_bar import benchmark_system, \
+from experiments.quadratic_manifold.benchmark_u import benchmark_system, \
     amfe_dir, alpha
 #from benchmark_u import benchmark_system, amfe_dir
 
