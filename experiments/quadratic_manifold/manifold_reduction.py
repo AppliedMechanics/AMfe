@@ -12,11 +12,14 @@ import scipy as sp
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import amfe
+# mpl.rcParams['svg.fonttype'] = 'none'
+# mpl.rcParams['svg.image_inline'] = False
 
 # % cd experiments/quadratic_manifold/
 from experiments.quadratic_manifold.benchmark_u import benchmark_system, \
     amfe_dir, alpha
 
+paper_fig_path = '/home/rutzmoser/Dokumente/012_Paper_QM/paper/pics/comp_md_smd_u.svg'
 paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
 
@@ -244,8 +247,8 @@ benchmark_system.export_paraview(out_file)
 #%% Show the difference of MDs and SMDs of the system
 
 ndim, nred = V.shape
-symmetric = False
-orthogonal = True
+symmetric = True
+orthogonal = False
 print('Pay attention. The MDs are NOT symmetric.')
 Theta_MD = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M, \
                                        h=SQ_EPS, symmetric=symmetric)
@@ -262,9 +265,15 @@ norm_Theta_SMD = np.sqrt(np.einsum('ijk,ijk->jk', Theta_SMD, Theta_SMD))
 
 A = np.einsum('ijk, ijk->jk', Theta_MD, Theta_SMD)/(norm_Theta_MD*norm_Theta_SMD)
 
-plt.matshow(A, cmap=mpl.cm.viridis); plt.colorbar()
+#%% Plotting the matrix A
 
-amfe.matshow_3d(1 - np.abs(A), thickness=0.4, alpha=0.3, cmap=mpl.cm.inferno)
+matshow = plt.matshow(1-np.abs(A), cmap=mpl.cm.plasma_r, vmin=0, vmax=1)
+plt.colorbar()
+plt.xlabel('Index of eigenmode $i$')
+plt.ylabel('Index of eigenmode $j$')
+# plt.savefig(paper_fig_path)
+
+amfe.matshow_3d(1 - np.abs(A), thickness=0.4, alpha=0.3, cmap=mpl.cm.plasma_r)
 # matshow_bar(np.arccos(A)/(np.pi))
 
 #%%
