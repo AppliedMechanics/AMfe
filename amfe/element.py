@@ -1102,6 +1102,8 @@ class BoundaryElement(Element):
             def f_proj(f_mat):
                 return f_mat.flatten()
         else: # direct has to be a vector
+            # save direct to be an array
+            self.direct = np.array(direct)
             if shadow_area: # projected solution
                 def f_proj(f_mat):
                     return f_proj_a_shadow(f_mat, self.direct)

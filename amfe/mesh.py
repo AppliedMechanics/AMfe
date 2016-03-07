@@ -616,7 +616,7 @@ class Mesh:
                   'contains the following', len(self.phys_group_dict[i]),
                   ' nodes:\n', self.phys_group_dict[i])
 
-    def set_neumann_bc(self, key, val, direct, time_func=None,
+    def set_neumann_bc(self, key, val, direct, shadow_area=False, time_func=None,
                           mesh_prop='phys_group'):
         '''
         Add group of mesh to neumann boundary conditions.
@@ -627,27 +627,14 @@ class Mesh:
             Key of the physical domain to be chosen for the neumann bc
         val : float
             value for the pressure/traction onto the element
-        direct : str {'normal', 'x_n', 'y_n', 'z_n', 'x', 'y', 'z'}
-            direction, in which the traction should point at:
-
-            'normal'
-                Pressure acting onto the normal face of the deformed configuration
-            'x_n'
-                Traction acting in x-direction proportional to the area
-                projected onto the y-z surface
-            'y_n'
-                Traction acting in y-direction proportional to the area
-                projected onto the x-z surface
-            'z_n'
-                Traction acting in z-direction proportional to the area
-                projected onto the x-y surface
-            'x'
-                Traction acting in x-direction proportional to the area
-            'y'
-                Traction acting in y-direction proportional to the area
-            'z'
-                Traction acting in z-direction proportional to the area
-
+        direct : str 'normal' or ndarray
+            array giving the direction, in which the traction force should act. 
+            alternatively, the keyword 'normal' may be given. Default value:
+            'normal'. 
+        shadow_area : bool, optional
+            Flat setting, if force should be proportional to the shadow area, 
+            i.e. the area of the surface projected on the direction. Default 
+            value: 'False'. 
         time_func : function object
             Function object returning a value between -1 and 1 given the
             input t:
@@ -687,7 +674,9 @@ class Mesh:
         # then add the element objects to the ele_obj list
         ele_class_dict = copy.deepcopy(self.element_boundary_class_dict)
         for i in ele_class_dict:
-            ele_class_dict[i].__init__(val=val, direct=direct, time_func=time_func)
+            ele_class_dict[i].__init__(val=val, direct=direct, 
+                                       shadow_area=shadow_area,
+                                       time_func=time_func)
         object_series = elements_df['el_type'].map(ele_class_dict)
         self.neumann_obj.extend(object_series.values.tolist())
         self._update_mesh_props()

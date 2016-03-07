@@ -148,8 +148,8 @@ class MechanicalSystem():
         self.mesh_class.set_dirichlet_bc(key, coord, mesh_prop)
         self.dirichlet_class.constrain_dofs(self.mesh_class.dofs_dirichlet)
 
-    def apply_neumann_boundaries(self, key, val, direct, time_func=None, 
-                                 mesh_prop='phys_group'):
+    def apply_neumann_boundaries(self, key, val, direct, shadow_area=False, 
+                                 time_func=None, mesh_prop='phys_group'):
         '''
         Apply neumann boundaries to the system via skin elements. 
         
@@ -159,27 +159,11 @@ class MechanicalSystem():
             Key of the physical domain to be chosen for the neumann bc
         val : float
             value for the pressure/traction onto the element
-        direct : str {'normal', 'x_n', 'y_n', 'z_n', 'x', 'y', 'z'}
-            direction, in which the traction should point at: 
-            
-            'normal'
-                Pressure acting onto the normal face of the deformed configuration
-            'x_n'
-                Traction acting in x-direction proportional to the area 
-            projected onto the y-z surface
-            'y_n'
-                Traction acting in y-direction proportional to the area 
-                projected onto the x-z surface            
-            'z_n'
-                Traction acting in z-direction proportional to the area 
-                projected onto the x-y surface
-            'x'
-                Traction acting in x-direction proportional to the area
-            'y'
-                Traction acting in y-direction proportional to the area
-            'z'
-                Traction acting in z-direction proportional to the area
-            
+        direct : ndarray or str 'normal'
+            Direction, in which force should act at. If 
+        shadow_area : bool, optional
+            flag, if force should be proportional to shadow area of surface
+            with respect to direction. Default: False. 
         time_func : function object
             Function object returning a value between -1 and 1 given the 
             input t: 
@@ -195,7 +179,9 @@ class MechanicalSystem():
         None
         '''
         self.mesh_class.set_neumann_bc(key=key, val=val, direct=direct, 
-                                       time_func=time_func, mesh_prop=mesh_prop)
+                                       shadow_area=shadow_area,
+                                       time_func=time_func, 
+                                       mesh_prop=mesh_prop)
         self.assembly_class.compute_element_indices()
         
     def apply_neumann_boundaries_old(self, neumann_boundary_list):
