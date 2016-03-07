@@ -18,7 +18,8 @@ import matplotlib.pyplot as plt
 # Building the mechanical system
 my_material = amfe.KirchhoffMaterial()
 my_mechanical_system = amfe.MechanicalSystem()
-my_mechanical_system.load_mesh_from_gmsh('../meshes/test_meshes/bar_Tet4_fine.msh', 29, my_material)
+my_mechanical_system.load_mesh_from_gmsh('../meshes/test_meshes/bar_Tet4_fine.msh', 
+                                         29, my_material)
 # Fixations are simple to realize
 my_mechanical_system.apply_dirichlet_boundaries(30, 'xyz')
 my_mechanical_system.apply_dirichlet_boundaries(31, 'yz')
@@ -32,7 +33,7 @@ my_mechanical_system.dirichlet_class.update()
 
 # static force in y-direction
 # my_neumann_boundary_list = [[[dofs[0],], 'static', (1E10, ), None]]
-my_mechanical_system.apply_neumann_boundaries(31, 1E12, 'x', lambda t: t)
+my_mechanical_system.apply_neumann_boundaries(31, 1E12, (1,0,0), lambda t: t)
 
 
 # static solution

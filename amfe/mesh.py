@@ -616,8 +616,9 @@ class Mesh:
                   'contains the following', len(self.phys_group_dict[i]),
                   ' nodes:\n', self.phys_group_dict[i])
 
-    def set_neumann_bc(self, key, val, direct, shadow_area=False, time_func=None,
-                          mesh_prop='phys_group'):
+    def set_neumann_bc(self, key, val, direct, time_func=None, 
+                       shadow_area=False, 
+                       mesh_prop='phys_group'):
         '''
         Add group of mesh to neumann boundary conditions.
 
@@ -631,16 +632,16 @@ class Mesh:
             array giving the direction, in which the traction force should act. 
             alternatively, the keyword 'normal' may be given. Default value:
             'normal'. 
-        shadow_area : bool, optional
-            Flat setting, if force should be proportional to the shadow area, 
-            i.e. the area of the surface projected on the direction. Default 
-            value: 'False'. 
         time_func : function object
             Function object returning a value between -1 and 1 given the
             input t:
 
             >>> val = time_func(t)
 
+        shadow_area : bool, optional
+            Flat setting, if force should be proportional to the shadow area, 
+            i.e. the area of the surface projected on the direction. Default 
+            value: 'False'. 
         mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
             label of which the element should be chosen from. Default is
             phys_group.
@@ -675,8 +676,9 @@ class Mesh:
         ele_class_dict = copy.deepcopy(self.element_boundary_class_dict)
         for i in ele_class_dict:
             ele_class_dict[i].__init__(val=val, direct=direct, 
-                                       shadow_area=shadow_area,
-                                       time_func=time_func)
+                                       time_func=time_func,
+                                       shadow_area=shadow_area)
+                                       
         object_series = elements_df['el_type'].map(ele_class_dict)
         self.neumann_obj.extend(object_series.values.tolist())
         self._update_mesh_props()

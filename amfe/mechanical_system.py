@@ -148,8 +148,8 @@ class MechanicalSystem():
         self.mesh_class.set_dirichlet_bc(key, coord, mesh_prop)
         self.dirichlet_class.constrain_dofs(self.mesh_class.dofs_dirichlet)
 
-    def apply_neumann_boundaries(self, key, val, direct, shadow_area=False, 
-                                 time_func=None, mesh_prop='phys_group'):
+    def apply_neumann_boundaries(self, key, val, direct, time_func=None, 
+                                 shadow_area=False, mesh_prop='phys_group'):
         '''
         Apply neumann boundaries to the system via skin elements. 
         
@@ -161,15 +161,15 @@ class MechanicalSystem():
             value for the pressure/traction onto the element
         direct : ndarray or str 'normal'
             Direction, in which force should act at. If 
-        shadow_area : bool, optional
-            flag, if force should be proportional to shadow area of surface
-            with respect to direction. Default: False. 
         time_func : function object
             Function object returning a value between -1 and 1 given the 
             input t: 
 
             >>> val = time_func(t)
             
+        shadow_area : bool, optional
+            flag, if force should be proportional to shadow area of surface
+            with respect to direction. Default: False. 
         mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
             label of which the element should be chosen from. Default is 
             phys_group. 
@@ -179,8 +179,8 @@ class MechanicalSystem():
         None
         '''
         self.mesh_class.set_neumann_bc(key=key, val=val, direct=direct, 
-                                       shadow_area=shadow_area,
                                        time_func=time_func, 
+                                       shadow_area=shadow_area,
                                        mesh_prop=mesh_prop)
         self.assembly_class.compute_element_indices()
         

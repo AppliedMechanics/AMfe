@@ -1066,8 +1066,8 @@ class BoundaryElement(Element):
 
         '''
 
-    def __init__(self, val, ndof, direct='normal', shadow_area=False, 
-                 time_func=None):
+    def __init__(self, val, ndof, direct='normal', time_func=None, 
+                 shadow_area=False):
         '''
         Parameters
         ----------
@@ -1077,16 +1077,16 @@ class BoundaryElement(Element):
             array giving the direction, in which the traction force should act. 
             alternatively, the keyword 'normal' may be given. Default value:
             'normal'. 
-        shadow_area : bool, optional
-            Flat setting, if force should be proportional to the shadow area, 
-            i.e. the area of the surface projected on the direction. Default 
-            value: 'False'. 
         time_func : function object
             Function object returning a value between -1 and 1 given the
             input t:
 
             >>> val = time_func(t)
 
+        shadow_area : bool, optional
+            Flat setting, if force should be proportional to the shadow area, 
+            i.e. the area of the surface projected on the direction. Default 
+            value: 'False'. 
 
         Returns
         -------
@@ -1131,9 +1131,9 @@ class Tri3Boundary(BoundaryElement):
     Class for application of Neumann Boundary Conditions.
     '''
 
-    def __init__(self, val, direct, shadow_area=False, time_func=None):
-        super().__init__(val=val, direct=direct, shadow_area=shadow_area, 
-                         time_func=time_func, ndof=9)
+    def __init__(self, val, direct, time_func=None, shadow_area=False):
+        super().__init__(val=val, direct=direct, time_func=time_func, 
+                         shadow_area=shadow_area, ndof=9)
 
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 3)).T
@@ -1170,16 +1170,16 @@ class Tri6Boundary(BoundaryElement):
     w2 = 0.1259391805
 
     gauss_points = ((1/3, 1/3, 1/3, 0.225),
-                      (alpha1, beta1, beta1, w1),
-                      (beta1, alpha1, beta1, w1),
-                      (beta1, beta1, alpha1, w1),
-                      (alpha2, beta2, beta2, w2),
-                      (beta2, alpha2, beta2, w2),
-                     (beta2, beta2, alpha2, w2))
+                    (alpha1, beta1, beta1, w1),
+                    (beta1, alpha1, beta1, w1),
+                    (beta1, beta1, alpha1, w1),
+                    (alpha2, beta2, beta2, w2),
+                    (beta2, alpha2, beta2, w2),
+                    (beta2, beta2, alpha2, w2))
 
-    def __init__(self, val, direct, shadow_area=False, time_func=None, full_integration=False):
-        super().__init__(val=val, direct=direct, shadow_area=shadow_area, 
-                         time_func=time_func, ndof=18)
+    def __init__(self, val, direct, time_func=None, shadow_area=False):
+        super().__init__(val=val, direct=direct, time_func=time_func, 
+                         shadow_area=shadow_area, ndof=18)
 
     def _compute_tensors(self, X, u, t):
         '''
@@ -1218,9 +1218,9 @@ class LineLinearBoundary(BoundaryElement):
     rot_mat = np.array([[0,-1], [1, 0]])
     N = np.array([1/2, 1/2])
     
-    def __init__(self, val, direct, shadow_area=False, time_func=None):
-        super().__init__(val=val, direct=direct, shadow_area=shadow_area, 
-                         time_func=time_func, ndof=4)
+    def __init__(self, val, direct, time_func=None, shadow_area=False, ):
+        super().__init__(val=val, direct=direct, time_func=time_func, 
+                         shadow_area=shadow_area, ndof=4)
 
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 2)).T
@@ -1240,10 +1240,10 @@ class LineQuadraticBoundary(BoundaryElement):
 
     N = np.array([1, 1, 4])/6
     
-    def __init__(self, val, direct, shadow_area=False, time_func=None):
+    def __init__(self, val, direct, time_func=None, shadow_area=False):
         
-        super().__init__(val=val, direct=direct, shadow_area=shadow_area, 
-                         time_func=time_func, ndof=6)
+        super().__init__(val=val, direct=direct, time_func=time_func, 
+                         shadow_area=shadow_area, ndof=6)
 
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 2)).T
