@@ -43,7 +43,7 @@ Further documentation to this code is in the folder `docs/`. For building the do
 
     python setup.py build_sphinx
 
-The documentation will be built in the folder `docs/` available as html in `build`. 
+The documentation will be built in the folder `docs/` available as html in `build`.
 
 3. Fortran-Routines
 -------------------
@@ -67,10 +67,22 @@ The version shuld be at least `'1.3.1'`.
 
 ### IDEs:
 
-The best IDE for Python is Spyder, which has sort of a MATLAB-Style look and feel. Other editors integrate very well into Python like Atom, as well as PyCharm, which is an IDE for Python. 
+The best IDE for Python is Spyder, which has sort of a MATLAB-Style look and feel. Other editors integrate very well into Python like Atom, as well as PyCharm, which is an IDE for Python.
 
-I personally work with Spyder and Atom. Spyder is part of anaconda and can be installed via 
-     
+I personally work with Spyder and Atom. Spyder is part of anaconda and can be installed via
+
      conda install spyder
-     
-Spyder also provides nice features like built-in debugging, static code analysis with pylint and a profiling tool to measure the performance of the code. 
+
+Spyder also provides nice features like built-in debugging, static code analysis with pylint and a profiling tool to measure the performance of the code.
+
+### Profiling the code
+
+a good profiling tool is the cProfile moudule. It runs with
+
+    python -m cProfile -o stats.dat myscript.py
+
+The stats.dat file can be analyzed using the `snakeviz`-tool which is a Python tool which is available via conda or pip and runs with a web-based interface. To start run
+
+    snakeviz stats.dat
+
+in your console. 

@@ -296,6 +296,7 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     TODO
 
     '''
+    t_clock_1 = time.time()
     stepwidth = 1/no_of_load_steps
     ndof = mechanical_system.dirichlet_class.no_of_constrained_dofs
     u = np.zeros(ndof)
@@ -328,7 +329,10 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
             if wrt_iter:
                 mechanical_system.write_timestep(n_iter, u)
         mechanical_system.write_timestep(t, u)
-
+    t_clock_2 = time.time()
+    print('Time for solving nonlinear displacements: {0:4.2f} seconds'.format(
+            t_clock_2 - t_clock_1))
+    return 
 
 def give_mass_and_stiffness(mechanical_system):
     '''
