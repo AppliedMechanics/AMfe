@@ -224,7 +224,7 @@ class MaterialTest2dPlaneStress(unittest.TestCase):
 def test_tri3_pressure():
     X = np.array([0,0,0,1,0,0,0,1,0])
     u = np.zeros_like(X)
-    my_press_ele = amfe.Tri3Boundary(1, 'normal')
+    my_press_ele = amfe.Tri3Boundary(1, direct='normal')
     K, f = my_press_ele.k_and_f_int(X, u)
     np.testing.assert_array_equal( K, np.zeros((9,9)))
     np.testing.assert_allclose(np.sum(f), -1/2)
@@ -240,16 +240,15 @@ def test_line_pressure():
 def test_line_pressure2():
     X = np.array([0,0,1,1])
     u = X
-    my_press_ele = amfe.LineLinearBoundary(1, 'x')
+    my_press_ele = amfe.LineLinearBoundary(1, direct=np.array([1,0]))
     K, f = my_press_ele.k_and_f_int(X, u)
     np.testing.assert_array_equal(K, np.zeros((4,4)))
     np.testing.assert_allclose(f, -np.sqrt(2)*np.array([-1,0,-1,0]))
 
-@nose.tools.nottest
 def test_tri6_pressure():
     '''
-    The tri6 pressure element is not implemented yet. That's why this test 
-    is disabled! 
+    Test, if the Tri3 pressure element reveals the same behavior as a mass 
+    element, which is accelerated in one direction only. 
     '''
     my_material = amfe.KirchhoffMaterial(rho=1)
     my_tri6 = amfe.Tri6(my_material)
@@ -259,13 +258,17 @@ def test_tri6_pressure():
     M = my_tri6.m_int(X, u)
     t = np.array([ 0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.])
     f_2d = M @ t
-    f_1d = f_2d[np.ix_([1,3,5,7,9,11])]
+    f_1d = f_2d[1::2]
     my_boundary = amfe.Tri6Boundary(val=1., direct='normal', full_integration=True)
-    X_3D = np.array([0,0,0,2,0,0,0,2,0,1,0,0,1,1,0,0,1.,0])
+    X_3D = np.zeros(3*6)
+    X_3D[0::3] = X[0::2]
+    X_3D[1::3] = X[1::2]
     u_3D = np.zeros(3*6)
     K, f = my_boundary.k_and_f_int(X_3D, u_3D)
     np.testing.assert_equal(K, np.zeros((18,18)))
-    np.testing.assert_allclose(f_1d, f[np.ix_([2,5,8,11,14,17])])
+    # as the skin element produces a force acting on the right hand side, 
+    # f has a negative sign. 
+    np.testing.assert_allclose(f_1d, -f[2::3]) 
 
 
 

@@ -1019,6 +1019,32 @@ class Bar2Dlumped(Element):
         return m_el
 
 #%%
+def f_proj_a(f_mat, direction):
+    '''
+    Compute the force traction proportional to the area of the element 
+    in any-direction.
+    
+    '''
+    n_nodes, dofs_per_node = f_mat.shape
+    f_out = np.zeros(n_nodes * dofs_per_node)
+    for i, f_vec in enumerate(f_mat):
+        f_out[i*dofs_per_node:(i+1)*dofs_per_node] = direction * np.sqrt(f_vec @ f_vec)
+    return f_out
+
+def f_proj_a_shadow(f_mat, direction):
+    '''
+    Compute the force projection in any direction proportional to the projected 
+    area, i.e. the shadow-area, the are throws in the given direction. 
+    
+    '''
+    n_nodes, dofs_per_node = f_mat.shape
+    f_out = np.zeros(n_nodes * dofs_per_node)
+    for i, f_vec in enumerate(f_mat):
+        f_out[i*dofs_per_node:(i+1)*dofs_per_node] = direction * (direction @ f_vec)
+    return f_out
+
+
+
 class BoundaryElement(Element):
     '''
     Class for the application of Neumann Boundary Conditions.
@@ -1034,47 +1060,27 @@ class BoundaryElement(Element):
         >>> def func(t):
         >>>    return 1
 
-    f_func : func
-        function mapping the normal vector n of the element pointing outwards
-        to the nodes of the element.
-
-    B0_dict : dict
-        dictionary containing the B0 mapping matrices corresponding to the `direct`-strings given in the init method. The `direct` key specifies the direction, in which the force should act; the B0-matrix gives the direction, in which the external force should act.
-
-        If the `direct`-key is a pure coordinate direction, i.e. 'x', 'y' or 'z', `B0` contains the unit vectors for the mapping of a force in x, y  or z direction. The force is :code:`B0*f_abs`.
-
-        If the direct-key is a mapping direction, i.e. 'normal' or 'x_n', 'y_n' or 'z_n', `B0` is a matrix, where the force is :code:`B0 @ f`
+    f_proj : func
+        function producing the nodal force vector from the given nodal force
+        vector in normal direction. 
 
         '''
-    B0_dict = {}
 
-    def __init__(self, val, direct, ndof, time_func=None):
+    def __init__(self, val, ndof, direct='normal', shadow_area=False, 
+                 time_func=None):
         '''
         Parameters
         ----------
         val : float
             value for the pressure/traction onto the element
-        direct : str {'normal', 'x_n', 'y_n', 'z_n', 'x', 'y', 'z'}
-            direction, in which the traction should point at:
-
-            'normal'
-                Pressure acting onto the normal face of the deformed configuration
-            'x_n'
-                Traction acting in x-direction proportional to the area
-                projected onto the y-z surface
-            'y_n'
-                Traction acting in y-direction proportional to the area
-                projected onto the x-z surface
-            'z_n'
-                Traction acting in z-direction proportional to the area
-                projected onto the x-y surface
-            'x'
-                Traction acting in x-direction proportional to the area
-            'y'
-                Traction acting in y-direction proportional to the area
-            'z'
-                Traction acting in z-direction proportional to the area
-
+        direct : str 'normal' or ndarray, optional
+            array giving the direction, in which the traction force should act. 
+            alternatively, the keyword 'normal' may be given. Default value:
+            'normal'. 
+        shadow_area : bool, optional
+            Flat setting, if force should be proportional to the shadow area, 
+            i.e. the area of the surface projected on the direction. Default 
+            value: 'False'. 
         time_func : function object
             Function object returning a value between -1 and 1 given the
             input t:
@@ -1090,19 +1096,20 @@ class BoundaryElement(Element):
         self.f = np.zeros(ndof)
         self.K = np.zeros((ndof, ndof))
         self.M = np.zeros((ndof, ndof))
-
-        B0 = self.B0_dict[direct]
-        # definition of force_func:
-        if direct in {'x', 'y', 'z'}:
-            def f_func(n):
-                n_abs = np.sqrt(n.dot(n))
-                return B0 * n_abs
-            self.f_func = f_func
-        else:
-            def f_func(n):
-                return B0.dot(n)
-            self.f_func = f_func
-
+        self.direct = direct
+        
+        if direct is 'normal':
+            def f_proj(f_mat):
+                return f_mat.flatten()
+        else: # direct has to be a vector
+            if shadow_area: # projected solution
+                def f_proj(f_mat):
+                    return f_proj_a_shadow(f_mat, self.direct)
+            else: # non-projected solution
+                def f_proj(f_mat):
+                    return f_proj_a(f_mat, self.direct)
+        
+        self.f_proj = f_proj
         # time function...
         def const_func(t):
             return 1
@@ -1115,66 +1122,38 @@ class BoundaryElement(Element):
         return self.M
 
 
+
+
 class Tri3Boundary(BoundaryElement):
     '''
     Class for application of Neumann Boundary Conditions.
     '''
 
-    B0_dict = {}
-    B0_dict.update({'normal' : np.vstack((np.eye(3), np.eye(3), np.eye(3)))/3})
-    B0 = np.zeros((9,3))
-    B0[np.ix_([0,3,6], [0])] = 1/3
-    B0_dict.update({'x_n' : B0})
-    B0 = np.zeros((9,3))
-    B0[np.ix_([1,4,7], [1])] = 1/3
-    B0_dict.update({'y_n' : B0})
-    B0 = np.zeros((9,3))
-    B0[np.ix_([2,5,8], [2])] = 1/3
-    B0_dict.update({'z_n' : B0})
-    B0_dict.update({'x' : np.array([1/3, 0, 0, 1/3, 0, 0, 1/3, 0, 0])})
-    B0_dict.update({'y' : np.array([0, 1/3, 0, 0, 1/3, 0, 0, 1/3, 0])})
-    B0_dict.update({'z' : np.array([0, 0, 1/3, 0, 0, 1/3, 0, 0, 1/3])})
-
-    def __init__(self, val, direct, time_func=None):
-        super().__init__(val, direct, time_func=time_func, ndof=9)
+    def __init__(self, val, direct, shadow_area=False, time_func=None):
+        super().__init__(val=val, direct=direct, shadow_area=shadow_area, 
+                         time_func=time_func, ndof=9)
 
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 3)).T
         v1 = x_vec[:,2] - x_vec[:,0]
         v2 = x_vec[:,1] - x_vec[:,0]
         n = np.cross(v1, v2)/2
+        N = np.array([1/3, 1/3, 1/3])
+        f_mat = np.outer(N, n)
         # positive sign as it is external force on the right hand side of the
         # function
-        self.f = self.f_func(n) * self.val * self.time_func(t)
+        self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
 
 class Tri6Boundary(BoundaryElement):
     '''
-
+    Boundary element with variatonally consistent boundary forces. 
 
     Note
     ----
-    The area and the normal are approximated using only the three corner nodes.
-    Maybe in the future a more sophisticated area and normal computation is
-    necessary.
+    This function has been updated to give a variationally consistent 
+    integrated skin element. 
     '''
-    B0_dict = {}
-    B0_dict.update({'normal' : np.vstack((np.zeros((3*3,3)),
-                                          np.eye(3), np.eye(3), np.eye(3)))/3})
-    B0 = np.zeros((18,3))
-    B0[np.ix_([9,12,15], [0])] = 1/3
-    B0_dict.update({'x_n' : B0})
-    B0 = np.zeros((18,3))
-    B0[np.ix_([10,13,16], [0])] = 1/3
-    B0_dict.update({'y_n' : B0})
-    B0 = np.zeros((18,3))
-    B0[np.ix_([11,14,17], [0])] = 1/3
-    B0_dict.update({'z_n' : B0})
-    B0_dict.update({'x' : np.array([0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
-                                    1/3, 0, 0, 1/3, 0, 0, 1/3, 0, 0])})
-    B0_dict.update({'y' : np.array([0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
-                                    0, 1/3, 0, 0, 1/3, 0, 0, 1/3, 0])})
-    B0_dict.update({'z' : np.array([0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
-                                    0, 0, 1/3, 0, 0, 1/3, 0, 0, 1/3])})
+
 
     gauss_points = ((1/6, 1/6, 2/3, 1/3),
                     (1/6, 2/3, 1/6, 1/3),
@@ -1196,105 +1175,80 @@ class Tri6Boundary(BoundaryElement):
                       (beta2, alpha2, beta2, w2),
                      (beta2, beta2, alpha2, w2))
 
-    def __init__(self, val, direct, time_func=None, full_integration=False):
-        super().__init__(val, direct, time_func=time_func, ndof=18)
-        # ovlerloading of _compute_tensors function for case that full
-        # integration is valid
-        if full_integration:
-#            print('Attention! Full integration not possible yet!')
-            self._compute_tensors = self._compute_tensors_full
+    def __init__(self, val, direct, shadow_area=False, time_func=None, full_integration=False):
+        super().__init__(val=val, direct=direct, shadow_area=shadow_area, 
+                         time_func=time_func, ndof=18)
 
     def _compute_tensors(self, X, u, t):
-        x_vec = (X+u).reshape((-1, 3)).T
-        v1 = x_vec[:,2] - x_vec[:,0]
-        v2 = x_vec[:,1] - x_vec[:,0]
-        n = np.cross(v1, v2)/2
-        self.f = self.f_func(n) * self.val * self.time_func(t)
-
-    def _compute_tensors_full(self, X, u, t):
         '''
-        Compute the full pressure contribution by doing gauss integration.
+        Compute the full pressure contribution by performing gauss integration.
 
         '''
-        self.f *= 0
+        # self.f *= 0
+        f_mat = np.zeros((6,3))
         x_vec = (X+u).reshape((-1, 3))
-        N = np.zeros(3)
+
         # gauss point evaluation of full pressure field
         for L1, L2, L3, w in self.gauss_points:
-            N = ... 
+            N = np.array([L1*(2*L1 - 1), L2*(2*L2 - 1), L3*(2*L3 - 1), 
+                          4*L1*L2, 4*L2*L3, 4*L1*L3])
+            
             dN_dL = np.array([  [4*L1 - 1,        0,        0],
                                 [       0, 4*L2 - 1,        0],
                                 [       0,        0, 4*L3 - 1],
                                 [    4*L2,     4*L1,        0],
                                 [       0,     4*L3,     4*L2],
                                 [    4*L3,        0,     4*L1]])
-            dx_dL = x_vec.T @ dN_dL
-            n = np.cross(dx_dL[:,0], dx_dL[:,1])
-            # Don't know exactly where the factor 3/4 comes from, but seems to work
-            n *= 3/4
-            N += n * w
-        # no minus sign as force will be on the right hand side of eqn. 
-        self.f = self.f_func(N) * self.val * self.time_func(t)
 
+            dx_dL = x_vec.T @ dN_dL
+            v1 = dx_dL[:,2] - dx_dL[:,0]
+            v2 = dx_dL[:,1] - dx_dL[:,0]
+            n = np.cross(v1, v2)
+            f_mat += np.outer(N, n) / 2 * w
+        # no minus sign as force will be on the right hand side of eqn. 
+        self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
 
 
 class LineLinearBoundary(BoundaryElement):
     '''
     Line Boundary element for 2D-Problems
     '''
-    B0_dict = {}
-    B0_dict.update({'normal' : np.vstack((np.eye(2), np.eye(2)))/2})
-    B0 = np.zeros((4,2))
-    B0[np.ix_([0,2], [0])] = 1/2
-    B0_dict.update({'x_n' : B0})
-    B0 = np.zeros((4,2))
-    B0[np.ix_([1,3], [1])] = 1/2
-    B0_dict.update({'y_n' : B0})
-    B0_dict.update({'x' : np.array([1/2, 0, 1/2, 0])})
-    B0_dict.update({'y' : np.array([0, 1/2, 0, 1/2])})
-
     rot_mat = np.array([[0,-1], [1, 0]])
-
-    def __init__(self, val, direct, time_func=None):
-        super().__init__(val, direct, time_func=time_func, ndof=4)
+    N = np.array([1/2, 1/2])
+    
+    def __init__(self, val, direct, shadow_area=False, time_func=None):
+        super().__init__(val=val, direct=direct, shadow_area=shadow_area, 
+                         time_func=time_func, ndof=4)
 
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 2)).T
         v = x_vec[:,1] - x_vec[:,0]
-        n = self.rot_mat.dot(v)
-        self.f = self.f_func(n) * self.val * self.time_func(t)
-
+        n = self.rot_mat @ v
+        f_mat = np.outer(self.N, n)
+        self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
+        
+        
 class LineQuadraticBoundary(BoundaryElement):
     '''
     Quadratic line boundary element for 2D problems.
     '''
-    B0_dict = {}
-    B0_dict.update({'normal' : np.vstack((np.eye(2), np.eye(2), 4*np.eye(2)))/6})
-    B0_dict.update({'x_n' : np.array([ [ 1.,  0.],
-                                       [ 0.,  0.],
-                                       [ 1.,  0.],
-                                       [ 0.,  0.],
-                                       [ 4.,  0.],
-                                       [ 0.,  0.]])/6})
-    B0_dict.update({'y_n' : np.array([ [ 0.,  0.],
-                                       [ 0.,  1.],
-                                       [ 0.,  0.],
-                                       [ 0.,  1.],
-                                       [ 0.,  0.],
-                                       [ 0.,  4.]])/6})
-    B0_dict.update({'x' : np.array([1/6, 0, 1/6, 0, 2/3, 0])})
-    B0_dict.update({'y' : np.array([0, 1/6, 0, 1/6, 0, 2/3])})
 
-    rot_mat = np.array([[0,-1], [1, 0]])
+    rot_mat = np.array([[ 0, -1],
+                        [ 1,  0]])
 
-    def __init__(self, val, direct, time_func=None):
-        super().__init__(val, direct, time_func=time_func, ndof=6)
+    N = np.array([1, 1, 4])/6
+    
+    def __init__(self, val, direct, shadow_area=False, time_func=None):
+        
+        super().__init__(val=val, direct=direct, shadow_area=shadow_area, 
+                         time_func=time_func, ndof=6)
 
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 2)).T
         v = x_vec[:,1] - x_vec[:,0]
-        n = self.rot_mat.dot(v)
-        self.f = self.f_func(n) * self.val * self.time_func(t)
+        n = self.rot_mat @ v 
+        f_mat = np.outer(self.N, n)
+        self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
 
 
 #%%
