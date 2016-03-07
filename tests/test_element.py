@@ -259,7 +259,7 @@ def test_tri6_pressure():
     t = np.array([ 0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.])
     f_2d = M @ t
     f_1d = f_2d[1::2]
-    my_boundary = amfe.Tri6Boundary(val=1., direct='normal', full_integration=True)
+    my_boundary = amfe.Tri6Boundary(val=1., direct='normal')
     X_3D = np.zeros(3*6)
     X_3D[0::3] = X[0::2]
     X_3D[1::3] = X[1::2]
