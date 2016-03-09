@@ -1,9 +1,5 @@
-amfe.model_reduction package
-============================
-
-
-Module contents
----------------
+amfe.model_reduction module
+===========================
 
 .. automodule:: amfe.model_reduction
     :members:
