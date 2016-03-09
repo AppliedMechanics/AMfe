@@ -113,43 +113,45 @@ class NewmarkIntegrator():
 
         '''
         t_clock_1 = time.time()
+        eps = 1E-13
+        
         beta = self.beta
         gamma = self.gamma
         # initialize starting variables
+        t = 0
         q = q_start.copy()
         dq = dq_start.copy()
         ddq = np.zeros_like(q_start)
-
-        q_global = []
-        dq_global = []
-        t = 0
-        time_index = 0 # index of the timestep in the time_range array
-        write_flag = False
-
-        # catch start value 0:
-        if time_range[0] < 1E-12:
-            q_global.append(q)
-            dq_global.append(dq)
-            time_index = 1
-        else:
-            time_index = 0
+        # saving state for recovery if no convergence is gained
+        t_old = t
+        q_old = q.copy()
+        dq_old = dq.copy()
 
 #        # predict start values for ddq:
-#        ddq = linalg.spsolve(self.M, self.f_non(q, t))
+#        ddq = linalg.spsolve(self.M, self.f_non(q, t))        
+
         no_newton_convergence_flag = False
+        time_index = 0 # index of the timestep in the time_range array
         while time_index < len(time_range):
-            # time tolerance fitting...
-            if t + self.delta_t + 1E-8 >= time_range[time_index]:
-                dt = time_range[time_index] - t
-                if dt < 1E-8:
-                    dt = 1E-7
-                write_flag = True
+            
+            # write output, if necessary
+            if t+eps >= time_range[time_index]:
+                self.mechanical_system.write_timestep(t, q.copy())
                 time_index += 1
+                if time_index == len(time_range):
+                    break
+                
+
+            # time tolerance fitting...
+            if t + self.delta_t + eps >= time_range[time_index]:
+                dt = time_range[time_index] - t
             else:
                 dt = self.delta_t
-                if no_newton_convergence_flag:
-                    dt /= 2
-                    no_newton_convergence_flag = False
+            
+            # make half the step size if newton did not converge
+            if no_newton_convergence_flag:
+                dt /= 2
+                no_newton_convergence_flag = False
 
             # saving state for recovery if no convergence is gained
             t_old = t
@@ -193,6 +195,8 @@ class NewmarkIntegrator():
                           'Residual: {0:4.1E}, cond# of S: {1:4.2E}'.format(
                               res_abs, np.linalg.cond(S)))
 
+                # write the state for every iteration in order to watch, how
+                # Newton-raphson converges (or not ;-)
                 if self.write_iter:
                     t_write = t + dt/100*n_iter
                     self.mechanical_system.write_timestep(t_write, q.copy())
@@ -207,10 +211,6 @@ class NewmarkIntegrator():
 
             print('Time:', t, 'No of iterations:', n_iter,
                   'Residual: {0:4.2E}'.format(res_abs))
-            # Writing if necessary:
-            if write_flag:
-                self.mechanical_system.write_timestep(t, q.copy())
-                write_flag = False
         # end of time loop
         t_clock_2 = time.time()
         print('Time for time marching integration {0:4.2f} seconds'.format(
@@ -241,11 +241,15 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     -------
     q : ndarray
         Displacement of the linear system
-        
+    
+    Note
+    ----
+    Due to round-off-errors, the internal time step width is h and is very 
+    close to dt, but adjusted to fit the steps exactly. 
     '''
     t_clock_1 = time.time()
     print('Starting linear time integration')
-    eps = 1E-13 # epsilon for floating point round off errors
+    eps = 1E-12 # epsilon for floating point round off errors
     # Check, if the time step width and the spacing in time range fit together
     time_steps = time_range - np.roll(time_range, 1)
     remainder = (time_steps + eps) % dt
@@ -261,7 +265,7 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     M = mechanical_system.M()
     S = M + beta * dt**2 * K
     S_inv = sp.sparse.linalg.splu(S)
-    # S_inv.solve() # method to solve the system efficiently
+    # S_inv.solve(rhs_vec) # method to solve the system efficiently
     
     # initialization of the state variables
     t = 0
@@ -271,25 +275,32 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     f_ext = mechanical_system.f_ext(q, dq, t)
     ddq = sp.sparse.linalg.spsolve(M, f_ext - K @ q)
     
-    # check, if the first time step is zero
-    
+    h = dt
     time_index = 0
     while time_index < len(time_range):
         
         if t+eps >= time_range[time_index]:
             mechanical_system.write_timestep(t, q.copy())
             time_index += 1
+            if time_index == len(time_range):
+                break
         
+        # adjustment of dt 
+        if t+eps + dt >= time_range[time_index]:
+            h = time_range[time_index] - t
+        else:
+            h = dt
+            
         # update of state 
-        t += dt
-        q, dq = (q + dt*dq + (1/2-beta)*dt**2*ddq, dq + (1-gamma)*dt*ddq)
+        t += h
+        q, dq = (q + h*dq + (1/2-beta)*h**2*ddq, dq + (1-gamma)*h*ddq)
         
         # Solution of system
         f_ext = mechanical_system.f_ext(q, dq, t)
         ddq = S_inv.solve(f_ext - K @ q)
         
         # correction of state
-        q, dq = (q + beta*dt**2*ddq), dq + gamma*dt*ddq
+        q, dq = (q + beta*h**2*ddq), dq + gamma*h*ddq
     
     t_clock_2 = time.time()
     print('Time for linar time marching integration: {0:4.2f} seconds'.format(
