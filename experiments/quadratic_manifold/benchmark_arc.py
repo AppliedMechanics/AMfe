@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
 """
-Created on Fri Mar  4 16:24:11 2016
-
-@author: rutzmoser
+Benchmark arc which is a not too simple 2D-structure. 
 """
 
 import amfe
@@ -19,7 +16,7 @@ paraview_output_file_relative = 'results/test' + \
 gmsh_input_file = os.path.join(amfe_dir, gmsh_input_file_dir_relative)
 paraview_output_file = os.path.join(amfe_dir, paraview_output_file_relative)
 
-my_material = amfe.KirchhoffMaterial()
+my_material = amfe.KirchhoffMaterial(E=2E9)
 my_system = amfe.MechanicalSystem()
 
 my_system.load_mesh_from_gmsh(gmsh_input_file, 24, my_material)

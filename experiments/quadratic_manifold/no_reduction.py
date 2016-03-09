@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Feb  3 10:57:24 2016
-
-@author: rutzmoser
-"""
+"""Reference run where nonlinear system is executed without reduction."""
 
 import time
 import os
@@ -30,10 +25,3 @@ my_newmark.delta_t = 1E-4
 my_newmark.integrate(np.zeros(ndof), np.zeros(ndof), np.arange(0, 0.4, 1E-4))
 
 benchmark_system.export_paraview(paraview_output_file)
-
-#%%
-# try the linear system:
-q0, dq0 = np.zeros(ndof), np.zeros(ndof)
-time_range = np.arange(0, 0.4, 1E-4)
-amfe.integrate_linear_system(benchmark_system, q0, dq0, time_range, dt=1E-4, 
-                             alpha=alpha)

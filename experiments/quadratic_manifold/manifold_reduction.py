@@ -16,7 +16,7 @@ import amfe
 # mpl.rcParams['svg.image_inline'] = False
 
 # % cd experiments/quadratic_manifold/
-from experiments.quadratic_manifold.benchmark_u import benchmark_system, \
+from experiments.quadratic_manifold.benchmark_arc import benchmark_system, \
     amfe_dir, alpha
 
 paper_fig_path = '/home/rutzmoser/Dokumente/012_Paper_QM/paper/pics/comp_md_smd_u.svg'
@@ -74,7 +74,6 @@ omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
 M = benchmark_system.M()
 K = benchmark_system.K()
-
 
 #%% Create a static MD QM system
 
@@ -154,7 +153,7 @@ for t, phi in enumerate(V.T):
 out_file = amfe.append_to_filename(paraview_output_file)
 benchmark_system.export_paraview(out_file)
 
-#%% exprot the modal derivatives of the system
+#%% export the modal derivatives of the system
 for i in range(no_of_modes):
     #for j in range(i + 1):
     for j in range(no_of_modes):
@@ -193,12 +192,12 @@ my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced),
                      np.arange(0, 0.4, 1E-4))
 
 out_file = amfe.append_to_filename(paraview_output_file)
-benchmark_system.export_paraview(out_file)
+my_qm_sys.export_paraview(out_file)
 
 #%% plot the time line of the reduced variable 
 
 q_red = np.array(my_qm_sys.u_red_output)
-t = np.array(my_qm_sys.T_output)
+#t = np.array(my_qm_sys.T_output)
 plt.figure()
 plt.plot(t, q_red[:,:])
 plt.grid()
@@ -247,7 +246,7 @@ benchmark_system.export_paraview(out_file)
 #%% Show the difference of MDs and SMDs of the system
 
 ndim, nred = V.shape
-symmetric = True
+symmetric = False
 orthogonal = False
 print('Pay attention. The MDs are NOT symmetric.')
 Theta_MD = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M, \
@@ -298,7 +297,7 @@ def jacobian(func, u):
         jac[:,i] = (f_tmp - f) / h
     return jac
 
-#%%
+    #%%
 #
 # Test the stiffness matrix K
 #
