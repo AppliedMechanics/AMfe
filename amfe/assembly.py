@@ -149,7 +149,6 @@ class Assembly():
 
         '''
         self.mesh = mesh
-        # TODO: implement stress assembly
         self.save_stresses = False
         self.element_indices = []
         self.neumann_indices = []

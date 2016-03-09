@@ -1024,6 +1024,20 @@ def f_proj_a(f_mat, direction):
     Compute the force traction proportional to the area of the element 
     in any-direction.
     
+    Parameters
+    ----------
+    f_mat : ndarray
+        normal force vector of one element in matrix notation. The shape of 
+        `f_mat`  is (no_of_nodes, dofs_per_node)
+    direction : ndarray
+        normalized vector describing the direction, in which the force should 
+        act. 
+        
+    Returns
+    -------
+    f : ndarray
+        force vector of traction vector in voigt notation (1d-array)
+    
     '''
     n_nodes, dofs_per_node = f_mat.shape
     f_out = np.zeros(n_nodes * dofs_per_node)
@@ -1035,6 +1049,20 @@ def f_proj_a_shadow(f_mat, direction):
     '''
     Compute the force projection in any direction proportional to the projected 
     area, i.e. the shadow-area, the are throws in the given direction. 
+        
+    Parameters
+    ----------
+    f_mat : ndarray
+        normal force vector of one element in matrix notation. The shape of 
+        `f_mat`  is (no_of_nodes, dofs_per_node)
+    direction : ndarray
+        normalized vector describing the direction, in which the force should 
+        act. 
+        
+    Returns
+    -------
+    f : ndarray
+        force vector of traction vector in voigt notation (1d-array)
     
     '''
     n_nodes, dofs_per_node = f_mat.shape
@@ -1098,6 +1126,8 @@ class BoundaryElement(Element):
         self.M = np.zeros((ndof, ndof))
         self.direct = direct
         
+        # select the correct f_proj function in order to fulfill the direct 
+        # and shadow area specification
         if direct is 'normal':
             def f_proj(f_mat):
                 return f_mat.flatten()
@@ -1213,7 +1243,7 @@ class Tri6Boundary(BoundaryElement):
 
 class LineLinearBoundary(BoundaryElement):
     '''
-    Line Boundary element for 2D-Problems
+    Line Boundary element for 2D-Problems. 
     '''
     rot_mat = np.array([[0,-1], [1, 0]])
     N = np.array([1/2, 1/2])
@@ -1276,6 +1306,7 @@ if use_fortran:
             X, self.material.rho, self.material.thickness)
         return self.M
 
+    
     # overloading the routines with fortran routines
     Tri3._compute_tensors_python = Tri3._compute_tensors
     Tri6._compute_tensors_python = Tri6._compute_tensors
