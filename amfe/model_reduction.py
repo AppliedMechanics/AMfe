@@ -1,8 +1,10 @@
-# -*- coding: utf-8 -*-
-
 """
 Module of AMfe which handles the reduced order models.
 """
+
+__all__ = ['reduce_mechanical_system', 'qm_reduce_mechanical_system',
+            'modal_derivative', 'modal_derivative_theta',
+            'static_correction_derivative', 'static_correction_theta', 'principal_angles', 'krylov_subspace', 'craig_bampton', 'vibration_modes', 'pod']
 
 import copy
 import numpy as np
@@ -210,7 +212,7 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
         three dimensional array of modal derivatives. Theta[:,i,j] contains
         the modal derivative 1/2 * dx_i / dx_j. The basis Theta is made symmetric, so
         that `Theta[:,i,j] == Theta[:,j,i]` if `symmetic=True`.
-        
+
     See Also
     --------
     static_correction_theta : modal derivative with mass neglection.
@@ -334,12 +336,12 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
         three dimensional array of static corrections derivatives. Theta[:,i,j]
         contains the static derivative 1/2 * dx_i / dx_j. As the static derivatives
         are symmetric, Theta[:,i,j] == Theta[:,j,i].
-    
+
     See Also
     --------
     modal_derivative_theta
     static_correction_derivative
-    
+
     '''
     no_of_dofs = V.shape[0]
     no_of_modes = V.shape[1]
@@ -462,7 +464,7 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
         b_new = linalg.lu_solve(lu, f)
         b_new /= linalg.norm(b_new)
         V[:,i*no_of_inputs:(i+1)*no_of_inputs] = b_new.reshape((-1, no_of_inputs))
-        V[:,:(i+1)*no_of_inputs], R = linalg.qr(V[:,:(i+1)*no_of_inputs], 
+        V[:,:(i+1)*no_of_inputs], R = linalg.qr(V[:,:(i+1)*no_of_inputs],
                                                 mode='economic')
         b_new = V[:,i*no_of_inputs:(i+1)*no_of_inputs]
     sigmas = linalg.svdvals(V)
@@ -493,7 +495,7 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     Returns
     -------
     if `one_basis=True` is chosen:
-    
+
     V : array
         Basis constisting of static displacement modes and internal vibration
         modes

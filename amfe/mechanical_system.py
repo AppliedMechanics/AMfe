@@ -1,9 +1,10 @@
-# -*- coding: utf-8 -*-
+"""
+Module handling the whole mechanical system, no matter if it's a finite element
+system, defined by certain parameters or a multibody system.
+"""
 
-"""
-Module handling the whole mechanical system, no matter if it's a finite element 
-system, defined by certain parameters or a multibody system. 
-"""
+__all__ = ['MechanicalSystem', 'ReducedSystem', 'ConstrainedMechanicalSystem',
+           'QMSystem']
 
 import time
 import os
@@ -21,26 +22,26 @@ class MechanicalSystem():
     '''
     Mase class for mechanical systems with the goal to black-box the routines
     of assembly and element selection.
-    
+
     Attributes
     ----------
     mesh_class : instance of Mesh()
-        Class handling the mesh. 
+        Class handling the mesh.
     assembly_class : instance of Assembly()
-        Class handling the assembly. 
+        Class handling the assembly.
     dirichlet_class : instance of DirichletBoundary
-        Class handling the Dirichlet boundary conditions. 
+        Class handling the Dirichlet boundary conditions.
     neumann_class : instance of NeumannBoundary
-        This boundary type is deprecated. 
-    
+        This boundary type is deprecated.
+
     '''
 
     def __init__(self):
         '''
-        '''      
+        '''
         self.T_output = []
         self.u_output = []
-        
+
         # instanciate the important classes needed for the system:
         self.mesh_class = Mesh()
         self.assembly_class = Assembly(self.mesh_class)
@@ -51,7 +52,7 @@ class MechanicalSystem():
         self.unconstrain_vec = self.dirichlet_class.unconstrain_vec
         self.constrain_vec = self.dirichlet_class.constrain_vec
         self.constrain_matrix = self.dirichlet_class.constrain_matrix
-        
+
         # initializations to be overwritten by loading functions
         self.M_constr = None
         self.no_of_dofs_per_node = None
@@ -69,11 +70,11 @@ class MechanicalSystem():
         msh_file : str
             file name to an existing .msh file
         phys_group : int
-            integer key of the physical group which is considered as the 
-            mesh part 
+            integer key of the physical group which is considered as the
+            mesh part
         material : amfe.Material
             Material associated with the physical group to be computed
-        
+
         Returns
         -------
         None
@@ -81,14 +82,14 @@ class MechanicalSystem():
         self.mesh_class.import_msh(msh_file)
         self.mesh_class.load_group_to_mesh(phys_group, material)
         self.no_of_dofs_per_node = self.mesh_class.no_of_dofs_per_node
-        
+
         self.assembly_class.preallocate_csr()
         self.dirichlet_class.no_of_unconstrained_dofs = self.mesh_class.no_of_dofs
 
 
-    def load_mesh_from_csv(self, node_list_csv, element_list_csv, 
-                           no_of_dofs_per_node=2, 
-                           explicit_node_numbering=False, 
+    def load_mesh_from_csv(self, node_list_csv, element_list_csv,
+                           no_of_dofs_per_node=2,
+                           explicit_node_numbering=False,
                            ele_type=False):
         '''
         Loads the mesh from two csv-files containing the node and the element list.
@@ -102,7 +103,7 @@ class MechanicalSystem():
         no_of_dofs_per_node: int, optional
             degree of freedom per node as saved in the csv-file
         explicit_node_numbering : bool, optional
-            flag stating, if the node numbers are explcitly numbered in the 
+            flag stating, if the node numbers are explcitly numbered in the
             csv file, i.e. if the first column gives the numbers of the nodes.
         ele_type: str
             Spezifiy elements type of the mesh (e.g. for a Tri-Mesh different
@@ -118,7 +119,7 @@ class MechanicalSystem():
         todo
 
         '''
-        self.mesh_class.import_csv(node_list_csv, element_list_csv, 
+        self.mesh_class.import_csv(node_list_csv, element_list_csv,
                                    explicit_node_numbering=explicit_node_numbering,
                                    ele_type=ele_type)
         self.no_of_dofs_per_node = no_of_dofs_per_node
@@ -128,19 +129,19 @@ class MechanicalSystem():
     def apply_dirichlet_boundaries(self, key, coord, mesh_prop='phys_group'):
         '''
         Apply dirichlet-boundaries to the system.
-        
+
         Parameters
         ----------
         key : int
-            Key for mesh property which is to be chosen. Matches the group given 
-            in the gmsh file. For help, the function mesh_information or 
+            Key for mesh property which is to be chosen. Matches the group given
+            in the gmsh file. For help, the function mesh_information or
             boundary_information gives the groups
         coord : str {'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz'}
             coordinates which should be fixed
         mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
-            label of which the element should be chosen from. Default is 
-            'phys_group'. 
-            
+            label of which the element should be chosen from. Default is
+            'phys_group'.
+
         Returns
         -------
         None
@@ -148,11 +149,11 @@ class MechanicalSystem():
         self.mesh_class.set_dirichlet_bc(key, coord, mesh_prop)
         self.dirichlet_class.constrain_dofs(self.mesh_class.dofs_dirichlet)
 
-    def apply_neumann_boundaries(self, key, val, direct, time_func=None, 
+    def apply_neumann_boundaries(self, key, val, direct, time_func=None,
                                  shadow_area=False, mesh_prop='phys_group'):
         '''
-        Apply neumann boundaries to the system via skin elements. 
-        
+        Apply neumann boundaries to the system via skin elements.
+
         Parameters
         ----------
         key : int
@@ -160,30 +161,30 @@ class MechanicalSystem():
         val : float
             value for the pressure/traction onto the element
         direct : ndarray or str 'normal'
-            Direction, in which force should act at. If 
+            Direction, in which force should act at. If
         time_func : function object
-            Function object returning a value between -1 and 1 given the 
-            input t: 
+            Function object returning a value between -1 and 1 given the
+            input t:
 
             >>> val = time_func(t)
-            
+
         shadow_area : bool, optional
             flag, if force should be proportional to shadow area of surface
-            with respect to direction. Default: False. 
+            with respect to direction. Default: False.
         mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
-            label of which the element should be chosen from. Default is 
-            phys_group. 
-            
+            label of which the element should be chosen from. Default is
+            phys_group.
+
         Returns
         -------
         None
         '''
-        self.mesh_class.set_neumann_bc(key=key, val=val, direct=direct, 
-                                       time_func=time_func, 
+        self.mesh_class.set_neumann_bc(key=key, val=val, direct=direct,
+                                       time_func=time_func,
                                        shadow_area=shadow_area,
                                        mesh_prop=mesh_prop)
         self.assembly_class.compute_element_indices()
-        
+
     def apply_neumann_boundaries_old(self, neumann_boundary_list):
         '''Apply neumann-boundaries to the system.
 
@@ -207,7 +208,7 @@ class MechanicalSystem():
         properties : tupel
             tupel with the properties for the given load_type (see table below)
         B_matrix : ndarray / None
-            Vector giving the load weights for the given dofs in dofs_list. 
+            Vector giving the load weights for the given dofs in dofs_list.
             If None is chosen, the weight will be 1 for every dof by default.
 
         the load_type-Keywords and the corresponding properties are:
@@ -232,7 +233,7 @@ class MechanicalSystem():
         >>> NB = [[1, 2, 3], 'stepload', (1E3, 0.1), None]
         >>> mysystem.apply_neumann_boundaries([NB, ])
 
-        Harmonic loading on dof 4, 6 and 8 with frequency 8 Hz = 2*2*pi rad and 
+        Harmonic loading on dof 4, 6 and 8 with frequency 8 Hz = 2*2*pi rad and
         amplitude 100N:
 
         >>> mysystem = MechanicalSystem()
@@ -248,16 +249,16 @@ class MechanicalSystem():
 
     def export_paraview(self, filename, field_list=None):
         '''
-        Export the system with the given information to paraview. 
-        
+        Export the system with the given information to paraview.
+
         Parameters
         ----------
         filename : str
-            filename to which the xdmf file and the hdf5 file will be saved. 
+            filename to which the xdmf file and the hdf5 file will be saved.
         field_list : list, optional
-            list of tuples containing a field to be exported as well as a 
-            dictionary with the attribute information of the hdf5 file. 
-        
+            list of tuples containing a field to be exported as well as a
+            dictionary with the attribute information of the hdf5 file.
+
         Returns
         -------
         None
@@ -278,15 +279,15 @@ class MechanicalSystem():
 
     def M(self, u=None, t=0):
         '''
-        Compute the Mass matrix of the dynamical system. 
-        
+        Compute the Mass matrix of the dynamical system.
+
         Parameters
         ----------
         u : ndarray, optional
             array of the displacement
         t : float
             time
-        
+
         Returns
         -------
         M : sp.sparse.sparse_matrix
@@ -296,22 +297,22 @@ class MechanicalSystem():
             u_unconstr = self.unconstrain_vec(u)
         else:
             u_unconstr = None
-            
+
         M_unconstr = self.assembly_class.assemble_m(u_unconstr, t)
         self.M_constr = self.constrain_matrix(M_unconstr)
         return self.M_constr
-        
+
     def K(self, u=None, t=0):
         '''
         Compute the stiffness matrix of the mechanical system
-        
+
         Parameters
         ----------
         u : ndarray, optional
             Displacement field in voigt notation
         t : float, optional
             Time
-        
+
         Returns
         -------
         K : sp.sparse.sparse_matrix
@@ -321,30 +322,30 @@ class MechanicalSystem():
             u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
 
         K_unconstr, _ = \
-            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t) 
+            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)
 
         return self.constrain_matrix(K_unconstr)
-        
+
     def f_int(self, u, t=0):
         '''Return the elastic restoring force of the system '''
         _, f_unconstr = \
-            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t) 
+            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)
         return self.constrain_vec(f_unconstr)
-        
+
     def _f_ext_unconstr(self, u, t):
         '''
         Return the unconstrained external force coming from the Neumann BCs.
-        
+
         This function may be monkeypatched if necessary, for instance, when a
         global external force, e.g. gravity, should be applied.
         '''
         __, f_unconstr = \
             self.assembly_class.assemble_k_and_f_neumann(self.unconstrain_vec(u), t)
         return f_unconstr
-        
+
     def f_ext(self, u, du, t):
         '''
-        Return the nonlinear external force of the right hand side 
+        Return the nonlinear external force of the right hand side
         of the equation, i.e. the excitation.
         '''
         if u is None:
@@ -353,7 +354,7 @@ class MechanicalSystem():
 
     def K_and_f(self, u=None, t=0):
         '''
-        Compute tangential stiffness matrix and nonlinear force vector 
+        Compute tangential stiffness matrix and nonlinear force vector
         in one assembly run.
         '''
         if u is None:
@@ -366,8 +367,8 @@ class MechanicalSystem():
 
     def S_and_res(self, u, du, ddu, dt, t, beta, gamma):
         r'''
-        Compute jacobian and residual for implicit time integration. 
-        
+        Compute jacobian and residual for implicit time integration.
+
         Parameters
         ----------
         u : ndarray
@@ -384,54 +385,54 @@ class MechanicalSystem():
             weighting factor for position in generalized-:math:`\alpha` scheme
         gamma : float
             weighting factor for velocity in generalized-:math:`\alpha` scheme
-            
+
         Returns
         -------
         S : ndarray
             jacobian matrix of residual; dimension (ndof, ndof)
         res : ndarray
             residual; dimension (ndof,)
-        
+
         Note
         ----
         Time integration scheme: The iteration matrix is composed using the
-        generalized-:math:`\alpha` scheme: 
-        
-        .. math:: \mathbf S = \frac{1}{h^2\beta}\mathbf{M} 
+        generalized-:math:`\alpha` scheme:
+
+        .. math:: \mathbf S = \frac{1}{h^2\beta}\mathbf{M}
                   + \frac{\gamma}{h\beta} \mathbf D + \mathbf K
-                
-        which bases on the time discretization of the velocity and the 
+
+        which bases on the time discretization of the velocity and the
         displacement:
-        
+
         .. math:: \mathbf{\dot{q}}_{n+1} & = \mathbf{\dot{q}}_{n} + (1-\gamma)h
                   \mathbf{\ddot{q}}_{n} + \gamma h \mathbf{\ddot{q}}_{n+1}
-        
-        .. math:: \mathbf{q}_{n+1} & = \mathbf{q}_n + h \mathbf{\dot{q}}_n + 
+
+        .. math:: \mathbf{q}_{n+1} & = \mathbf{q}_n + h \mathbf{\dot{q}}_n +
                   \left(\frac{1}{2} - \beta\right)h^2\mathbf{\ddot{q}}_n +
-                  h^2\beta\mathbf{\ddot{q}}_{n+1} 
-        
+                  h^2\beta\mathbf{\ddot{q}}_{n+1}
+
         This method is using the variables/methods
-        
+
             - self.M()
             - self.M_constr
             - self.K_and_f()
             - self.f_ext()
-        
-        If these methods are implemented correctly in a daughter class, the 
-        time integration interface should work properly. 
-        
+
+        If these methods are implemented correctly in a daughter class, the
+        time integration interface should work properly.
+
         '''
-        # compute mass matrix only once if it hasnt's been computed yet        
+        # compute mass matrix only once if it hasnt's been computed yet
         if self.M_constr is None:
             self.M()
-            
+
         K, f = self.K_and_f(u, t)
         f_ext = self.f_ext(u, du, t)
         S = K + 1/(beta*dt**2)*self.M_constr
         res = f - f_ext + self.M_constr @ ddu
 
         return S, res, f_ext
-    
+
     def write_timestep(self, t, u):
         '''
         write the timestep to the mechanical_system class
@@ -445,17 +446,17 @@ class ReducedSystem(MechanicalSystem):
     '''
     Class for reduced systems.
     It is directly inherited from MechanicalSystem.
-    Provides the interface for an integration scheme and so on where a basis 
+    Provides the interface for an integration scheme and so on where a basis
     vector is to be chosen...
 
     Notes
     -----
-    The Basis V is a Matrix with x = V*q mapping the reduced set of coordinates 
-    q onto the physical coordinates x. The coordinates x are constrained, i.e. 
-    the x denotes the full system in the sense of the problem set and not of 
+    The Basis V is a Matrix with x = V*q mapping the reduced set of coordinates
+    q onto the physical coordinates x. The coordinates x are constrained, i.e.
+    the x denotes the full system in the sense of the problem set and not of
     the pure finite element set.
 
-    The system runs without providing a V_basis when constructing the method 
+    The system runs without providing a V_basis when constructing the method
     only for the unreduced routines.
 
     Examples
@@ -469,10 +470,10 @@ class ReducedSystem(MechanicalSystem):
         Parameters
         ----------
         V_basis : ndarray, optional
-            Basis onto which the problem will be projected with an 
+            Basis onto which the problem will be projected with an
             Galerkin-Projection.
         **kwargs : dict, optional
-            Keyword arguments to be passed to the mother class MechanicalSystem. 
+            Keyword arguments to be passed to the mother class MechanicalSystem.
 
         Returns
         -------
@@ -484,7 +485,7 @@ class ReducedSystem(MechanicalSystem):
 
     def K_and_f(self, u=None, t=0):
         if u is None:
-            u = np.zeros(self.V.shape[1])        
+            u = np.zeros(self.V.shape[1])
         V = self.V
         u_full = V @ u
         K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
@@ -513,51 +514,51 @@ class ReducedSystem(MechanicalSystem):
 
     def K_unreduced(self, u=None, t=0):
         '''
-        Unreduced Stiffness Matrix. 
-        
+        Unreduced Stiffness Matrix.
+
         Parameters
         ----------
         u : ndarray, optional
-            Displacement of constrained system. Default is zero vector. 
+            Displacement of constrained system. Default is zero vector.
         t : float, optionial
-            Time. Default is 0. 
-            
+            Time. Default is 0.
+
         Returns
         -------
         K : sparse csr matrix
             Stiffness matrix
-        
+
         '''
         return MechanicalSystem.K(self, u, t)
 
     def f_int_unreduced(self, u, t=0):
         '''
-        Internal nonlinear force of the unreduced system. 
-        
+        Internal nonlinear force of the unreduced system.
+
         Parameters
         ----------
         u : ndarray
-            displacement of unreduces system. 
+            displacement of unreduces system.
         t : float, optional
             time, default value: 0.
-            
+
         Returns
         -------
         f_nl : ndarray
-            nonlinear force of unreduced system. 
-        
+            nonlinear force of unreduced system.
+
         '''
         return MechanicalSystem.f_int(self, u, t)
 
     def M_unreduced(self):
         '''
-        Unreduced mass matrix. 
+        Unreduced mass matrix.
         '''
         return MechanicalSystem.M(self)
-    
+
     def export_paraview(self, filename, field_list=None):
         '''
-        Export the produced results to ParaView via XDMF format. 
+        Export the produced results to ParaView via XDMF format.
         '''
         u_red_export = np.array(self.u_red_output).T
         u_red_dict = {'ParaView':'False', 'Name':'q_red'}
@@ -575,42 +576,42 @@ class ReducedSystem(MechanicalSystem):
         # add V and Theta to the hdf5 file
         with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
             f.create_dataset('reduction/V', data=self.V)
-            
+
         return
 
 
 class QMSystem(MechanicalSystem):
     '''
-    Quadratic Manifold Finite Element system. 
-    
-    
+    Quadratic Manifold Finite Element system.
+
+
     '''
-    
+
     def __init__(self, **kwargs):
         MechanicalSystem.__init__(self, **kwargs)
         self.V = None
         self.Theta = None
         self.no_of_red_dofs = None
         self.u_red_output = []
-    
+
     def M(self, u=None, t=0):
         # checks, if u is there and M is already computed
         if u is None:
             u = np.zeros(self.no_of_red_dofs)
         if self.M_constr is None:
             MechanicalSystem.M(self)
-            
+
         P = self.V + self.Theta @ u
         M_red = P.T @ self.M_constr @ P
         return M_red
-    
+
     def K_and_f(self, u=None, t=0):
         '''
-        Take care here! It is not clear yet how to compute the tangential 
-        stiffness matrix! 
-        
-        It seems to be like the contribution of geometric and material 
-        stiffness. 
+        Take care here! It is not clear yet how to compute the tangential
+        stiffness matrix!
+
+        It seems to be like the contribution of geometric and material
+        stiffness.
         '''
         if u is None:
             u = np.zeros(self.no_of_red_dofs)
@@ -623,22 +624,22 @@ class QMSystem(MechanicalSystem):
         K = K1 + K2
         f = P.T @ f_unreduced
         return K, f
-    
+
     def S_and_res(self, u, du, ddu, dt, t, beta, gamma):
         '''
-        TODO: checking the contributions of the different parts of the 
-        iteration matrix etc. 
-        
+        TODO: checking the contributions of the different parts of the
+        iteration matrix etc.
+
         '''
         # checking out that constant unreduced M is built
         if self.M_constr is None:
             MechanicalSystem.M(self)
         M_unreduced = self.M_constr
-        
-        theta = self.Theta        
-        theta_u = theta @ u        
+
+        theta = self.Theta
+        theta_u = theta @ u
         u_full = (self.V + 1/2*theta_u) @ u
-        
+
         K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
         f_ext_unred = MechanicalSystem.f_ext(self, u_full, None, t)
         # nonlinear projector P
@@ -661,48 +662,48 @@ class QMSystem(MechanicalSystem):
         f_ext = P.T @ f_ext_unred
         S = 1/(dt**2 * beta) * M + gamma/(dt*beta) * G + K
         return S, res, f_ext
-    
+
     def f_ext(self, u, du, t):
         '''
-        Return the reduced external force. The velocity du is by now ignored. 
+        Return the reduced external force. The velocity du is by now ignored.
         '''
-        theta_u = self.Theta @ u        
+        theta_u = self.Theta @ u
         u_full = (self.V + 1/2*theta_u) @ u
         P = self.V + theta_u
         f_ext_unred = MechanicalSystem.f_ext(self, u_full, None, t)
         f_ext = P.T @ f_ext_unred
         return f_ext
-    
+
     def write_timestep(self, t, u):
         u_full = self.V @ u + (self.Theta @ u) @ u
         MechanicalSystem.write_timestep(self, t, u_full)
         # own reduced output
         self.u_red_output.append(u.copy())
         return
-        
+
     def export_paraview(self, filename, field_list=None):
         '''
-        Export the produced results to ParaView via XDMF format. 
+        Export the produced results to ParaView via XDMF format.
         '''
         ReducedSystem.export_paraview(self, filename, field_list)
         filename_no_ext, _ = os.path.splitext(filename)
-        
+
         # add Theta to the hdf5 file
         with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
             f.create_dataset('reduction/Theta', data=self.Theta)
-        
+
         return
-    
-    
-    
-        
+
+
+
+
 
 #pylint: disable=unused-argument
 class ConstrainedMechanicalSystem():
     '''
     Mechanical System with constraints providing the interface for solvers.
 
-    This is an anonymous class providing all interface functions with zero-outputs. 
+    This is an anonymous class providing all interface functions with zero-outputs.
     For practical use, inherit this class and overwrite the functions needed.
 
     '''
@@ -733,9 +734,9 @@ class ConstrainedMechanicalSystem():
         '''
         Return the tangential damping matrix.
 
-        The tangential damping matrix is the jacobian matrix of the nonlinear 
+        The tangential damping matrix is the jacobian matrix of the nonlinear
         forces with respect to the generalized velocities q.
-        
+
         Parameters
         ----------
         q : ndarray
@@ -774,7 +775,7 @@ class ConstrainedMechanicalSystem():
         '''
         Return the residual of the constraints.
 
-        The constraints are given in the canonical form C=0. This function 
+        The constraints are given in the canonical form C=0. This function
         returns the residual of the constraints, i.e. C=res.
 
         Parameters
@@ -798,8 +799,8 @@ class ConstrainedMechanicalSystem():
         '''
         Return the Jacobian B of the constraints.
 
-        The Jacobian matrix of the constraints B is the partial derivative of 
-        the constraint vector C with respect to the generalized coordinates q, 
+        The Jacobian matrix of the constraints B is the partial derivative of
+        the constraint vector C with respect to the generalized coordinates q,
         i.e. B = dC/dq
 
         Parameters
@@ -814,7 +815,7 @@ class ConstrainedMechanicalSystem():
         Returns
         -------
         B : ndarray
-            Jacobian of the constraint vector with respect to the generalized 
+            Jacobian of the constraint vector with respect to the generalized
             coordinates
         '''
         return np.zeros((self.ndof_const, self.ndof))
@@ -842,7 +843,7 @@ class ConstrainedMechanicalSystem():
         '''
         External force of the mechanical system.
 
-        This is the right hand side of the canonical dynamic equation giving 
+        This is the right hand side of the canonical dynamic equation giving
         the external forcing.
 
         Parameters

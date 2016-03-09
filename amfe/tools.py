@@ -1,9 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 A collection of tools which to not fit to one topic of the other modules.
 
-Some tools here are experimental. 
+Some tools here are experimental.
 """
+
+__all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat', 
+    'append_to_filename', 'matshow_3d', 'test']
 
 import numpy as np
 import scipy as sp
@@ -176,9 +178,9 @@ def append_to_filename(filename):
 
 def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
     '''
-    Show a matrix as bar-plot using matplotlib.bar3d plotting tools similar to 
-    `pyplot.matshow`. 
-    
+    Show a matrix as bar-plot using matplotlib.bar3d plotting tools similar to
+    `pyplot.matshow`.
+
     Parameters
     ----------
     A : ndarray
@@ -188,17 +190,17 @@ def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
     cmap : matplotlib.cm function, optional
         Colormap-function of matplotlib. Default. mpl.cm.jet
     alpha : float
-        alpha channel value (transparency): alpha=1.0 is not transparent at all, 
-        alpha=0.0 is full transparent and thus invisible. 
-    
+        alpha channel value (transparency): alpha=1.0 is not transparent at all,
+        alpha=0.0 is full transparent and thus invisible.
+
     Returns
     -------
     barplot : instance of mpl_toolkits.mplot3d.art3d.Poly3DCollection
-    
+
     See Also
     --------
     matplotlib.pyplot.matshow
-    
+
     '''
     xdim, ydim = A.shape
     fig = plt.figure()

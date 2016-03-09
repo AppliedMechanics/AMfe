@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Element Module in which the Finite Elements are described on Element level.
 
@@ -16,6 +15,9 @@ using direct functions.
 
 """
 
+__all__ = ['Element', 'Tri3', 'Tri6', 'Quad4', 'Quad8', 'Tet4', 'Tet10',
+           'Bar2Dlumped', 'BoundaryElement', 'Tri3Boundary', 'Tri6Boundary',
+           'LineLinearBoundary', 'LineQuadraticBoundary']
 
 import numpy as np
 
@@ -1021,23 +1023,23 @@ class Bar2Dlumped(Element):
 #%%
 def f_proj_a(f_mat, direction):
     '''
-    Compute the force traction proportional to the area of the element 
+    Compute the force traction proportional to the area of the element
     in any-direction.
-    
+
     Parameters
     ----------
     f_mat : ndarray
-        normal force vector of one element in matrix notation. The shape of 
+        normal force vector of one element in matrix notation. The shape of
         `f_mat`  is (no_of_nodes, dofs_per_node)
     direction : ndarray
-        normalized vector describing the direction, in which the force should 
-        act. 
-        
+        normalized vector describing the direction, in which the force should
+        act.
+
     Returns
     -------
     f : ndarray
         force vector of traction vector in voigt notation (1d-array)
-    
+
     '''
     n_nodes, dofs_per_node = f_mat.shape
     f_out = np.zeros(n_nodes * dofs_per_node)
@@ -1047,23 +1049,23 @@ def f_proj_a(f_mat, direction):
 
 def f_proj_a_shadow(f_mat, direction):
     '''
-    Compute the force projection in any direction proportional to the projected 
-    area, i.e. the shadow-area, the are throws in the given direction. 
-        
+    Compute the force projection in any direction proportional to the projected
+    area, i.e. the shadow-area, the are throws in the given direction.
+
     Parameters
     ----------
     f_mat : ndarray
-        normal force vector of one element in matrix notation. The shape of 
+        normal force vector of one element in matrix notation. The shape of
         `f_mat`  is (no_of_nodes, dofs_per_node)
     direction : ndarray
-        normalized vector describing the direction, in which the force should 
-        act. 
-        
+        normalized vector describing the direction, in which the force should
+        act.
+
     Returns
     -------
     f : ndarray
         force vector of traction vector in voigt notation (1d-array)
-    
+
     '''
     n_nodes, dofs_per_node = f_mat.shape
     f_out = np.zeros(n_nodes * dofs_per_node)
@@ -1090,11 +1092,11 @@ class BoundaryElement(Element):
 
     f_proj : func
         function producing the nodal force vector from the given nodal force
-        vector in normal direction. 
+        vector in normal direction.
 
         '''
 
-    def __init__(self, val, ndof, direct='normal', time_func=None, 
+    def __init__(self, val, ndof, direct='normal', time_func=None,
                  shadow_area=False):
         '''
         Parameters
@@ -1102,9 +1104,9 @@ class BoundaryElement(Element):
         val : float
             value for the pressure/traction onto the element
         direct : str 'normal' or ndarray, optional
-            array giving the direction, in which the traction force should act. 
+            array giving the direction, in which the traction force should act.
             alternatively, the keyword 'normal' may be given. Default value:
-            'normal'. 
+            'normal'.
         time_func : function object
             Function object returning a value between -1 and 1 given the
             input t:
@@ -1112,9 +1114,9 @@ class BoundaryElement(Element):
             >>> val = time_func(t)
 
         shadow_area : bool, optional
-            Flat setting, if force should be proportional to the shadow area, 
-            i.e. the area of the surface projected on the direction. Default 
-            value: 'False'. 
+            Flat setting, if force should be proportional to the shadow area,
+            i.e. the area of the surface projected on the direction. Default
+            value: 'False'.
 
         Returns
         -------
@@ -1125,8 +1127,8 @@ class BoundaryElement(Element):
         self.K = np.zeros((ndof, ndof))
         self.M = np.zeros((ndof, ndof))
         self.direct = direct
-        
-        # select the correct f_proj function in order to fulfill the direct 
+
+        # select the correct f_proj function in order to fulfill the direct
         # and shadow area specification
         if direct is 'normal':
             def f_proj(f_mat):
@@ -1140,7 +1142,7 @@ class BoundaryElement(Element):
             else: # non-projected solution
                 def f_proj(f_mat):
                     return f_proj_a(f_mat, self.direct)
-        
+
         self.f_proj = f_proj
         # time function...
         def const_func(t):
@@ -1162,7 +1164,7 @@ class Tri3Boundary(BoundaryElement):
     '''
 
     def __init__(self, val, direct, time_func=None, shadow_area=False):
-        super().__init__(val=val, direct=direct, time_func=time_func, 
+        super().__init__(val=val, direct=direct, time_func=time_func,
                          shadow_area=shadow_area, ndof=9)
 
     def _compute_tensors(self, X, u, t):
@@ -1178,19 +1180,19 @@ class Tri3Boundary(BoundaryElement):
 
 class Tri6Boundary(BoundaryElement):
     '''
-    Boundary element with variatonally consistent boundary forces. 
+    Boundary element with variatonally consistent boundary forces.
 
     Note
     ----
-    This function has been updated to give a variationally consistent 
-    integrated skin element. 
+    This function has been updated to give a variationally consistent
+    integrated skin element.
     '''
 
 
     gauss_points = ((1/6, 1/6, 2/3, 1/3),
                     (1/6, 2/3, 1/6, 1/3),
                     (2/3, 1/6, 1/6, 1/3))
-    
+
     alpha1 = 0.0597158717
     beta1 = 0.4701420641 # 1/(np.sqrt(15)-6)
     w1 = 0.1323941527
@@ -1208,7 +1210,7 @@ class Tri6Boundary(BoundaryElement):
                     (beta2, beta2, alpha2, w2))
 
     def __init__(self, val, direct, time_func=None, shadow_area=False):
-        super().__init__(val=val, direct=direct, time_func=time_func, 
+        super().__init__(val=val, direct=direct, time_func=time_func,
                          shadow_area=shadow_area, ndof=18)
 
     def _compute_tensors(self, X, u, t):
@@ -1222,9 +1224,9 @@ class Tri6Boundary(BoundaryElement):
 
         # gauss point evaluation of full pressure field
         for L1, L2, L3, w in self.gauss_points:
-            N = np.array([L1*(2*L1 - 1), L2*(2*L2 - 1), L3*(2*L3 - 1), 
+            N = np.array([L1*(2*L1 - 1), L2*(2*L2 - 1), L3*(2*L3 - 1),
                           4*L1*L2, 4*L2*L3, 4*L1*L3])
-            
+
             dN_dL = np.array([  [4*L1 - 1,        0,        0],
                                 [       0, 4*L2 - 1,        0],
                                 [       0,        0, 4*L3 - 1],
@@ -1237,19 +1239,19 @@ class Tri6Boundary(BoundaryElement):
             v2 = dx_dL[:,1] - dx_dL[:,0]
             n = np.cross(v1, v2)
             f_mat += np.outer(N, n) / 2 * w
-        # no minus sign as force will be on the right hand side of eqn. 
+        # no minus sign as force will be on the right hand side of eqn.
         self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
 
 
 class LineLinearBoundary(BoundaryElement):
     '''
-    Line Boundary element for 2D-Problems. 
+    Line Boundary element for 2D-Problems.
     '''
     rot_mat = np.array([[0,-1], [1, 0]])
     N = np.array([1/2, 1/2])
-    
+
     def __init__(self, val, direct, time_func=None, shadow_area=False, ):
-        super().__init__(val=val, direct=direct, time_func=time_func, 
+        super().__init__(val=val, direct=direct, time_func=time_func,
                          shadow_area=shadow_area, ndof=4)
 
     def _compute_tensors(self, X, u, t):
@@ -1258,8 +1260,8 @@ class LineLinearBoundary(BoundaryElement):
         n = self.rot_mat @ v
         f_mat = np.outer(self.N, n)
         self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
-        
-        
+
+
 class LineQuadraticBoundary(BoundaryElement):
     '''
     Quadratic line boundary element for 2D problems.
@@ -1269,16 +1271,16 @@ class LineQuadraticBoundary(BoundaryElement):
                         [ 1,  0]])
 
     N = np.array([1, 1, 4])/6
-    
+
     def __init__(self, val, direct, time_func=None, shadow_area=False):
-        
-        super().__init__(val=val, direct=direct, time_func=time_func, 
+
+        super().__init__(val=val, direct=direct, time_func=time_func,
                          shadow_area=shadow_area, ndof=6)
 
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 2)).T
         v = x_vec[:,1] - x_vec[:,0]
-        n = self.rot_mat @ v 
+        n = self.rot_mat @ v
         f_mat = np.outer(self.N, n)
         self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
 
@@ -1306,7 +1308,7 @@ if use_fortran:
             X, self.material.rho, self.material.thickness)
         return self.M
 
-    
+
     # overloading the routines with fortran routines
     Tri3._compute_tensors_python = Tri3._compute_tensors
     Tri6._compute_tensors_python = Tri6._compute_tensors

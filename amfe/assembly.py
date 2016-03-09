@@ -1,10 +1,9 @@
-#!/bin/env python
-# -*- coding: utf-8 -*-
-
 """
 Basic assembly module for the finite element code. Assumes to have all elements
 in the inertial frame.
 """
+
+__all__ = ['Assembly']
 
 import time
 
@@ -13,6 +12,8 @@ import scipy as sp
 
 from scipy import sparse
 from scipy import linalg
+
+
 
 use_fortran = False
 try:
