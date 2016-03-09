@@ -296,8 +296,8 @@ class Tri3(Element):
     Element class for a plane triangle element in Total Lagrangian formulation.
     The displacements are given in x- and y-coordinates;
 
-    Element-properties:
-    -------------------
+    Notes
+    -----
     The Element assumes constant strain and stress over the whole element.
     Thus the approximation quality is very moderate.
 
@@ -1081,7 +1081,6 @@ class BoundaryElement(Element):
 
     Attributes
     ----------
-
     time_func : func
         function returning a value between {-1, 1} which is time dependent
         storing the time dependency of the Neumann Boundary condition.
@@ -1182,8 +1181,8 @@ class Tri6Boundary(BoundaryElement):
     '''
     Boundary element with variatonally consistent boundary forces.
 
-    Note
-    ----
+    Notes
+    -----
     This function has been updated to give a variationally consistent
     integrated skin element.
     '''

@@ -1,11 +1,11 @@
 """
 A collection of tools which to not fit to one topic of the other modules.
 
-Some tools here are experimental.
+Some tools here might be experimental.
 """
 
 __all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat', 
-    'append_to_filename', 'matshow_3d', 'test']
+           'append_to_filename', 'matshow_3d', 'test']
 
 import numpy as np
 import scipy as sp
@@ -88,13 +88,11 @@ def read_hbmat(filename):
     matrix : sp.sparse.csc_matrix
         matrix which is saved in harwell-boeing format
 
-    Info
-    ----
+    Notes
+    ----_
     Information on the Harwell Boeing format:
     http://people.sc.fsu.edu/~jburkardt/data/hb/hb.html
 
-    Note
-    ----
     When the hbmat file is exported as an ASCII-file, the truncation of the
     numerical values can cause issues, for example
 

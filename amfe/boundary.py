@@ -137,8 +137,8 @@ class DirichletBoundary():
         ... <95x95 sparse matrix of type '<class 'numpy.float64'>'
                 with 93 stored elements in Compressed Sparse Column format>
 
-        Information
-        -----------
+        Notes
+        -----
 
         Die globalen Freiheitsgrade differieren daher von den Freiheitsgraden
         des beschränkten Systems;

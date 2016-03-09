@@ -3,8 +3,10 @@ Module of AMfe which handles the reduced order models.
 """
 
 __all__ = ['reduce_mechanical_system', 'qm_reduce_mechanical_system',
-            'modal_derivative', 'modal_derivative_theta',
-            'static_correction_derivative', 'static_correction_theta', 'principal_angles', 'krylov_subspace', 'craig_bampton', 'vibration_modes', 'pod']
+           'modal_derivative', 'modal_derivative_theta',
+           'static_correction_derivative', 'static_correction_theta', 
+           'principal_angles', 'krylov_subspace', 'craig_bampton', 
+           'vibration_modes', 'pod']
 
 import copy
 import numpy as np

@@ -133,6 +133,28 @@ if use_fortran:
 class Assembly():
     '''
     Class for the more fancy assembly of meshes with non-heterogeneous elements.
+    
+    Attributes
+    ----------
+    C_csr : scipy.sparse.csr.csr_matrix
+        Matrix containing the sparsity pattern of the problem
+    csr_assembly_indices : np.ndarray
+        Array containing the indices for the csr matrix assembly routine.
+        The entry [i,j,k] contains the index of the csr-value-matrix
+        for the i-th element and the j-th row and the k-th column
+        of the local stiffness matrix of the i-th element.
+        The dimension is (n_elements, ndof_element, ndof_element).
+    element_indices : list
+        Ragged list containing the global indices for the local variables
+        of an element. The entry [i,j] gives the index in the global vector
+        of element i with dof j
+    neumann_indices : list
+        Ragged list equivalently to element_indices for the neumann
+        boundary skin elements.
+    nodes_voigt : np.ndarray
+        vector of all nodal coordinates in voigt-notation.
+        Dimension is (ndofs_total, )
+
     '''
     def __init__(self, mesh):
         '''
@@ -169,31 +191,9 @@ class Assembly():
         None
 
 
-        Internal variables computed:
-        ----------------------------
-
-        C_csr : scipy.sparse.csr.csr_matrix
-            Matrix containing the sparsity pattern of the problem
-        csr_assembly_indices : np.ndarray
-            Array containing the indices for the csr matrix assembly routine.
-            The entry [i,j,k] contains the index of the csr-value-matrix
-            for the i-th element and the j-th row and the k-th column
-            of the local stiffness matrix of the i-th element.
-            The dimension is (n_elements, ndof_element, ndof_element).
-        element_indices : list
-            Ragged list containing the global indices for the local variables
-            of an element. The entry [i,j] gives the index in the global vector
-            of element i with dof j
-        neumann_indices : list
-            Ragged list equivalently to element_indices for the neumann
-            boundary skin elements.
-        nodes_voigt : np.ndarray
-            vector of all nodal coordinates in voigt-notation.
-            Dimension is (ndofs_total, )
-
         Notes
         -----
-        This preallocation routine can take some while for small matrices.
+        This preallocation routine can take some while.
 
         '''
         print('Preallocating the stiffness matrix')
