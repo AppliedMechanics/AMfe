@@ -11,18 +11,18 @@ import numpy as np
 
 import amfe
 
-from experiments.quadratic_manifold.benchmark_u import benchmark_system, \
+from experiments.quadratic_manifold.benchmark_bar import benchmark_system, \
     amfe_dir, alpha
 #from benchmark_u import benchmark_system, amfe_dir
 
 paraview_output_file = os.path.join(amfe_dir, 'results/no_reduction' +
                                     time.strftime("_%Y%m%d_%H%M%S"))
 
-
-#%%
-
 # time integration
 ndof = benchmark_system.dirichlet_class.no_of_constrained_dofs
+
+
+#%% Integrate the nonlinear system
 
 my_newmark = amfe.NewmarkIntegrator(benchmark_system, alpha=alpha)
 my_newmark.delta_t = 1E-4
@@ -30,3 +30,10 @@ my_newmark.delta_t = 1E-4
 my_newmark.integrate(np.zeros(ndof), np.zeros(ndof), np.arange(0, 0.4, 1E-4))
 
 benchmark_system.export_paraview(paraview_output_file)
+
+#%%
+# try the linear system:
+q0, dq0 = np.zeros(ndof), np.zeros(ndof)
+time_range = np.arange(0, 0.4, 1E-4)
+amfe.integrate_linear_system(benchmark_system, q0, dq0, time_range, dt=1E-4, 
+                             alpha=alpha)

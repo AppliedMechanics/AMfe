@@ -22,7 +22,8 @@ from amfe.mechanical_system import MechanicalSystem, ReducedSystem, \
     ConstrainedMechanicalSystem, QMSystem
 from amfe.mesh import Mesh, MeshGenerator
 from amfe.solver import NewmarkIntegrator, solve_linear_displacement, \
-    solve_nonlinear_displacement, give_mass_and_stiffness, HHTConstrained
+    solve_nonlinear_displacement, give_mass_and_stiffness, HHTConstrained, \
+    integrate_linear_system
 from amfe.tools import node2total, total2node, inherit_docs, read_hbmat, \
     append_to_filename, matshow_3d, test
 

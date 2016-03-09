@@ -118,7 +118,7 @@ class NewmarkIntegrator():
         # initialize starting variables
         q = q_start.copy()
         dq = dq_start.copy()
-        ddq = np.zeros(len(q_start))
+        ddq = np.zeros_like(q_start)
 
         q_global = []
         dq_global = []
@@ -217,6 +217,85 @@ class NewmarkIntegrator():
             t_clock_2 - t_clock_1))
         return
 
+def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0):
+    '''
+    Perform an implicit time integration of the linearized system given with 
+    the linear system. 
+    
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Mechanical System which is linearized about the zero displacement. 
+    q0 : ndarray
+        initial displacement 
+    dq0 : ndarray 
+        initial velocity
+    time_range : ndarray
+        array containing the time steps to be exported
+    dt : float
+        time step size.
+    alpha : float
+        general damping factor of the generalized-alpha method.
+        
+    Returns
+    -------
+    q : ndarray
+        Displacement of the linear system
+        
+    '''
+    t_clock_1 = time.time()
+    print('Starting linear time integration')
+    eps = 1E-13 # epsilon for floating point round off errors
+    # Check, if the time step width and the spacing in time range fit together
+    time_steps = time_range - np.roll(time_range, 1)
+    remainder = (time_steps + eps) % dt
+    if np.any(remainder > eps*10):
+        raise ValueError(
+            'The time step size and the time range vector do not fit.', 
+            'Make the time increments in the time_range vector integer',
+            'multiples of dt.')
+    
+    beta = 1/4*(1 + alpha)**2
+    gamma = 1/2 + alpha
+    K = mechanical_system.K()
+    M = mechanical_system.M()
+    S = M + beta * dt**2 * K
+    S_inv = sp.sparse.linalg.splu(S)
+    # S_inv.solve() # method to solve the system efficiently
+    
+    # initialization of the state variables
+    t = 0
+    q = q0.copy()
+    dq = dq0.copy()
+    # Evaluation of the initial acceleration
+    f_ext = mechanical_system.f_ext(q, dq, t)
+    ddq = sp.sparse.linalg.spsolve(M, f_ext - K @ q)
+    
+    # check, if the first time step is zero
+    
+    time_index = 0
+    while time_index < len(time_range):
+        
+        if t+eps >= time_range[time_index]:
+            mechanical_system.write_timestep(t, q.copy())
+            time_index += 1
+        
+        # update of state 
+        t += dt
+        q, dq = (q + dt*dq + (1/2-beta)*dt**2*ddq, dq + (1-gamma)*dt*ddq)
+        
+        # Solution of system
+        f_ext = mechanical_system.f_ext(q, dq, t)
+        ddq = S_inv.solve(f_ext - K @ q)
+        
+        # correction of state
+        q, dq = (q + beta*dt**2*ddq), dq + gamma*dt*ddq
+    
+    t_clock_2 = time.time()
+    print('Time for linar time marching integration: {0:4.2f} seconds'.format(
+          t_clock_2 - t_clock_1))
+
+    return
 
 def solve_linear_displacement(mechanical_system, t=1, verbose=True):
     '''
