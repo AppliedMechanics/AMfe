@@ -122,10 +122,6 @@ class NewmarkIntegrator():
         q = q_start.copy()
         dq = dq_start.copy()
         ddq = np.zeros_like(q_start)
-        # saving state for recovery if no convergence is gained
-        t_old = t
-        q_old = q.copy()
-        dq_old = dq.copy()
 
 #        # predict start values for ddq:
 #        ddq = linalg.spsolve(self.M, self.f_non(q, t))        
@@ -304,7 +300,7 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     
     t_clock_2 = time.time()
     print('Time for linar time marching integration: {0:4.2f} seconds'.format(
-          t_clock_2 - t_clock_1))
+        t_clock_2 - t_clock_1))
 
     return
 
@@ -421,7 +417,7 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         mechanical_system.write_timestep(t, u)
     t_clock_2 = time.time()
     print('Time for solving nonlinear displacements: {0:4.2f} seconds'.format(
-            t_clock_2 - t_clock_1))
+        t_clock_2 - t_clock_1))
     return 
 
 def give_mass_and_stiffness(mechanical_system):
