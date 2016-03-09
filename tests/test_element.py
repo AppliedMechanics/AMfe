@@ -268,7 +268,7 @@ def test_tri6_pressure():
     np.testing.assert_equal(K, np.zeros((18,18)))
     # as the skin element produces a force acting on the right hand side, 
     # f has a negative sign. 
-    np.testing.assert_allclose(f_1d, -f[2::3]) 
+    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7) 
 
 
 
