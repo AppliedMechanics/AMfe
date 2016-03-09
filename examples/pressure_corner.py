@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Dec 18 13:18:08 2015
 
 @author: johannesr
 """
 
-import numpy
-import scipy
 import amfe
 
 
@@ -27,4 +24,3 @@ my_system.apply_neumann_boundaries(12, 1E10, 'normal', lambda t: t)
 amfe.solve_nonlinear_displacement(my_system, no_of_load_steps=50)
 
 my_system.export_paraview(output_file)
-

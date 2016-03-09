@@ -66,7 +66,18 @@ for element in element_mapping_list:
 
 
 def check_dir(*filenames):
-    '''Checkt ob Verzeichnis vorliegt; falls nicht, wird Verzeichnis angelegt'''
+    '''
+    Check if paths exists; if not, the given paths will be created.
+
+    Parameters
+    ----------
+    *filenames : string or list of strings
+        string containing a path. 
+    
+    Returns
+    -------
+    None        
+    '''
     for filename in filenames:  # loop on files
         dir_name = os.path.dirname(filename)
         # check if directory does not exist; then create directory
@@ -356,7 +367,7 @@ class Mesh:
         try:
             self.nodes = np.genfromtxt(filename_nodes, delimiter = ',', skip_header = 1)
         except:
-            print('FEHLER beim lesen der Datei', filename_nodes,
+            ImportError('Error while reading file ' + filename_nodes, '\n'
                   '\nVermutlich stimmt die erwartete Dimension der Knotenfreiheitsgrade',
                   self.no_of_dofs_per_node, 'nicht mit der Dimension in der Datei zusammen.')
         # when line numbers are erased if they are content of the csv
