@@ -6,7 +6,7 @@ import numpy as np
 
 import amfe
 
-from experiments.quadratic_manifold.benchmark_u import benchmark_system, \
+from experiments.quadratic_manifold.benchmark_arc import benchmark_system, \
     amfe_dir, alpha
 #from benchmark_u import benchmark_system, amfe_dir
 
@@ -20,8 +20,9 @@ ndof = benchmark_system.dirichlet_class.no_of_constrained_dofs
 #%%
 # try the linear system:
 q0, dq0 = np.zeros(ndof), np.zeros(ndof)
-time_range = np.arange(0, 0.4, 1E-4)
+time_range = np.arange(0, 0.4, 1E-3)
 amfe.integrate_linear_system(benchmark_system, q0, dq0, time_range, dt=1E-4, 
                              alpha=alpha)
 
-benchmark_system.export_paraview(paraview_output_file)
+out_file = amfe.append_to_filename(paraview_output_file)
+benchmark_system.export_paraview(out_file)
