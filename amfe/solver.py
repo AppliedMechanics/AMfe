@@ -264,7 +264,7 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     S = M + beta * dt**2 * K
     S_inv = sp.sparse.linalg.splu(S)
     # S_inv.solve(rhs_vec) # method to solve the system efficiently
-
+    print('Iteration matrix successfully factorized. Starting time marching...')
     # initialization of the state variables
     t = 0
     q = q0.copy()
