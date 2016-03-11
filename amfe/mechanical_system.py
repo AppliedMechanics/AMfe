@@ -675,7 +675,7 @@ class QMSystem(MechanicalSystem):
         return f_ext
 
     def write_timestep(self, t, u):
-        u_full = self.V @ u + (self.Theta @ u) @ u
+        u_full = self.V @ u + (self.Theta @ u) @ u * 1/2
         MechanicalSystem.write_timestep(self, t, u_full)
         # own reduced output
         self.u_red_output.append(u.copy())
