@@ -29,7 +29,7 @@ my_system.apply_dirichlet_boundaries(20, 'xy')
 def harmonic_ext(t):
     return np.sin(2*np.pi*t*10)
 
-my_system.apply_neumann_boundaries(21, 6E6, 'normal', harmonic_ext)
+my_system.apply_neumann_boundaries(21, 2E6, 'normal', harmonic_ext)
 
 benchmark_system = my_system
 

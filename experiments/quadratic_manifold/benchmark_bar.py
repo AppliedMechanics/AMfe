@@ -30,7 +30,8 @@ my_system.apply_dirichlet_boundaries(8, 'xy')
 
 harmonic_y = lambda t: np.sin(2*np.pi*t*20)
 
-my_system.apply_neumann_boundaries(key=9, val=2E7, direct=(0,1), time_func=harmonic_y)
+# old force: 2E7
+my_system.apply_neumann_boundaries(key=9, val=5E6, direct=(0,1), time_func=harmonic_y)
 
 benchmark_system = my_system
 

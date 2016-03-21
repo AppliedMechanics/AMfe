@@ -16,7 +16,7 @@ import amfe
 # mpl.rcParams['svg.image_inline'] = False
 
 # % cd experiments/quadratic_manifold/
-from experiments.quadratic_manifold.benchmark_arc import benchmark_system, \
+from experiments.quadratic_manifold.benchmark_bar_arc import benchmark_system, \
     amfe_dir, alpha
 
 paper_fig_path = '/home/rutzmoser/Dokumente/012_Paper_QM/paper/pics/comp_md_smd_u.svg'
@@ -84,9 +84,9 @@ my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 #%% create a MD QM system
  
-print('Take care! Theta is not symmetric now!')
+# print('Take care! Theta is not symmetric now!')
 theta = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M, h=SQ_EPS,\
-                                    symmetric=False)
+                                    symmetric=True)
 # theta = 1/2*(theta * theta.transpose(0,2,1))
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
@@ -113,7 +113,7 @@ plt.title('Inner product of V with theta')
 
 
 M = benchmark_system.M()
-theta = make_theta_mass_orthogonal(theta, V, M)
+theta = theta_m_orth_v(theta, V, M)
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
 #%% Second approach: Show the norm of the vector in theta
@@ -189,7 +189,7 @@ my_newmark.atol = 1E-7
 #my_newmark.write_iter = True
 
 my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), 
-                     np.arange(0, 0.4, 1E-4))
+                     np.arange(0, 0.4, 1E-3))
 
 out_file = amfe.append_to_filename(paraview_output_file)
 my_qm_sys.export_paraview(out_file)
@@ -197,7 +197,7 @@ my_qm_sys.export_paraview(out_file)
 #%% plot the time line of the reduced variable 
 
 q_red = np.array(my_qm_sys.u_red_output)
-#t = np.array(my_qm_sys.T_output)
+t = np.array(my_qm_sys.T_output)
 plt.figure()
 plt.plot(t, q_red[:,:])
 plt.grid()
@@ -222,17 +222,6 @@ plt.semilogy(t, conds[:,1], label='cond P scaling')
 plt.semilogy(t, conds[:,2], label='cond P vecs')
 plt.legend()
 plt.grid()
-
-
-#%% Check condition number due to bad lengthes in scaling
-
-conds_scaling = np.zeros_like(q_red[:,0])
-for i, q in enumerate(q_red):
-    P = V + 2*(theta @ q)
-    conds_scaling[i] = np.linalg.cond(P)
-
-plt.figure()
-plt.semilogy(t, conds); plt.grid()
 
 
 #%% Check, how the modes in P look like by export to ParaView

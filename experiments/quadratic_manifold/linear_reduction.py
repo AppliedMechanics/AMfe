@@ -13,7 +13,7 @@ import time
 
 import amfe
 
-from experiments.quadratic_manifold.benchmark_bar import benchmark_system, \
+from experiments.quadratic_manifold.benchmark_bar_arc import benchmark_system, \
     amfe_dir, alpha
 #from benchmark_u import benchmark_system, amfe_dir
 
@@ -61,6 +61,7 @@ my_newmark = amfe.NewmarkIntegrator(my_reduced_system, alpha=alpha)
 my_newmark.delta_t = 1E-4
 my_newmark.atol = 1E-3
 my_newmark.integrate(np.zeros(no_of_modes), np.zeros(no_of_modes), 
-                     np.arange(0, 0.4, 1E-4))
+                     np.arange(0, 0.4, 1E-3))
 
-my_reduced_system.export_paraview(paraview_output_file)
+out_file = amfe.append_to_filename(paraview_output_file)
+my_reduced_system.export_paraview(out_file)
