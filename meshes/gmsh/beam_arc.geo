@@ -1,8 +1,8 @@
 // Gmsh project created on Mon Mar 21 18:26:05 2016
-h = 0.05;
+h = 0.1;
 R = 3.0;
 w = 2.0;
-h_m = 0.02;
+h_m = 0.05;
 
 Point(1) = {-w/2, 0, 0, h_m};
 Point(2) = {-w/2, h, 0, h_m};
