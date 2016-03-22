@@ -25,12 +25,7 @@ my_system.load_mesh_from_gmsh(gmsh_input_file, 10, my_material)
 my_system.apply_dirichlet_boundaries(5, 'xy')
 my_system.apply_dirichlet_boundaries(6, 'xy')
 
-def harmonic_y(t):
-    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*30)
-
-# old force: 2E7
-my_system.apply_neumann_boundaries(key=7, val=5E5, direct=(0,1), 
-                                   time_func=harmonic_y)
+neumann_domain = 7
 
 benchmark_system = my_system
 

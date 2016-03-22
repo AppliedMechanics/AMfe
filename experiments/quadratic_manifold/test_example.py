@@ -10,13 +10,19 @@ from multiprocessing import Pool
 import amfe
 import os
 from experiments.quadratic_manifold.benchmark_bar_arc import benchmark_system, \
-    amfe_dir, alpha
+    amfe_dir, alpha, neum_domain
 
 paraview_output_file = os.path.join(amfe_dir, 'results/test_examples/' +
                                     time.strftime("%Y%m%d_%H%M%S"))
 
+def harmonic_y(t):
+    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*30)
 
-file_string = '_beam_arc_h_01_f'
+benchmark_system.apply_neumann_boundaries(key=neum_domain, val=4E5, 
+                                          direct=(0,1), 
+                                          time_func=harmonic_y)
+
+file_string = '_bar_arc_R1_h01_f4E5_'
 
 no_of_modes = 10
 dt_calc = 2E-4
@@ -47,7 +53,32 @@ def compute_linearized_sol(mech_system, filename):
     mech_system.export_paraview(filename)
 
 
-def compute_qm_sol(mech_system, filename):
+def compute_qm_smd_sol(mech_system, filename):
+    '''
+    Compute the solution of the mechanical system usinig QM approach
+    '''
+    dofs_reduced = no_of_modes
+    omega, V = amfe.vibration_modes(mech_system, n=no_of_modes)
+    dofs_full = V.shape[0]
+    M = mech_system.M()
+    K = mech_system.K()
+    
+    # Create a static MD QM system
+    theta = amfe.static_correction_theta(V, mech_system.K)
+    # theta = amfe.modal_derivative_theta(V, omega, benchmark_system.K, M, h=SQ_EPS,\
+#                                    symmetric=True)
+    my_qm_sys = amfe.qm_reduce_mechanical_system(mech_system, V, theta)
+    
+    my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=alpha)
+    my_newmark.verbose = True
+    my_newmark.delta_t = dt_calc
+    my_newmark.n_iter_max = 100
+    my_newmark.atol = 1E-7
+    t_series = np.arange(0, t_end, dt_output)
+    my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
+    my_qm_sys.export_paraview(filename)
+
+def compute_qm_md_sol(mech_system, filename):
     '''
     Compute the solution of the mechanical system usinig QM approach
     '''
@@ -71,6 +102,7 @@ def compute_qm_sol(mech_system, filename):
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
     my_qm_sys.export_paraview(filename)
+
 
 
 def compute_full_sol(mech_system, filename):
@@ -103,15 +135,21 @@ mech_sys_full = copy.deepcopy(benchmark_system)
 args_full = [mech_sys_full, filename_full]
 result_full = apply_async(pool, compute_full_sol, args_full)
 
-filename_qm = paraview_output_file + file_string + 'qm'
-mech_sys_qm = copy.deepcopy(benchmark_system)
-args_qm = [mech_sys_qm, filename_qm]
-result_qm = apply_async(pool, compute_qm_sol, args_qm)
+filename_qm_md = paraview_output_file + file_string + 'qm_md'
+mech_sys_qm_md = copy.deepcopy(benchmark_system)
+args_qm_md = [mech_sys_qm_md, filename_qm_md]
+result_qm_md = apply_async(pool, compute_qm_md_sol, args_qm_md)
+
+filename_qm_smd = paraview_output_file + file_string + 'qm_smd'
+mech_sys_qm_smd = copy.deepcopy(benchmark_system)
+args_qm_smd = [mech_sys_qm_smd, filename_qm_smd]
+result_qm_smd = apply_async(pool, compute_qm_smd_sol, args_qm_smd)
+
 
 answer_lin = result_lin.get()
 answer_full = result_full.get()
-answer_qm = result_qm.get()
-
+answer_qm_md = result_qm_md.get()
+answer_qm_smd = result_qm_smd.get()
 
 
 # result2 = pool.apply_async(func, arglist)

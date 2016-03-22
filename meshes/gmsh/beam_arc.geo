@@ -1,6 +1,6 @@
 // Gmsh project created on Mon Mar 21 18:26:05 2016
 h = 0.1;
-R = 3.0;
+R = 1.0;
 w = 2.0;
 h_m = 0.05;
 
