@@ -17,7 +17,16 @@ import amfe
 
 # % cd experiments/quadratic_manifold/
 from experiments.quadratic_manifold.benchmark_bar_arc import benchmark_system, \
-    amfe_dir, alpha
+    amfe_dir, alpha, neumann_domain
+
+def harmonic_y(t):
+    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*30)
+
+benchmark_system.apply_neumann_boundaries(key=neumann_domain, val=4E5,
+                                          direct=(0,1),
+                                          time_func=harmonic_y)
+
+
 
 paper_fig_path = '/home/rutzmoser/Dokumente/012_Paper_QM/paper/pics/comp_md_smd_u.svg'
 paraview_output_file = os.path.join(amfe_dir, 'results/qm_reduction' +
@@ -76,9 +85,9 @@ M = benchmark_system.M()
 K = benchmark_system.K()
 
 #%% Create a static MD QM system
+om_shift = 30*2*np.pi
 
-theta = amfe.static_correction_theta(V, benchmark_system.K)
-# theta = sp.zeros((dofs_full, dofs_reduced, dofs_reduced))
+theta = amfe.static_correction_theta(V, benchmark_system.K, M, om_shift)
 
 my_qm_sys = amfe.qm_reduce_mechanical_system(benchmark_system, V, theta)
 
@@ -185,7 +194,7 @@ my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=alpha)
 my_newmark.verbose = True
 my_newmark.delta_t = 1E-4
 my_newmark.n_iter_max = 100
-my_newmark.atol = 1E-7
+my_newmark.atol = 1E-5
 #my_newmark.write_iter = True
 
 my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), 

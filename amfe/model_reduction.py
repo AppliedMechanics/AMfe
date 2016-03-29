@@ -315,10 +315,12 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     return dx_i_dx_j
 
 
-def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
+def static_correction_theta(V, K_func, M=None, omega=0, h=5*SQ_EPS, verbose=True):
     '''
-    Computes the static correction derivatives of the basis V
-
+    Compute the static correctioin derivatives for the given basis V. 
+    
+    Optionally, a frequency shift can be performed. 
+    
     Parameters
     ----------
     V : ndarray
@@ -326,6 +328,11 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
     K_func : function
         function returning the tangential stiffness matrix for a given
         displacement. Has to work like `K = K_func(u)`.
+    M : ndarray, optional
+        mass matrix. Can be sparse or dense. If `None` is given, the mass of 0 
+        is assumed. Default value is `None`. 
+    omega : float, optional
+        shift frequency. Default value is 0.
     h : float, optional
         step width for finite difference scheme. Default value is 500 * machine
         epsilon
@@ -336,19 +343,24 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
     -------
     Theta : ndarray
         three dimensional array of static corrections derivatives. Theta[:,i,j]
-        contains the static derivative 1/2 * dx_i / dx_j. As the static derivatives
-        are symmetric, Theta[:,i,j] == Theta[:,j,i].
-
+        contains the static derivative 1/2 * dx_i / dx_j. As the static 
+        derivatives are symmetric, Theta[:,i,j] == Theta[:,j,i].
+    
     See Also
     --------
     modal_derivative_theta
     static_correction_derivative
-
+    
     '''
     no_of_dofs = V.shape[0]
     no_of_modes = V.shape[1]
     Theta = np.zeros((no_of_dofs, no_of_modes, no_of_modes))
     K = K_func(np.zeros(no_of_dofs))
+    if (omega > 0) and (M != None):
+        K_dyn = K - omega**2 * M
+    else:
+        K_dyn = K
+    LU_object = sp.sparse.linalg.splu(K_dyn)
     for i in range(no_of_modes):
         if verbose:
             print('Computing finite difference K-matrix')
@@ -356,7 +368,8 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
         b = - dK_dx_i @ V
         if verbose:
             print('Sovling linear system #', i)
-        Theta[:,:,i] = sp.sparse.linalg.spsolve(K, b)
+        # Theta[:,:,i] = sp.sparse.linalg.spsolve(K, b)
+        Theta[:,:,i] = LU_object.solve(b)
         if verbose:
             print('Done solving linear system #', i)
     if verbose:
@@ -365,7 +378,7 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
     # make Theta symmetric
     Theta = 1/2*(Theta + Theta.transpose(0,2,1))
     return Theta
-
+    
 def principal_angles(V1, V2, cosine=True, principal_vectors=False):
     '''
     Return the cosine of the principal angles of the two bases V1 and V2.
