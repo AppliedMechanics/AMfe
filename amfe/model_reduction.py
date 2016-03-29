@@ -469,19 +469,18 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
     '''
     ndim = M.shape[0]
     no_of_inputs = b.size//ndim
+    f = b.copy()
     V = np.zeros((ndim, no_of_moments*no_of_inputs))
-    lu = linalg.lu_factor(K - omega**2 * M)
-    b_new = linalg.lu_solve(lu, b)
-    b_new /= linalg.norm(b_new)
-    V[:,0:no_of_inputs] = b_new.reshape((-1, no_of_inputs))
-    for i in np.arange(1, no_of_moments):
-        f = M.dot(b_new)
-        b_new = linalg.lu_solve(lu, f)
-        b_new /= linalg.norm(b_new)
+    LU_object = sp.sparse.linalg.splu(K - omega**2 * M)
+
+    for i in np.arange(no_of_moments):
+        b_new = LU_object.solve(f)
+        # b_new /= linalg.norm(b_new)
         V[:,i*no_of_inputs:(i+1)*no_of_inputs] = b_new.reshape((-1, no_of_inputs))
         V[:,:(i+1)*no_of_inputs], R = linalg.qr(V[:,:(i+1)*no_of_inputs],
                                                 mode='economic')
         b_new = V[:,i*no_of_inputs:(i+1)*no_of_inputs]
+        f = M.dot(b_new)
     sigmas = linalg.svdvals(V)
     print('Krylov Basis constructed. The singular values of the basis are', sigmas)
     return V

@@ -83,9 +83,15 @@ omega, V = amfe.vibration_modes(benchmark_system, n=no_of_modes)
 dofs_full = V.shape[0]
 M = benchmark_system.M()
 K = benchmark_system.K()
+f = benchmark_system.f_ext(None, None, sp.rand())
+
+
+#%% Krylov subspace...
+
+V = amfe.krylov_subspace(M, K, f, no_of_moments=10)
 
 #%% Create a static MD QM system
-om_shift = 30*2*np.pi
+om_shift = 30*2*np.pi * 0
 
 theta = amfe.static_correction_theta(V, benchmark_system.K, M, om_shift)
 

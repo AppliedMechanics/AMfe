@@ -6,6 +6,7 @@ import time
 import copy
 import dill
 import numpy as np
+import scipy as sp
 from multiprocessing import Pool
 import amfe
 import os
@@ -105,6 +106,33 @@ def compute_qm_smd_shift_sol(mech_system, filename):
     my_qm_sys.export_paraview(filename)
 
 
+
+def compute_qm_kry_sol(mech_system, filename):
+    '''
+    Compute the solution of the mechanical system usinig QM approach
+    '''
+    M = mech_system.M()
+    K = mech_system.K()
+    dofs_full = M.shape[0]
+    dofs_reduced = no_of_modes
+    f = mech_system.f_ext(np.zeros(dofs_full), np.zeros(dofs_full), sp.rand())
+    f /= np.sqrt(f @ f)
+    V = amfe.krylov_subspace(M, K, f, no_of_moments=no_of_modes)
+
+    # Create a static MD QM system
+    theta = amfe.static_correction_theta(V, mech_system.K, M, om_shift)
+    my_qm_sys = amfe.qm_reduce_mechanical_system(mech_system, V, theta)
+
+    my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=alpha)
+    my_newmark.verbose = True
+    my_newmark.delta_t = dt_calc
+    my_newmark.n_iter_max = 100
+    my_newmark.atol = 1E-7
+    t_series = np.arange(0, t_end, dt_output)
+    my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
+    my_qm_sys.export_paraview(filename)
+
+
 def compute_qm_md_sol(mech_system, filename):
     '''
     Compute the solution of the mechanical system usinig QM approach
@@ -172,15 +200,21 @@ mech_sys_qm_smd = copy.deepcopy(benchmark_system)
 args_qm_smd = [mech_sys_qm_smd, filename_qm_smd]
 result_qm_smd = apply_async(pool, compute_qm_smd_sol, args_qm_smd)
 
-filename_qm_smd_shift = paraview_output_file + file_string + 'qm_smd_shift'
-mech_sys_qm_smd_shift = copy.deepcopy(benchmark_system)
-args_qm_smd_shift = [mech_sys_qm_smd_shift, filename_qm_smd_shift]
-result_qm_smd_shift = apply_async(pool, compute_qm_smd_shift_sol, args_qm_smd_shift)
+#filename_qm_smd_shift = paraview_output_file + file_string + 'qm_smd_shift'
+#mech_sys_qm_smd_shift = copy.deepcopy(benchmark_system)
+#args_qm_smd_shift = [mech_sys_qm_smd_shift, filename_qm_smd_shift]
+#result_qm_smd_shift = apply_async(pool, compute_qm_smd_shift_sol, args_qm_smd_shift)
 
+filename_qm_kry = paraview_output_file + file_string + 'qm_kry'
+mech_sys_qm_kry = copy.deepcopy(benchmark_system)
+args_qm_kry = [mech_sys_qm_kry, filename_qm_kry]
+result_qm_kry = apply_async(pool, compute_qm_kry_sol, args_qm_kry)
 
+#%%
 
 answer_lin = result_lin.get()
 answer_full = result_full.get()
 answer_qm_md = result_qm_md.get()
 answer_qm_smd = result_qm_smd.get()
-answer_qm_smd_shift = result_qm_smd_shift.get()
+#answer_qm_smd_shift = result_qm_smd_shift.get()
+answer_qm_kry = result_qm_kry.get()
