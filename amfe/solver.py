@@ -85,6 +85,7 @@ class NewmarkIntegrator():
         self.n_iter_max = n_iter_max
         self.mechanical_system = mechanical_system
         self.write_iter = False
+        self.conv_abort = True
 
     def integrate(self, q_start, dq_start, time_range):
         '''
@@ -201,11 +202,15 @@ class NewmarkIntegrator():
 
                 # catch when the newton loop doesn't converge
                 if n_iter > self.n_iter_max:
+                    if self.conv_abort:
+                        return
+                        # raise Exception('No convergence in Newton-Loop!')
                     t = t_old
                     q = q_old.copy()
                     dq = dq_old.copy()
                     no_newton_convergence_flag = True
                     break
+                    
 
             print('Time:', t, 'No of iterations:', n_iter,
                   'Residual: {0:4.2E}'.format(res_abs))
