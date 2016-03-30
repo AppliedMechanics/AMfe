@@ -1,5 +1,6 @@
 """
-Make a comparison the given example
+Make a comparison of the given example using linearized simulation, QM 
+simulation and a full reference simulation. 
 """
 
 import time
@@ -10,27 +11,30 @@ import scipy as sp
 from multiprocessing import Pool
 import amfe
 import os
-from experiments.quadratic_manifold.benchmark_bar_arc import benchmark_system, \
-    amfe_dir, alpha, neumann_domain
+from experiments.quadratic_manifold.benchmark_bar_2 import benchmark_system, \
+    amfe_dir, alpha# , neumann_domain
 
 paraview_output_file = os.path.join(amfe_dir, 'results/test_examples/' +
                                     time.strftime("%Y%m%d_%H%M%S"))
 
-def harmonic_y(t):
-    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*30)
-
-benchmark_system.apply_neumann_boundaries(key=neumann_domain, val=4E5,
-                                          direct=(0,1),
-                                          time_func=harmonic_y)
+#def harmonic_y(t):
+#    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*30)
+#
+#benchmark_system.apply_neumann_boundaries(key=neumann_domain, val=4E5,
+#                                          direct=(0,1),
+#                                          time_func=harmonic_y)
 
 file_string = '_bar_arc_R1_h01_f4E5_'
+file_string = '_bar_2_f5E5_'
 
-om_shift = 30 * 2*np.pi
+
+om_shift = 10 * 2*np.pi
 
 no_of_modes = 10
 dt_calc = 2E-4
 dt_output = 1E-3
 t_end = 0.4
+atol = 1E-5
 
 
 SQ_EPS = amfe.model_reduction.SQ_EPS
@@ -76,7 +80,7 @@ def compute_qm_smd_sol(mech_system, filename):
     my_newmark.verbose = True
     my_newmark.delta_t = dt_calc
     my_newmark.n_iter_max = 100
-    my_newmark.atol = 1E-7
+    my_newmark.atol = atol
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
     my_qm_sys.export_paraview(filename)
@@ -100,7 +104,7 @@ def compute_qm_smd_shift_sol(mech_system, filename):
     my_newmark.verbose = True
     my_newmark.delta_t = dt_calc
     my_newmark.n_iter_max = 100
-    my_newmark.atol = 1E-7
+    my_newmark.atol = atol
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
     my_qm_sys.export_paraview(filename)
@@ -116,18 +120,18 @@ def compute_qm_kry_sol(mech_system, filename):
     dofs_full = M.shape[0]
     dofs_reduced = no_of_modes
     f = mech_system.f_ext(np.zeros(dofs_full), np.zeros(dofs_full), sp.rand())
-    f /= np.sqrt(f @ f)
+    # f /= np.sqrt(f @ f)
     V = amfe.krylov_subspace(M, K, f, no_of_moments=no_of_modes)
 
-    # Create a static MD QM system
-    theta = amfe.static_correction_theta(V, mech_system.K, M, om_shift)
+    # Create a static MD krylov QM system
+    theta = amfe.static_correction_theta(V, mech_system.K)
     my_qm_sys = amfe.qm_reduce_mechanical_system(mech_system, V, theta)
 
     my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=alpha)
     my_newmark.verbose = True
     my_newmark.delta_t = dt_calc
     my_newmark.n_iter_max = 100
-    my_newmark.atol = 1E-7
+    my_newmark.atol = atol
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
     my_qm_sys.export_paraview(filename)
@@ -153,7 +157,7 @@ def compute_qm_md_sol(mech_system, filename):
     my_newmark.verbose = True
     my_newmark.delta_t = dt_calc
     my_newmark.n_iter_max = 100
-    my_newmark.atol = 1E-7
+    my_newmark.atol = atol
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
     my_qm_sys.export_paraview(filename)
@@ -167,7 +171,7 @@ def compute_full_sol(mech_system, filename):
     ndof = mech_system.dirichlet_class.no_of_constrained_dofs
     my_newmark = amfe.NewmarkIntegrator(mech_system, alpha=alpha)
     my_newmark.delta_t = dt_calc
-    my_newmark.atol = 1E-3
+    my_newmark.atol = atol
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(ndof), np.zeros(ndof), t_series)
 
@@ -200,10 +204,10 @@ mech_sys_qm_smd = copy.deepcopy(benchmark_system)
 args_qm_smd = [mech_sys_qm_smd, filename_qm_smd]
 result_qm_smd = apply_async(pool, compute_qm_smd_sol, args_qm_smd)
 
-#filename_qm_smd_shift = paraview_output_file + file_string + 'qm_smd_shift'
-#mech_sys_qm_smd_shift = copy.deepcopy(benchmark_system)
-#args_qm_smd_shift = [mech_sys_qm_smd_shift, filename_qm_smd_shift]
-#result_qm_smd_shift = apply_async(pool, compute_qm_smd_shift_sol, args_qm_smd_shift)
+filename_qm_smd_shift = paraview_output_file + file_string + 'qm_smd_shift'
+mech_sys_qm_smd_shift = copy.deepcopy(benchmark_system)
+args_qm_smd_shift = [mech_sys_qm_smd_shift, filename_qm_smd_shift]
+result_qm_smd_shift = apply_async(pool, compute_qm_smd_shift_sol, args_qm_smd_shift)
 
 filename_qm_kry = paraview_output_file + file_string + 'qm_kry'
 mech_sys_qm_kry = copy.deepcopy(benchmark_system)
@@ -216,5 +220,5 @@ answer_lin = result_lin.get()
 answer_full = result_full.get()
 answer_qm_md = result_qm_md.get()
 answer_qm_smd = result_qm_smd.get()
-#answer_qm_smd_shift = result_qm_smd_shift.get()
+answer_qm_smd_shift = result_qm_smd_shift.get()
 answer_qm_kry = result_qm_kry.get()
