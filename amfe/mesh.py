@@ -834,7 +834,7 @@ class Mesh:
         return
 
 
-    def save_mesh_xdmf(self, filename, field_list=None):
+    def save_mesh_xdmf(self, filename, field_list=None, bmat=None):
         '''
         Save the mesh in hdf5 and xdmf file format.
 
@@ -855,6 +855,10 @@ class Mesh:
                                          'AttributeType':'Tensor6',
                                          'Center':'Node',
                                          'NoOfComponents':6})]
+        bmat : csrMatrix
+            CSR-Matrix describing the way, how the Dirichlet-BCs are applied: 
+            u_unconstr = bmat @ u_constr
+            
 
         Returns
         -------
@@ -921,7 +925,16 @@ class Mesh:
 
             h5_time = f.create_dataset('time', data=np.array(self.timesteps))
             h5_set_attributes(h5_time, h5_time_dict)
+            
+            # export bmat if given
+            if bmat is not None:
+                h5_bmat = f.create_group('mesh/bmat')
+                h5_bmat.attrs['ParaView'] = False
+                for par in ('data', 'indices', 'indptr', 'shape'):
+                    array = np.array(getattr(bmat, par))
+                    h5_bmat.create_dataset(par, data=array, dtype=array.dtype)
 
+            # export fields in new_field_list
             for data_array, data_dict in new_field_list:
                 h5_dataset = f.create_dataset('time_vals/' + data_dict['Name'],
                                               data=data_array)
