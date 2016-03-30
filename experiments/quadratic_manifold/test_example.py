@@ -11,29 +11,31 @@ import scipy as sp
 from multiprocessing import Pool
 import amfe
 import os
-from experiments.quadratic_manifold.benchmark_bar_2 import benchmark_system, \
-    amfe_dir, alpha# , neumann_domain
+from experiments.quadratic_manifold.benchmark_bar_arc import benchmark_system, \
+    amfe_dir, alpha, neumann_domain
 
 paraview_output_file = os.path.join(amfe_dir, 'results/test_examples/' +
                                     time.strftime("%Y%m%d_%H%M%S"))
 
-#def harmonic_y(t):
-#    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*30)
-#
-#benchmark_system.apply_neumann_boundaries(key=neumann_domain, val=4E5,
-#                                          direct=(0,1),
-#                                          time_func=harmonic_y)
+def harmonic_y(t):
+    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*30)
+
+benchmark_system.apply_neumann_boundaries(key=neumann_domain, val=4E5,
+                                          direct=(0,1),
+                                          time_func=harmonic_y)
 
 file_string = '_bar_arc_R1_h01_f4E5_'
-file_string = '_bar_2_f5E5_'
+# file_string = '_bar_2_f5E5_'
 
 
-om_shift = 10 * 2*np.pi
+om_shift = 30 * 2*np.pi
 
+verbose = False
+n_iter_max = 200
 no_of_modes = 10
-dt_calc = 2E-4
+dt_calc = 1E-4
 dt_output = 1E-3
-t_end = 0.4
+t_end = 0.15
 atol = 1E-5
 
 
@@ -77,9 +79,9 @@ def compute_qm_smd_sol(mech_system, filename):
     my_qm_sys = amfe.qm_reduce_mechanical_system(mech_system, V, theta)
 
     my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=alpha)
-    my_newmark.verbose = True
+    my_newmark.verbose = verbose
     my_newmark.delta_t = dt_calc
-    my_newmark.n_iter_max = 100
+    my_newmark.n_iter_max = n_iter_max
     my_newmark.atol = atol
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
@@ -101,9 +103,9 @@ def compute_qm_smd_shift_sol(mech_system, filename):
     my_qm_sys = amfe.qm_reduce_mechanical_system(mech_system, V, theta)
 
     my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=alpha)
-    my_newmark.verbose = True
+    my_newmark.verbose = verbose
     my_newmark.delta_t = dt_calc
-    my_newmark.n_iter_max = 100
+    my_newmark.n_iter_max = n_iter_max
     my_newmark.atol = atol
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
@@ -128,9 +130,9 @@ def compute_qm_kry_sol(mech_system, filename):
     my_qm_sys = amfe.qm_reduce_mechanical_system(mech_system, V, theta)
 
     my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=alpha)
-    my_newmark.verbose = True
+    my_newmark.verbose = verbose
     my_newmark.delta_t = dt_calc
-    my_newmark.n_iter_max = 100
+    my_newmark.n_iter_max = n_iter_max
     my_newmark.atol = atol
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
@@ -154,9 +156,9 @@ def compute_qm_md_sol(mech_system, filename):
     my_qm_sys = amfe.qm_reduce_mechanical_system(mech_system, V, theta)
 
     my_newmark = amfe.NewmarkIntegrator(my_qm_sys, alpha=alpha)
-    my_newmark.verbose = True
+    my_newmark.verbose = verbose
     my_newmark.delta_t = dt_calc
-    my_newmark.n_iter_max = 100
+    my_newmark.n_iter_max = n_iter_max
     my_newmark.atol = atol
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
@@ -171,6 +173,7 @@ def compute_full_sol(mech_system, filename):
     ndof = mech_system.dirichlet_class.no_of_constrained_dofs
     my_newmark = amfe.NewmarkIntegrator(mech_system, alpha=alpha)
     my_newmark.delta_t = dt_calc
+    my_newmark.n_iter_max = n_iter_max
     my_newmark.atol = atol
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(ndof), np.zeros(ndof), t_series)
@@ -182,43 +185,24 @@ def compute_full_sol(mech_system, filename):
 
 pool = Pool()
 
+job_funcs = {
+    'linearized': compute_linearized_sol, 
+    'full': compute_full_sol,
+    'qm_md': compute_qm_md_sol,
+    'qm_smd': compute_qm_smd_sol,
+    'qm_smd_shift': compute_qm_smd_shift_sol,
+    'qm_kry': compute_qm_kry_sol,
+}
 
 
-filename_lin = paraview_output_file + file_string + 'linearized'
-mech_sys_lin = copy.deepcopy(benchmark_system)
-args_lin = [mech_sys_lin, filename_lin]
-result_lin = apply_async(pool, compute_linearized_sol, args_lin)
 
-filename_full = paraview_output_file + file_string + 'full'
-mech_sys_full = copy.deepcopy(benchmark_system)
-args_full = [mech_sys_full, filename_full]
-result_full = apply_async(pool, compute_full_sol, args_full)
 
-filename_qm_md = paraview_output_file + file_string + 'qm_md'
-mech_sys_qm_md = copy.deepcopy(benchmark_system)
-args_qm_md = [mech_sys_qm_md, filename_qm_md]
-result_qm_md = apply_async(pool, compute_qm_md_sol, args_qm_md)
+job_results = {}
+for job in job_funcs:
+    filename = paraview_output_file + file_string + job
+    mech_sys = copy.deepcopy(benchmark_system)
+    args =  [mech_sys, filename]
+    job_results[job] = apply_async(pool, job_funcs[job], args)
 
-filename_qm_smd = paraview_output_file + file_string + 'qm_smd'
-mech_sys_qm_smd = copy.deepcopy(benchmark_system)
-args_qm_smd = [mech_sys_qm_smd, filename_qm_smd]
-result_qm_smd = apply_async(pool, compute_qm_smd_sol, args_qm_smd)
-
-filename_qm_smd_shift = paraview_output_file + file_string + 'qm_smd_shift'
-mech_sys_qm_smd_shift = copy.deepcopy(benchmark_system)
-args_qm_smd_shift = [mech_sys_qm_smd_shift, filename_qm_smd_shift]
-result_qm_smd_shift = apply_async(pool, compute_qm_smd_shift_sol, args_qm_smd_shift)
-
-filename_qm_kry = paraview_output_file + file_string + 'qm_kry'
-mech_sys_qm_kry = copy.deepcopy(benchmark_system)
-args_qm_kry = [mech_sys_qm_kry, filename_qm_kry]
-result_qm_kry = apply_async(pool, compute_qm_kry_sol, args_qm_kry)
-
-#%%
-
-answer_lin = result_lin.get()
-answer_full = result_full.get()
-answer_qm_md = result_qm_md.get()
-answer_qm_smd = result_qm_smd.get()
-answer_qm_smd_shift = result_qm_smd_shift.get()
-answer_qm_kry = result_qm_kry.get()
+for job in job_results:
+    job_results[job].get()
