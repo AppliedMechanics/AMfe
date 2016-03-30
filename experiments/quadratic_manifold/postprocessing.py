@@ -77,13 +77,16 @@ def displ_error(u_ref, u_test, dof_id):
 #%% Doing the postprocessing
 
 
-node_id = 255
+node_id = 194
 dof_id = node_id*2 + 1
 
 experiments = ['linearized', 'full', 'qm_md', 'qm_smd', 'qm_smd_shift', 'qm_kry']
 
 results_path = '/home/rutzmoser/Dokumente/004_AMfe/results/test_examples'
-file_key = '20160330_093816_bar_2_f5E5_'
+# This seems to work out...
+# file_key = '20160330_093816_bar_2_f5E5_'
+file_key = '20160330_171831_bar_arc_R1_h01_f2E5_'
+file_key = '20160330_181504_bar_arc_R1_h01_f4E5_'
 
 # Reading the displacement fields
 u_dict = {}

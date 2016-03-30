@@ -30,3 +30,13 @@ neumann_domain = 7
 benchmark_system = my_system
 
 alpha = 0.1
+
+
+def harmonic_y(t):
+    return np.sin(2*np.pi*t*8.65) + np.sin(2*np.pi*t*28)
+
+benchmark_system.apply_neumann_boundaries(key=neumann_domain, val=4E5,
+                                          direct=(0,1),
+                                          time_func=harmonic_y)
+
+

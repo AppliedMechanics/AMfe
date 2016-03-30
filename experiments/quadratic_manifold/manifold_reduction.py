@@ -17,14 +17,14 @@ import amfe
 
 # % cd experiments/quadratic_manifold/
 from experiments.quadratic_manifold.benchmark_bar_arc import benchmark_system, \
-    amfe_dir, alpha, neumann_domain
+    amfe_dir, alpha#, neumann_domain
 
-def harmonic_y(t):
-    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*30)
-
-benchmark_system.apply_neumann_boundaries(key=neumann_domain, val=4E5,
-                                          direct=(0,1),
-                                          time_func=harmonic_y)
+#def harmonic_y(t):
+#    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*30)
+#
+#benchmark_system.apply_neumann_boundaries(key=neumann_domain, val=4E5,
+#                                          direct=(0,1),
+#                                          time_func=harmonic_y)
 
 
 
