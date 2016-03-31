@@ -132,7 +132,7 @@ class NewmarkIntegrator():
 
 #        # predict start values for ddq:
 #        ddq = linalg.spsolve(self.M, self.f_non(q, t))
-
+        abs_f_ext = self.atol
         no_newton_convergence_flag = False
         time_index = 0 # index of the timestep in the time_range array
         while time_index < len(time_range):
@@ -169,7 +169,7 @@ class NewmarkIntegrator():
 
             S, res, f_ext = self.mechanical_system.S_and_res(q, dq, ddq, dt,
                                                              t, beta, gamma)
-            abs_f_ext = norm_of_vector(f_ext)
+            abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
             res_abs = norm_of_vector(res)
 
             # Newton-Correction-loop
@@ -190,13 +190,18 @@ class NewmarkIntegrator():
                 S, res, f_ext = self.mechanical_system.S_and_res(q, dq, ddq, dt,
                                                                  t, beta, gamma)
                 res_abs = norm_of_vector(res)
-                abs_f_ext = norm_of_vector(f_ext)
+                abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
                 n_iter += 1
 
                 if self.verbose:
+                    if sp.sparse.issparse(S):
+                        cond_nr = 0
+                        print('Cond# cannot be determined as S is sparse.')
+                    else:
+                        cond_nr = np.linalg.cond(S)
                     print('Iteration', n_iter,
                           'Residual: {0:4.1E}, cond# of S: {1:4.2E}'.format(
-                              res_abs, np.linalg.cond(S)))
+                              res_abs, cond_nr))
 
                 # write the state for every iteration in order to watch, how
                 # Newton-raphson converges (or not ;-)
