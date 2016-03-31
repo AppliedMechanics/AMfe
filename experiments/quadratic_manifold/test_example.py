@@ -11,31 +11,32 @@ import scipy as sp
 from multiprocessing import Pool
 import amfe
 import os
-from experiments.quadratic_manifold.benchmark_bar_arc import benchmark_system, \
-    amfe_dir, alpha, neumann_domain
+from experiments.quadratic_manifold.benchmark_bar import benchmark_system, \
+    amfe_dir, alpha
 
 paraview_output_file = os.path.join(amfe_dir, 'results/test_examples/' +
                                     time.strftime("%Y%m%d_%H%M%S"))
 
-def harmonic_y(t):
-    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*30)
+#def harmonic_y(t):
+#    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*30)
+#
+#benchmark_system.apply_neumann_boundaries(key=neumann_domain, val=4E5,
+#                                          direct=(0,1),
+#                                          time_func=harmonic_y)
 
-benchmark_system.apply_neumann_boundaries(key=neumann_domain, val=4E5,
-                                          direct=(0,1),
-                                          time_func=harmonic_y)
-
-file_string = '_bar_arc_R1_h01_f4E5_'
+# file_string = '_bar_arc_R8_h01_f3E5_'
 # file_string = '_bar_2_f5E5_'
-
+file_string = '_bar_f2E7_'
 
 om_shift = 30 * 2*np.pi
 
+conv_abort = True
 verbose = False
 n_iter_max = 200
 no_of_modes = 10
 dt_calc = 1E-4
 dt_output = 1E-3
-t_end = 0.15
+t_end = 0.4
 atol = 1E-5
 
 
@@ -83,6 +84,7 @@ def compute_qm_smd_sol(mech_system, filename):
     my_newmark.delta_t = dt_calc
     my_newmark.n_iter_max = n_iter_max
     my_newmark.atol = atol
+    my_newmark.conv_abort = conv_abort
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
     my_qm_sys.export_paraview(filename)
@@ -107,6 +109,7 @@ def compute_qm_smd_shift_sol(mech_system, filename):
     my_newmark.delta_t = dt_calc
     my_newmark.n_iter_max = n_iter_max
     my_newmark.atol = atol
+    my_newmark.conv_abort = conv_abort
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
     my_qm_sys.export_paraview(filename)
@@ -134,6 +137,7 @@ def compute_qm_kry_sol(mech_system, filename):
     my_newmark.delta_t = dt_calc
     my_newmark.n_iter_max = n_iter_max
     my_newmark.atol = atol
+    my_newmark.conv_abort = conv_abort
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
     my_qm_sys.export_paraview(filename)
@@ -160,6 +164,7 @@ def compute_qm_md_sol(mech_system, filename):
     my_newmark.delta_t = dt_calc
     my_newmark.n_iter_max = n_iter_max
     my_newmark.atol = atol
+    my_newmark.conv_abort = conv_abort
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(dofs_reduced), np.zeros(dofs_reduced), t_series)
     my_qm_sys.export_paraview(filename)
@@ -175,6 +180,7 @@ def compute_full_sol(mech_system, filename):
     my_newmark.delta_t = dt_calc
     my_newmark.n_iter_max = n_iter_max
     my_newmark.atol = atol
+    my_newmark.conv_abort = conv_abort
     t_series = np.arange(0, t_end, dt_output)
     my_newmark.integrate(np.zeros(ndof), np.zeros(ndof), t_series)
 

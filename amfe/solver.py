@@ -56,7 +56,8 @@ class NewmarkIntegrator():
 
     '''
 
-    def __init__(self, mechanical_system, alpha=0, verbose=False, n_iter_max=30):
+    def __init__(self, mechanical_system, alpha=0, verbose=False, 
+                 n_iter_max=30, conv_abort=True):
         '''
         Parameters
         ----------
@@ -69,6 +70,9 @@ class NewmarkIntegrator():
             residual for every correction in the newton iteration
         n_iter_max : int, optional
             number of maximum iteration in the newton correction process
+        conv_abort : bool, optional
+            flag indicating, if the integration is aborted when no convergence 
+            is gained. 
 
         Returns
         -------
@@ -85,7 +89,7 @@ class NewmarkIntegrator():
         self.n_iter_max = n_iter_max
         self.mechanical_system = mechanical_system
         self.write_iter = False
-        self.conv_abort = True
+        self.conv_abort = conv_abort
 
     def integrate(self, q_start, dq_start, time_range):
         '''

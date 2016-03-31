@@ -10,6 +10,7 @@ import numpy as np
 import time
 import os
 
+
 amfe_dir = amfe.__path__[0]
 amfe_dir = os.path.dirname(amfe_dir) # move one folder up
 
@@ -28,10 +29,11 @@ my_system.load_mesh_from_gmsh(gmsh_input_file, 7, my_material)
 
 my_system.apply_dirichlet_boundaries(8, 'xy')
 
-harmonic_y = lambda t: np.sin(2*np.pi*t*20)
+def harmonic_y(t):
+    return np.sin(2*np.pi*t*20) + np.sin(2*np.pi*t*32.36)
 
 # old force: 2E7
-my_system.apply_neumann_boundaries(key=9, val=5E6, direct=(0,1), time_func=harmonic_y)
+my_system.apply_neumann_boundaries(key=9, val=2E7, direct=(0,1), time_func=harmonic_y)
 
 benchmark_system = my_system
 

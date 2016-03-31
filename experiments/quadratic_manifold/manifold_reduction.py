@@ -16,7 +16,7 @@ import amfe
 # mpl.rcParams['svg.image_inline'] = False
 
 # % cd experiments/quadratic_manifold/
-from experiments.quadratic_manifold.benchmark_bar_arc import benchmark_system, \
+from experiments.quadratic_manifold.benchmark_bar import benchmark_system, \
     amfe_dir, alpha#, neumann_domain
 
 #def harmonic_y(t):
@@ -88,7 +88,7 @@ f = benchmark_system.f_ext(None, None, sp.rand())
 
 #%% Krylov subspace...
 
-V = amfe.krylov_subspace(M, K, f, no_of_moments=10)
+V = amfe.krylov_subspace(M, K, f, no_of_moments=no_of_modes)
 
 #%% Create a static MD QM system
 om_shift = 30*2*np.pi * 0

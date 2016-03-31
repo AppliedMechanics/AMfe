@@ -83,8 +83,9 @@ dof_id = node_id*2 + 1
 experiments = ['linearized', 'qm_md', 'qm_smd', 'qm_smd_shift', 'qm_kry', 'full']
 
 results_path = '/home/rutzmoser/Dokumente/004_AMfe/results/test_examples'
-# This seems to work out...
+# Example for bar
 file_key = '20160330_093816_bar_2_f5E5_'
+file_key = '20160331_112826_bar_arc_R8_h01_f3E5_'
 #file_key = '20160330_185128_bar_arc_R1_h01_f4E5_'
 
 # Reading the displacement fields
@@ -110,8 +111,8 @@ for exp in u_dict:
 
 # remove redundant full column
 df_err.drop('full', axis=1, inplace=True)
-df_err.plot(logy=True)
-df_disp.plot()
+df_err.plot(logy=True, grid=True)
+df_disp.plot(grid=True)
 
 df_err.sum()
 
