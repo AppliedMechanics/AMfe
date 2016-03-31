@@ -80,13 +80,12 @@ def displ_error(u_ref, u_test, dof_id):
 node_id = 194
 dof_id = node_id*2 + 1
 
-experiments = ['linearized', 'full', 'qm_md', 'qm_smd', 'qm_smd_shift', 'qm_kry']
+experiments = ['linearized', 'qm_md', 'qm_smd', 'qm_smd_shift', 'qm_kry', 'full']
 
 results_path = '/home/rutzmoser/Dokumente/004_AMfe/results/test_examples'
 # This seems to work out...
-# file_key = '20160330_093816_bar_2_f5E5_'
-file_key = '20160330_171831_bar_arc_R1_h01_f2E5_'
-file_key = '20160330_181504_bar_arc_R1_h01_f4E5_'
+file_key = '20160330_093816_bar_2_f5E5_'
+#file_key = '20160330_185128_bar_arc_R1_h01_f4E5_'
 
 # Reading the displacement fields
 u_dict = {}
@@ -103,13 +102,18 @@ for i, exp in enumerate(experiments):
 df_disp = pd.DataFrame()
 df_err = pd.DataFrame()
 for exp in u_dict:
-    df_disp[exp] = pd.Series(u_dict[exp][dof_id, :], index=T)
+    n_points = u_dict[exp].shape[-1]
+    df_disp[exp] = pd.Series(u_dict[exp][dof_id, :], index=T[:n_points])
 
-    rms = rms_error(u_dict['full'], u_dict[exp])
-    df_err[exp] = pd.Series(rms, index=T)
+    rms = rms_error(u_dict['full'][:,:n_points], u_dict[exp][:,:n_points])
+    df_err[exp] = pd.Series(rms, index=T[:n_points])
 
+# remove redundant full column
+df_err.drop('full', axis=1, inplace=True)
 df_err.plot(logy=True)
 df_disp.plot()
+
+df_err.sum()
 
 #%%
 
