@@ -29,6 +29,13 @@ def norm_of_vector(array):
     '''
     return np.sqrt(array.T.dot(array))
 
+abort_statement = '''
+###############################################################################
+#### The current time integration has been aborted. No convergence was gained 
+#### within the number of given iteration steps.  
+###############################################################################
+'''
+
 class NewmarkIntegrator():
     '''
     Newmark-integration scheme using generalized alpha routine for nonlinear
@@ -212,6 +219,7 @@ class NewmarkIntegrator():
                 # catch when the newton loop doesn't converge
                 if n_iter > self.n_iter_max:
                     if self.conv_abort:
+                        print(abort_statement)
                         return
                         # raise Exception('No convergence in Newton-Loop!')
                     t = t_old
@@ -426,8 +434,9 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
             abs_f_ext = np.sqrt(f_ext @ f_ext)
             abs_res = norm_of_vector(res)
             n_iter += 1
-            if verbose:
-                print('Stufe', t, 'Iteration Nr.', n_iter, 'Residuum:', abs_res)
+            if verbose: 
+                print('Step', t, 'Iteration #', n_iter, 
+                      'Residal: {0:4.2E}'.format(abs_res))
             if wrt_iter:
                 mechanical_system.write_timestep(n_iter, u)
         mechanical_system.write_timestep(t, u)
