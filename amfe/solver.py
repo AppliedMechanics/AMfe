@@ -63,7 +63,7 @@ class NewmarkIntegrator():
 
     '''
 
-    def __init__(self, mechanical_system, alpha=0, verbose=False, 
+    def __init__(self, mechanical_system, alpha=0.001, verbose=False, 
                  n_iter_max=30, conv_abort=True):
         '''
         Parameters
@@ -203,7 +203,7 @@ class NewmarkIntegrator():
                 if self.verbose:
                     if sp.sparse.issparse(S):
                         cond_nr = 0
-                        print('Cond# cannot be determined as S is sparse.')
+                        # print('Cond# cannot be determined as S is sparse.')
                     else:
                         cond_nr = np.linalg.cond(S)
                     print('Iteration', n_iter,
