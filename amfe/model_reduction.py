@@ -590,7 +590,7 @@ def vibration_modes(mechanical_system, n=10, save=False):
         number of modes to be computed.
     save : bool
         Flag for saving the modes in mechanical_system for ParaView export.
-        Default: True.
+        Default: False.
 
     Returns
     -------

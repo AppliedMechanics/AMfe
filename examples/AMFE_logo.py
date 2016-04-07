@@ -42,7 +42,6 @@ def f_ext_unconstr(u=None, t=None):
 
 my_system._f_ext_unconstr = f_ext_unconstr
 
-
 om, V = amfe.vibration_modes(my_system, 40)
 
 print('The vibration modes eigenfrequencies (1/s) are:\n', om/(2*np.pi))
