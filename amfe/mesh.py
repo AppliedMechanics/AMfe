@@ -296,6 +296,7 @@ class Mesh:
         self.no_of_dofs = 0
         self.no_of_nodes = 0
         self.no_of_elements = 0
+        self.el_df = pd.DataFrame()
 
         # Element Class dictionary with all available elements
         kwargs = { }
@@ -577,7 +578,7 @@ class Mesh:
         # asking for a group to be chosen, when no valid group is given
         df = self.el_df
         while key not in pd.unique(df[mesh_prop]):
-            self.mesh_information()
+            self.mesh_information(mesh_prop)
             print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop,
                   'is', key, ')')
             key = int(input('Please choose a ' + mesh_prop + ' to be used as mesh: '))
@@ -611,17 +612,41 @@ class Mesh:
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
 
-    def mesh_information(self):
-        '''Print some infos about the mesh'''
+    def mesh_information(self, mesh_prop='phys_group'):
+        '''
+        Print some information about the current mesh
+        
+        Parameters
+        ----------
+        mesh_prop : str, optional
+            mesh property of the loaded mesh. This mesh property is the basis 
+            for selection of parts of the mesh for materials and boundary 
+            conditions. The default value is 'phys_group' which is the physical 
+            group, if the mesh comes from gmsh. 
+        
+        Returns
+        -------
+        None
+        
+        '''
         df = self.el_df
-        print('The loaded mesh contains', len(self.phys_group_dict),
+        if mesh_prop not in df.columns:
+            print('The given mesh property "' + str(mesh_prop) + '" is not valid!', 
+                'Please enter a valid mesh prop from the following list:\n')
+            for i in df.columns:
+                print(i)
+            return
+            
+        phys_groups = pd.unique(df[mesh_prop])
+        print('The loaded mesh contains', len(phys_groups),
               'physical groups:')
-        for i in self.phys_group_dict :
+        for i in phys_groups:
             print('\nPhysical group', i, ':')
-            print('Number of Nodes:', len(self.phys_group_dict [i]))
-            print('Number of Elements:', len(df[df.phys_group == i]))
+            # print('Number of Nodes:', len(self.phys_group_dict [i]))
+            print('Number of Elements:', len(df[df[mesh_prop] == i]))
             print('Element types appearing in this group:',
-                  pd.unique(df[df.phys_group == i].el_type))
+                  pd.unique(df[df[mesh_prop] == i].el_type))
+        return
 
     def boundary_information(self):
         '''
@@ -669,7 +694,7 @@ class Mesh:
         '''
         df = self.el_df
         while key not in pd.unique(df[mesh_prop]):
-            self.mesh_information()
+            self.mesh_information(mesh_prop)
             print('\nNo valid', mesh_prop, 'is given.\n(Given',
                   mesh_prop, 'is', key, ')')
             key = int(input('Please choose a ' + mesh_prop +
@@ -740,7 +765,7 @@ class Mesh:
         # asking for a group to be chosen, when no valid group is given
         df = self.el_df
         while key not in pd.unique(df[mesh_prop]):
-            self.mesh_information()
+            self.mesh_information(mesh_prop)
             print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop,
                   'is', key, ')')
             key = int(input('Please choose a ' + mesh_prop +
