@@ -577,6 +577,12 @@ class Mesh:
         '''
         # asking for a group to be chosen, when no valid group is given
         df = self.el_df
+        if mesh_prop not in df.columns:
+            print('The given mesh property "' + str(mesh_prop) + '" is not valid!', 
+                'Please enter a valid mesh prop from the following list:\n')
+            for i in df.columns:
+                print(i)
+            return
         while key not in pd.unique(df[mesh_prop]):
             self.mesh_information(mesh_prop)
             print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop,
