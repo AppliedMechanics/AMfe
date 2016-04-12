@@ -920,6 +920,12 @@ class Mesh:
         # select the nodes to export an make an array of them
         ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
         ele_nodes_export = np.array(ele_nodes_export.tolist())
+        
+        # account for different node ordering in ParaView and gmsh:
+        # The last two indices are flipped
+        if el_type_export == 'Tet10':
+            perm = np.array([0, 1, 2, 3, 4, 5, 6, 7, 9, 8])
+            ele_nodes_export = ele_nodes_export[:, perm]
 
         # make displacement 3D vector, as paraview only accepts 3D vectors
         q_array = np.array(self.u, dtype=float).T
