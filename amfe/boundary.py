@@ -165,6 +165,7 @@ class DirichletBoundary():
         B = sp.sparse.eye(dofs_uncstr).tocsr()
 
         if self.master_slave_list == []:  # no boundary conditions
+            self.B = B
             return B
         B_tmp = B*0
         global_slave_node_list = np.array([], dtype=int)

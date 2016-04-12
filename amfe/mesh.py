@@ -2,6 +2,7 @@
 Mesh module of amfe. It handles the mesh from import, defining the dofs for the
 boundary conditions and the export.
 """
+
 __all__ = ['Mesh', 'MeshGenerator']
 
 import os
@@ -475,11 +476,14 @@ class Mesh:
 
         # conversion of the read strings to integer and floats
         for j in range(len(list_imported_mesh_format)):
-            list_imported_mesh_format[j] = [float(x) for x in list_imported_mesh_format[j].split()]
+            list_imported_mesh_format[j] = [float(x) for x in 
+                                            list_imported_mesh_format[j].split()]
         for j in range(len(list_imported_nodes)):
-            list_imported_nodes[j] = [float(x) for x in list_imported_nodes[j].split()]
+            list_imported_nodes[j] = [float(x) for x in 
+                                      list_imported_nodes[j].split()]
         for j in range(len(list_imported_elements)):
-            list_imported_elements[j] = [int(x) for x in list_imported_elements[j].split()]
+            list_imported_elements[j] = [int(x) for x in 
+                                         list_imported_elements[j].split()]
 
         # Construct Pandas Dataframe for the elements (self.el_df and df for shorter code)
         self.el_df = df = pd.DataFrame(list_imported_elements)

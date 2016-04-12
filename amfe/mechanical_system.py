@@ -85,6 +85,7 @@ class MechanicalSystem():
 
         self.assembly_class.preallocate_csr()
         self.dirichlet_class.no_of_unconstrained_dofs = self.mesh_class.no_of_dofs
+        self.dirichlet_class.update()
 
 
     def load_mesh_from_csv(self, node_list_csv, element_list_csv,
