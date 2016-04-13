@@ -640,15 +640,6 @@ class Mesh:
                   pd.unique(df[df[mesh_prop] == i].el_type))
         return
 
-    def boundary_information(self):
-        '''
-        Print the information of the boundary stuff
-        '''
-        print('Voundary nodes sorted by the boundary number:')
-        for i in self.phys_group_dict:
-            print('Boundary (physical group)', i,
-                  'contains the following', len(self.phys_group_dict[i]),
-                  ' nodes:\n', self.phys_group_dict[i])
 
     def set_neumann_bc(self, key, val, direct, time_func=None,
                        shadow_area=False,
