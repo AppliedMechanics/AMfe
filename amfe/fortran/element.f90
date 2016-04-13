@@ -126,8 +126,8 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     real(8) :: B0_tilde(6,2), B0(3,12)
     real(8) :: E(2,2), H(2,2), F(2,2), EYE(2,2), S(2,2), S_v(3)
 
-    real(8) :: gauss_points(7,3), weights(7)
-    real(8) :: w0, w1, w2, alpha1, alpha2, beta1, beta2
+    real(8) :: gauss_points(3,3), weights(3)
+!    real(8) :: w0, w1, w2, alpha1, alpha2, beta1, beta2
     real(8) :: L1, L2, L3, det
 
 !   External functions that will be used afterwards
@@ -151,26 +151,30 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     ! take care of the fortran matrix order (columns first!):
     u_e = transpose(reshape(u, (/2, 6/)))
 
-    ! take care of a precise description of 1/3 in order to avoid errors!
-    w0 = 0.225D0
+!    ! take care of a precise description of 1/3 in order to avoid errors!
+!    w0 = 0.225D0
+!
+!    alpha1 = 0.0597158717D0
+!    beta1 = 0.4701420641D0
+!    w1 = 0.1323941527D0
+!
+!    alpha2 = 0.7974269853D0
+!    beta2 = 0.1012865073D0
+!    w2 = 0.1259391805D0
+!
+!    weights = (/ w0, w1, w1, w1, w2, w2, w2 /)
+!    gauss_points(1,:) = (/ 1/3.0D0, 1/3.0D0, 1/3.0D0 /)
+!    gauss_points(2,:) = (/ alpha1, beta1, beta1 /)
+!    gauss_points(3,:) = (/ beta1, alpha1, beta1 /)
+!    gauss_points(4,:) = (/ beta1, beta1, alpha1 /)
+!    gauss_points(5,:) = (/ alpha2, beta2, beta2 /)
+!    gauss_points(6,:) = (/ beta2, alpha2, beta2 /)
+!    gauss_points(7,:) = (/ beta2, beta2, alpha2 /)
 
-    alpha1 = 0.0597158717D0
-    beta1 = 0.4701420641D0
-    w1 = 0.1323941527D0
-
-    alpha2 = 0.7974269853D0
-    beta2 = 0.1012865073D0
-    w2 = 0.1259391805D0
-
-    weights = (/ w0, w1, w1, w1, w2, w2, w2 /)
-    gauss_points(1,:) = (/ 1/3.0D0, 1/3.0D0, 1/3.0D0 /)
-    gauss_points(2,:) = (/ alpha1, beta1, beta1 /)
-    gauss_points(3,:) = (/ beta1, alpha1, beta1 /)
-    gauss_points(4,:) = (/ beta1, beta1, alpha1 /)
-    gauss_points(5,:) = (/ alpha2, beta2, beta2 /)
-    gauss_points(6,:) = (/ beta2, alpha2, beta2 /)
-    gauss_points(7,:) = (/ beta2, beta2, alpha2 /)
-
+    weights = (/ 1/3.0D0, 1/3.0D0, 1/3.0D0 /)
+    gauss_points(1,:) = (/ 1/6.0D0, 1/6.0D0, 2/3.0D0 /)
+    gauss_points(2,:) = (/ 1/6.0D0, 2/3.0D0, 1/6.0D0 /)
+    gauss_points(3,:) = (/ 2/3.0D0, 1/6.0D0, 1/6.0D0 /)
 
     EYE = reshape((/1, 0, 0, 1/), shape(EYE))
 
@@ -178,7 +182,7 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     f_int = 0.0
 
     ! loop over all quadrature points
-    do i=1,7
+    do i=1,3
        L1 = gauss_points(i, 1)
        L2 = gauss_points(i, 2)
        L3 = gauss_points(i, 3)
@@ -241,32 +245,38 @@ subroutine tri6_m(X, rho, t, M)
     real(8) :: Jx1 ,Jx2 ,Jx3 ,Jy1 ,Jy2 ,Jy3, w
     real(8) :: N(6,1), M_small(6,6)
 
-    real(8) :: gauss_points(7,3), weights(7)
-    real(8) :: w0, w1, w2, alpha1, alpha2, beta1, beta2
+    real(8) :: gauss_points(3,3), weights(3)
+!    real(8) :: w0, w1, w2, alpha1, alpha2, beta1, beta2
     real(8) :: L1, L2, L3, det
 
 !   External functions that will be used afterwards
     external :: scatter_matrix
 
-    ! take care of a precise description of 1/3 in order to avoid errors!
-    w0 = 0.225D0
+!    ! take care of a precise description of 1/3 in order to avoid errors!
+!    w0 = 0.225D0
+!
+!    alpha1 = 0.0597158717D0
+!    beta1 = 0.4701420641D0
+!    w1 = 0.1323941527D0
+!
+!    alpha2 = 0.7974269853D0
+!    beta2 = 0.1012865073D0
+!    w2 = 0.1259391805D0
+!
+!    weights = (/ w0, w1, w1, w1, w2, w2, w2 /)
+!    gauss_points(1,:) = (/ 1/3.0D0, 1/3.0D0, 1/3.0D0 /)
+!    gauss_points(2,:) = (/ alpha1, beta1, beta1 /)
+!    gauss_points(3,:) = (/ beta1, alpha1, beta1 /)
+!    gauss_points(4,:) = (/ beta1, beta1, alpha1 /)
+!    gauss_points(5,:) = (/ alpha2, beta2, beta2 /)
+!    gauss_points(6,:) = (/ beta2, alpha2, beta2 /)
+!    gauss_points(7,:) = (/ beta2, beta2, alpha2 /)
 
-    alpha1 = 0.0597158717D0
-    beta1 = 0.4701420641D0
-    w1 = 0.1323941527D0
+    weights = (/ 1/3.0D0, 1/3.0D0, 1/3.0D0 /)
+    gauss_points(1,:) = (/ 1/6.0D0, 1/6.0D0, 2/3.0D0 /)
+    gauss_points(2,:) = (/ 1/6.0D0, 2/3.0D0, 1/6.0D0 /)
+    gauss_points(3,:) = (/ 2/3.0D0, 1/6.0D0, 1/6.0D0 /)
 
-    alpha2 = 0.7974269853D0
-    beta2 = 0.1012865073D0
-    w2 = 0.1259391805D0
-
-    weights = (/ w0, w1, w1, w1, w2, w2, w2 /)
-    gauss_points(1,:) = (/ 1/3.0D0, 1/3.0D0, 1/3.0D0 /)
-    gauss_points(2,:) = (/ alpha1, beta1, beta1 /)
-    gauss_points(3,:) = (/ beta1, alpha1, beta1 /)
-    gauss_points(4,:) = (/ beta1, beta1, alpha1 /)
-    gauss_points(5,:) = (/ alpha2, beta2, beta2 /)
-    gauss_points(6,:) = (/ beta2, alpha2, beta2 /)
-    gauss_points(7,:) = (/ beta2, beta2, alpha2 /)
 
 
     X1 = X(1)
@@ -285,7 +295,7 @@ subroutine tri6_m(X, rho, t, M)
     M_small = 0.0
     M = 0.0
 
-    do i=1,7
+    do i=1,3
        L1 = gauss_points(i, 1)
        L2 = gauss_points(i, 2)
        L3 = gauss_points(i, 3)

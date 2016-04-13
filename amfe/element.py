@@ -412,26 +412,28 @@ class Tri6(Element):
                               (1/6, 2/3, 1/6, 1/3),
                               (2/3, 1/6, 1/6, 1/3))
 
-        self.gauss_points3 = ((1/3, 1/3, 1/3, -27/48),
-                              (0.6, 0.2, 0.2, 25/48),
-                              (0.2, 0.6, 0.2, 25/48),
-                              (0.2, 0.2, 0.6, 25/48))
+#        self.gauss_points3 = ((1/3, 1/3, 1/3, -27/48),
+#                              (0.6, 0.2, 0.2, 25/48),
+#                              (0.2, 0.6, 0.2, 25/48),
+#                              (0.2, 0.2, 0.6, 25/48))
+#
+#        alpha1 = 0.0597158717
+#        beta1 = 0.4701420641 # 1/(np.sqrt(15)-6)
+#        w1 = 0.1323941527
+#
+#        alpha2 = 0.7974269853 #
+#        beta2 = 0.1012865073 # 1/(np.sqrt(15)+6)
+#        w2 = 0.1259391805
+#
+#        self.gauss_points5 = ((1/3, 1/3, 1/3, 0.225),
+#                              (alpha1, beta1, beta1, w1),
+#                              (beta1, alpha1, beta1, w1),
+#                              (beta1, beta1, alpha1, w1),
+#                              (alpha2, beta2, beta2, w2),
+#                              (beta2, alpha2, beta2, w2),
+#                              (beta2, beta2, alpha2, w2))
 
-        alpha1 = 0.0597158717
-        beta1 = 0.4701420641 # 1/(np.sqrt(15)-6)
-        w1 = 0.1323941527
-
-        alpha2 = 0.7974269853 #
-        beta2 = 0.1012865073 # 1/(np.sqrt(15)+6)
-        w2 = 0.1259391805
-
-        self.gauss_points5 = ((1/3, 1/3, 1/3, 0.225),
-                              (alpha1, beta1, beta1, w1),
-                              (beta1, alpha1, beta1, w1),
-                              (beta1, beta1, alpha1, w1),
-                              (alpha2, beta2, beta2, w2),
-                              (beta2, alpha2, beta2, w2),
-                              (beta2, beta2, alpha2, w2))
+        self.gauss_points = self.gauss_points2
 
     def _compute_tensors(self, X, u, t):
         '''
@@ -444,7 +446,7 @@ class Tri6(Element):
 
         self.K *= 0
         self.f *= 0
-        for L1, L2, L3, w in self.gauss_points5:
+        for L1, L2, L3, w in self.gauss_points:
 
             dN_dL = np.array([  [4*L1 - 1,        0,        0],
                                 [       0, 4*L2 - 1,        0],
@@ -487,7 +489,7 @@ class Tri6(Element):
         t = self.material.thickness
         rho = self.material.rho
         self.M_small *= 0
-        for L1, L2, L3, w in self.gauss_points5:
+        for L1, L2, L3, w in self.gauss_points:
 
             # the entries in the jacobian dX_dL
             Jx1 = 4*L2*X4 + 4*L3*X6 + X1*(4*L1 - 1)
@@ -526,9 +528,13 @@ class Quad4(Element):
         self.f = np.zeros(8)
         self.M_small = np.zeros((4,4))
         # Gauss-Point-Handling:
-        g1 = 0.577350269189626
+#        g1 = 0.577350269189626
+        g1 = 1/np.sqrt(3)
 
-        self.gauss_points = ((-g1, -g1, 1.), (g1, -g1, 1.), (-g1, g1, 1.), (g1, g1, 1.))
+        self.gauss_points = ((-g1, -g1, 1.), 
+                             ( g1, -g1, 1.), 
+                             (-g1,  g1, 1.), 
+                             ( g1,  g1, 1.))
 
 
     def _compute_tensors(self, X, u, t):
@@ -605,21 +611,29 @@ class Quad8(Element):
         self.M_small = np.zeros((8,8))
         self.M = np.zeros((16,16))
 
-        # Gauss-Point-Handling
-        g3 = 0.861136311594053
-        w3 = 0.347854845137454
-        g4 = 0.339981043584856
-        w4 = 0.652145154862546
-        self.gauss_points = (
-            (-g3, -g3, w3*w3), (-g4, -g3, w4*w3), ( g3,-g3, w3*w3), ( g4,-g3, w4*w3),
-            (-g3, -g4, w3*w4), (-g4, -g4, w4*w4), ( g3,-g4, w3*w4), ( g4,-g4, w4*w4),
-            (-g3,  g3, w3*w3), (-g4,  g3, w4*w3), ( g3, g3, w3*w3), ( g4, g3, w4*w3),
-            (-g3,  g4, w3*w4), (-g4,  g4, w4*w4), ( g3, g4, w3*w4), ( g4, g4, w4*w4))
-
-        g2 = 0.577350269189626
-        w2 = 1.
-        self.gauss_points = ((-g2, -g2, w2), (-g2, g2, w2),
-                             ( g2, -g2, w2), ( g2, g2, w2))
+#        # Gauss-Point-Handling
+#        g3 = 0.861136311594053
+#        w3 = 0.347854845137454
+#        g4 = 0.339981043584856
+#        w4 = 0.652145154862546
+#        self.gauss_points = (
+#            (-g3, -g3, w3*w3), (-g4, -g3, w4*w3), ( g3,-g3, w3*w3), ( g4,-g3, w4*w3),
+#            (-g3, -g4, w3*w4), (-g4, -g4, w4*w4), ( g3,-g4, w3*w4), ( g4,-g4, w4*w4),
+#            (-g3,  g3, w3*w3), (-g4,  g3, w4*w3), ( g3, g3, w3*w3), ( g4, g3, w4*w3),
+#            (-g3,  g4, w3*w4), (-g4,  g4, w4*w4), ( g3, g4, w3*w4), ( g4, g4, w4*w4))
+#
+#        g2 = 0.577350269189626
+#        w2 = 1.
+#        self.gauss_points = ((-g2, -g2, w2), (-g2, g2, w2),
+#                             ( g2, -g2, w2), ( g2, g2, w2))
+#        
+        # Quadrature like ANSYS or ABAQUS:
+        g = np.sqrt(3/5)
+        w = 5/9
+        w0 = 8/9
+        self.gauss_points = ((-g,  g,  w*w), (-g,  0,  w*w0), (-g,  g,  w*w),
+                             ( 0,  g, w0*w), ( 0,  0, w0*w0), ( 0,  g, w0*w),
+                             ( g,  g,  w*w), ( g,  0,  w*w0), ( g,  g,  w*w))
 
     def _compute_tensors(self, X, u, t):
 #        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
@@ -798,7 +812,7 @@ class Tet10(Element):
         self.K = np.zeros((30,30))
         self.f = np.zeros(30)
 
-        gauss_points_1 = ((1/4, 1/4, 1/4, 1/4, 1), )
+#        gauss_points_1 = ((1/4, 1/4, 1/4, 1/4, 1), )
 
         a = (5 - np.sqrt(5)) / 20
         b = (5 + 3*np.sqrt(5)) / 20
@@ -808,37 +822,37 @@ class Tet10(Element):
                           (a,b,a,a,w),
                           (b,a,a,a,w),)
 
-        w1 = 0.030283678097089*6
-        w2 = 0.006026785714286*6
-        w3 = 0.011645249086029*6
-        w4 = 0.010949141561386*6
-
-        a1 = 1/4
-        a2 = 0.
-        b2 = 1/3
-        a3 = 72/99
-        b3 =  9/99
-        a4 = 0.066550153573664
-        c4 = 0.433449846426336
-
-        gauss_points_15 = ((a1, a1, a1, a1, w1),
-
-                             (a2, b2, b2, b2, w2),
-                             (b2, a2, b2, b2, w2),
-                             (b2, b2, a2, b2, w2),
-                             (b2, b2, b2, a2, w2),
-
-                             (a3, b3, b3, b3, w3),
-                             (b3, a3, b3, b3, w3),
-                             (b3, b3, a3, b3, w3),
-                             (b3, b3, b3, a3, w3),
-
-                             (a4, a4, c4, c4, w4),
-                             (a4, c4, a4, c4, w4),
-                             (a4, c4, c4, a4, w4),
-                             (c4, c4, a4, a4, w4),
-                             (c4, a4, c4, a4, w4),
-                             (c4, a4, a4, c4, w4))
+#        w1 = 0.030283678097089*6
+#        w2 = 0.006026785714286*6
+#        w3 = 0.011645249086029*6
+#        w4 = 0.010949141561386*6
+#
+#        a1 = 1/4
+#        a2 = 0.
+#        b2 = 1/3
+#        a3 = 72/99
+#        b3 =  9/99
+#        a4 = 0.066550153573664
+#        c4 = 0.433449846426336
+#
+#        gauss_points_15 = ((a1, a1, a1, a1, w1),
+#
+#                             (a2, b2, b2, b2, w2),
+#                             (b2, a2, b2, b2, w2),
+#                             (b2, b2, a2, b2, w2),
+#                             (b2, b2, b2, a2, w2),
+#
+#                             (a3, b3, b3, b3, w3),
+#                             (b3, a3, b3, b3, w3),
+#                             (b3, b3, a3, b3, w3),
+#                             (b3, b3, b3, a3, w3),
+#
+#                             (a4, a4, c4, c4, w4),
+#                             (a4, c4, a4, c4, w4),
+#                             (a4, c4, c4, a4, w4),
+#                             (c4, c4, a4, a4, w4),
+#                             (c4, a4, c4, a4, w4),
+#                             (c4, a4, a4, c4, w4))
 
         self.gauss_points = gauss_points_4
 
@@ -1196,26 +1210,26 @@ class Tri6Boundary(BoundaryElement):
     integrated skin element.
     '''
 
-
+    # Gauss-Points like ABAQUS or ANSYS
     gauss_points = ((1/6, 1/6, 2/3, 1/3),
                     (1/6, 2/3, 1/6, 1/3),
                     (2/3, 1/6, 1/6, 1/3))
 
-    alpha1 = 0.0597158717
-    beta1 = 0.4701420641 # 1/(np.sqrt(15)-6)
-    w1 = 0.1323941527
-
-    alpha2 = 0.7974269853 #
-    beta2 = 0.1012865073 # 1/(np.sqrt(15)+6)
-    w2 = 0.1259391805
-
-    gauss_points = ((1/3, 1/3, 1/3, 0.225),
-                    (alpha1, beta1, beta1, w1),
-                    (beta1, alpha1, beta1, w1),
-                    (beta1, beta1, alpha1, w1),
-                    (alpha2, beta2, beta2, w2),
-                    (beta2, alpha2, beta2, w2),
-                    (beta2, beta2, alpha2, w2))
+#    alpha1 = 0.0597158717
+#    beta1 = 0.4701420641 # 1/(np.sqrt(15)-6)
+#    w1 = 0.1323941527
+#
+#    alpha2 = 0.7974269853 #
+#    beta2 = 0.1012865073 # 1/(np.sqrt(15)+6)
+#    w2 = 0.1259391805
+#
+#    gauss_points = ((1/3, 1/3, 1/3, 0.225),
+#                    (alpha1, beta1, beta1, w1),
+#                    (beta1, alpha1, beta1, w1),
+#                    (beta1, beta1, alpha1, w1),
+#                    (alpha2, beta2, beta2, w2),
+#                    (beta2, alpha2, beta2, w2),
+#                    (beta2, beta2, alpha2, w2))
 
     def __init__(self, val, direct, time_func=None, shadow_area=False):
         super().__init__(val=val, direct=direct, time_func=time_func,
