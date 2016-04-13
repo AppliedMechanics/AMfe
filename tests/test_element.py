@@ -320,17 +320,21 @@ class Test_fortran_vs_python(ElementTest):
     def test_tri6(self):
         self.initialize_element(Tri6, X_tri6)
         self.check_python_vs_fortran()
-    
-    def test_tet4(self):
-        self.initialize_element(Tet4, X_tet4)
-        self.check_python_vs_fortran()
-        
+            
     def test_mass_tri6(self):
         self.initialize_element(Tri6, X_tri6)
         self.my_element._m_int_python(self.X, self.u, t=0)
         M_py = self.my_element.M.copy()
         M_f = self.my_element._m_int(self.X, self.u, t=0)
         assert_almost_equal(M_f, M_py)
+
+    def test_tet4(self):
+        self.initialize_element(Tet4, X_tet4)
+        self.check_python_vs_fortran()
+
+    def test_tet10(self):
+        self.initialize_element(Tet10, X_tet10)
+        self.check_python_vs_fortran()
         
         
 if __name__ == '__main__':

@@ -1305,25 +1305,33 @@ if use_fortran:
         self.K, self.f = amfe.f90_element.tri6_k_and_f(\
             X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
 
-    def compute_tet4_tensors(self, X, u, t):
-        '''Wrapping funktion for fortran function call.'''
-        self.K, self.f = amfe.f90_element.tet4_k_and_f( \
-            X, u, self.material.S_Sv_and_C)
-
     def compute_tri6_mass(self, X, u, t=0):
         '''Wrapping funktion for fortran function call.'''
         self.M = amfe.f90_element.tri6_m(\
             X, self.material.rho, self.material.thickness)
         return self.M
 
+    def compute_tet4_tensors(self, X, u, t):
+        '''Wrapping funktion for fortran function call.'''
+        self.K, self.f = amfe.f90_element.tet4_k_and_f( \
+            X, u, self.material.S_Sv_and_C)
+
+    def compute_tet10_tensors(self, X, u, t):
+        '''Wrapping funktion for fortran function call.'''
+        self.K, self.f = amfe.f90_element.tet10_k_and_f( \
+            X, u, self.material.S_Sv_and_C)
+        
 
     # overloading the routines with fortran routines
     Tri3._compute_tensors_python = Tri3._compute_tensors
     Tri6._compute_tensors_python = Tri6._compute_tensors
-    Tet4._compute_tensors_python = Tet4._compute_tensors
     Tri6._m_int_python = Tri6._m_int
+    Tet4._compute_tensors_python = Tet4._compute_tensors
+    Tet10._compute_tensors_python = Tet10._compute_tensors
 
     Tri3._compute_tensors = compute_tri3_tensors
     Tri6._compute_tensors = compute_tri6_tensors
-    Tet4._compute_tensors = compute_tet4_tensors
     Tri6._m_int = compute_tri6_mass
+    Tet4._compute_tensors = compute_tet4_tensors
+    Tet10._compute_tensors = compute_tet10_tensors
+

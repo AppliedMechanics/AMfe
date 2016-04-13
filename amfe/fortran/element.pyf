@@ -1,6 +1,8 @@
 !    -*- f90 -*-
 ! Note: the context of this file is case sensitive.
 
+! arrange the handling of the material callback
+
 python module tri3_k_and_f__user__routines
     interface tri3_k_and_f_user_interface
         subroutine s_sv_and_c_2d(e,s,s_v,c_se) ! in :f90_element:element.f90:tri3_k_and_f:unknown_interface
@@ -33,6 +35,18 @@ python module tet4_k_and_f__user__routines
         end subroutine s_sv_and_c
     end interface tet4_k_and_f_user_interface
 end python module tet4_k_and_f__user__routines
+
+python module tet10_k_and_f__user__routines
+    interface tet10_k_and_f_user_interface
+        subroutine s_sv_and_c(e,s,s_v,c_se) ! in :f90_element:element.f90:tet10_k_and_f:unknown_interface
+            real(kind=8) dimension(3,3),intent(in) :: e
+            real(kind=8) dimension(3,3),intent(out) :: s
+            real(kind=8) dimension(6),intent(out) :: s_v
+            real(kind=8) dimension(6,6),intent(out) :: c_se
+        end subroutine s_sv_and_c
+    end interface tet10_k_and_f_user_interface
+end python module tet10_k_and_f__user__routines
+
 
 python module f90_element ! in
     interface  ! in :f90_element
@@ -88,6 +102,15 @@ python module f90_element ! in
             real(kind=8) dimension(12),intent(out) :: f_int
             external s_sv_and_c
         end subroutine tet4_k_and_f
+
+        subroutine tet10_k_and_f(x,u,k,f_int,s_sv_and_c) ! in :f90_element:element.f90
+            use tet10_k_and_f__user__routines
+            real(kind=8) dimension(30),intent(in) :: x
+            real(kind=8) dimension(30),intent(in) :: u
+            real(kind=8) dimension(30,30),intent(out) :: k
+            real(kind=8) dimension(30),intent(out) :: f_int
+            external s_sv_and_c
+        end subroutine tet10_k_and_f
     end interface
 end python module f90_element
 
