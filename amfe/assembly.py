@@ -213,7 +213,7 @@ class Assembly():
         # preallocate the CSR-matrix
         row_global = np.zeros(no_of_elements*max_dofs_per_element**2, dtype=int)
         col_global = row_global.copy()
-        vals_global = np.zeros_like(col_global, dtype=float)
+        vals_global = np.zeros_like(col_global, dtype=bool)
 
         for i, indices_of_one_element in enumerate(self.element_indices):
             l = len(indices_of_one_element)
@@ -224,7 +224,7 @@ class Assembly():
                 H.T.reshape(-1)
 
         self.C_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
-                                          shape=(no_of_dofs, no_of_dofs))
+                                          shape=(no_of_dofs, no_of_dofs), dtype=float)
         t2 = time.clock()
         print('Done preallocating stiffness matrix with', no_of_elements, 'elements',
               'and', no_of_dofs, 'dofs.')
