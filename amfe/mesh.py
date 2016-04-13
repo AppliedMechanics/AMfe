@@ -523,28 +523,14 @@ class Mesh:
         # fill the nodes of the selected physical group to the array
         self.nodes = np.array(list_imported_nodes)[:,1:1+self.no_of_dofs_per_node]
 
+        # Change the indices of Tet10-elements, as they are numbered differently 
+        # from the numbers used in AMFE and ParaView (last two indices permuted)
+        if 'Tet10' in element_types:
+            row_loc = df['el_type'] == 'Tet10'
+            i = self.node_idx
+            df.ix[row_loc, i + 9], df.ix[row_loc, i + 8] = \
+            df.ix[row_loc, i + 8], df.ix[row_loc, i + 9]
 
-        # Handling the physical groups
-        all_physical_groups = pd.unique(df.phys_group)
-
-        # make a dictionary with the nodes of every physical group
-        self.phys_group_dict = nodes_phys_group = {}
-        for idx in all_physical_groups:
-            gr_nodes = np.array([], dtype=int)
-            # pick the elements corresponding to the current physical group from table
-            df_phys_group = df[df.phys_group == idx]
-            # assemble all nodes to one huge array
-            for series in df_phys_group.iloc[:, node_idx:]:
-                gr_nodes = np.append(gr_nodes, df_phys_group[series].unique())
-            # make them unique, remove nan (resulting from non-existing entries in pandas)
-            # cast and sort the array and put into dict
-            gr_nodes = np.unique(gr_nodes)
-            # remove nan from non-existing entries
-            gr_nodes = gr_nodes[np.isfinite(gr_nodes)]
-            # recast to int as somewhere a float is casted
-            gr_nodes = np.array(gr_nodes, dtype=int)
-            gr_nodes.sort()
-            nodes_phys_group[idx] = gr_nodes
 
         self._update_mesh_props()
         # printing some information regarding the physical groups
@@ -920,12 +906,6 @@ class Mesh:
         # select the nodes to export an make an array of them
         ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
         ele_nodes_export = np.array(ele_nodes_export.tolist())
-        
-        # account for different node ordering in ParaView and gmsh:
-        # The last two indices are flipped
-        if el_type_export == 'Tet10':
-            perm = np.array([0, 1, 2, 3, 4, 5, 6, 7, 9, 8])
-            ele_nodes_export = ele_nodes_export[:, perm]
 
         # make displacement 3D vector, as paraview only accepts 3D vectors
         q_array = np.array(self.u, dtype=float).T

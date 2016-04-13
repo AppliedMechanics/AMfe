@@ -776,7 +776,16 @@ class Tet4(Element):
 
 class Tet10(Element):
     '''
-    Tet10 solid element
+    Tet10 solid element; Node numbering is done like in ParaView and in [1]_
+    
+    
+    References
+    ----------
+    .. [1] Felippa, Carlos: Advanced Finite Element Methods (ASEN 6367), 
+        Spring 2013. `Online Source`__
+    
+    __ http://www.colorado.edu/engineering/CAS/courses.d/AFEM.d/AFEM.Ch10.d/
+        AFEM.Ch10.index.html
 
     '''
 
