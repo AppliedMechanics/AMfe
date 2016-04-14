@@ -4,7 +4,8 @@ Module for solving static and dynamic problems.
 
 __all__ = ['NewmarkIntegrator', 'solve_linear_displacement',
             'solve_nonlinear_displacement', 'give_mass_and_stiffness',
-            'HHTConstrained', 'integrate_linear_system']
+            'HHTConstrained', 'integrate_linear_system', 
+            'integrate_nonlinear_system']
 
 import time
 import numpy as np
@@ -35,6 +36,8 @@ abort_statement = '''
 #### within the number of given iteration steps.  
 ###############################################################################
 '''
+
+
 
 class NewmarkIntegrator():
     '''
@@ -237,6 +240,177 @@ class NewmarkIntegrator():
             t_clock_2 - t_clock_1))
         return
 
+def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt, 
+                               alpha=0, rtol=1E-8, atol=1E-6, verbose=False, 
+                               n_iter_max=30, conv_abort=True, 
+                               write_iter=False):
+    '''
+    Time integrate the nonlinear system using a generalized-alpha HHT-scheme. 
+    
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Instance of MechanicalSystem, which should be integrated.
+    q0 : ndarray
+        Start displacement.
+    dq0 : ndarray
+        Start velocity.
+    time_range : ndarray
+        Array of discrete timesteps, at which the solution is saved.
+    dt : float
+        Time step size of the integrator.
+    alpha : float, optional
+        HHT-damping factor for numerical damping. If alpha=0, no numerical 
+        damping is introduced, if alpha=0.3, the maximum numerical damping is
+        introduced. 
+    rtol : float, optional
+        Relative tolerance with respect to the maximum external force for the
+        Newton-Raphson iteration. Default value: 1E-8.
+    atol : float, optional
+        Absolute tolerance for the Newton_Raphson iteration. 
+        Default value: 1E-6.
+    verbose : bool, optional
+        Flag setting verbose output. Default: False.
+    n_iter_max : int, optional
+        Number of maximal iterations per Newton-Raphson-procedure. Default 
+        value is 30.
+    conv_abourt : bool, optional
+        Flag setting, if time integration is aborted in the case when no 
+        convergence is gained in the Newton-Raphson-Loop. Default value is 
+        True.
+    write_iter : bool, optional
+        Flag setting, if every step of the Newton-Raphson iteration is written
+        to the MechanicalSystem object. Useful only for debugging, when no 
+        convergence is gained. Default value: False.
+    
+    Returns
+    -------
+    None
+    
+    References
+    ----------
+    .. [1]  M. Géradin and D. J. Rixen. Mechanical vibrations: theory and
+            application to structural dynamics. John Wiley & Sons, 2014.
+            pp. 564.
+    .. [2]  O. A. Bauchau: Flexible Multibody Dynamics. Springer, 2011. 
+            pp. 664.
+    
+    
+    '''
+    t_clock_1 = time.time()
+    eps = 1E-13
+
+    beta = 1/4*(1 + alpha)**2
+    gamma = 1/2 + alpha
+
+    # initialize starting variables
+    t = 0
+    q = q0.copy()
+    dq = dq0.copy()
+    ddq = np.zeros_like(q0)
+    h = dt
+
+#        # predict start values for ddq:
+#        ddq = linalg.spsolve(self.M, self.f_non(q, t))
+    abs_f_ext = atol
+    no_newton_convergence_flag = False
+    time_index = 0 # index of the timestep in the time_range array
+    while time_index < len(time_range):
+
+        # write output, if necessary
+        if t+eps >= time_range[time_index]:
+            mechanical_system.write_timestep(t, q.copy())
+            time_index += 1
+            if time_index == len(time_range):
+                break
+
+        # make half the step size if newton did not converge
+        if no_newton_convergence_flag:
+            h /= 2
+            no_newton_convergence_flag = False
+        else:
+            # time tolerance fitting...
+            if t + dt + eps >= time_range[time_index]:
+                h = time_range[time_index] - t
+            else:
+                h = dt
+
+
+        # saving state for recovery if no convergence is gained
+        t_old = t
+        q_old = q.copy()
+        dq_old = dq.copy()
+
+        # Prediction using state from previous step
+        t += h
+        q += h*dq + (1/2-beta)*h**2*ddq
+        dq += (1-gamma)*h*ddq
+        ddq *= 0
+
+        S, res, f_ext = mechanical_system.S_and_res(q, dq, ddq, h,
+                                                         t, beta, gamma)
+        abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
+        res_abs = norm_of_vector(res)
+
+        # Newton-Correction-loop
+        n_iter = 0
+        while res_abs > rtol*abs_f_ext + atol:
+
+            if sp.sparse.issparse(S):
+                delta_q = - sp.sparse.linalg.spsolve(S, res)
+            else:
+                delta_q = - sp.linalg.solve(S, res)
+
+            # update state variables
+            q += delta_q
+            dq += gamma/(beta*h)*delta_q
+            ddq += 1/(beta*h**2)*delta_q
+
+            # update system matrices and vectors
+            S, res, f_ext = mechanical_system.S_and_res(q, dq, ddq, h,
+                                                             t, beta, gamma)
+            res_abs = norm_of_vector(res)
+            abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
+            n_iter += 1
+
+            if verbose:
+                if sp.sparse.issparse(S):
+                    cond_nr = 0
+                    # print('Cond# cannot be determined as S is sparse.')
+                else:
+                    cond_nr = np.linalg.cond(S)
+                print('Iteration', n_iter,
+                      'Residual: {0:4.1E}, cond# of S: {1:4.2E}'.format(
+                          res_abs, cond_nr))
+
+            # write the state for every iteration in order to watch, how
+            # Newton-raphson converges (or not ;-)
+            if write_iter:
+                t_write = t + h/100*n_iter
+                mechanical_system.write_timestep(t_write, q.copy())
+
+            # catch when the newton loop doesn't converge
+            if n_iter > n_iter_max:
+                if conv_abort:
+                    print(abort_statement)
+                    return
+                    # raise Exception('No convergence in Newton-Loop!')
+                t = t_old
+                q = q_old.copy()
+                dq = dq_old.copy()
+                no_newton_convergence_flag = True
+                break
+                
+
+        print('Time:', t, 'No of iterations:', n_iter,
+              'Residual: {0:4.2E}'.format(res_abs), 'h:', h)
+    # end of time loop
+    t_clock_2 = time.time()
+    print('Time for time marching integration {0:4.2f} seconds'.format(
+        t_clock_2 - t_clock_1))
+    return
+        
+        
 def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0):
     '''
     Perform an implicit time integration of the linearized system given with
