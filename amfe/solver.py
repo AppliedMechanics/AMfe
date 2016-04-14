@@ -298,6 +298,7 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     h = dt
     time_index = 0
     while time_index < len(time_range):
+        print('Time:', t)
 
         if t+eps >= time_range[time_index]:
             mechanical_system.write_timestep(t, q.copy())

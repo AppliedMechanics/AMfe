@@ -8,10 +8,14 @@ extracting the tangential stiffness matrix and the internal force vector in one
 run.
 
 Some remarks resulting in the observations of the profiler:
-Most of the time is spent with pyhton-functions, when they are used. For
+Most of the time is spent with python-functions, when they are used. For
 instance the kron-function in order to build the scattered geometric stiffness
 matrix or the trace function are very inefficient. They can be done better when
 using direct functions.
+
+If some element things are really time critical, it is recommended to port the 
+heavy computation to FORTRAN. This can be achieved by using the provided f2py 
+routines and reprogram the stuff for the own use. 
 
 """
 
