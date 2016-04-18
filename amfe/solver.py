@@ -241,7 +241,7 @@ class NewmarkIntegrator():
         return
 
 def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt, 
-                               alpha=0, rtol=1E-8, atol=1E-6, verbose=False, 
+                               alpha=0.01, rtol=1E-8, atol=1E-6, verbose=False, 
                                n_iter_max=30, conv_abort=True, 
                                write_iter=False):
     '''
@@ -262,7 +262,7 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
     alpha : float, optional
         HHT-damping factor for numerical damping. If alpha=0, no numerical 
         damping is introduced, if alpha=0.3, the maximum numerical damping is
-        introduced. 
+        introduced. Default value: 0.01
     rtol : float, optional
         Relative tolerance with respect to the maximum external force for the
         Newton-Raphson iteration. Default value: 1E-8.
@@ -370,7 +370,7 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
             S, res, f_ext = mechanical_system.S_and_res(q, dq, ddq, h,
                                                              t, beta, gamma)
             res_abs = norm_of_vector(res)
-            abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
+            # abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
             n_iter += 1
 
             if verbose:
@@ -402,8 +402,8 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
                 break
                 
 
-        print('Time:', t, 'No of iterations:', n_iter,
-              'Residual: {0:4.2E}'.format(res_abs), 'h:', h)
+        print('Time:', t, 'h:', h, 'No of iterations:', n_iter,
+              'Residual: {0:4.2E}'.format(res_abs))
     # end of time loop
     t_clock_2 = time.time()
     print('Time for time marching integration {0:4.2f} seconds'.format(
