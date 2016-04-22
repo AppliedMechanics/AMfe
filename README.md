@@ -81,8 +81,13 @@ a good profiling tool is the cProfile moudule. It runs with
 
     python -m cProfile -o stats.dat myscript.py
 
-The stats.dat file can be analyzed using the `snakeviz`-tool which is a Python tool which is available via conda or pip and runs with a web-based interface. To start run
+The stats.dat file can be analyzed using the `snakeviz`-tool which is a Python tool which is available via `conda` or `pip` and runs with a web-based interface. To start run
 
     snakeviz stats.dat
 
 in your console. 
+
+
+### Theory
+The theory for finite elements is very fragmented, though the theory is very well developed. But when it comes to element technology, good benchmarks and guidelines are often missed. A good guideline is the [Documentation of the CalculiX-Software-Package](http://web.mit.edu/calculix_v2.7/CalculiX/ccx_2.7/doc/ccx/ccx.html) which covers a lot about element technology. CalculiX is also an OpenSource Finite Element software written in FORTRAN an C++. 
+ 
