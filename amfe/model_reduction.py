@@ -6,7 +6,7 @@ __all__ = ['reduce_mechanical_system', 'qm_reduce_mechanical_system',
            'modal_derivative', 'modal_derivative_theta',
            'static_correction_derivative', 'static_correction_theta', 
            'principal_angles', 'krylov_subspace', 'craig_bampton', 
-           'vibration_modes', 'pod']
+           'vibration_modes', 'pod', 'theta_orth_v']
 
 import copy
 import numpy as np
@@ -315,9 +315,9 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     return dx_i_dx_j
 
 
-def static_correction_theta(V, K_func, M=None, omega=0, h=5*SQ_EPS, verbose=True):
+def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS, verbose=True):
     '''
-    Compute the static correctioin derivatives for the given basis V. 
+    Compute the static correction derivatives for the given basis V. 
     
     Optionally, a frequency shift can be performed. 
     
@@ -378,7 +378,46 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=5*SQ_EPS, verbose=True
     # make Theta symmetric
     Theta = 1/2*(Theta + Theta.transpose(0,2,1))
     return Theta
+
+def theta_orth_v(Theta, V, M, overwrite=False):
+    '''
+    Make third order tensor Theta fully mass orthogonal with respect to the 
+    basis V via a Gram-Schmid-process.
+
+    Parameters
+    ----------
+    Theta : ndarray
+        Third order Tensor describing the quadratic part of the basis
+    V : ndarray
+        Linear Basis 
+    M : ndarray or scipy.sparse matrix
+        Mass Matrix
+    overwrite : bool
+        Flag for setting, if Theta should be overwritten in-place
     
+    Returns
+    -------
+    Theta_orth : ndarray
+        Third order tensor Theta mass orthogonalized, such that 
+        Theta_orth[:,i,j] is mass orthogonal to V[:,k]:
+        :math:`\\theta_{ij}^T M V = 0`
+        
+    '''
+    # Make sure, that V is M-orthogonal
+    __, no_of_modes = V.shape
+    V_M_space = M @ V
+    np.testing.assert_allclose(V.T @ V_M_space, np.eye(no_of_modes), atol=1E-14)        
+    if overwrite:
+        Theta_ret = Theta
+    else:
+        Theta_ret = Theta.copy()
+    # inner product of Theta[:,j,k] with V[:,l] in the M-norm
+    inner_prod = np.einsum('ijk, il -> jkl', Theta, V_M_space)
+    for j in range(no_of_modes):
+        for k in range(no_of_modes):
+            Theta_ret[:,j,k] -= V @ inner_prod[j,k,:]
+    return Theta_ret
+
 def principal_angles(V1, V2, cosine=True, principal_vectors=False):
     '''
     Return the cosine of the principal angles of the two bases V1 and V2.

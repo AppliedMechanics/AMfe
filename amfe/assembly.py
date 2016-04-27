@@ -133,7 +133,7 @@ if use_fortran:
 class Assembly():
     '''
     Class for the more fancy assembly of meshes with non-heterogeneous elements.
-    
+
     Attributes
     ----------
     C_csr : scipy.sparse.csr.csr_matrix
@@ -159,15 +159,15 @@ class Assembly():
     def __init__(self, mesh):
         '''
         Parameters
-        ----
+        ----------
         mesh : instance of the Mesh-class
 
         Returns
-        --------
+        -------
         None
 
         Examples
-        ---------
+        --------
         TODO
 
         '''
@@ -364,7 +364,7 @@ class Assembly():
             nodal displacement of the nodes in Voigt-notation
         t : float
             time
-            
+
         Returns
         --------
         M : ndarray
@@ -414,7 +414,7 @@ class Assembly():
             nodal displacement of the nodes in Voigt-notation
         t : float
             time
-            
+
         Returns
         --------
         K : sparse.csr_matrix

@@ -258,7 +258,17 @@ class MechanicalSystem():
             filename to which the xdmf file and the hdf5 file will be saved.
         field_list : list, optional
             list of tuples containing a field to be exported as well as a
-            dictionary with the attribute information of the hdf5 file.
+            dictionary with the attribute information of the hdf5 file. 
+            Example:
+
+                >>> # example field list with reduced displacement not to export
+                >>> # ParaView and strain epsilon to be exported to ParaView
+                >>> field_list = [(q_red, {'ParaView':False, 'Name':'q_red'}),
+                                  (eps, {'ParaView':True,
+                                         'Name':'epsilon',
+                                         'AttributeType':'Tensor6',
+                                         'Center':'Node',
+                                         'NoOfComponents':6})]
 
         Returns
         -------
