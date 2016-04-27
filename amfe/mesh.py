@@ -565,7 +565,7 @@ class Mesh:
         df = self.el_df
         if mesh_prop not in df.columns:
             print('The given mesh property "' + str(mesh_prop) + '" is not valid!', 
-                'Please enter a valid mesh prop from the following list:\n')
+                  'Please enter a valid mesh prop from the following list:\n')
             for i in df.columns:
                 print(i)
             return
@@ -582,7 +582,7 @@ class Mesh:
         ele_nodes = [np.nan for i in range(len(elements_df))]
         for i, ele in enumerate(elements_df.values):
             ele_nodes[i] = np.array(ele[self.node_idx :
-                                    self.node_idx + amfe2no_of_nodes[ele[1]]],
+                                        self.node_idx + amfe2no_of_nodes[ele[1]]],
                                     dtype=int)
         self.ele_nodes.extend(ele_nodes)
 
@@ -624,7 +624,7 @@ class Mesh:
         df = self.el_df
         if mesh_prop not in df.columns:
             print('The given mesh property "' + str(mesh_prop) + '" is not valid!', 
-                'Please enter a valid mesh prop from the following list:\n')
+                  'Please enter a valid mesh prop from the following list:\n')
             for i in df.columns:
                 print(i)
             return
@@ -690,7 +690,7 @@ class Mesh:
         nm_nodes = [np.nan for i in range(len(elements_df))]
         for i, ele in enumerate(elements_df.values):
             nm_nodes[i] = np.array(ele[self.node_idx :
-                                   self.node_idx + amfe2no_of_nodes[ele[1]]],
+                                       self.node_idx + amfe2no_of_nodes[ele[1]]],
                                    dtype=int)
         self.neumann_nodes.extend(nm_nodes)
 
