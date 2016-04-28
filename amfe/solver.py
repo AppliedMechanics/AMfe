@@ -1,8 +1,11 @@
-# -*- coding: utf-8 -*-
-
 '''
 Module for solving static and dynamic problems.
 '''
+
+__all__ = ['NewmarkIntegrator', 'solve_linear_displacement',
+            'solve_nonlinear_displacement', 'give_mass_and_stiffness',
+            'HHTConstrained', 'integrate_linear_system', 
+            'integrate_nonlinear_system']
 
 import time
 import numpy as np
@@ -23,9 +26,18 @@ def norm_of_vector(array):
     -------
     abs : float
         2-norm of the given array.
-        
+
     '''
     return np.sqrt(array.T.dot(array))
+
+abort_statement = '''
+###############################################################################
+#### The current time integration has been aborted. No convergence was gained 
+#### within the number of given iteration steps.  
+###############################################################################
+'''
+
+
 
 class NewmarkIntegrator():
     '''
@@ -54,7 +66,8 @@ class NewmarkIntegrator():
 
     '''
 
-    def __init__(self, mechanical_system, alpha=0, verbose=False, n_iter_max=30):
+    def __init__(self, mechanical_system, alpha=0.001, verbose=False, 
+                 n_iter_max=30, conv_abort=True):
         '''
         Parameters
         ----------
@@ -67,6 +80,9 @@ class NewmarkIntegrator():
             residual for every correction in the newton iteration
         n_iter_max : int, optional
             number of maximum iteration in the newton correction process
+        conv_abort : bool, optional
+            flag indicating, if the integration is aborted when no convergence 
+            is gained. 
 
         Returns
         -------
@@ -83,6 +99,7 @@ class NewmarkIntegrator():
         self.n_iter_max = n_iter_max
         self.mechanical_system = mechanical_system
         self.write_iter = False
+        self.conv_abort = conv_abort
 
     def integrate(self, q_start, dq_start, time_range):
         '''
@@ -113,43 +130,41 @@ class NewmarkIntegrator():
 
         '''
         t_clock_1 = time.time()
+        eps = 1E-13
+
         beta = self.beta
         gamma = self.gamma
         # initialize starting variables
+        t = 0
         q = q_start.copy()
         dq = dq_start.copy()
-        ddq = np.zeros(len(q_start))
-
-        q_global = []
-        dq_global = []
-        t = 0
-        time_index = 0 # index of the timestep in the time_range array
-        write_flag = False
-
-        # catch start value 0:
-        if time_range[0] < 1E-12:
-            q_global.append(q)
-            dq_global.append(dq)
-            time_index = 1
-        else:
-            time_index = 0
+        ddq = np.zeros_like(q_start)
 
 #        # predict start values for ddq:
 #        ddq = linalg.spsolve(self.M, self.f_non(q, t))
+        abs_f_ext = self.atol
         no_newton_convergence_flag = False
+        time_index = 0 # index of the timestep in the time_range array
         while time_index < len(time_range):
-            # time tolerance fitting...
-            if t + self.delta_t + 1E-8 >= time_range[time_index]:
-                dt = time_range[time_index] - t
-                if dt < 1E-8:
-                    dt = 1E-7
-                write_flag = True
+
+            # write output, if necessary
+            if t+eps >= time_range[time_index]:
+                self.mechanical_system.write_timestep(t, q.copy())
                 time_index += 1
+                if time_index == len(time_range):
+                    break
+
+
+            # time tolerance fitting...
+            if t + self.delta_t + eps >= time_range[time_index]:
+                dt = time_range[time_index] - t
             else:
                 dt = self.delta_t
-                if no_newton_convergence_flag:
-                    dt /= 2
-                    no_newton_convergence_flag = False
+
+            # make half the step size if newton did not converge
+            if no_newton_convergence_flag:
+                dt /= 2
+                no_newton_convergence_flag = False
 
             # saving state for recovery if no convergence is gained
             t_old = t
@@ -164,7 +179,7 @@ class NewmarkIntegrator():
 
             S, res, f_ext = self.mechanical_system.S_and_res(q, dq, ddq, dt,
                                                              t, beta, gamma)
-            abs_f_ext = norm_of_vector(f_ext)
+            abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
             res_abs = norm_of_vector(res)
 
             # Newton-Correction-loop
@@ -185,38 +200,308 @@ class NewmarkIntegrator():
                 S, res, f_ext = self.mechanical_system.S_and_res(q, dq, ddq, dt,
                                                                  t, beta, gamma)
                 res_abs = norm_of_vector(res)
-                abs_f_ext = norm_of_vector(f_ext)
+                abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
                 n_iter += 1
 
                 if self.verbose:
+                    if sp.sparse.issparse(S):
+                        cond_nr = 0
+                        # print('Cond# cannot be determined as S is sparse.')
+                    else:
+                        cond_nr = np.linalg.cond(S)
                     print('Iteration', n_iter,
                           'Residual: {0:4.1E}, cond# of S: {1:4.2E}'.format(
-                              res_abs, np.linalg.cond(S)))
+                              res_abs, cond_nr))
 
+                # write the state for every iteration in order to watch, how
+                # Newton-raphson converges (or not ;-)
                 if self.write_iter:
                     t_write = t + dt/100*n_iter
                     self.mechanical_system.write_timestep(t_write, q.copy())
 
                 # catch when the newton loop doesn't converge
                 if n_iter > self.n_iter_max:
+                    if self.conv_abort:
+                        print(abort_statement)
+                        return
+                        # raise Exception('No convergence in Newton-Loop!')
                     t = t_old
                     q = q_old.copy()
                     dq = dq_old.copy()
                     no_newton_convergence_flag = True
                     break
+                    
 
             print('Time:', t, 'No of iterations:', n_iter,
                   'Residual: {0:4.2E}'.format(res_abs))
-            # Writing if necessary:
-            if write_flag:
-                self.mechanical_system.write_timestep(t, q.copy())
-                write_flag = False
         # end of time loop
         t_clock_2 = time.time()
         print('Time for time marching integration {0:4.2f} seconds'.format(
             t_clock_2 - t_clock_1))
         return
 
+def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt, 
+                               alpha=0.01, rtol=1E-8, atol=1E-6, verbose=False, 
+                               n_iter_max=30, conv_abort=True, 
+                               write_iter=False):
+    '''
+    Time integrate the nonlinear system using a generalized-alpha HHT-scheme. 
+    
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Instance of MechanicalSystem, which should be integrated.
+    q0 : ndarray
+        Start displacement.
+    dq0 : ndarray
+        Start velocity.
+    time_range : ndarray
+        Array of discrete timesteps, at which the solution is saved.
+    dt : float
+        Time step size of the integrator.
+    alpha : float, optional
+        HHT-damping factor for numerical damping. If alpha=0, no numerical 
+        damping is introduced, if alpha=0.3, the maximum numerical damping is
+        introduced. Default value: 0.01
+    rtol : float, optional
+        Relative tolerance with respect to the maximum external force for the
+        Newton-Raphson iteration. Default value: 1E-8.
+    atol : float, optional
+        Absolute tolerance for the Newton_Raphson iteration. 
+        Default value: 1E-6.
+    verbose : bool, optional
+        Flag setting verbose output. Default: False.
+    n_iter_max : int, optional
+        Number of maximal iterations per Newton-Raphson-procedure. Default 
+        value is 30.
+    conv_abourt : bool, optional
+        Flag setting, if time integration is aborted in the case when no 
+        convergence is gained in the Newton-Raphson-Loop. Default value is 
+        True.
+    write_iter : bool, optional
+        Flag setting, if every step of the Newton-Raphson iteration is written
+        to the MechanicalSystem object. Useful only for debugging, when no 
+        convergence is gained. Default value: False.
+    
+    Returns
+    -------
+    None
+    
+    References
+    ----------
+    .. [1]  M. Géradin and D. J. Rixen. Mechanical vibrations: theory and
+            application to structural dynamics. John Wiley & Sons, 2014.
+            pp. 564.
+    .. [2]  O. A. Bauchau: Flexible Multibody Dynamics. Springer, 2011. 
+            pp. 664.
+    
+    
+    '''
+    t_clock_1 = time.time()
+    eps = 1E-13
+
+    beta = 1/4*(1 + alpha)**2
+    gamma = 1/2 + alpha
+
+    # initialize starting variables
+    t = 0
+    q = q0.copy()
+    dq = dq0.copy()
+    ddq = np.zeros_like(q0)
+    h = dt
+
+#        # predict start values for ddq:
+#        ddq = linalg.spsolve(self.M, self.f_non(q, t))
+    abs_f_ext = atol
+    no_newton_convergence_flag = False
+    time_index = 0 # index of the timestep in the time_range array
+    while time_index < len(time_range):
+
+        # write output, if necessary
+        if t+eps >= time_range[time_index]:
+            mechanical_system.write_timestep(t, q.copy())
+            time_index += 1
+            if time_index == len(time_range):
+                break
+
+        # make half the step size if newton did not converge
+        if no_newton_convergence_flag:
+            h /= 2
+            no_newton_convergence_flag = False
+        else:
+            # time tolerance fitting...
+            if t + dt + eps >= time_range[time_index]:
+                h = time_range[time_index] - t
+            else:
+                h = dt
+
+
+        # saving state for recovery if no convergence is gained
+        t_old = t
+        q_old = q.copy()
+        dq_old = dq.copy()
+
+        # Prediction using state from previous step
+        t += h
+        q += h*dq + (1/2-beta)*h**2*ddq
+        dq += (1-gamma)*h*ddq
+        ddq *= 0
+
+        S, res, f_ext = mechanical_system.S_and_res(q, dq, ddq, h,
+                                                         t, beta, gamma)
+        abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
+        res_abs = norm_of_vector(res)
+
+        # Newton-Correction-loop
+        n_iter = 0
+        while res_abs > rtol*abs_f_ext + atol:
+
+            if sp.sparse.issparse(S):
+                delta_q = - sp.sparse.linalg.spsolve(S, res)
+            else:
+                delta_q = - sp.linalg.solve(S, res)
+
+            # update state variables
+            q += delta_q
+            dq += gamma/(beta*h)*delta_q
+            ddq += 1/(beta*h**2)*delta_q
+
+            # update system matrices and vectors
+            S, res, f_ext = mechanical_system.S_and_res(q, dq, ddq, h,
+                                                             t, beta, gamma)
+            res_abs = norm_of_vector(res)
+            # abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
+            n_iter += 1
+
+            if verbose:
+                if sp.sparse.issparse(S):
+                    cond_nr = 0
+                    # print('Cond# cannot be determined as S is sparse.')
+                else:
+                    cond_nr = np.linalg.cond(S)
+                print('Iteration', n_iter,
+                      'Residual: {0:4.1E}, cond# of S: {1:4.2E}'.format(
+                          res_abs, cond_nr))
+
+            # write the state for every iteration in order to watch, how
+            # Newton-raphson converges (or not ;-)
+            if write_iter:
+                t_write = t + h/100*n_iter
+                mechanical_system.write_timestep(t_write, q.copy())
+
+            # catch when the newton loop doesn't converge
+            if n_iter > n_iter_max:
+                if conv_abort:
+                    print(abort_statement)
+                    return
+                    # raise Exception('No convergence in Newton-Loop!')
+                t = t_old
+                q = q_old.copy()
+                dq = dq_old.copy()
+                no_newton_convergence_flag = True
+                break
+                
+
+        print('Time:', t, 'h:', h, 'No of iterations:', n_iter,
+              'Residual: {0:4.2E}'.format(res_abs))
+    # end of time loop
+    t_clock_2 = time.time()
+    print('Time for time marching integration {0:4.2f} seconds'.format(
+        t_clock_2 - t_clock_1))
+    return
+        
+        
+def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0):
+    '''
+    Perform an implicit time integration of the linearized system given with
+    the linear system.
+
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Mechanical System which is linearized about the zero displacement.
+    q0 : ndarray
+        initial displacement
+    dq0 : ndarray
+        initial velocity
+    time_range : ndarray
+        array containing the time steps to be exported
+    dt : float
+        time step size.
+    alpha : float
+        general damping factor of the generalized-alpha method.
+
+    Returns
+    -------
+    q : ndarray
+        Displacement of the linear system
+
+    Note
+    ----
+    Due to round-off-errors, the internal time step width is h and is very
+    close to dt, but adjusted to fit the steps exactly.
+    '''
+    t_clock_1 = time.time()
+    print('Starting linear time integration')
+    eps = 1E-12 # epsilon for floating point round off errors
+    # Check, if the time step width and the spacing in time range fit together
+    time_steps = time_range - np.roll(time_range, 1)
+    remainder = (time_steps + eps) % dt
+    if np.any(remainder > eps*10):
+        raise ValueError(
+            'The time step size and the time range vector do not fit.',
+            'Make the time increments in the time_range vector integer',
+            'multiples of dt.')
+
+    beta = 1/4*(1 + alpha)**2
+    gamma = 1/2 + alpha
+    K = mechanical_system.K()
+    M = mechanical_system.M()
+    S = M + beta * dt**2 * K
+    S_inv = sp.sparse.linalg.splu(S)
+    # S_inv.solve(rhs_vec) # method to solve the system efficiently
+    print('Iteration matrix successfully factorized. Starting time marching...')
+    # initialization of the state variables
+    t = 0
+    q = q0.copy()
+    dq = dq0.copy()
+    # Evaluation of the initial acceleration
+    f_ext = mechanical_system.f_ext(q, dq, t)
+    ddq = sp.sparse.linalg.spsolve(M, f_ext - K @ q)
+
+    h = dt
+    time_index = 0
+    while time_index < len(time_range):
+        print('Time:', t)
+
+        if t+eps >= time_range[time_index]:
+            mechanical_system.write_timestep(t, q.copy())
+            time_index += 1
+            if time_index == len(time_range):
+                break
+
+        # adjustment of dt
+        if t+eps + dt >= time_range[time_index]:
+            h = time_range[time_index] - t
+        else:
+            h = dt
+
+        # update of state
+        t += h
+        q, dq = (q + h*dq + (1/2-beta)*h**2*ddq, dq + (1-gamma)*h*ddq)
+
+        # Solution of system
+        f_ext = mechanical_system.f_ext(q, dq, t)
+        ddq = S_inv.solve(f_ext - K @ q)
+
+        # correction of state
+        q, dq = (q + beta*h**2*ddq), dq + gamma*h*ddq
+
+    t_clock_2 = time.time()
+    print('Time for linar time marching integration: {0:4.2f} seconds'.format(
+        t_clock_2 - t_clock_1))
+
+    return
 
 def solve_linear_displacement(mechanical_system, t=1, verbose=True):
     '''
@@ -296,6 +581,7 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     TODO
 
     '''
+    t_clock_1 = time.time()
     stepwidth = 1/no_of_load_steps
     ndof = mechanical_system.dirichlet_class.no_of_constrained_dofs
     u = np.zeros(ndof)
@@ -323,12 +609,16 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
             abs_f_ext = np.sqrt(f_ext @ f_ext)
             abs_res = norm_of_vector(res)
             n_iter += 1
-            if verbose:
-                print('Stufe', t, 'Iteration Nr.', n_iter, 'Residuum:', abs_res)
+            if verbose: 
+                print('Step', t, 'Iteration #', n_iter, 
+                      'Residal: {0:4.2E}'.format(abs_res))
             if wrt_iter:
                 mechanical_system.write_timestep(n_iter, u)
         mechanical_system.write_timestep(t, u)
-
+    t_clock_2 = time.time()
+    print('Time for solving nonlinear displacements: {0:4.2f} seconds'.format(
+        t_clock_2 - t_clock_1))
+    return
 
 def give_mass_and_stiffness(mechanical_system):
     '''

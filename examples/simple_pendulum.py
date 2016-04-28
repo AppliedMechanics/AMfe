@@ -82,7 +82,7 @@ q0_min = sp.array([sp.pi/2,])
 dq0_min = sp.array([0.,])
 my_constrained_solver_min = amfe.HHTConstrained(delta_t = 1E-3, alpha=0.001)
 my_constrained_solver_min.set_constrained_system(my_minimal_pendulum)
-q_min, dq_min, lambda_min = my_constrained_solver_min.integrate_nonlinear_system(q0_min, dq0_min, T)
+q_min, dq_min, lambda_min = my_constrained_solver_min.integrate(q0_min, dq0_min, T)
 
 plt.plot(T, q)
 plt.plot(T, sp.sin(q_min))

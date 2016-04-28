@@ -1,9 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 A collection of tools which to not fit to one topic of the other modules.
 
-Some tools here are experimental. 
+Some tools here might be experimental.
 """
+
+__all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat', 
+           'append_to_filename', 'matshow_3d', 'test']
 
 import numpy as np
 import scipy as sp
@@ -86,13 +88,11 @@ def read_hbmat(filename):
     matrix : sp.sparse.csc_matrix
         matrix which is saved in harwell-boeing format
 
-    Info
-    ----
+    Notes
+    ----_
     Information on the Harwell Boeing format:
     http://people.sc.fsu.edu/~jburkardt/data/hb/hb.html
 
-    Note
-    ----
     When the hbmat file is exported as an ASCII-file, the truncation of the
     numerical values can cause issues, for example
 
@@ -176,9 +176,9 @@ def append_to_filename(filename):
 
 def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
     '''
-    Show a matrix as bar-plot using matplotlib.bar3d plotting tools similar to 
-    `pyplot.matshow`. 
-    
+    Show a matrix as bar-plot using matplotlib.bar3d plotting tools similar to
+    `pyplot.matshow`.
+
     Parameters
     ----------
     A : ndarray
@@ -188,17 +188,17 @@ def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
     cmap : matplotlib.cm function, optional
         Colormap-function of matplotlib. Default. mpl.cm.jet
     alpha : float
-        alpha channel value (transparency): alpha=1.0 is not transparent at all, 
-        alpha=0.0 is full transparent and thus invisible. 
-    
+        alpha channel value (transparency): alpha=1.0 is not transparent at all,
+        alpha=0.0 is full transparent and thus invisible.
+
     Returns
     -------
     barplot : instance of mpl_toolkits.mplot3d.art3d.Poly3DCollection
-    
+
     See Also
     --------
     matplotlib.pyplot.matshow
-    
+
     '''
     xdim, ydim = A.shape
     fig = plt.figure()
@@ -214,6 +214,33 @@ def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
     barplot = ax.bar3d(xx, yy, zz, dx, dy, dz, color=colors, alpha=alpha)
     # fig.colorbar(barplot)
     return barplot
+
+
+def reorder_sparse_matrix(A):
+    '''
+    Reorder the sparse matrix A such that the bandwidth of the matrix is 
+    minimized using the Cuthill–McKee (RCM) algorithm. 
+    
+    Parameters
+    ----------
+    A : CSR or CSC sprarse symmetric matrix
+        Sparse and symmetric matrix 
+    
+    Returns
+    -------
+    A_new : CSR or CSC sparse symmetric matrix
+        reordered sparse and symmetric matrix
+    perm : ndarray
+        vector of row and column permutation
+    
+    References
+    ----------
+    E. Cuthill and J. McKee, "Reducing the Bandwidth of Sparse Symmetric Matrices",
+    ACM '69 Proceedings of the 1969 24th national conference, (1969).
+    '''
+    perm = sp.sparse.csgraph.reverse_cuthill_mckee(A, symmetric_mode=True)
+    return A[perm,:][:,perm], perm
+
 
 def test(*args, **kwargs):
     '''

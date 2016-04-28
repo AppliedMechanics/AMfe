@@ -1,7 +1,7 @@
 cl = 0.05;
 Point(1) = {0, 0, 0, cl};
-Point(2) = {2, 0, 0, cl};
-Point(3) = {2, 0.1, 0, cl};
+Point(2) = {3, 0, 0, cl};
+Point(3) = {3, 0.1, 0, cl};
 Point(4) = {0, 0.1, 0, cl};
 Line(1) = {1, 2};
 Line(2) = {2, 3};
@@ -12,3 +12,4 @@ Plane Surface(6) = {6};
 Physical Line(8) = {4};
 Physical Line(9) = {2};
 Physical Surface(7) = {6};
+Physical Line(10) = {3};

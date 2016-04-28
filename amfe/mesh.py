@@ -1,7 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Mesh module of amfe. It handles the mesh from import, defining the dofs for the
-boundary conditions and the export. """
+boundary conditions and the export.
+"""
+
+__all__ = ['Mesh', 'MeshGenerator']
+
 import os
 import copy
 # XML stuff
@@ -64,7 +67,18 @@ for element in element_mapping_list:
 
 
 def check_dir(*filenames):
-    '''Checkt ob Verzeichnis vorliegt; falls nicht, wird Verzeichnis angelegt'''
+    '''
+    Check if paths exists; if not, the given paths will be created.
+
+    Parameters
+    ----------
+    *filenames : string or list of strings
+        string containing a path. 
+    
+    Returns
+    -------
+    None        
+    '''
     for filename in filenames:  # loop on files
         dir_name = os.path.dirname(filename)
         # check if directory does not exist; then create directory
@@ -253,6 +267,9 @@ class Mesh:
         Dictionary containing objects of elements.
     element_boundary_class_dict : dict
         Dictionary containing objects of skin elements.
+    node_idx : int
+        index describing, at which position in the Pandas Dataframe `el_df` 
+        the nodes of the element start. 
 
     '''
 
@@ -282,6 +299,8 @@ class Mesh:
         self.no_of_dofs = 0
         self.no_of_nodes = 0
         self.no_of_elements = 0
+        self.el_df = pd.DataFrame()
+        self.node_idx = 0
 
         # Element Class dictionary with all available elements
         kwargs = { }
@@ -354,7 +373,7 @@ class Mesh:
         try:
             self.nodes = np.genfromtxt(filename_nodes, delimiter = ',', skip_header = 1)
         except:
-            print('FEHLER beim lesen der Datei', filename_nodes,
+            ImportError('Error while reading file ' + filename_nodes, '\n'
                   '\nVermutlich stimmt die erwartete Dimension der Knotenfreiheitsgrade',
                   self.no_of_dofs_per_node, 'nicht mit der Dimension in der Datei zusammen.')
         # when line numbers are erased if they are content of the csv
@@ -462,11 +481,14 @@ class Mesh:
 
         # conversion of the read strings to integer and floats
         for j in range(len(list_imported_mesh_format)):
-            list_imported_mesh_format[j] = [float(x) for x in list_imported_mesh_format[j].split()]
+            list_imported_mesh_format[j] = [float(x) for x in 
+                                            list_imported_mesh_format[j].split()]
         for j in range(len(list_imported_nodes)):
-            list_imported_nodes[j] = [float(x) for x in list_imported_nodes[j].split()]
+            list_imported_nodes[j] = [float(x) for x in 
+                                      list_imported_nodes[j].split()]
         for j in range(len(list_imported_elements)):
-            list_imported_elements[j] = [int(x) for x in list_imported_elements[j].split()]
+            list_imported_elements[j] = [int(x) for x in 
+                                         list_imported_elements[j].split()]
 
         # Construct Pandas Dataframe for the elements (self.el_df and df for shorter code)
         self.el_df = df = pd.DataFrame(list_imported_elements)
@@ -505,28 +527,14 @@ class Mesh:
         # fill the nodes of the selected physical group to the array
         self.nodes = np.array(list_imported_nodes)[:,1:1+self.no_of_dofs_per_node]
 
+        # Change the indices of Tet10-elements, as they are numbered differently 
+        # from the numbers used in AMFE and ParaView (last two indices permuted)
+        if 'Tet10' in element_types:
+            row_loc = df['el_type'] == 'Tet10'
+            i = self.node_idx
+            df.ix[row_loc, i + 9], df.ix[row_loc, i + 8] = \
+            df.ix[row_loc, i + 8], df.ix[row_loc, i + 9]
 
-        # Handling the physical groups
-        all_physical_groups = pd.unique(df.phys_group)
-
-        # make a dictionary with the nodes of every physical group
-        self.phys_group_dict = nodes_phys_group = {}
-        for idx in all_physical_groups:
-            gr_nodes = np.array([], dtype=int)
-            # pick the elements corresponding to the current physical group from table
-            df_phys_group = df[df.phys_group == idx]
-            # assemble all nodes to one huge array
-            for series in df_phys_group.iloc[:, node_idx:]:
-                gr_nodes = np.append(gr_nodes, df_phys_group[series].unique())
-            # make them unique, remove nan (resulting from non-existing entries in pandas)
-            # cast and sort the array and put into dict
-            gr_nodes = np.unique(gr_nodes)
-            # remove nan from non-existing entries
-            gr_nodes = gr_nodes[np.isfinite(gr_nodes)]
-            # recast to int as somewhere a float is casted
-            gr_nodes = np.array(gr_nodes, dtype=int)
-            gr_nodes.sort()
-            nodes_phys_group[idx] = gr_nodes
 
         self._update_mesh_props()
         # printing some information regarding the physical groups
@@ -559,8 +567,14 @@ class Mesh:
         '''
         # asking for a group to be chosen, when no valid group is given
         df = self.el_df
+        if mesh_prop not in df.columns:
+            print('The given mesh property "' + str(mesh_prop) + '" is not valid!', 
+                  'Please enter a valid mesh prop from the following list:\n')
+            for i in df.columns:
+                print(i)
+            return
         while key not in pd.unique(df[mesh_prop]):
-            self.mesh_information()
+            self.mesh_information(mesh_prop)
             print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop,
                   'is', key, ')')
             key = int(input('Please choose a ' + mesh_prop + ' to be used as mesh: '))
@@ -572,7 +586,7 @@ class Mesh:
         ele_nodes = [np.nan for i in range(len(elements_df))]
         for i, ele in enumerate(elements_df.values):
             ele_nodes[i] = np.array(ele[self.node_idx :
-                                    self.node_idx + amfe2no_of_nodes[ele[1]]],
+                                        self.node_idx + amfe2no_of_nodes[ele[1]]],
                                     dtype=int)
         self.ele_nodes.extend(ele_nodes)
 
@@ -594,30 +608,46 @@ class Mesh:
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
 
-    def mesh_information(self):
-        '''Print some infos about the mesh'''
+    def mesh_information(self, mesh_prop='phys_group'):
+        '''
+        Print some information about the current mesh
+        
+        Parameters
+        ----------
+        mesh_prop : str, optional
+            mesh property of the loaded mesh. This mesh property is the basis 
+            for selection of parts of the mesh for materials and boundary 
+            conditions. The default value is 'phys_group' which is the physical 
+            group, if the mesh comes from gmsh. 
+        
+        Returns
+        -------
+        None
+        
+        '''
         df = self.el_df
-        print('The loaded mesh contains', len(self.phys_group_dict),
+        if mesh_prop not in df.columns:
+            print('The given mesh property "' + str(mesh_prop) + '" is not valid!', 
+                  'Please enter a valid mesh prop from the following list:\n')
+            for i in df.columns:
+                print(i)
+            return
+            
+        phys_groups = pd.unique(df[mesh_prop])
+        print('The loaded mesh contains', len(phys_groups),
               'physical groups:')
-        for i in self.phys_group_dict :
+        for i in phys_groups:
             print('\nPhysical group', i, ':')
-            print('Number of Nodes:', len(self.phys_group_dict [i]))
-            print('Number of Elements:', len(df[df.phys_group == i]))
+            # print('Number of Nodes:', len(self.phys_group_dict [i]))
+            print('Number of Elements:', len(df[df[mesh_prop] == i]))
             print('Element types appearing in this group:',
-                  pd.unique(df[df.phys_group == i].el_type))
+                  pd.unique(df[df[mesh_prop] == i].el_type))
+        return
 
-    def boundary_information(self):
-        '''
-        Print the information of the boundary stuff
-        '''
-        print('Voundary nodes sorted by the boundary number:')
-        for i in self.phys_group_dict:
-            print('Boundary (physical group)', i,
-                  'contains the following', len(self.phys_group_dict[i]),
-                  ' nodes:\n', self.phys_group_dict[i])
 
     def set_neumann_bc(self, key, val, direct, time_func=None,
-                          mesh_prop='phys_group'):
+                       shadow_area=False,
+                       mesh_prop='phys_group'):
         '''
         Add group of mesh to neumann boundary conditions.
 
@@ -627,33 +657,20 @@ class Mesh:
             Key of the physical domain to be chosen for the neumann bc
         val : float
             value for the pressure/traction onto the element
-        direct : str {'normal', 'x_n', 'y_n', 'z_n', 'x', 'y', 'z'}
-            direction, in which the traction should point at:
-
-            'normal'
-                Pressure acting onto the normal face of the deformed configuration
-            'x_n'
-                Traction acting in x-direction proportional to the area
-                projected onto the y-z surface
-            'y_n'
-                Traction acting in y-direction proportional to the area
-                projected onto the x-z surface
-            'z_n'
-                Traction acting in z-direction proportional to the area
-                projected onto the x-y surface
-            'x'
-                Traction acting in x-direction proportional to the area
-            'y'
-                Traction acting in y-direction proportional to the area
-            'z'
-                Traction acting in z-direction proportional to the area
-
+        direct : str 'normal' or ndarray
+            array giving the direction, in which the traction force should act.
+            alternatively, the keyword 'normal' may be given. Default value:
+            'normal'.
         time_func : function object
             Function object returning a value between -1 and 1 given the
             input t:
 
             >>> val = time_func(t)
 
+        shadow_area : bool, optional
+            Flat setting, if force should be proportional to the shadow area,
+            i.e. the area of the surface projected on the direction. Default
+            value: 'False'.
         mesh_prop : str {'phys_group', 'geom_entity', 'el_type'}, optional
             label of which the element should be chosen from. Default is
             phys_group.
@@ -664,7 +681,7 @@ class Mesh:
         '''
         df = self.el_df
         while key not in pd.unique(df[mesh_prop]):
-            self.mesh_information()
+            self.mesh_information(mesh_prop)
             print('\nNo valid', mesh_prop, 'is given.\n(Given',
                   mesh_prop, 'is', key, ')')
             key = int(input('Please choose a ' + mesh_prop +
@@ -677,7 +694,7 @@ class Mesh:
         nm_nodes = [np.nan for i in range(len(elements_df))]
         for i, ele in enumerate(elements_df.values):
             nm_nodes[i] = np.array(ele[self.node_idx :
-                                   self.node_idx + amfe2no_of_nodes[ele[1]]],
+                                       self.node_idx + amfe2no_of_nodes[ele[1]]],
                                    dtype=int)
         self.neumann_nodes.extend(nm_nodes)
 
@@ -687,7 +704,10 @@ class Mesh:
         # then add the element objects to the ele_obj list
         ele_class_dict = copy.deepcopy(self.element_boundary_class_dict)
         for i in ele_class_dict:
-            ele_class_dict[i].__init__(val=val, direct=direct, time_func=time_func)
+            ele_class_dict[i].__init__(val=val, direct=direct,
+                                       time_func=time_func,
+                                       shadow_area=shadow_area)
+
         object_series = elements_df['el_type'].map(ele_class_dict)
         self.neumann_obj.extend(object_series.values.tolist())
         self._update_mesh_props()
@@ -732,7 +752,7 @@ class Mesh:
         # asking for a group to be chosen, when no valid group is given
         df = self.el_df
         while key not in pd.unique(df[mesh_prop]):
-            self.mesh_information()
+            self.mesh_information(mesh_prop)
             print('\nNo valid', mesh_prop, 'is given.\n(Given', mesh_prop,
                   'is', key, ')')
             key = int(input('Please choose a ' + mesh_prop +
@@ -830,7 +850,7 @@ class Mesh:
         return
 
 
-    def save_mesh_xdmf(self, filename, field_list=None):
+    def save_mesh_xdmf(self, filename, field_list=None, bmat=None):
         '''
         Save the mesh in hdf5 and xdmf file format.
 
@@ -851,6 +871,10 @@ class Mesh:
                                          'AttributeType':'Tensor6',
                                          'Center':'Node',
                                          'NoOfComponents':6})]
+        bmat : csrMatrix
+            CSR-Matrix describing the way, how the Dirichlet-BCs are applied: 
+            u_unconstr = bmat @ u_constr
+            
 
         Returns
         -------
@@ -917,7 +941,16 @@ class Mesh:
 
             h5_time = f.create_dataset('time', data=np.array(self.timesteps))
             h5_set_attributes(h5_time, h5_time_dict)
+            
+            # export bmat if given
+            if bmat is not None:
+                h5_bmat = f.create_group('mesh/bmat')
+                h5_bmat.attrs['ParaView'] = False
+                for par in ('data', 'indices', 'indptr', 'shape'):
+                    array = np.array(getattr(bmat, par))
+                    h5_bmat.create_dataset(par, data=array, dtype=array.dtype)
 
+            # export fields in new_field_list
             for data_array, data_dict in new_field_list:
                 h5_dataset = f.create_dataset('time_vals/' + data_dict['Name'],
                                               data=data_array)

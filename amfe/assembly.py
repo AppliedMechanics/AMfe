@@ -1,10 +1,9 @@
-#!/bin/env python
-# -*- coding: utf-8 -*-
-
 """
 Basic assembly module for the finite element code. Assumes to have all elements
 in the inertial frame.
 """
+
+__all__ = ['Assembly']
 
 import time
 
@@ -13,6 +12,8 @@ import scipy as sp
 
 from scipy import sparse
 from scipy import linalg
+
+
 
 use_fortran = False
 try:
@@ -132,24 +133,45 @@ if use_fortran:
 class Assembly():
     '''
     Class for the more fancy assembly of meshes with non-heterogeneous elements.
+
+    Attributes
+    ----------
+    C_csr : scipy.sparse.csr.csr_matrix
+        Matrix containing the sparsity pattern of the problem
+    csr_assembly_indices : np.ndarray
+        Array containing the indices for the csr matrix assembly routine.
+        The entry [i,j,k] contains the index of the csr-value-matrix
+        for the i-th element and the j-th row and the k-th column
+        of the local stiffness matrix of the i-th element.
+        The dimension is (n_elements, ndof_element, ndof_element).
+    element_indices : list
+        Ragged list containing the global indices for the local variables
+        of an element. The entry [i,j] gives the index in the global vector
+        of element i with dof j
+    neumann_indices : list
+        Ragged list equivalently to element_indices for the neumann
+        boundary skin elements.
+    nodes_voigt : np.ndarray
+        vector of all nodal coordinates in voigt-notation.
+        Dimension is (ndofs_total, )
+
     '''
     def __init__(self, mesh):
         '''
         Parameters
-        ----
+        ----------
         mesh : instance of the Mesh-class
 
         Returns
-        --------
+        -------
         None
 
         Examples
-        ---------
+        --------
         TODO
 
         '''
         self.mesh = mesh
-        # TODO: implement stress assembly
         self.save_stresses = False
         self.element_indices = []
         self.neumann_indices = []
@@ -169,31 +191,9 @@ class Assembly():
         None
 
 
-        Internal variables computed:
-        ----------------------------
-
-        C_csr : scipy.sparse.csr.csr_matrix
-            Matrix containing the sparsity pattern of the problem
-        csr_assembly_indices : np.ndarray
-            Array containing the indices for the csr matrix assembly routine.
-            The entry [i,j,k] contains the index of the csr-value-matrix
-            for the i-th element and the j-th row and the k-th column
-            of the local stiffness matrix of the i-th element.
-            The dimension is (n_elements, ndof_element, ndof_element).
-        element_indices : list
-            Ragged list containing the global indices for the local variables
-            of an element. The entry [i,j] gives the index in the global vector
-            of element i with dof j
-        neumann_indices : list
-            Ragged list equivalently to element_indices for the neumann
-            boundary skin elements.
-        nodes_voigt : np.ndarray
-            vector of all nodal coordinates in voigt-notation.
-            Dimension is (ndofs_total, )
-
         Notes
         -----
-        This preallocation routine can take some while for small matrices.
+        This preallocation routine can take some while.
 
         '''
         print('Preallocating the stiffness matrix')
@@ -213,7 +213,7 @@ class Assembly():
         # preallocate the CSR-matrix
         row_global = np.zeros(no_of_elements*max_dofs_per_element**2, dtype=int)
         col_global = row_global.copy()
-        vals_global = np.zeros_like(col_global, dtype=float)
+        vals_global = np.zeros_like(col_global, dtype=bool)
 
         for i, indices_of_one_element in enumerate(self.element_indices):
             l = len(indices_of_one_element)
@@ -224,7 +224,7 @@ class Assembly():
                 H.T.reshape(-1)
 
         self.C_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
-                                          shape=(no_of_dofs, no_of_dofs))
+                                          shape=(no_of_dofs, no_of_dofs), dtype=float)
         t2 = time.clock()
         print('Done preallocating stiffness matrix with', no_of_elements, 'elements',
               'and', no_of_dofs, 'dofs.')
@@ -364,7 +364,7 @@ class Assembly():
             nodal displacement of the nodes in Voigt-notation
         t : float
             time
-            
+
         Returns
         --------
         M : ndarray
@@ -414,7 +414,7 @@ class Assembly():
             nodal displacement of the nodes in Voigt-notation
         t : float
             time
-            
+
         Returns
         --------
         K : sparse.csr_matrix

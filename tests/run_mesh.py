@@ -26,7 +26,7 @@ my_mesh.import_msh(gmsh_input_file)
 
 
 #%%
-my_mesh.mesh_information()
+my_mesh.mesh_information('Sepp')
 
 my_material = amfe.material.KirchhoffMaterial()
 my_mesh.load_group_to_mesh(29, my_material)

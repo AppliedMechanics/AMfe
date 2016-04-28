@@ -1,8 +1,12 @@
-# -*- coding: utf-8 -*-
-
 """
 Module of AMfe which handles the reduced order models.
 """
+
+__all__ = ['reduce_mechanical_system', 'qm_reduce_mechanical_system',
+           'modal_derivative', 'modal_derivative_theta',
+           'static_correction_derivative', 'static_correction_theta', 
+           'principal_angles', 'krylov_subspace', 'craig_bampton', 
+           'vibration_modes', 'pod', 'theta_orth_v']
 
 import copy
 import numpy as np
@@ -210,7 +214,7 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
         three dimensional array of modal derivatives. Theta[:,i,j] contains
         the modal derivative 1/2 * dx_i / dx_j. The basis Theta is made symmetric, so
         that `Theta[:,i,j] == Theta[:,j,i]` if `symmetic=True`.
-        
+
     See Also
     --------
     static_correction_theta : modal derivative with mass neglection.
@@ -311,10 +315,12 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     return dx_i_dx_j
 
 
-def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
+def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS, verbose=True):
     '''
-    Computes the static correction derivatives of the basis V
-
+    Compute the static correction derivatives for the given basis V. 
+    
+    Optionally, a frequency shift can be performed. 
+    
     Parameters
     ----------
     V : ndarray
@@ -322,6 +328,11 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
     K_func : function
         function returning the tangential stiffness matrix for a given
         displacement. Has to work like `K = K_func(u)`.
+    M : ndarray, optional
+        mass matrix. Can be sparse or dense. If `None` is given, the mass of 0 
+        is assumed. Default value is `None`. 
+    omega : float, optional
+        shift frequency. Default value is 0.
     h : float, optional
         step width for finite difference scheme. Default value is 500 * machine
         epsilon
@@ -332,8 +343,8 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
     -------
     Theta : ndarray
         three dimensional array of static corrections derivatives. Theta[:,i,j]
-        contains the static derivative 1/2 * dx_i / dx_j. As the static derivatives
-        are symmetric, Theta[:,i,j] == Theta[:,j,i].
+        contains the static derivative 1/2 * dx_i / dx_j. As the static 
+        derivatives are symmetric, Theta[:,i,j] == Theta[:,j,i].
     
     See Also
     --------
@@ -345,6 +356,11 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
     no_of_modes = V.shape[1]
     Theta = np.zeros((no_of_dofs, no_of_modes, no_of_modes))
     K = K_func(np.zeros(no_of_dofs))
+    if (omega > 0) and (M != None):
+        K_dyn = K - omega**2 * M
+    else:
+        K_dyn = K
+    LU_object = sp.sparse.linalg.splu(K_dyn)
     for i in range(no_of_modes):
         if verbose:
             print('Computing finite difference K-matrix')
@@ -352,7 +368,8 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
         b = - dK_dx_i @ V
         if verbose:
             print('Sovling linear system #', i)
-        Theta[:,:,i] = sp.sparse.linalg.spsolve(K, b)
+        # Theta[:,:,i] = sp.sparse.linalg.spsolve(K, b)
+        Theta[:,:,i] = LU_object.solve(b)
         if verbose:
             print('Done solving linear system #', i)
     if verbose:
@@ -361,6 +378,45 @@ def static_correction_theta(V, K_func, h=500*SQ_EPS, verbose=True):
     # make Theta symmetric
     Theta = 1/2*(Theta + Theta.transpose(0,2,1))
     return Theta
+
+def theta_orth_v(Theta, V, M, overwrite=False):
+    '''
+    Make third order tensor Theta fully mass orthogonal with respect to the 
+    basis V via a Gram-Schmid-process.
+
+    Parameters
+    ----------
+    Theta : ndarray
+        Third order Tensor describing the quadratic part of the basis
+    V : ndarray
+        Linear Basis 
+    M : ndarray or scipy.sparse matrix
+        Mass Matrix
+    overwrite : bool
+        Flag for setting, if Theta should be overwritten in-place
+    
+    Returns
+    -------
+    Theta_orth : ndarray
+        Third order tensor Theta mass orthogonalized, such that 
+        Theta_orth[:,i,j] is mass orthogonal to V[:,k]:
+        :math:`\\theta_{ij}^T M V = 0`
+        
+    '''
+    # Make sure, that V is M-orthogonal
+    __, no_of_modes = V.shape
+    V_M_space = M @ V
+    np.testing.assert_allclose(V.T @ V_M_space, np.eye(no_of_modes), atol=1E-14)        
+    if overwrite:
+        Theta_ret = Theta
+    else:
+        Theta_ret = Theta.copy()
+    # inner product of Theta[:,j,k] with V[:,l] in the M-norm
+    inner_prod = np.einsum('ijk, il -> jkl', Theta, V_M_space)
+    for j in range(no_of_modes):
+        for k in range(no_of_modes):
+            Theta_ret[:,j,k] -= V @ inner_prod[j,k,:]
+    return Theta_ret
 
 def principal_angles(V1, V2, cosine=True, principal_vectors=False):
     '''
@@ -452,18 +508,18 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
     '''
     ndim = M.shape[0]
     no_of_inputs = b.size//ndim
+    f = b.copy()
     V = np.zeros((ndim, no_of_moments*no_of_inputs))
-    lu = linalg.lu_factor(K - omega**2 * M)
-    b_new = linalg.lu_solve(lu, b)
-    b_new /= linalg.norm(b_new)
-    V[:,0:no_of_inputs] = b_new.reshape((-1, no_of_inputs))
-    for i in np.arange(1, no_of_moments):
-        f = M.dot(b_new)
-        b_new = linalg.lu_solve(lu, f)
-        b_new /= linalg.norm(b_new)
+    LU_object = sp.sparse.linalg.splu(K - omega**2 * M)
+
+    for i in np.arange(no_of_moments):
+        b_new = LU_object.solve(f)
+        # b_new /= linalg.norm(b_new)
         V[:,i*no_of_inputs:(i+1)*no_of_inputs] = b_new.reshape((-1, no_of_inputs))
-        V[:,:(i+1)*no_of_inputs], R = linalg.qr(V[:,:(i+1)*no_of_inputs], mode='economic')
+        V[:,:(i+1)*no_of_inputs], R = linalg.qr(V[:,:(i+1)*no_of_inputs],
+                                                mode='economic')
         b_new = V[:,i*no_of_inputs:(i+1)*no_of_inputs]
+        f = M.dot(b_new)
     sigmas = linalg.svdvals(V)
     print('Krylov Basis constructed. The singular values of the basis are', sigmas)
     return V
@@ -492,7 +548,7 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     Returns
     -------
     if `one_basis=True` is chosen:
-    
+
     V : array
         Basis constisting of static displacement modes and internal vibration
         modes
@@ -573,7 +629,7 @@ def vibration_modes(mechanical_system, n=10, save=False):
         number of modes to be computed.
     save : bool
         Flag for saving the modes in mechanical_system for ParaView export.
-        Default: True.
+        Default: False.
 
     Returns
     -------
