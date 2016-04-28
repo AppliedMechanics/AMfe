@@ -18,7 +18,7 @@ Overview:
 1. Installation
 --------------
 
-Before installing the AMfe package, check, if the latest python version and all necessary modules are installed. For managing the python packages, the distribution *Anaconda* is highly recommended. It has a very easy and effective packaging system and can thus handle all Python sources needed for this project. For installation and usage of Anaconda checkout http://docs.continuum.io/anaconda/install#anaconda-install.
+Before installing the AMfe package, check, if the latest python version and all necessary modules are installed. For managing the python packages, the **Python distribution Anaconda** is **highly recommended**. It has a very easy and effective packaging system and can thus handle all Python sources needed for this project. For installation and usage of Anaconda checkout http://docs.continuum.io/anaconda/install#anaconda-install.
 
    - Python version 3.5 or higher
    - `numpy`, `scipy` and `pandas`
@@ -36,6 +36,7 @@ If you do not want to install the FORTRAN-routines, you can add the flag `no_for
 
     python setup.py develop no_fortran
 
+If no FORTRAN-compile is found, the installation will work only with the `no_fortran`-flag.
 
 2. Documentation
 ----------------
@@ -53,16 +54,19 @@ In order to use the fast Fortran routines, which are used within the assembly pr
 4. Hints
 -----------
 
-### Sphinx:
+### Python and the Scientific Ecosystem
+Though Python is a general purpose programming language, it provides a great ecosystem for scientific computing. As resources to learn both, Python as a language and the scientific Python ecosystem, the following resources are recommended to become familiar with them. As these topics are interesting for many people on the globe, lots of resources can be found in the internet.
 
-`sphinx` has to be installed for `python3`. Maybe, `sphinx` was automatically installed for `python2`.
-```python
-Using `python3`, one can test which `sphinx`-version is installed:
-python3
->>> import sphinx
->>> sphinx.__version__
-```
-The version shuld be at least `'1.3.1'`.
+##### Python language:
+- [A byte of Python:](http://python.swaroopch.com/) A good introductory tutorial to Python. My personal favorite.
+- [Learn Python the hard way:](http://learnpythonthehardway.org/book/) good introductory tutorial to the programming language.
+- [Youtube: Testing in Python ](https://www.youtube.com/watch?v=FxSsnHeWQBY) This amazing talk explains the concept and the philosophy of unittests, which are used in the `amfe` framework.
+
+##### Scientific Python Stack (numpy, scipy, matplotlib):
+- [Scipy Lecture Notes:](http://www.scipy-lectures.org/) Good and extensive lecture notes which are evolutionary improved online with very good reference on special topics, e.g. sparse matrices in `scipy`.
+- [Youtube: Talk about the numpy data type ](https://www.youtube.com/watch?v=EEUXKG97YRw) This amazing talk **is a must-see** for using `numpy` arrays properly. It shows the concept of array manipulations, which are very effective and powerful and extensively used in `amfe`.
+- [Youtube: Talk about color maps in matplotlib](https://youtu.be/xAoljeRJ3lU?list=PLYx7XA2nY5Gcpabmu61kKcToLz0FapmHu) This interesting talk is a little off-topic but cetainly worth to see. It is about choosing a good color-map for your diagrams.
+- [Youtube: Talk about the HDF5 file format and the use of Python:](https://youtu.be/nddj5OA8LJo?list=PLYx7XA2nY5Gcpabmu61kKcToLz0FapmHu) Maybe of interest, if the HDF5 data structure, in which the simulation data are extracted, is of interest. This video is no must-have.
 
 
 ### IDEs:
@@ -88,5 +92,5 @@ The stats.dat file can be analyzed using the `snakeviz`-tool which is a Python t
 in your console.
 
 
-### Theory
-The theory for finite elements is very well developed, though the knowledge is quite fragmented. When it comes to element technology for instance, good benchmarks and guidelines are often missed. A good guideline is the [Documentation of the CalculiX-Software-Package](http://web.mit.edu/calculix_v2.7/CalculiX/ccx_2.7/doc/ccx/ccx.html) which covers a lot about element technology, that is also used in AMfe. CalculiX is also an OpenSource Finite Element software written in FORTRAN an C++. 
+### Theory of Finite Elements
+The theory for finite elements is very well developed, though the knowledge is quite fragmented. When it comes to element technology for instance, good benchmarks and guidelines are often missed. A good guideline is the [Documentation of the CalculiX-Software-Package](http://web.mit.edu/calculix_v2.7/CalculiX/ccx_2.7/doc/ccx/ccx.html) which covers a lot about element technology, that is also used in AMfe. CalculiX is also an OpenSource Finite Element software written in FORTRAN an C++.
