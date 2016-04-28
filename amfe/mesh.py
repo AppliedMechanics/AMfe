@@ -267,6 +267,9 @@ class Mesh:
         Dictionary containing objects of elements.
     element_boundary_class_dict : dict
         Dictionary containing objects of skin elements.
+    node_idx : int
+        index describing, at which position in the Pandas Dataframe `el_df` 
+        the nodes of the element start. 
 
     '''
 
@@ -297,6 +300,7 @@ class Mesh:
         self.no_of_nodes = 0
         self.no_of_elements = 0
         self.el_df = pd.DataFrame()
+        self.node_idx = 0
 
         # Element Class dictionary with all available elements
         kwargs = { }

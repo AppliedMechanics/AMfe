@@ -85,9 +85,8 @@ The stats.dat file can be analyzed using the `snakeviz`-tool which is a Python t
 
     snakeviz stats.dat
 
-in your console. 
+in your console.
 
 
 ### Theory
-The theory for finite elements is very fragmented, though the theory is very well developed. But when it comes to element technology, good benchmarks and guidelines are often missed. A good guideline is the [Documentation of the CalculiX-Software-Package](http://web.mit.edu/calculix_v2.7/CalculiX/ccx_2.7/doc/ccx/ccx.html) which covers a lot about element technology. CalculiX is also an OpenSource Finite Element software written in FORTRAN an C++. 
- 
+The theory for finite elements is very well developed, though the knowledge is quite fragmented. When it comes to element technology for instance, good benchmarks and guidelines are often missed. A good guideline is the [Documentation of the CalculiX-Software-Package](http://web.mit.edu/calculix_v2.7/CalculiX/ccx_2.7/doc/ccx/ccx.html) which covers a lot about element technology, that is also used in AMfe. CalculiX is also an OpenSource Finite Element software written in FORTRAN an C++. 
