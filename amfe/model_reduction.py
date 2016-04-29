@@ -315,7 +315,8 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     return dx_i_dx_j
 
 
-def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS, verbose=True):
+def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS, 
+                            verbose=True):
     '''
     Compute the static correction derivatives for the given basis V.
 
