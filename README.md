@@ -45,6 +45,7 @@ Further documentation to this code is in the folder `docs/`. For building the do
     python setup.py build_sphinx
 
 The documentation will be built in the folder `docs/` available as html in `build`.
+**Attention** There is a bug in the recent versions of sphinx, where the `@`-operator for the matrix-multiplication cannot be resolved. To overcome the problem downgrade the sphinx-version to `1.3.1`, where this bug is not present, by typing `conda install sphinx=1.3.1`. 
 
 3. Fortran-Routines
 -------------------

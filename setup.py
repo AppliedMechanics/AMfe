@@ -35,7 +35,7 @@ config = {
     'download_url': 'Where to download it.',
     'author_email': 'johannes.rutzmoser@tum.de',
     'install_requires': ['numpy>=1.10', 'scipy>=0.17', 'pandas', 'h5py'],
-    'tests_require': ['nose', 'sphinx>=1.3.0'],
+    'tests_require': ['nose', 'sphinx==1.3.1'],
     'packages': ['amfe'],
     'scripts': [],
     'entry_points': {},
