@@ -4,13 +4,19 @@ system, defined by certain parameters or a multibody system.
 """
 
 __all__ = ['MechanicalSystem', 'ReducedSystem', 'ConstrainedMechanicalSystem',
-           'QMSystem']
+           'QMSystem', 'HRSystem']
 
 import time
 import os
 
 import h5py
 import numpy as np
+import scipy as sp
+
+from scipy.optimize import nnls
+from scipy.linalg import norm as norm2
+from numpy.linalg import inv
+
 
 from amfe.mesh import Mesh
 from amfe.assembly import Assembly
@@ -588,17 +594,327 @@ class ReducedSystem(MechanicalSystem):
         # add V and Theta to the hdf5 file
         with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
             f.create_dataset('reduction/V', data=self.V)
-
+            
         return
 
 
+class HRSystem(ReducedSystem):
+    '''
+    Inheritance of ReducedSystem class. Currently only ECSW based on POD
+    is implemented. 
+    
+    
+
+    
+    '''
+    
+    def __init__(self, V_basis=None, **kwargs):
+        
+        '''
+        Initializes the Hyperreduced system
+        
+        Parameters
+        ----------
+        V_basis : ndarray
+                  Constrained Selective POD basis from the full system
+            
+        Returns
+        -------
+        None
+        
+        '''
+        ReducedSystem.__init__(self, V_basis, **kwargs)
+        
+        self.u_hr_output = []
+         
+        pass
+    
+    def get_weights_and_indices(self, U_sol,tau):
+        '''
+        Gets the weights and indices with G-matrix and RHS vector b for ECSW. 
+        
+        Parameters
+        ----------
+        U_sol   : ndarray
+                  Training snapshots of the system (Unconstrained full solution)
+        tau     : float, optional
+                  Tolerance for equation below
+                  s
+         .. math:: \\| G \\xi - b\\|_2 \\leq \\tau\\| b\\|_2
+            
+        Returns
+        -------
+        G       : ndarray
+                  Refer Farhats paper on ECSW
+        b       : ndarray
+                  Refer Farhats paper on ECSW
+        xi      : ndarray
+                  Weights corresponding to row number, i.e., element number
+        E_tilde : list
+                  List of all elements that have non zero weights
+        
+        
+        Reference:
+        ---------
+        Farhat, C., Chapman, T. and Avery, P., 2015. Structure‐preserving, stability, 
+        and accuracy properties of the energy‐conserving sampling and weighting method 
+        for the hyper reduction of nonlinear finite element dynamic models. 
+        International Journal for Numerical Methods in Engineering, 102(5), pp.1077-1110.
+        ''' 
+
+        
+        # Initialization and setup of the Basis(V) and Contraint matrix (B)
+        self.dirichlet_class.B = None # Calculate B for every new run
+
+        V = self.V
+        B = self.get_b_matrix_from_boundary()
+
+        self.BV = B @ V # Used in the assembly routines of HRSystem
+                        #for speedups
+        V_uncon = self.unconstrain_vec(V) 
+        
+        # Getting weights
+        self.project_snapshot_onto_subspace(V_uncon,U_sol)
+        
+        G, b = self.G_and_b()
+        
+        self.xi, self.E_tilde = self.snnls(G,b,tau)
+        
+        return G,b,self.xi,self.E_tilde     
+           
+    def G_and_b(self, u=None, t=0): 
+        '''
+        Asembles G and b necessary to obtain weights
+        
+        Parameters
+        ----------
+        u           : ndarray
+                      Initial solution or solution from previous iteration
+        t           : float
+                      Time
+        
+        Returns
+        -------
+        G   : ndarray
+              Refer Farhats paper on ECSW
+        b   : ndarray
+              Refer Farhats paper on ECSW
+        
+        '''
+        
+        t_gandb_1 = time.time()
+
+        if u is None:
+            u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)                
+        
+        # Assemble the G and b        
+        G,b = \
+            self.assembly_class.assemble_g_and_b(self.unconstrain_vec(u), t, \
+                 self.Vq, self.BV)               
+        print('G and b have been extracted')
+        
+        t_gandb_2 = time.time()      
+        self.t_gandb = "{:10.2f}".format(t_gandb_2 - t_gandb_1)
+
+        return G,b
+            
+              
+    def project_snapshot_onto_subspace(self,V,U):
+        '''
+        Create Reduced set of training vectors multiplied by V, so that we can 
+        compute the element f_int and tangential stiffness matrix
+        
+        Parameters
+        ----------
+        V : ndarray
+             Constrained selective POD basis from the full system
+        U : ndarray
+             Training snapshots of the system (Unconstrained full solution)        
+        Returns
+        -------
+        None
+        '''
+        # Create V @(into) low dimensional Training vectors
+               
+        self.Vq = V @ inv(V.T @ V) @ V.T @ U
+        print('Projected snapshots onto the subspace')
+        
+    
+    
+    def K_and_f(self, u=None, t=0):
+        '''
+        Compute tangential stiffness matrix and nonlinear force vector 
+        given the weights xi
+
+	Parameters
+        ----------
+        u : ndarray
+            Initial solution or solution from previous iteration
+        t : float
+            Time
+        
+        Returns
+        -------
+        None
+        '''
+	# The below three lines could be used when we are using this method for the 
+								#reduced system	
+#        if self.xi is None:
+#            self.xi = np.ones(self.mesh_class.no_of_elements)
+#            self.E_tilde = np.arange(self.mesh_class.no_of_elements)
+        
+        # if u            
+        if u is None:
+            u = np.zeros(self.V.shape[1])        
+            
+        V = self.V
+        u_full = V @ u
+
+        #assemble the reduced constrained matrix
+
+        K_reduced, f_reduced = \
+            self.assembly_class.assemble_hr_k_and_f(\
+            		self.unconstrain_vec(u_full),t, \
+                               self.xi, self.E_tilde, self.BV)
+       
+        return K_reduced, f_reduced
+    
+#    @profile
+    def snnls(self,G,b,tau):
+        '''
+        Algoritm to compute cheaply the weights given G, b and tau
+        
+        .. math:: \\| G \\xi - b\\|_2 \\leq \\tau\\| b\\|_2
+
+	Parameters
+        -------
+        G       : ndarray
+                  Refer Farhats paper on ECSW
+        b       : ndarray
+                  Refer Farhats paper on ECSW
+
+        Returns
+        -------
+        None
+
+	References
+	----------
+	Singh, A. S. Model order reduction of nonlinear magnetic problems. Diss. TU Delft, 
+	Delft University of Technology, 2015.	
+	
+	Farhat, C., Chapman, T. and Avery, P., 2015. Structure‐preserving, stability, 
+        and accuracy properties of the energy‐conserving sampling and weighting method 
+        for the hyper reduction of nonlinear finite element dynamic models. 
+        International Journal for Numerical Methods in Engineering, 102(5), pp.1077-1110.	
+        '''
+        
+        
+        # Initialize
+        t_snnls_1 = time.time()
+        n_e = self.mesh_class.no_of_elements    
+        E_tilde = []; #E_tilde = np.array(E_tilde)
+        
+        Z = np.arange(n_e); 
+        Z = np.ndarray.tolist(Z)
+        
+        xi = np.zeros(n_e)
+        
+        # Loop related initialize
+        
+        res = G @ xi - b        
+        resnorm2 = norm2(res,2)
+        bnorm = norm2(b,2)
+        
+        i = 0
+        
+        while resnorm2 > tau * bnorm :
+            
+                                              
+            mu = -G.T @ res
+            mu_max_ind = np.argmax(mu)
+            mu_max_ind_list = np.ndarray.tolist(np.array([mu_max_ind]))
+            
+            #E_tilde = self.union(E_tilde,[mu_max_ind_list,])# didnt work!
+            E_tilde = self.union(E_tilde,mu_max_ind_list)
+            E_tilde.sort()
+            Z =  list(set(Z) - set(E_tilde))
+            
+            eta,_ = nnls(G[:,E_tilde],b)
+            
+            xi[E_tilde] = eta
+            
+            i = i+1
+            
+            res = G @ xi - b
+            resnorm2 = norm2(res,2)
+            print ('sNNLS iteration no.,', i,'and the norm is',resnorm2)
+
+        
+        
+
+        t_snnls_2 = time.time()
+        print('Time for sNNLS {0:4.2f} seconds'.format(
+        t_snnls_2 - t_snnls_1))
+        self.t_snnls = "{:10.2f}".format(t_snnls_2-t_snnls_1)
+        return xi,E_tilde
+                                              
+    def union(self,a, b):
+        """ 
+	return the union of two lists
+	Used in one of the classes in Hyperreduction
+	
+	"""
+        return list(set(a) | set(b))
+
+    def get_b_matrix_from_boundary(self):   
+        '''
+        Computing the B matrix that constrains the full system, 
+        if not computed earlier
+        '''
+
+        if not sp.sparse.issparse(self.dirichlet_class.B):
+            B = self.dirichlet_class.b_matrix()
+        else:
+            B = self.dirichlet_class.B          
+        
+        return B
+
+
+
+    def export_paraview(self, filename, field_list=None):
+        '''
+        Export the produced results form HRSystem to ParaView via XDMF format. 
+        '''
+                
+        h5_xi_dict = {'ParaView':True,
+             'AttributeType':'Scalar',
+             'Center':'Cell',
+             'Name':'xi_hr',
+             'NoOfComponents':1,
+             }
+        
+        xi = self.xi
+
+        if field_list is None:
+            new_field_list = []
+        else:
+            new_field_list = field_list.copy()
+
+        new_field_list.append((xi, h5_xi_dict))
+
+        ReducedSystem.export_paraview(self, filename, new_field_list)
+                    
+        return
+
+    
+    
 class QMSystem(MechanicalSystem):
     '''
-    Quadratic Manifold Finite Element system.
-
-
+    Quadratic Manifold Finite Element system. 
+    
+    
     '''
-
+    
     def __init__(self, **kwargs):
         MechanicalSystem.__init__(self, **kwargs)
         self.V = None
