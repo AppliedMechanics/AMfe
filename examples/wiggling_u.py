@@ -11,8 +11,8 @@ import amfe
 
 
 
-gmsh_input_file = '../meshes/gmsh/bogen_grob.msh'
-paraview_output_file = '../results/gmsh_bogen_grob' + \
+gmsh_input_file = '../meshes/gmsh/c_bow_coarse.msh'
+paraview_output_file = '../results/c_bow_coarse' + \
                         time.strftime("_%Y%m%d_%H%M%S") + '/bogen_grob'
 
 
@@ -28,8 +28,8 @@ my_system.apply_dirichlet_boundaries(13, 'xy')
 harmonic_x = lambda t: np.sin(2*np.pi*t*30)
 harmonic_y = lambda t: np.sin(2*np.pi*t*50)
 
-my_system.apply_neumann_boundaries(14, 6E7, (1,0), False, harmonic_x)
-my_system.apply_neumann_boundaries(14, 6E7, (0,1), False, harmonic_y)
+my_system.apply_neumann_boundaries(14, 6E7, (1,0), harmonic_x)
+my_system.apply_neumann_boundaries(14, 6E7, (0,1), harmonic_y)
 
 
 ###############################################################################
