@@ -89,7 +89,7 @@ class MechanicalSystem():
         -------
         None
         '''
-        self.mesh_class.import_msh(msh_file)
+        self.mesh_class.import_msh(msh_file, scale_factor=scale_factor)
         self.mesh_class.load_group_to_mesh(phys_group, material)
         self.no_of_dofs_per_node = self.mesh_class.no_of_dofs_per_node
 
