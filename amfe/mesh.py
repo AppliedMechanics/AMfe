@@ -419,7 +419,7 @@ class Mesh:
         self._update_mesh_props()
         print('Reading elements successful.')
 
-    def import_msh(self, filename):
+    def import_msh(self, filename, scale_factor=1.):
         '''
         Import a gmsh-mesh.
 
@@ -427,6 +427,9 @@ class Mesh:
         ----------
         filename : string
             filename of the .msh-file
+        scale_factor : float, optional
+            scale factor for the mesh to adjust the units. The default value is
+            1, i.e. no scaling is done. 
 
         Returns
         -------
@@ -524,8 +527,9 @@ class Mesh:
             if i in self.element_3d_set:
                 self.no_of_dofs_per_node = 3
 
-        # fill the nodes of the selected physical group to the array
+        # fill the nodes to the array
         self.nodes = np.array(list_imported_nodes)[:,1:1+self.no_of_dofs_per_node]
+        self.nodes *= scale_factor # scaling of nodes
 
         # Change the indices of Tet10-elements, as they are numbered differently 
         # from the numbers used in AMFE and ParaView (last two indices permuted)
