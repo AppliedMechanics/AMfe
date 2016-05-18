@@ -13,7 +13,9 @@ import numpy as np
 import scipy as sp
 from scipy import linalg
 
-from amfe.mechanical_system import ReducedSystem, QMSystem
+from .mechanical_system import ReducedSystem, QMSystem
+from .solver import solve_sparse, SpSolve
+
 
 def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     '''
@@ -243,7 +245,7 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
         if verbose:
             print('Factorizing the dynamic stiffness matrix for eigenfrequency',
                   '{0:d} with {1:4.2f} rad/s.'.format(i, omega[i]) )
-        LU_object = sp.sparse.linalg.splu(K_dyn_i)
+        LU_object = SpSolve(K_dyn_i)
 
         for j in range(no_of_modes): # looping over the rows
             x_j = V[:,j]
@@ -361,15 +363,14 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS,
         K_dyn = K - omega**2 * M
     else:
         K_dyn = K
-    LU_object = sp.sparse.linalg.splu(K_dyn)
+    LU_object = SpSolve(K_dyn)
     for i in range(no_of_modes):
         if verbose:
             print('Computing finite difference K-matrix')
         dK_dx_i = (K_func(h*V[:,i]) - K)/h
         b = - dK_dx_i @ V
         if verbose:
-            print('Sovling linear system #', i)
-        # Theta[:,:,i] = sp.sparse.linalg.spsolve(K, b)
+            print('Solving linear system #', i)
         Theta[:,:,i] = LU_object.solve(b)
         if verbose:
             print('Done solving linear system #', i)
@@ -515,7 +516,7 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
     no_of_inputs = b.size//ndim
     f = b.copy()
     V = np.zeros((ndim, no_of_moments*no_of_inputs))
-    LU_object = sp.sparse.linalg.splu(K - omega**2 * M)
+    LU_object = SpSolve(K - omega**2 * M)
 
     for i in np.arange(no_of_moments):
         b_new = LU_object.solve(f)
