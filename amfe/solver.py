@@ -50,7 +50,7 @@ mtypes = {'spd':2,
           'symm':-2,
           'unsymm':11}
 
-def solve_sparse(A, b, matrix_type='spd', verbose=False):
+def solve_sparse(A, b, matrix_type='symm', verbose=False):
     '''
     Abstractoin of the solution of the sparse system Ax=b using the fastest 
     solver available.     
