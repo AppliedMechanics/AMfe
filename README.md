@@ -26,6 +26,11 @@ Before installing the AMfe package, check, if the latest python version and all 
    - for building the documentation `sphinx` and `numpydoc`
    - for checking the code: `pylint`
 
+For getting the package type
+
+    git clone git@gitlab.lrz.de:AMCode/AMfe.git
+
+in your console. Git will clone the repository into the current folder.
 For installing the package type
 
     python setup.py develop
@@ -38,6 +43,14 @@ If you do not want to install the FORTRAN-routines, you can add the flag `no_for
 
 If no FORTRAN-compile is found, the installation will work only with the `no_fortran`-flag.
 
+For getting the full speed of the Intel MKL library, which provides a fast solver for sparse systems, install `pyMKL` by running
+
+    git clone https://github.com/Rutzmoser/pyMKL.git
+    cd pyMKL
+    python setup.py install
+
+which installs the pyMKL library. After that run, you may delete the folder `pyMKL`. 
+
 2. Documentation
 ----------------
 Further documentation to this code is in the folder `docs/`. For building the documentation, type
@@ -45,7 +58,7 @@ Further documentation to this code is in the folder `docs/`. For building the do
     python setup.py build_sphinx
 
 The documentation will be built in the folder `docs/` available as html in `build`.
-**Attention** There is a bug in the recent versions of sphinx, where the `@`-operator for the matrix-multiplication cannot be resolved. To overcome the problem downgrade the sphinx-version to `1.3.1`, where this bug is not present, by typing `conda install sphinx=1.3.1`. 
+**Attention** There is a bug in the recent versions of sphinx, where the `@`-operator for the matrix-multiplication cannot be resolved. To overcome the problem downgrade the sphinx-version to `1.3.1`, where this bug is not present, by typing `conda install sphinx=1.3.1`.
 
 3. Fortran-Routines
 -------------------
