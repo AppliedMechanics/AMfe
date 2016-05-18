@@ -301,6 +301,9 @@ class Assembly():
         f : ndarray
             unconstrained assembled force vector
         '''
+        if u is None:
+            u = np.zeros_like(self.nodes_voigt)
+
         K_csr = self.C_csr.copy()
         f_glob = np.zeros(self.mesh.no_of_dofs)
 
@@ -343,6 +346,9 @@ class Assembly():
         ---------
         TODO
         '''
+        if u is None:
+            u = np.zeros_like(self.nodes_voigt)
+
         M_csr = self.C_csr.copy()
         
         for i, indices in enumerate(self.element_indices):
