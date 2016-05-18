@@ -98,28 +98,6 @@ def fill_csr_matrix(indptr, indices, vals, K, k_indices):
             vals[l] += K[i,j]
     return
 
-## This function is deprecated!!!
-#def compute_csr_assembly_indices(global_element_indices, indptr, indices):
-#    '''
-#    Computes the assembly-indices for matrices in andvance.
-#
-#    This function is deprecated. It is not clear, if the function will be used
-#    in the future, but it seems that it could make sense for small systems
-#    when FORTRAN is not aviailible.
-#
-#    '''
-#    no_of_elements, dofs_per_element = global_element_indices.shape
-#    matrix_assembly_indices = np.zeros((no_of_elements, dofs_per_element,
-#                                        dofs_per_element))
-#    for i in range(no_of_elements):
-#        for j in range(dofs_per_element):
-#            for k in range(dofs_per_element):
-#                row_idx = global_element_indices[i,j]
-#                col_idx = global_element_indices[i,k]
-#                matrix_assembly_indices[i, j, k] = \
-#                    get_index_of_csr_data(row_idx, col_idx, indptr, indices)
-#    return matrix_assembly_indices
-
 
 if use_fortran:
     ###########################################################################
@@ -323,36 +301,27 @@ class Assembly():
         f : ndarray
             unconstrained assembled force vector
         '''
-        # define the function that returns K, f for (i, X, u)
-        # sort of a decorator approach!
-        def k_and_f_func(i, X, u, t):
-            '''
-            Decorated function picking the element object from the mesh and
-            returning k and f out of it.
+        K_csr = self.C_csr.copy()
+        f_glob = np.zeros(self.mesh.no_of_dofs)
 
-            Parameters
-            ----------
-            i : int
-                index of the element
-            X : ndarray
-                reference configuration of nodes
-            u : ndarray
-                displacement of nodes
-            t : float
-                time
+        # Schleife ueber alle Elemente
+        # (i - Elementnummer, indices - DOF-Nummern des Elements)
+        for i, indices in enumerate(self.element_indices):
+            # X - zu den DOF-Nummern zugehoerige Koordinaten (Positionen)
+            X_local = self.nodes_voigt[indices]
+            # Auslesen der localen Elementverschiebungen
+            u_local = u[indices]
+            # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
+            K, f = self.mesh.ele_obj[i].k_and_f_int(X_local, u_local, t)
+            # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
+            f_glob[indices] += f
 
-            Returns
-            -------
-            K : ndarray
-                Stiffness matrix.
-            f : ndarray
-                Force vector.
+            # this is equal to 
+            # K_csr[indices, indices] += K
+            fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
 
-            '''
-            return self.mesh.ele_obj[i].k_and_f_int(X, u, t)
-
-        return self.assemble_matrix_and_vector(u, k_and_f_func,
-                                               self.element_indices, t)
+        return K_csr, f_glob
+        
 
     def assemble_m(self, u=None, t=0):
         '''
@@ -374,34 +343,16 @@ class Assembly():
         ---------
         TODO
         '''
-        def m_and_vec_func(i, X, u, t):
-            '''
-            Decorated function picking the element object from the mesh and
-            returning m out of it.
+        M_csr = self.C_csr.copy()
+        
+        for i, indices in enumerate(self.element_indices):
+            X_local = self.nodes_voigt[indices]
+            u_local = u[indices]
+            M = self.mesh.ele_obj[i].m_int(X_local, u_local, t)
+            fill_csr_matrix(M_csr.indptr, M_csr.indices, M_csr.data, M, indices)
+            
+        return M_csr
 
-            Parameters
-            ----------
-            i : int
-                index of the element
-            X : ndarray
-                reference configuration of nodes
-            u : ndarray
-                displacement of nodes
-            t : float
-                time
-
-            Returns
-            -------
-            M : ndarray
-                Mass matrix of element i.
-            '''
-            return self.mesh.ele_obj[i].m_and_vec_int(X, u, t)
-
-        if u is None:
-            u = np.zeros_like(self.nodes_voigt)
-        M, _ = self.assemble_matrix_and_vector(u, m_and_vec_func,
-                                               self.element_indices, t)
-        return M
 
     def assemble_k_and_f_neumann(self, u=None, t=0):
         '''
@@ -422,39 +373,21 @@ class Assembly():
         f : ndarray
             unconstrained assembled force vector
         '''
-        # define the function that returns K, f for (i, X, u)
-        # sort of a decorator approach!
-        def k_and_f_func(i, X, u, t):
-            '''
-            Decorated function picking the element object from the mesh and
-            returning k and f out of it.
-
-            Parameters
-            ----------
-            i : int
-                index of the element
-            X : ndarray
-                reference configuration of nodes
-            u : ndarray
-                displacement of nodes
-            t : float
-                time
-
-            Returns
-            -------
-            K : ndarray
-                Stiffness matrix.
-            f : ndarray
-                Force vector.
-
-            '''
-            return self.mesh.neumann_obj[i].k_and_f_int(X, u, t)
-
         if u is None:
             u = np.zeros_like(self.nodes_voigt)
+            
+        K_csr = self.C_csr.copy()
+        f_glob = np.zeros(self.mesh.no_of_dofs)
 
-        return self.assemble_matrix_and_vector(u, k_and_f_func,
-                                               self.neumann_indices, t)
+        for i, indices in enumerate(self.neumann_indices):
+            X_local = self.nodes_voigt[indices]
+            u_local = u[indices]
+            K, f = self.mesh.neumann_obj[i].k_and_f_int(X_local, u_local, t)
+            f_glob[indices] += f
+            fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
+
+        return K_csr, f_glob
+        
 
 ###########################Hyper Reduction implementation######################
 
