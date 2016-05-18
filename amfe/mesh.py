@@ -18,8 +18,8 @@ import pandas as pd
 import h5py
 import numpy as np
 
-from amfe.element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
-from amfe.element import LineLinearBoundary, LineQuadraticBoundary, \
+from .element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
+from .element import LineLinearBoundary, LineQuadraticBoundary, \
     Tri3Boundary, Tri6Boundary
 
 # Element mapping is described here. If a new element is implemented, the

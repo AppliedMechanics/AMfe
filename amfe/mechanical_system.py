@@ -18,9 +18,9 @@ from scipy.linalg import norm as norm2
 from numpy.linalg import inv
 
 
-from amfe.mesh import Mesh
-from amfe.assembly import Assembly
-from amfe.boundary import DirichletBoundary, NeumannBoundary
+from .mesh import Mesh
+from .assembly import Assembly
+from .boundary import DirichletBoundary, NeumannBoundary
 
 
 
