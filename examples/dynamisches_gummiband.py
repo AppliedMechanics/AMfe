@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu May 21 16:42:30 2015
-
-@author: johannesr
+This file is deprecated! Do not use!
 """
 
 
