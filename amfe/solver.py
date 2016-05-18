@@ -5,13 +5,22 @@ Module for solving static and dynamic problems.
 __all__ = ['NewmarkIntegrator', 'solve_linear_displacement',
             'solve_nonlinear_displacement', 'give_mass_and_stiffness',
             'HHTConstrained', 'integrate_linear_system', 
-            'integrate_nonlinear_system']
+            'integrate_nonlinear_system', 'solve_sparse', 'SpSolve']
 
 import time
 import numpy as np
 import scipy as sp
 from scipy import sparse
 from scipy.sparse import linalg
+
+try:
+    from pyMKL import pardisoSolver
+    use_pardiso = True
+except:
+    use_pardiso = False
+    print('The fast Intel MKL library could not be used. Please install', 
+          'pyMKL in order to exploit the full speed of your computer.' )
+
 
 def norm_of_vector(array):
     '''
@@ -37,6 +46,112 @@ abort_statement = '''
 ###############################################################################
 '''
 
+mtypes = {'spd':2,
+          'symm':-2,
+          'unsymm':11}
+
+def solve_sparse(A, b, matrix_type='spd', verbose=False):
+    '''
+    Abstractoin of the solution of the sparse system Ax=b using the fastest 
+    solver available.     
+
+    Parameters
+    ----------
+    A : sp.sparse.CSR
+        sparse matrix in CSR-format
+    b : ndarray
+        right hand side of equation
+    matrixd_type : {'spd', 'symm', 'unsymm'}, optional
+        Specifier for the matrix type: 
+        
+        - 'spd' : symmetric positive definite
+        - 'symm' : symmetric indefinite
+        - 'unsymm' : generally unsymmetric
+    
+    Returns
+    -------
+    x : ndarray
+        solution of system Ax=b
+    
+    Note
+    ----
+    This tool uses the Intel MKL library provided by Anaconda. If the Intel MKL
+    is not installed, especially for large systems the computation time can go 
+    crazy. To adjust the number of threads used for the computation, it is 
+    recommended to use the mkl-service module provided by Anaconda:
+    
+    >>> import mkl
+    >>> mkl.get_max_threads()
+    2
+    >>> mkl.set_num_threads(1)
+    >>> mkl.get_max_threads()
+    1
+        
+    '''
+    if use_pardiso:
+        mtype = mtypes[matrix_type]
+        pSolve = pardisoSolver(A, mtype=mtype, verbose=verbose)
+        x = pSolve.run_pardiso(13, b)
+        pSolve.clear()
+    else:
+        x = sp.sparse.linalg.spsolve(A, b)
+    return x
+
+
+class SpSolve():
+    '''
+    Solver class for solving the sparse system Ax=b for multiple right hand 
+    sides b using the fastest solver available, i.e. the Intel MKL Pardiso, if
+    available. 
+    '''
+    def __init__(self, A, matrix_type='spd', verbose=False):
+        '''
+        Parameters
+        ----------
+        A : sp.sparse.CSR
+            sparse matrix in CSR-format
+        matrixd_type : {'spd', 'symm', 'unsymm'}, optional
+            Specifier for the matrix type: 
+        
+        - 'spd' : symmetric positive definite
+        - 'symm' : symmetric indefinite
+        - 'unsymm' : generally unsymmetric
+    
+        '''
+        if use_pardiso:
+            mtype = mtypes[matrix_type]
+            self.pSolve = pardisoSolver(A, mtype=mtype, verbose=verbose)
+            self.pSolve.run_pardiso(12) # Analysis and numerical factorization
+        else:
+            self.pSolve = sp.sparse.linalg.splu(A)
+    
+    def solve(self, b):
+        '''
+        Solve the system for the given right hand side b. 
+        
+        Parameters
+        ----------
+        b : ndarray
+            right hand side of equation
+
+        Returns
+        -------
+        x : ndarray
+            solution of the sparse equation Ax=b
+
+        '''
+        if use_pardiso:
+            x = self.pSolve.run_pardiso(33, b)
+        else:
+            x = self.pSolve.solve(b)
+        return x
+    
+    def clear(self):
+        '''
+        Clear the memory, if possible. 
+        '''
+        if use_pardiso:
+            self.pSolve.clear()
 
 
 class NewmarkIntegrator():
@@ -187,7 +302,7 @@ class NewmarkIntegrator():
             while res_abs > self.rtol*abs_f_ext + self.atol:
 
                 if sp.sparse.issparse(S):
-                    delta_q = - sp.sparse.linalg.spsolve(S, res)
+                    delta_q = - solve_sparse(S, res)
                 else:
                     delta_q = - sp.linalg.solve(S, res)
 
@@ -357,7 +472,7 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
         while res_abs > rtol*abs_f_ext + atol:
 
             if sp.sparse.issparse(S):
-                delta_q = - sp.sparse.linalg.spsolve(S, res)
+                delta_q = - solve_sparse(S, res)
             else:
                 delta_q = - sp.linalg.solve(S, res)
 
@@ -458,7 +573,8 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     K = mechanical_system.K()
     M = mechanical_system.M()
     S = M + beta * dt**2 * K
-    S_inv = sp.sparse.linalg.splu(S)
+#    S_inv = sp.sparse.linalg.splu(S)
+    S_inv = SpSolve(S, matrix_type='spd')
     # S_inv.solve(rhs_vec) # method to solve the system efficiently
     print('Iteration matrix successfully factorized. Starting time marching...')
     # initialization of the state variables
@@ -467,7 +583,7 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     dq = dq0.copy()
     # Evaluation of the initial acceleration
     f_ext = mechanical_system.f_ext(q, dq, t)
-    ddq = sp.sparse.linalg.spsolve(M, f_ext - K @ q)
+    ddq = solve_sparse(M, f_ext - K @ q)
 
     h = dt
     time_index = 0
