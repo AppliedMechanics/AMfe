@@ -104,7 +104,7 @@ class SpSolve():
     sides b using the fastest solver available, i.e. the Intel MKL Pardiso, if
     available. 
     '''
-    def __init__(self, A, matrix_type='spd', verbose=False):
+    def __init__(self, A, matrix_type='symm', verbose=False):
         '''
         Parameters
         ----------
@@ -574,7 +574,7 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     M = mechanical_system.M()
     S = M + beta * dt**2 * K
 #    S_inv = sp.sparse.linalg.splu(S)
-    S_inv = SpSolve(S, matrix_type='spd')
+    S_inv = SpSolve(S, matrix_type='symm')
     # S_inv.solve(rhs_vec) # method to solve the system efficiently
     print('Iteration matrix successfully factorized. Starting time marching...')
     # initialization of the state variables
