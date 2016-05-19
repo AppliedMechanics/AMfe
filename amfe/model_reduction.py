@@ -257,7 +257,8 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
             v_i = LU_object.solve(F_i)
             c_i = - v_i @ M @ x_i
             Theta[:,i,j] = v_i + c_i*x_i
-
+    
+    LU_object.clear()
     if symmetric:
         Theta = 1/2*(Theta + Theta.transpose((0,2,1)))
     return Theta
@@ -377,6 +378,7 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS,
     if verbose:
         residual = np.sum(Theta - Theta.transpose(0,2,1))
         print('The residual, i.e. the unsymmetric values, are', residual)
+    LU_object.clear()
     # make Theta symmetric
     Theta = 1/2*(Theta + Theta.transpose(0,2,1))
     return Theta
@@ -526,6 +528,7 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
                                                 mode='economic')
         b_new = V[:,i*no_of_inputs:(i+1)*no_of_inputs]
         f = M.dot(b_new)
+    LU_object.clear()
     sigmas = linalg.svdvals(V)
 
     # mass-orthogonalization of V:
