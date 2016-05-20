@@ -387,9 +387,9 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
     verbose : bool, optional
         Flag setting verbose output. Default: False.
     n_iter_max : int, optional
-        Number of maximal iterations per Newton-Raphson-procedure. Default 
+        Number of maximum iterations per Newton-Raphson-procedure. Default 
         value is 30.
-    conv_abourt : bool, optional
+    conv_abort : bool, optional
         Flag setting, if time integration is aborted in the case when no 
         convergence is gained in the Newton-Raphson-Loop. Default value is 
         True.
@@ -508,6 +508,9 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
             if n_iter > n_iter_max:
                 if conv_abort:
                     print(abort_statement)
+                    t_clock_2 = time.time()
+                    print('Time for time marching integration ' + 
+                          '{0:4.2f} seconds'.format(t_clock_2 - t_clock_1))
                     return
                     # raise Exception('No convergence in Newton-Loop!')
                 t = t_old
