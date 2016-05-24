@@ -13,13 +13,19 @@ import scipy as sp
 from scipy import sparse
 from scipy.sparse import linalg
 
+pardiso_msg = '''
+############################### WARNING #######################################
+# The fast Intel MKL library could not be used. Please install pyMKL in order 
+# to exploit the full speed of your computer.
+###############################################################################
+'''
+
 try:
     from pyMKL import pardisoSolver
     use_pardiso = True
 except:
     use_pardiso = False
-    print('The fast Intel MKL library could not be used. Please install', 
-          'pyMKL in order to exploit the full speed of your computer.' )
+    print(pardiso_msg)
 
 
 def norm_of_vector(array):
