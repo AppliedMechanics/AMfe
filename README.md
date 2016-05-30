@@ -84,7 +84,7 @@ Though Python is a general purpose programming language, it provides a great eco
 
 ##### Version Control with git:
 - [Cheat sheet with the important git commands](https://www.git-tower.com/blog/git-cheat-sheet/) Good cheatsheet with all the commands needed for git version control. 
-- [Youtube: (long) talk about git](https://youtu.be/Qthor07loHM) This talk is extensive and time intensive but worth the time spent. It is a great workshop introducing the concepts and the workflow with git. 
+- [Youtube: (long) talk about git](https://youtu.be/Qthor07loHM) This talk is extensive and time intensive but worth the time spent. It is a great workshop introducing the concepts of git in a well paced manner. 
 
 ### IDEs:
 
