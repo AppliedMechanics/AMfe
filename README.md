@@ -82,6 +82,9 @@ Though Python is a general purpose programming language, it provides a great eco
 - [Youtube: Talk about color maps in matplotlib](https://youtu.be/xAoljeRJ3lU?list=PLYx7XA2nY5Gcpabmu61kKcToLz0FapmHu) This interesting talk is a little off-topic but cetainly worth to see. It is about choosing a good color-map for your diagrams.
 - [Youtube: Talk about the HDF5 file format and the use of Python:](https://youtu.be/nddj5OA8LJo?list=PLYx7XA2nY5Gcpabmu61kKcToLz0FapmHu) Maybe of interest, if the HDF5 data structure, in which the simulation data are extracted, is of interest. This video is no must-have.
 
+##### Version Control with git:
+- [Cheat sheet with the important git commands](https://www.git-tower.com/blog/git-cheat-sheet/) Good cheatsheet with all the commands needed for git version control. 
+- [Youtube: (long) talk about git](https://youtu.be/Qthor07loHM) This talk is extensive and time intensive but worth the time spent. It is a great workshop introducing the concepts and the workflow with git. 
 
 ### IDEs:
 
