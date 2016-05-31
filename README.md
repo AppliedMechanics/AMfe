@@ -16,7 +16,7 @@ Overview:
 
 
 1. Installation
---------------
+---------------
 
 Before installing the AMfe package, check, if the latest python version and all necessary modules are installed. For managing the python packages, the **Python distribution Anaconda** is **highly recommended**. It has a very easy and effective packaging system and can thus handle all Python sources needed for this project. For installation and usage of Anaconda checkout http://docs.continuum.io/anaconda/install#anaconda-install.
 
@@ -60,13 +60,16 @@ Further documentation to this code is in the folder `docs/`. For building the do
 The documentation will be built in the folder `docs/` available as html in `build`.
 **Attention** There is a bug in the recent versions of sphinx, where the `@`-operator for the matrix-multiplication cannot be resolved. To overcome the problem downgrade the sphinx-version to `1.3.1`, where this bug is not present, by typing `conda install sphinx=1.3.1`.
 
-3. Fortran-Routines
--------------------
-In order to use the fast Fortran routines, which are used within the assembly process, a working Fortan compiler (e.g. `gfortran`, `gfortran-4.8`) has to be installed.
+3. Workflow for Pre- and Postprocessing
+---------------------------------------
+Preprocessing and postprocessing is not part of the code AMfe, but the open source tools gmsh and Paraview are recommended: 
+
+- [gmsh](http://gmsh.info) The open-source meshing tool can create unstructured meshes for 2D and 3D geometries. The geometry can either be built inside the tool or outside in a CAD program with the `.stp`-file imported into gmsh. In order to define volumes for materials or points/lines/surfaces for boundaries, physical groups must be assigned in gmsh. 
+- [ParaView](http://www.paraview.org) With ParaView the results can be analyzed. For showing the displacements, usually it is very handy to apply the *Warp By Vector* filter to see the displaced configuration. 
 
 
 4. Hints
------------
+--------
 
 ### Python and the Scientific Ecosystem
 Though Python is a general purpose programming language, it provides a great ecosystem for scientific computing. As resources to learn both, Python as a language and the scientific Python ecosystem, the following resources are recommended to become familiar with them. As these topics are interesting for many people on the globe, lots of resources can be found in the internet.
