@@ -26,6 +26,11 @@ Before installing the AMfe package, check, if the latest python version and all 
    - for building the documentation `sphinx` and `numpydoc`
    - for checking the code: `pylint`
 
+For getting the package type
+
+    git clone git@gitlab.lrz.de:AMCode/AMfe.git
+
+in your console. Git will clone the repository into the current folder.
 For installing the package type
 
     python setup.py develop
@@ -38,6 +43,14 @@ If you do not want to install the FORTRAN-routines, you can add the flag `no_for
 
 If no FORTRAN-compile is found, the installation will work only with the `no_fortran`-flag.
 
+For getting the full speed of the Intel MKL library, which provides a fast solver for sparse systems, install `pyMKL` by running
+
+    git clone https://github.com/Rutzmoser/pyMKL.git
+    cd pyMKL
+    python setup.py install
+
+which installs the pyMKL library. After that run, you may delete the folder `pyMKL`. 
+
 2. Documentation
 ----------------
 Further documentation to this code is in the folder `docs/`. For building the documentation, type
@@ -45,6 +58,7 @@ Further documentation to this code is in the folder `docs/`. For building the do
     python setup.py build_sphinx
 
 The documentation will be built in the folder `docs/` available as html in `build`.
+**Attention** There is a bug in the recent versions of sphinx, where the `@`-operator for the matrix-multiplication cannot be resolved. To overcome the problem downgrade the sphinx-version to `1.3.1`, where this bug is not present, by typing `conda install sphinx=1.3.1`.
 
 3. Fortran-Routines
 -------------------
@@ -68,6 +82,9 @@ Though Python is a general purpose programming language, it provides a great eco
 - [Youtube: Talk about color maps in matplotlib](https://youtu.be/xAoljeRJ3lU?list=PLYx7XA2nY5Gcpabmu61kKcToLz0FapmHu) This interesting talk is a little off-topic but cetainly worth to see. It is about choosing a good color-map for your diagrams.
 - [Youtube: Talk about the HDF5 file format and the use of Python:](https://youtu.be/nddj5OA8LJo?list=PLYx7XA2nY5Gcpabmu61kKcToLz0FapmHu) Maybe of interest, if the HDF5 data structure, in which the simulation data are extracted, is of interest. This video is no must-have.
 
+##### Version Control with git:
+- [Cheat sheet with the important git commands](https://www.git-tower.com/blog/git-cheat-sheet/) Good cheatsheet with all the commands needed for git version control. 
+- [Youtube: git-Workshop](https://youtu.be/Qthor07loHM) This workshop is extensive and time intensive but definetely worth the time spent. It is a great workshop introducing the concepts of git in a well paced manner ([The slides are also available](https://speakerdeck.com/singingwolfboy/get-started-with-git)). 
 
 ### IDEs:
 

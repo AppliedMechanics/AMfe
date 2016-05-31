@@ -4,8 +4,8 @@ Module of AMfe which handles the reduced order models.
 
 __all__ = ['reduce_mechanical_system', 'qm_reduce_mechanical_system',
            'modal_derivative', 'modal_derivative_theta',
-           'static_correction_derivative', 'static_correction_theta', 
-           'principal_angles', 'krylov_subspace', 'craig_bampton', 
+           'static_correction_derivative', 'static_correction_theta',
+           'principal_angles', 'krylov_subspace', 'craig_bampton',
            'vibration_modes', 'pod', 'theta_orth_v']
 
 import copy
@@ -13,7 +13,9 @@ import numpy as np
 import scipy as sp
 from scipy import linalg
 
-from amfe.mechanical_system import ReducedSystem, QMSystem
+from .mechanical_system import ReducedSystem, QMSystem
+from .solver import solve_sparse, SpSolve
+
 
 def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     '''
@@ -243,7 +245,7 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
         if verbose:
             print('Factorizing the dynamic stiffness matrix for eigenfrequency',
                   '{0:d} with {1:4.2f} rad/s.'.format(i, omega[i]) )
-        LU_object = sp.sparse.linalg.splu(K_dyn_i)
+        LU_object = SpSolve(K_dyn_i)
 
         for j in range(no_of_modes): # looping over the rows
             x_j = V[:,j]
@@ -255,7 +257,8 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
             v_i = LU_object.solve(F_i)
             c_i = - v_i @ M @ x_i
             Theta[:,i,j] = v_i + c_i*x_i
-
+    
+    LU_object.clear()
     if symmetric:
         Theta = 1/2*(Theta + Theta.transpose((0,2,1)))
     return Theta
@@ -315,12 +318,13 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     return dx_i_dx_j
 
 
-def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS, verbose=True):
+def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS, 
+                            verbose=True):
     '''
-    Compute the static correction derivatives for the given basis V. 
-    
-    Optionally, a frequency shift can be performed. 
-    
+    Compute the static correction derivatives for the given basis V.
+
+    Optionally, a frequency shift can be performed.
+
     Parameters
     ----------
     V : ndarray
@@ -329,8 +333,8 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS, verbose=Tr
         function returning the tangential stiffness matrix for a given
         displacement. Has to work like `K = K_func(u)`.
     M : ndarray, optional
-        mass matrix. Can be sparse or dense. If `None` is given, the mass of 0 
-        is assumed. Default value is `None`. 
+        mass matrix. Can be sparse or dense. If `None` is given, the mass of 0
+        is assumed. Default value is `None`.
     omega : float, optional
         shift frequency. Default value is 0.
     h : float, optional
@@ -343,14 +347,14 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS, verbose=Tr
     -------
     Theta : ndarray
         three dimensional array of static corrections derivatives. Theta[:,i,j]
-        contains the static derivative 1/2 * dx_i / dx_j. As the static 
+        contains the static derivative 1/2 * dx_i / dx_j. As the static
         derivatives are symmetric, Theta[:,i,j] == Theta[:,j,i].
-    
+
     See Also
     --------
     modal_derivative_theta
     static_correction_derivative
-    
+
     '''
     no_of_dofs = V.shape[0]
     no_of_modes = V.shape[1]
@@ -360,28 +364,28 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS, verbose=Tr
         K_dyn = K - omega**2 * M
     else:
         K_dyn = K
-    LU_object = sp.sparse.linalg.splu(K_dyn)
+    LU_object = SpSolve(K_dyn)
     for i in range(no_of_modes):
         if verbose:
             print('Computing finite difference K-matrix')
         dK_dx_i = (K_func(h*V[:,i]) - K)/h
         b = - dK_dx_i @ V
         if verbose:
-            print('Sovling linear system #', i)
-        # Theta[:,:,i] = sp.sparse.linalg.spsolve(K, b)
+            print('Solving linear system #', i)
         Theta[:,:,i] = LU_object.solve(b)
         if verbose:
             print('Done solving linear system #', i)
     if verbose:
         residual = np.sum(Theta - Theta.transpose(0,2,1))
         print('The residual, i.e. the unsymmetric values, are', residual)
+    LU_object.clear()
     # make Theta symmetric
     Theta = 1/2*(Theta + Theta.transpose(0,2,1))
     return Theta
 
 def theta_orth_v(Theta, V, M, overwrite=False):
     '''
-    Make third order tensor Theta fully mass orthogonal with respect to the 
+    Make third order tensor Theta fully mass orthogonal with respect to the
     basis V via a Gram-Schmid-process.
 
     Parameters
@@ -389,24 +393,24 @@ def theta_orth_v(Theta, V, M, overwrite=False):
     Theta : ndarray
         Third order Tensor describing the quadratic part of the basis
     V : ndarray
-        Linear Basis 
+        Linear Basis
     M : ndarray or scipy.sparse matrix
         Mass Matrix
     overwrite : bool
         Flag for setting, if Theta should be overwritten in-place
-    
+
     Returns
     -------
     Theta_orth : ndarray
-        Third order tensor Theta mass orthogonalized, such that 
+        Third order tensor Theta mass orthogonalized, such that
         Theta_orth[:,i,j] is mass orthogonal to V[:,k]:
         :math:`\\theta_{ij}^T M V = 0`
-        
+
     '''
     # Make sure, that V is M-orthogonal
     __, no_of_modes = V.shape
     V_M_space = M @ V
-    np.testing.assert_allclose(V.T @ V_M_space, np.eye(no_of_modes), atol=1E-14)        
+    np.testing.assert_allclose(V.T @ V_M_space, np.eye(no_of_modes), atol=1E-14)
     if overwrite:
         Theta_ret = Theta
     else:
@@ -475,7 +479,7 @@ def principal_angles(V1, V2, cosine=True, principal_vectors=False):
     else:
         return sigma
 
-def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
+def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
     '''
     Computes the Krylov Subspace associated with the input matrix b at the
     frequency omega.
@@ -492,6 +496,10 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
         frequency for the frequency shift of the stiffness. Default value 0.
     no_of_moments : int, optional
         number of moments matched. Default value 3.
+    mass_orth : bool, optional
+        flag for setting orthogonality of returnd Krylov basis vectors. If
+        True, basis vectors are mass-orthogonal (V.T @ M @ V = eye). If False, basis vectors are
+        orthogonal (V.T @ V = eye)
 
     Returns
     -------
@@ -510,7 +518,7 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
     no_of_inputs = b.size//ndim
     f = b.copy()
     V = np.zeros((ndim, no_of_moments*no_of_inputs))
-    LU_object = sp.sparse.linalg.splu(K - omega**2 * M)
+    LU_object = SpSolve(K - omega**2 * M)
 
     for i in np.arange(no_of_moments):
         b_new = LU_object.solve(f)
@@ -520,7 +528,19 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3):
                                                 mode='economic')
         b_new = V[:,i*no_of_inputs:(i+1)*no_of_inputs]
         f = M.dot(b_new)
+    LU_object.clear()
     sigmas = linalg.svdvals(V)
+
+    # mass-orthogonalization of V:
+    if mass_orth:
+        # Gram-Schmid-process
+        for i in range(no_of_moments*no_of_inputs):
+            v = V[:,i]
+            v /= np.sqrt(v @ M @ v)
+            V[:,i] = v
+            weights = v @ M @ V[:,i+1:]
+            V[:,i+1:] -= v.reshape((-1,1)) * weights
+
     print('Krylov Basis constructed. The singular values of the basis are', sigmas)
     return V
 

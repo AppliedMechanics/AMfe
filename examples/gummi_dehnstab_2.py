@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue May 19 17:44:04 2015
-
-@author: johannesr
+This file is heavily deprecated. 
 """
 
 import sys

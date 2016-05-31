@@ -3,7 +3,7 @@ Mesh module of amfe. It handles the mesh from import, defining the dofs for the
 boundary conditions and the export.
 """
 
-__all__ = ['Mesh', 'MeshGenerator']
+__all__ = ['Mesh', 'MeshGenerator', 'create_xdmf_from_hdf5']
 
 import os
 import copy
@@ -18,8 +18,8 @@ import pandas as pd
 import h5py
 import numpy as np
 
-from amfe.element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
-from amfe.element import LineLinearBoundary, LineQuadraticBoundary, \
+from .element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
+from .element import LineLinearBoundary, LineQuadraticBoundary, \
     Tri3Boundary, Tri6Boundary
 
 # Element mapping is described here. If a new element is implemented, the
@@ -419,7 +419,7 @@ class Mesh:
         self._update_mesh_props()
         print('Reading elements successful.')
 
-    def import_msh(self, filename):
+    def import_msh(self, filename, scale_factor=1.):
         '''
         Import a gmsh-mesh.
 
@@ -427,6 +427,9 @@ class Mesh:
         ----------
         filename : string
             filename of the .msh-file
+        scale_factor : float, optional
+            scale factor for the mesh to adjust the units. The default value is
+            1, i.e. no scaling is done. 
 
         Returns
         -------
@@ -524,8 +527,9 @@ class Mesh:
             if i in self.element_3d_set:
                 self.no_of_dofs_per_node = 3
 
-        # fill the nodes of the selected physical group to the array
+        # fill the nodes to the array
         self.nodes = np.array(list_imported_nodes)[:,1:1+self.no_of_dofs_per_node]
+        self.nodes *= scale_factor # scaling of nodes
 
         # Change the indices of Tet10-elements, as they are numbered differently 
         # from the numbers used in AMFE and ParaView (last two indices permuted)

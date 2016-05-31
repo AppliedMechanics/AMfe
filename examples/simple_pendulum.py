@@ -4,9 +4,6 @@ Created on Wed Jul  8 18:24:13 2015
 
 @author: johannesr
 
-This file does not run at the moment!
-Line 83 is causing an error! 
-Something about a tuple out of range given to linalg.spsolve
 """
 
 import numpy as np
