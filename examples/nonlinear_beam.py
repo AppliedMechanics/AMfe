@@ -19,14 +19,15 @@ my_system.apply_neumann_boundaries(key=9, val=1E8, direct=(0,-1),
                                    time_func=lambda t: t)
 
 
-#amfe.solve_linear_displacement(my_system)
-amfe.solve_nonlinear_displacement(my_system, no_of_load_steps=50)
+amfe.solve_linear_displacement(my_system)
+#amfe.solve_nonlinear_displacement(my_system, no_of_load_steps=50)
 
-#my_system.export_paraview(output_file + '_linear')
-my_system.export_paraview(output_file)
+my_system.export_paraview(output_file + '_linear')
+#my_system.export_paraview(output_file)
 
 
 
 #%% Modal analysis
 
-# omega, V = amfe.vibration_modes(my_system, save=True)
+omega, V = amfe.vibration_modes(my_system, save=True)
+my_system.export_paraview(output_file + '_modes')
