@@ -50,10 +50,10 @@ print('Time for assembly:', t2-t1, 's.')
 my_boundary = amfe.DirichletBoundary(my_mesh.no_of_dofs)
 my_boundary.constrain_dofs(my_mesh.dofs_dirichlet)
 B = my_boundary.b_matrix()
-K = B.T.dot(K_unconstr).dot(B)
-f = B.T.dot(f_unconstr)
+K = B.T @ K_unconstr @ B
+f = B.T @ f_unconstr
 f_ext = B.T @ f_nm_unconstr
-u = sp.sparse.linalg.spsolve(K, f)
+u = sp.sparse.linalg.spsolve(K, f_ext)
 #%%
 my_mesh.set_displacement(B.dot(u))
 # my_mesh.save_mesh_for_paraview(paraview_output_file)

@@ -350,7 +350,7 @@ class Tri3(Element):
         det = (X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2)
         A0       = 0.5*det
         dN_dX = 1/det*np.array([[Y2-Y3, X3-X2], [Y3-Y1, X1-X3], [Y1-Y2, X2-X1]])
-        H        = u_mat.T @ dN_dX
+        H = u_mat.T @ dN_dX
         F = H + np.eye(2)
         E = 1/2*(H + H.T + H.T @ H)
         S, S_v, C_SE = self.material.S_Sv_and_C_2d(E)

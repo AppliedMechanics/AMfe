@@ -545,7 +545,7 @@ class Mesh:
         print('Mesh', filename, 'successfully imported.',
               '\nAssign a material to a physical group.')
         print('*************************************************************')
-
+        return
 
 
     def load_group_to_mesh(self, key, material, mesh_prop='phys_group'):
