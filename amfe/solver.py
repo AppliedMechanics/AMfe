@@ -708,7 +708,10 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     '''
     t_clock_1 = time.time()
     stepwidth = 1/no_of_load_steps
-    ndof = mechanical_system.dirichlet_class.no_of_constrained_dofs
+    K, f_int= mechanical_system.K_and_f()
+    ndof = K.shape[0]
+#   Does not work for reduced systems
+#     ndof = mechanical_system.dirichlet_class.no_of_constrained_dofs
     u = np.zeros(ndof)
     du = np.zeros(ndof)
     mechanical_system.write_timestep(0, u) # initial write
