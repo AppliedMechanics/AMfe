@@ -49,7 +49,7 @@ For getting the full speed of the Intel MKL library, which provides a fast solve
     cd pyMKL
     python setup.py install
 
-which installs the pyMKL library. After that run, you may delete the folder `pyMKL`. 
+which installs the pyMKL library. After that run, you may delete the folder `pyMKL`.
 
 2. Documentation
 ----------------
@@ -62,10 +62,10 @@ The documentation will be built in the folder `docs/` available as html in `buil
 
 3. Workflow for Pre- and Postprocessing
 ---------------------------------------
-Preprocessing and postprocessing is not part of the code AMfe, but the open source tools gmsh and Paraview are recommended: 
+Preprocessing and postprocessing is not part of the code AMfe, but the open source tools gmsh and Paraview are recommended:
 
-- [gmsh](http://gmsh.info) The open-source meshing tool can create unstructured meshes for 2D and 3D geometries. The geometry can either be built inside the tool or outside in a CAD program with the `.stp`-file imported into gmsh. In order to define volumes for materials or points/lines/surfaces for boundaries, physical groups must be assigned in gmsh. 
-- [ParaView](http://www.paraview.org) With ParaView the results can be analyzed. For showing the displacements, usually it is very handy to apply the *Warp By Vector* filter to see the displaced configuration. 
+- [gmsh](http://gmsh.info) The open-source meshing tool can create unstructured meshes for 2D and 3D geometries. The geometry can either be built inside the tool or outside in a CAD program with the `.stp`-file imported into gmsh. In order to define volumes for materials or points/lines/surfaces for boundaries, physical groups must be assigned in gmsh.
+- [ParaView](http://www.paraview.org) With ParaView the results can be analyzed. For showing the displacements, usually it is very handy to apply the *Warp By Vector* filter to see the displaced configuration.
 
 
 4. Hints
@@ -86,8 +86,11 @@ Though Python is a general purpose programming language, it provides a great eco
 - [Youtube: Talk about the HDF5 file format and the use of Python:](https://youtu.be/nddj5OA8LJo?list=PLYx7XA2nY5Gcpabmu61kKcToLz0FapmHu) Maybe of interest, if the HDF5 data structure, in which the simulation data are extracted, is of interest. This video is no must-have.
 
 ##### Version Control with git:
-- [Cheat sheet with the important git commands](https://www.git-tower.com/blog/git-cheat-sheet/) Good cheatsheet with all the commands needed for git version control. 
-- [Youtube: git-Workshop](https://youtu.be/Qthor07loHM) This workshop is extensive and time intensive but definetely worth the time spent. It is a great workshop introducing the concepts of git in a well paced manner ([The slides are also available](https://speakerdeck.com/singingwolfboy/get-started-with-git)). 
+- [Cheat sheet with the important git commands](https://www.git-tower.com/blog/git-cheat-sheet/) Good cheatsheet with all the commands needed for git version control.
+- [Youtube: git-Workshop](https://youtu.be/Qthor07loHM) This workshop is extensive and time intensive but definetely worth the time spent. It is a great workshop introducing the concepts of git in a well paced manner ([The slides are also available](https://speakerdeck.com/singingwolfboy/get-started-with-git)).
+
+##### gmsh:
+- [HowTo for generating structured meshes in gmsh](https://openfoamwiki.net/index.php/2D_Mesh_Tutorial_using_GMSH) This tutorial is about the generation of structured meshes in gmsh, in this case for the use in the CFD-Framework OpenFOAM. Nonetheless, everything can be used for AMfe as well. 
 
 ### IDEs:
 
