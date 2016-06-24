@@ -40,7 +40,7 @@ def scatter_matrix(Mat, ndim):
     '''
     Scatter the symmetric (geometric stiffness) matrix to all dofs.
 
-    What is basically done is to perform the kron(Mat, eye(ndim))
+    What is basically done is to perform the np.kron(Mat, eye(ndim))
 
     Parameters
     ----------
@@ -486,7 +486,7 @@ class Tri6(Element):
             K_mat = B0.T @ C_SE @ B0 * det / 2 * d
             self.K += (K_geo + K_mat) * w
             self.f += B0.T @ S_v * det / 2*d*w
-        pass
+        return 
 
     def _m_int(self, X, u, t=0):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
