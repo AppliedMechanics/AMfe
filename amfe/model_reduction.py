@@ -135,8 +135,8 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
     dx_i / dx_j : ndarray
         The modal derivative dx_i / dx_j with mass consideration
 
-    Note
-    ----
+    Notes
+    -----
     The the vectors x_i and x_j are internally mass normalized;
 
     See Also
@@ -450,8 +450,8 @@ def principal_angles(V1, V2, cosine=True, principal_vectors=False):
         array of principal vectors of subspace spanned by V2. Only returned if
         ``principal_vectors=True``.
 
-    Note
-    ----
+    Notes
+    -----
     Both matrices V1 and V2 have live in the same vector space, i.e. they have
     to have the same number of rows.
 
@@ -588,8 +588,8 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     --------
     TODO
 
-    Note
-    ----
+    Notes
+    -----
     There is a filter-out command to remove the interface eigenvalues of the
     system.
 
@@ -660,8 +660,8 @@ def vibration_modes(mechanical_system, n=10, save=False):
         Array containing the vibration modes. Phi[:,0] is the first vibration
         mode corresponding to eigenfrequency omega[0]
 
-    Example
-    -------
+    Examples
+    --------
 
     Notes
     -----
@@ -704,8 +704,8 @@ def pod(mechanical_system, n=None):
         Array containing the POD vectors. V[:,0] contains the POD-vector
         associated with sigma[0] etc.
 
-    Example
-    -------
+    Examples
+    --------
     TODO
 
     '''

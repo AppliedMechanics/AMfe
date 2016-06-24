@@ -884,8 +884,8 @@ class Mesh:
         -------
         None
 
-        Note
-        ----
+        Notes
+        -----
         Only one homogeneous mesh is exported. Thus only the mesh made of the
         elements which occur most often is exported. The other meshes are
         discarded.

@@ -79,8 +79,8 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
     x : ndarray
         solution of system Ax=b
     
-    Note
-    ----
+    Notes
+    -----
     This tool uses the Intel MKL library provided by Anaconda. If the Intel MKL
     is not installed, especially for large systems the computation time can go 
     crazy. To adjust the number of threads used for the computation, it is 
@@ -560,8 +560,8 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     q : ndarray
         Displacement of the linear system
 
-    Note
-    ----
+    Notes
+    -----
     Due to round-off-errors, the internal time step width is h and is very
     close to dt, but adjusted to fit the steps exactly.
     '''
@@ -809,6 +809,7 @@ class HHTConstrained():
         ----------
         Bauchau, Olivier Andre: Flexible multibody dynamics, volume 176.
         Springer Science & Business Media, 2010.
+        
         '''
         self.beta = 1/4*(1 + alpha)**2
         self.gamma = 1/2 + alpha
@@ -883,8 +884,8 @@ class HHTConstrained():
         --------
         TODO
 
-        Note
-        ----
+        Notes
+        -----
         This is a deprecated function. The constraint handling is better
         handled within the `MechanicalSystem` class.
         '''

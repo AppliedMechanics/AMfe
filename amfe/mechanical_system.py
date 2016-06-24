@@ -415,8 +415,8 @@ class MechanicalSystem():
         res : ndarray
             residual; dimension (ndof,)
 
-        Note
-        ----
+        Notes
+        -----
         Time integration scheme: The iteration matrix is composed using the
         generalized-:math:`\alpha` scheme:
 
@@ -658,12 +658,13 @@ class HRSystem(ReducedSystem):
                   List of all elements that have non zero weights
         
         
-        Reference:
-        ---------
+        References
+        ----------
         Farhat, C., Chapman, T. and Avery, P., 2015. Structure‐preserving, stability, 
         and accuracy properties of the energy‐conserving sampling and weighting method 
         for the hyper reduction of nonlinear finite element dynamic models. 
         International Journal for Numerical Methods in Engineering, 102(5), pp.1077-1110.
+        
         ''' 
 
         

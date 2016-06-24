@@ -57,8 +57,7 @@ Further documentation to this code is in the folder `docs/`. For building the do
 
     python setup.py build_sphinx
 
-The documentation will be built in the folder `docs/` available as html in `build`.
-**Attention** There is a bug in the recent versions of sphinx, where the `@`-operator for the matrix-multiplication cannot be resolved. To overcome the problem downgrade the sphinx-version to `1.3.1`, where this bug is not present, by typing `conda install sphinx=1.3.1`.
+The documentation will be built in the folder `docs/` available as html in `build`. If the command above does not work, the execution of `make html` in the folder `docs/` also builds the documentation.
 
 3. Workflow for Pre- and Postprocessing
 ---------------------------------------
@@ -90,7 +89,7 @@ Though Python is a general purpose programming language, it provides a great eco
 - [Youtube: git-Workshop](https://youtu.be/Qthor07loHM) This workshop is extensive and time intensive but definetely worth the time spent. It is a great workshop introducing the concepts of git in a well paced manner ([The slides are also available](https://speakerdeck.com/singingwolfboy/get-started-with-git)).
 
 ##### gmsh:
-- [HowTo for generating structured meshes in gmsh](https://openfoamwiki.net/index.php/2D_Mesh_Tutorial_using_GMSH) This tutorial is about the generation of structured meshes in gmsh, in this case for the use in the CFD-Framework OpenFOAM. Nonetheless, everything can be used for AMfe as well. 
+- [HowTo for generating structured meshes in gmsh](https://openfoamwiki.net/index.php/2D_Mesh_Tutorial_using_GMSH) This tutorial is about the generation of structured meshes in gmsh, in this case for the use in the CFD-Framework OpenFOAM. Nonetheless, everything can be used for AMfe as well.
 
 ### IDEs:
 

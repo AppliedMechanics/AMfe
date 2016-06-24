@@ -237,6 +237,7 @@ def reorder_sparse_matrix(A):
     ----------
     E. Cuthill and J. McKee, "Reducing the Bandwidth of Sparse Symmetric Matrices",
     ACM '69 Proceedings of the 1969 24th national conference, (1969).
+    
     '''
     perm = sp.sparse.csgraph.reverse_cuthill_mckee(A, symmetric_mode=True)
     return A[perm,:][:,perm], perm
