@@ -319,12 +319,12 @@ class Assembly():
             # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
             f_glob[indices] += f
 
-            # this is equal to 
+            # this is equal to
             # K_csr[indices, indices] += K
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
 
         return K_csr, f_glob
-        
+
 
     def assemble_m(self, u=None, t=0):
         '''
@@ -350,13 +350,13 @@ class Assembly():
             u = np.zeros_like(self.nodes_voigt)
 
         M_csr = self.C_csr.copy()
-        
+
         for i, indices in enumerate(self.element_indices):
             X_local = self.nodes_voigt[indices]
             u_local = u[indices]
             M = self.mesh.ele_obj[i].m_int(X_local, u_local, t)
             fill_csr_matrix(M_csr.indptr, M_csr.indices, M_csr.data, M, indices)
-            
+
         return M_csr
 
 
@@ -381,7 +381,7 @@ class Assembly():
         '''
         if u is None:
             u = np.zeros_like(self.nodes_voigt)
-            
+
         K_csr = self.C_csr.copy()
         f_glob = np.zeros(self.mesh.no_of_dofs)
 
@@ -393,7 +393,63 @@ class Assembly():
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
 
         return K_csr, f_glob
-        
+
+    def assemble_k_f_S_E(self, u, t):
+        '''
+        Assemble the stiffness matrix with stress recovery of the given mesh
+        and element.
+
+        Parameters
+        -----------
+        u : ndarray
+            nodal displacement of the nodes in Voigt-notation
+        t : float
+            time
+
+        Returns
+        --------
+        K : sparse.csr_matrix
+            unconstrained assembled stiffness matrix in sparse matrix csr format.
+        f : ndarray
+            unconstrained assembled force vector
+        S : ndarray
+            unconstrained assembled stress tensor
+        E : ndarray
+            unconstrained assembled strain tensor
+
+        '''
+
+        K_csr = self.C_csr.copy()
+        f_glob = np.zeros(self.mesh.no_of_dofs)
+        no_of_nodes = len(self.mesh.nodes)
+        E_global = np.zeros((no_of_nodes, 6))
+        S_global = np.zeros((no_of_nodes, 6))
+
+        for i, indices in enumerate(self.element_indices):
+            node_indices = self.mesh.ele_nodes[i]
+            # X - zu den DOF-Nummern zugehoerige Koordinaten (Positionen)
+            X_local = self.nodes_voigt[indices]
+            # Auslesen der localen Elementverschiebungen
+            u_local = u[indices]
+            # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
+            K, f, E, S = self.mesh.ele_obj[i].k_f_S_E_int(X_local, u_local, t)
+            # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
+            f_glob[indices] += f
+            # Einsortieren der lokalen Elementmatrix in die globale Matrix
+            fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
+            # Assemble the stresses and strains
+            E_global[node_indices, :] += E
+            S_global[node_indices, :] += S
+
+        # Correct strains such, that average is taken at the elements
+        nodes_vec = np.array(self.mesh.ele_nodes).ravel
+        # calculate the frequency of every nodes in ele_nodes list
+        nodes_frequency = np.bincount(nodes_vec)
+        E_global = (E_global.T/nodes_frequency).T
+        S_global = (S_global.T/nodes_frequency).T
+
+        return K_csr, f_glob, E_global, S_global
+
 
 ###########################Hyper Reduction implementation######################
 
@@ -414,7 +470,7 @@ class Assembly():
               The trained dofs for ECSW
         BV  : ndarray
               Constraining matrix B multiplied with constrained basis V
-              
+
         Returns
         -------
         G   : ndarray
@@ -446,7 +502,7 @@ class Assembly():
                 Force vector.
 
             '''
-          
+
             return self.mesh.ele_obj[i].k_and_f_int(X, u, t)
 
         return self.assemble_g_matrix_and_b_vector(u, k_and_f_func,
@@ -454,7 +510,7 @@ class Assembly():
 #    @profile
     def assemble_g_matrix_and_b_vector(self, u, decorated_matrix_func,
                                    element_indices, t,Vq,BV):
-                                       
+
         '''
         Assembles the matrix and the vector of the decorated matrix func.
 
@@ -476,8 +532,8 @@ class Assembly():
         Vq  : ndarray
               The trained dofs for ECSW
         BV  : ndarray
-              Constraining matrix B multiplied with constrained basis V            
-        
+              Constraining matrix B multiplied with constrained basis V
+
         Returns
         -------
         G     : ndarray
@@ -485,47 +541,47 @@ class Assembly():
         b_g   : ndarray
                 Refer Farhats paper on ECSW
         '''
-        
-       
-        # Set the dimensions of V, G, B into variables 
+
+
+        # Set the dimensions of V, G, B into variables
         m = BV.shape[1] #no. of modes
         n_t = Vq.shape[1] # no. of training vectors
         n_e = self.mesh.no_of_elements #no. of elements
-        
+
         # Initialize G and (b_g -> b related to G)
-        
-        G = np.zeros((m*n_t, n_e)) 
+
+        G = np.zeros((m*n_t, n_e))
         b_g= np.zeros((m*n_t))
         g1sum = np.zeros(m)
-        
-        # Loop over j(alles elemente) and i(alles training vetorin)        
+
+        # Loop over j(alles elemente) and i(alles training vetorin)
         # i->  element number, indices- DOF-number j ->  training vec number
         for j in np.arange(n_t): #(row)
             g1sum = np.zeros(m)
             for i, indices in enumerate(element_indices):  #(column)
-                
+
                 # coordinates of the nodes corresponding to the dofs
-                X = self.nodes_voigt[indices] 
-                
-                #u_local = u[indices] 
+                X = self.nodes_voigt[indices]
+
+                #u_local = u[indices]
                 #v_local = V[indices,:]
-                
-                u_proj  = Vq[:,j] # Kinematically admissible u 
+
+                u_proj  = Vq[:,j] # Kinematically admissible u
                 u_local = u_proj[indices]
-                #Somehow Sky Daddy ou get the element matrix and force, 
+                #Somehow Sky Daddy ou get the element matrix and force,
                 _, f = decorated_matrix_func(i, X, u_local, t)
-                
+
                 bv_local = BV[indices,:]
 #                g1  = v_local.T @ f # \in R**n
                 g1  =  bv_local.T @ f # \in R**{n-dirchdofs}
                 g1sum = g1sum + g1
 #                g2  = v_local.T @ K @ v_local # not sure if this is used.
                 G[j*m:(j+1)*m,i] = g1 # \in R**{mn_t*n_e}
-                        
+
             b_g[j*m:(j+1)*m] = g1sum # \in R**m
-            
+
         return G,b_g
-    
+
     def assemble_hr_k_and_f(self, u, t, xi, E_tilde, BV):
         '''
         Assembles the Hyper-reduced stiffness matrix of the given mesh and element.
@@ -545,7 +601,7 @@ class Assembly():
         E_tilde : list
                   List of all elements that have non zero weights
         BV      : ndarray
-                  Constraining matrix B multiplied with constrained basis V 
+                  Constraining matrix B multiplied with constrained basis V
 
         Returns
         --------
@@ -584,7 +640,7 @@ class Assembly():
 
         return self.assemble_hr_matrix_and_vector(u, k_and_f_func,
                                     self.element_indices, t, xi, E_tilde, BV)
-    
+
 #    @profile
     def assemble_hr_matrix_and_vector(self, u, decorated_matrix_func,\
                                 element_indices, t, xi=None, E_tilde=None, BV=None):
@@ -609,9 +665,9 @@ class Assembly():
         xi      : ndarray
                   Weights corresponding to row number, i.e., element number
         E_tilde : list
-                  List of all elements that have non zero weights            
+                  List of all elements that have non zero weights
         BV      : ndarray
-                  Constraining matrix B multiplied with constrained basis V 
+                  Constraining matrix B multiplied with constrained basis V
 
         Returns
         --------
@@ -620,44 +676,42 @@ class Assembly():
         f : ndarray
             Constrained Hyper-reduced force vector
         '''
-         
+
         n_t = BV.shape[1]
         K_red = np.zeros((n_t,n_t))
         f_red = np.zeros((n_t))
-        
+
         #try 3 will not work as we have element_indices everywhere
 #        for j, indices in enumerate(element_indices):
 #            i = E_tilde[j] #element nummer!
-#            indices = element_indices[j]   # Correspondin indices     
+#            indices = element_indices[j]   # Correspondin indices
          #try2 not faster than try 1
 #        for j in np.arange(len(E_tilde)):
 #            i = E_tilde[j]
 #            indices = element_indices[i]
         for i in E_tilde:
             indices  = element_indices[i]
-#        
+#
          #try 1
-#        # i->  element number, indices- DOF-number      
-#        for i, indices in enumerate(element_indices):              
+#        # i->  element number, indices- DOF-number
+#        for i, indices in enumerate(element_indices):
 #            if xi[i] != 0:
 
-            # coordinates of the nodes corresponding to the dofs          
-            X = self.nodes_voigt[indices] 
+            # coordinates of the nodes corresponding to the dofs
+            X = self.nodes_voigt[indices]
 
             u_local = u[indices]
             bv_local = BV[indices,:]
 
-            #Somehow you get the element matrix and force, 
-            K, f = decorated_matrix_func(i, X, u_local, t)           
-           
+            #Somehow you get the element matrix and force,
+            K, f = decorated_matrix_func(i, X, u_local, t)
+
             K_mod = xi[i] * bv_local.T @ K @ bv_local
             f_mod = xi[i] * bv_local.T @ f
-            
+
             # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
             f_red += f_mod
             # Einsortieren der lokalen Elementmatrix in die globale Matrix
             K_red += K_mod
 
         return K_red,f_red
-        
-            
