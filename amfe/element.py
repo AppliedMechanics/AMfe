@@ -151,6 +151,8 @@ class Element():
         self.material = material
         self.K = None
         self.f = None
+        self.S = None
+        self.E = None
 
     def _compute_tensors(self, X, u, t):
         '''
@@ -292,6 +294,40 @@ class Element():
 
         '''
         return self._m_int(X, u, t)
+        
+    def k_f_S_E_int(self, X, u, t=0):
+        '''
+        Returns the tangential stiffness matrix and the internal nodal force
+        of the Element.
+    
+        Parameters
+        ----------
+        X : ndarray
+            nodal coordinates given in Voigt notation (i.e. a 1-D-Array
+            of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])
+        u : ndarray
+            nodal displacements given in Voigt notation
+        t : float
+            time
+    
+        Returns
+        -------
+        K : ndarray
+            The tangential stiffness matrix (ndarray of dimension (ndim, ndim))
+        f : ndarray
+            The nodal force vector (ndarray of dimension (ndim,))
+        S : ndarray
+            The stress tensor (ndarray of dimension (no_of_nodes, 6))
+        E : ndarray
+            The stress tensor (ndarray of dimension (no_of_nodes, 6))
+    
+        Examples
+        --------
+        TODO
+    
+        '''
+        self._compute_tensors(X, u, t)
+        return self.K, self.f, self.S, self.E
 
 
 
@@ -323,6 +359,10 @@ class Tri3(Element):
             Material class representing the material
         '''
         super().__init__(*args, **kwargs)
+        self.K = np.zeros((6,6))
+        self.f = np.zeros(6)
+        self.S = np.zeros((3,6))
+        self.E = np.zeros((3,6))
 
     def _compute_tensors(self, X, u, t):
         '''
@@ -407,10 +447,12 @@ class Tri6(Element):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.M_small = np.zeros((6,6))
-        self.K = np.zeros((12, 12))
+        self.K = np.zeros((12,12))
         self.f = np.zeros(12)
-
+        self.M_small = np.zeros((6,6))
+        self.M = np.zeros((12,12))
+        self.S = np.zeros((6,6))
+        self.E = np.zeros((6,6))
 
         self.gauss_points2 = ((1/6, 1/6, 2/3, 1/3),
                               (1/6, 2/3, 1/6, 1/3),
@@ -531,6 +573,10 @@ class Quad4(Element):
         self.K = np.zeros((8,8))
         self.f = np.zeros(8)
         self.M_small = np.zeros((4,4))
+        self.M = np.zeros((8,8))
+        self.S = np.zeros((4,6))
+        self.E = np.zeros((4,6))
+        
         # Gauss-Point-Handling:
 #        g1 = 0.577350269189626
         g1 = 1/np.sqrt(3)
@@ -575,7 +621,7 @@ class Quad4(Element):
             K_mat = B0.T @ C_SE @ B0 *det*t
             self.K += (K_geo + K_mat)*w
             self.f += B0.T @ S_v*det*t*w
-        pass
+        return
 
     def _m_int(self, X, u, t=0):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4 = X
@@ -614,6 +660,8 @@ class Quad8(Element):
         self.f = np.zeros(16)
         self.M_small = np.zeros((8,8))
         self.M = np.zeros((16,16))
+        self.S = np.zeros((8,6))
+        self.E = np.zeros((8,6))
 
 #        # Gauss-Point-Handling
 #        g3 = 0.861136311594053
@@ -676,7 +724,7 @@ class Quad8(Element):
             K_mat = B0.T @ C_SE @ B0 * det * t
             self.K += w*(K_geo + K_mat)
             self.f += B0.T @ S_v*det*t*w
-        pass
+        return
 
     def _m_int(self, X, u, t=0):
         '''
@@ -724,6 +772,10 @@ class Tet4(Element):
         super().__init__(*args, **kwargs)
         self.K = np.zeros((12,12))
         self.f = np.zeros(12)
+        self.M = np.zeros((12,12))
+        self.S = np.zeros((4,6))
+        self.E = np.zeros((4,6))
+
 
     def _compute_tensors(self, X, u, t):
         X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4 = X
@@ -812,9 +864,12 @@ class Tet10(Element):
         '''
         super().__init__(*args, **kwargs)
 
-        self.M = np.zeros((30,30))
         self.K = np.zeros((30,30))
         self.f = np.zeros(30)
+        self.M = np.zeros((30,30))
+        self.S = np.zeros((10,6))
+        self.E = np.zeros((10,6))
+
 
 #        gauss_points_1 = ((1/4, 1/4, 1/4, 1/4, 1), )
 
@@ -935,7 +990,7 @@ class Tet10(Element):
 
             self.K += (K_geo + K_mat) * w
             self.f += B0.T @ S_v * det/6 * w
-        pass
+        return
 
     def _m_int(self, X, u, t=0):
         '''
