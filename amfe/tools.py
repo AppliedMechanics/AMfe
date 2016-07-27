@@ -5,8 +5,9 @@ Some tools here might be experimental.
 """
 
 __all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat', 
-           'append_to_filename', 'matshow_3d', 'test']
+           'append_to_filename', 'matshow_3d', 'amfe_dir', 'test']
 
+import os
 import numpy as np
 import scipy as sp
 import matplotlib as mpl
@@ -243,6 +244,18 @@ def reorder_sparse_matrix(A):
     return A[perm,:][:,perm], perm
 
 
+def amfe_dir():
+    '''
+    Return the directory of the AMfe folder. 
+    
+    Returns
+    -------
+    dir : string
+        string of the AMFE-directory
+    
+    '''
+    return os.path.dirname(os.path.dirname(__file__))
+    
 def test(*args, **kwargs):
     '''
     Run all tests for AMfe.
