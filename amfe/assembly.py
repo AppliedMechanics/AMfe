@@ -442,7 +442,7 @@ class Assembly():
             S_global[node_indices, :] += S
 
         # Correct strains such, that average is taken at the elements
-        nodes_vec = np.array(self.mesh.ele_nodes).ravel
+        nodes_vec = np.array(self.mesh.ele_nodes).ravel()
         # calculate the frequency of every nodes in ele_nodes list
         nodes_frequency = np.bincount(nodes_vec)
         E_global = (E_global.T/nodes_frequency).T
