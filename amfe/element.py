@@ -33,8 +33,8 @@ try:
 except Exception:
     print('''Python was not able to load the fast fortran element routines.''')
 
-#use_fortran = False
-#print('Explicit no use of fortran routines in the Element routine')
+use_fortran = False
+print('Explicit no use of fortran routines in the Element routine')
 
 def scatter_matrix(Mat, ndim):
     '''
@@ -400,7 +400,9 @@ class Tri3(Element):
         K_mat = B0.T @ C_SE @ B0 * det/2 * d
         self.K = (K_geo + K_mat)
         self.f = B0.T @ S_v * det/2 * d
-
+        self.E = np.ones((3,1)) @ np.array([[E[0,0], E[0,1], 0, E[1,1], 0, 0]])
+        self.S = np.ones((3,1)) @ np.array([[S[0,0], S[0,1], 0, S[1,1], 0, 0]])
+        return 
 
     def _m_int(self, X, u, t=0):
         '''
@@ -454,9 +456,14 @@ class Tri6(Element):
         self.S = np.zeros((6,6))
         self.E = np.zeros((6,6))
 
-        self.gauss_points2 = ((1/6, 1/6, 2/3, 1/3),
+        self.gauss_points2 = ((2/3, 1/6, 1/6, 1/3),
                               (1/6, 2/3, 1/6, 1/3),
-                              (2/3, 1/6, 1/6, 1/3))
+                              (1/6, 1/6, 2/3, 1/3))
+                              
+        self.extrapolation_points = np.array([
+            [5/3, -1/3, -1/3, 2/3, -1/3, 2/3], 
+            [-1/3, 5/3, -1/3, 2/3, 2/3, -1/3], 
+            [-1/3, -1/3, 5/3, -1/3, 2/3, 2/3]]).T
 
 #        self.gauss_points3 = ((1/3, 1/3, 1/3, -27/48),
 #                              (0.6, 0.2, 0.2, 25/48),
@@ -487,12 +494,14 @@ class Tri6(Element):
         '''
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
         u_mat = u.reshape((-1,2))
-        X_mat = X.reshape((-1,2))
+        # X_mat = X.reshape((-1,2))
         d = self.material.thickness
 
         self.K *= 0
         self.f *= 0
-        for L1, L2, L3, w in self.gauss_points:
+        self.E *= 0
+        self.S *= 0
+        for n_gauss, (L1, L2, L3, w) in enumerate(self.gauss_points):
 
             dN_dL = np.array([  [4*L1 - 1,        0,        0],
                                 [       0, 4*L2 - 1,        0],
@@ -528,6 +537,10 @@ class Tri6(Element):
             K_mat = B0.T @ C_SE @ B0 * det / 2 * d
             self.K += (K_geo + K_mat) * w
             self.f += B0.T @ S_v * det / 2*d*w
+            # extrapolation of gauss element
+            extrapol = self.extrapolation_points[:,n_gauss:n_gauss+1]
+            self.S += extrapol @ np.array([[S[0,0], S[0,1], 0, S[1,1], 0, 0]])
+            self.E += extrapol @ np.array([[E[0,0], E[0,1], 0, E[1,1], 0, 0]])
         return 
 
     def _m_int(self, X, u, t=0):
@@ -811,6 +824,7 @@ class Tet4(Element):
         K_mat = B0.T @ C_SE @ B0 * det/6
         self.K = K_geo + K_mat
         self.f = B0.T @ S_v*det/6
+        
 
     def _m_int(self, X, u, t=0):
         '''
