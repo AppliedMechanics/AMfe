@@ -412,11 +412,11 @@ subroutine tet4_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
 end subroutine tet4_k_f_s_e
 
 
-subroutine tet10_k_and_f(X, u, K, f_int, S_Sv_and_C)
+subroutine tet10_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
     implicit none
 
     real(8), intent(in) :: X(30), u(30)
-    real(8), intent(out) :: K(30, 30), f_int(30)
+    real(8), intent(out) :: K(30, 30), f_int(30), S_exp(10,6), E_exp(10,6)
     real(8) :: X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4, X5, Y5, Z5
     real(8) :: X6, Y6, Z6, X7, Y7, Z7, X8, Y8, Z8, X9, Y9, Z9, X10, Y10, Z10
     real(8) :: Jx1, Jx2, Jx3, Jx4, Jy1, Jy2, Jy3, Jy4, Jz1, Jz2, Jz3, Jz4
@@ -426,8 +426,8 @@ subroutine tet10_k_and_f(X, u, K, f_int, S_Sv_and_C)
     real(8) :: K_geo_sm(10,10), K_mat(30,30), K_geo(30,30)
     real(8) :: B0_tilde(10,3), B0(6,30)
     real(8) :: E(3,3), H(3,3), F(3,3), EYE(3,3), S(3,3), S_v(6)
-    real(8) :: det
-    real(8) :: gauss_points(4,4), weights(4), a, b, w
+    real(8) :: det, extrapol(10,4)
+    real(8) :: gauss_points(4,4), weights(4), a, b, w, m1, m2
     integer :: i
 
 !   External functions that will be used afterwards
@@ -479,16 +479,31 @@ subroutine tet10_k_and_f(X, u, K, f_int, S_Sv_and_C)
     b = 0.585410196624968520D0
     w = 1/4D0
 
-    gauss_points(1,:) = (/ a, a, a, b /)
-    gauss_points(2,:) = (/ a, a, b, a /)
-    gauss_points(3,:) = (/ a, b, a, a /)
-    gauss_points(4,:) = (/ b, a, a, a /)
+    gauss_points(1,:) = (/ b, a, a, a /)
+    gauss_points(2,:) = (/ a, b, a, a /)
+    gauss_points(3,:) = (/ a, a, b, a /)
+    gauss_points(4,:) = (/ a, a, a, b /)
 
     weights = (/ w, w, w, w /)
+
+    c1 = 1/4.0D0 + 3.0D0*sqrt(5.0D0)/4.0D0 ! close corner node
+    c2 = -sqrt(5.0D0)/4.0D0 + 1/4.0D0  ! far corner node
+    m1 = 1/4.0D0 + sqrt(5.0D0)/4.0D0   ! close mid-node
+    m2 = -sqrt(5.0D0)/4.0D0 + 1/4.0D0  ! far mid node
+
+
+    extrapol(:,1) = (/ c1, c2, c2, c2, m1, m2, m1, m1, m2, m2 /)
+    extrapol(:,2) = (/ c2, c1, c2, c2, m1, m1, m2, m2, m1, m2 /)
+    extrapol(:,3) = (/ c2, c2, c1, c2, m2, m1, m1, m2, m2, m1 /)
+    extrapol(:,4) = (/ c2, c2, c2, c1, m2, m2, m2, m1, m1, m1 /)
+
+
 
     ! set the matrices and vectors to zero
     K = 0.0
     f_int = 0.0
+    S_exp = 0.0
+    E_exp = 0.0
 
     ! Loop over the gauss points
     do i = 1, 4
@@ -560,6 +575,11 @@ subroutine tet10_k_and_f(X, u, K, f_int, S_Sv_and_C)
 
         K = K + (K_mat + K_geo)*det/6 * w
         f_int = f_int + matmul(transpose(B0), S_v) * det/6 * w
+
+        S_exp = S_exp + matmul(reshape(extrapol(:,i), (/10,1/)), &
+                 reshape((/S(1,1), S(1,2), S(1,3), S(2,2), S(2,3), S(3,3)/), (/1, 6/)))
+        E_exp = E_exp + matmul(reshape(extrapol(:,i), (/10,1/)), &
+                 reshape((/ E(1,1), E(1,2), E(1,3), E(2,2), E(2,3), E(3,3)/), (/1, 6/)))
 
     end do
 

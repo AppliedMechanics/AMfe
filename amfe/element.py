@@ -34,8 +34,8 @@ try:
 except Exception:
     print('''Python was not able to load the fast fortran element routines.''')
 
-use_fortran = False
-print('Explicit no use of fortran routines in the Element routine')
+#use_fortran = False
+#print('Explicit no use of fortran routines in the Element routine')
 
 def scatter_matrix(Mat, ndim):
     '''
@@ -1080,11 +1080,10 @@ class Tet10(Element):
 
             # extrapolation of gauss element
             extrapol = self.extrapolation_points[:,n_gauss:n_gauss+1]
-            self.S += extrapol @ np.array([[E[0,0], E[0,1], E[0,2],
-                                            E[1,1], E[1,2], E[2,2]]])
-            self.E += extrapol @ np.array([[S[0,0], S[0,1], S[0,2],
+            self.S += extrapol @ np.array([[S[0,0], S[0,1], S[0,2],
                                             S[1,1], S[1,2], S[2,2]]])
-
+            self.E += extrapol @ np.array([[E[0,0], E[0,1], E[0,2],
+                                            E[1,1], E[1,2], E[2,2]]])
         return
 
     def _m_int(self, X, u, t=0):
@@ -1486,7 +1485,7 @@ if use_fortran:
 
     def compute_tet10_tensors(self, X, u, t):
         '''Wrapping funktion for fortran function call.'''
-        self.K, self.f = amfe.f90_element.tet10_k_and_f( \
+        self.K, self.f, self.S, self.E = amfe.f90_element.tet10_k_f_s_e( \
             X, u, self.material.S_Sv_and_C)
 
 
