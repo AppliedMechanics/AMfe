@@ -13,9 +13,9 @@ instance the kron-function in order to build the scattered geometric stiffness
 matrix or the trace function are very inefficient. They can be done better when
 using direct functions.
 
-If some element things are really time critical, it is recommended to port the 
-heavy computation to FORTRAN. This can be achieved by using the provided f2py 
-routines and reprogram the stuff for the own use. 
+If some element things are really time critical, it is recommended to port the
+heavy computation to FORTRAN. This can be achieved by using the provided f2py
+routines and reprogram the stuff for the own use.
 
 """
 
@@ -24,6 +24,7 @@ __all__ = ['Element', 'Tri3', 'Tri6', 'Quad4', 'Quad8', 'Tet4', 'Tet10',
            'LineLinearBoundary', 'LineQuadraticBoundary']
 
 import numpy as np
+from numpy import sqrt
 
 use_fortran = False
 
@@ -294,12 +295,12 @@ class Element():
 
         '''
         return self._m_int(X, u, t)
-        
+
     def k_f_S_E_int(self, X, u, t=0):
         '''
         Returns the tangential stiffness matrix and the internal nodal force
         of the Element.
-    
+
         Parameters
         ----------
         X : ndarray
@@ -309,7 +310,7 @@ class Element():
             nodal displacements given in Voigt notation
         t : float
             time
-    
+
         Returns
         -------
         K : ndarray
@@ -320,11 +321,11 @@ class Element():
             The stress tensor (ndarray of dimension (no_of_nodes, 6))
         E : ndarray
             The stress tensor (ndarray of dimension (no_of_nodes, 6))
-    
+
         Examples
         --------
         TODO
-    
+
         '''
         self._compute_tensors(X, u, t)
         return self.K, self.f, self.S, self.E
@@ -402,7 +403,7 @@ class Tri3(Element):
         self.f = B0.T @ S_v * det/2 * d
         self.E = np.ones((3,1)) @ np.array([[E[0,0], E[0,1], 0, E[1,1], 0, 0]])
         self.S = np.ones((3,1)) @ np.array([[S[0,0], S[0,1], 0, S[1,1], 0, 0]])
-        return 
+        return
 
     def _m_int(self, X, u, t=0):
         '''
@@ -459,10 +460,10 @@ class Tri6(Element):
         self.gauss_points2 = ((2/3, 1/6, 1/6, 1/3),
                               (1/6, 2/3, 1/6, 1/3),
                               (1/6, 1/6, 2/3, 1/3))
-                              
+
         self.extrapolation_points = np.array([
-            [5/3, -1/3, -1/3, 2/3, -1/3, 2/3], 
-            [-1/3, 5/3, -1/3, 2/3, 2/3, -1/3], 
+            [5/3, -1/3, -1/3, 2/3, -1/3, 2/3],
+            [-1/3, 5/3, -1/3, 2/3, 2/3, -1/3],
             [-1/3, -1/3, 5/3, -1/3, 2/3, 2/3]]).T
 
 #        self.gauss_points3 = ((1/3, 1/3, 1/3, -27/48),
@@ -541,7 +542,7 @@ class Tri6(Element):
             extrapol = self.extrapolation_points[:,n_gauss:n_gauss+1]
             self.S += extrapol @ np.array([[S[0,0], S[0,1], 0, S[1,1], 0, 0]])
             self.E += extrapol @ np.array([[E[0,0], E[0,1], 0, E[1,1], 0, 0]])
-        return 
+        return
 
     def _m_int(self, X, u, t=0):
         X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6 = X
@@ -575,7 +576,7 @@ class Tri6(Element):
 
 class Quad4(Element):
     '''
-    Elementklasse für viereckiges ebenes Element mit linearen Ansatzfunktionen.
+    Quadrilateral 2D element with bilinear shape functions.
     '''
 
     def __init__(self, *args, **kwargs):
@@ -589,15 +590,21 @@ class Quad4(Element):
         self.M = np.zeros((8,8))
         self.S = np.zeros((4,6))
         self.E = np.zeros((4,6))
-        
+
         # Gauss-Point-Handling:
 #        g1 = 0.577350269189626
         g1 = 1/np.sqrt(3)
 
-        self.gauss_points = ((-g1, -g1, 1.), 
-                             ( g1, -g1, 1.), 
-                             (-g1,  g1, 1.), 
-                             ( g1,  g1, 1.))
+        self.gauss_points = ((-g1, -g1, 1.),
+                             ( g1, -g1, 1.),
+                             ( g1,  g1, 1.),
+                             (-g1,  g1, 1.))
+
+        self.extrapolation_points = np.array([
+            [1+np.sqrt(3)/2, -1/2, 1-np.sqrt(3)/2, -1/2],
+            [-1/2, 1+np.sqrt(3)/2, -1/2, 1-np.sqrt(3)/2],
+            [1-np.sqrt(3)/2, -1/2, 1+np.sqrt(3)/2, -1/2],
+            [-1/2, 1-np.sqrt(3)/2, -1/2, 1+np.sqrt(3)/2]]).T
 
 
     def _compute_tensors(self, X, u, t):
@@ -610,8 +617,10 @@ class Quad4(Element):
 
         self.K *= 0
         self.f *= 0
+        self.S *= 0
+        self.E *= 0
 
-        for xi, eta, w in self.gauss_points:
+        for n_gauss, (xi, eta, w) in enumerate(self.gauss_points):
 
             dN_dxi = np.array([ [ eta/4 - 1/4,  xi/4 - 1/4],
                                 [-eta/4 + 1/4, -xi/4 - 1/4],
@@ -634,6 +643,10 @@ class Quad4(Element):
             K_mat = B0.T @ C_SE @ B0 *det*t
             self.K += (K_geo + K_mat)*w
             self.f += B0.T @ S_v*det*t*w
+            # extrapolation of gauss element
+            extrapol = self.extrapolation_points[:,n_gauss:n_gauss+1]
+            self.S += extrapol @ np.array([[S[0,0], S[0,1], 0, S[1,1], 0, 0]])
+            self.E += extrapol @ np.array([[E[0,0], E[0,1], 0, E[1,1], 0, 0]])
         return
 
     def _m_int(self, X, u, t=0):
@@ -691,14 +704,33 @@ class Quad8(Element):
 #        w2 = 1.
 #        self.gauss_points = ((-g2, -g2, w2), (-g2, g2, w2),
 #                             ( g2, -g2, w2), ( g2, g2, w2))
-#        
+#
         # Quadrature like ANSYS or ABAQUS:
         g = np.sqrt(3/5)
         w = 5/9
         w0 = 8/9
-        self.gauss_points = ((-g,  g,  w*w), (-g,  0,  w*w0), (-g,  g,  w*w),
-                             ( 0,  g, w0*w), ( 0,  0, w0*w0), ( 0,  g, w0*w),
-                             ( g,  g,  w*w), ( g,  0,  w*w0), ( g,  g,  w*w))
+        self.gauss_points = ((-g, -g,  w*w), ( g, -g,  w*w ), ( g,  g,   w*w),
+                             (-g,  g,  w*w), ( 0, -g, w0*w ), ( g,  0,  w*w0),
+                             ( 0,  g, w0*w), (-g,  0,  w*w0), ( 0,  0, w0*w0))
+
+        # a little bit dirty but correct. Comes from sympy file.
+        self.extrapolation_points = np.array(
+        [[ 5*sqrt(15)/18 + 10/9, 5/18, -5*sqrt(15)/18 + 10/9,
+            5/18, -5/9 - sqrt(15)/9, -5/9 + sqrt(15)/9,
+            -5/9 + sqrt(15)/9, -5/9 - sqrt(15)/9,  4/9],
+         [5/18,  5*sqrt(15)/18 + 10/9, 5/18, -5*sqrt(15)/18 + 10/9,
+          -5/9 - sqrt(15)/9, -5/9 - sqrt(15)/9, -5/9 + sqrt(15)/9,
+          -5/9 + sqrt(15)/9,  4/9],
+         [-5*sqrt(15)/18 + 10/9, 5/18, 5*sqrt(15)/18 + 10/9, 5/18,
+          -5/9 + sqrt(15)/9, -5/9 - sqrt(15)/9, -5/9 - sqrt(15)/9,
+          -5/9 + sqrt(15)/9,  4/9],
+         [ 5/18, -5*sqrt(15)/18 + 10/9, 5/18,  5*sqrt(15)/18 + 10/9,
+          -5/9 + sqrt(15)/9, -5/9 + sqrt(15)/9, -5/9 - sqrt(15)/9,
+          -5/9 - sqrt(15)/9,  4/9],
+         [ 0,  0,  0,  0, sqrt(15)/6 + 5/6,  0, -sqrt(15)/6 + 5/6,  0, -2/3],
+         [0, 0, 0, 0, 0, sqrt(15)/6 + 5/6,  0, -sqrt(15)/6 + 5/6, -2/3],
+         [ 0, 0, 0, 0, -sqrt(15)/6 + 5/6, 0, sqrt(15)/6 + 5/6, 0, -2/3],
+         [ 0, 0, 0, 0, 0, -sqrt(15)/6 + 5/6, 0, sqrt(15)/6 + 5/6, -2/3]])
 
     def _compute_tensors(self, X, u, t):
 #        X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
@@ -709,8 +741,10 @@ class Quad8(Element):
 
         self.K *= 0
         self.f *= 0
+        self.S *= 0
+        self.E *= 0
 
-        for xi, eta, w in self.gauss_points:
+        for n_gauss, (xi, eta, w) in enumerate(self.gauss_points):
             # this is now the standard procedure for Total Lagrangian behavior
             dN_dxi = np.array([
                 [-(eta - 1)*(eta + 2*xi)/4, -(2*eta + xi)*(xi - 1)/4],
@@ -737,6 +771,10 @@ class Quad8(Element):
             K_mat = B0.T @ C_SE @ B0 * det * t
             self.K += w*(K_geo + K_mat)
             self.f += B0.T @ S_v*det*t*w
+            # extrapolation of gauss element
+            extrapol = self.extrapolation_points[:,n_gauss:n_gauss+1]
+            self.S += extrapol @ np.array([[S[0,0], S[0,1], 0, S[1,1], 0, 0]])
+            self.E += extrapol @ np.array([[E[0,0], E[0,1], 0, E[1,1], 0, 0]])
         return
 
     def _m_int(self, X, u, t=0):
@@ -824,7 +862,12 @@ class Tet4(Element):
         K_mat = B0.T @ C_SE @ B0 * det/6
         self.K = K_geo + K_mat
         self.f = B0.T @ S_v*det/6
-        
+        self.E = np.ones((4,1)) @ np.array([[E[0,0], E[0,1], E[0,2],
+                                             E[1,1], E[1,2], E[2,2]]])
+        self.S = np.ones((4,1)) @ np.array([[S[0,0], S[0,1], S[0,2],
+                                             S[1,1], S[1,2], S[2,2]]])
+
+
 
     def _m_int(self, X, u, t=0):
         '''
@@ -861,13 +904,28 @@ class Tet4(Element):
 class Tet10(Element):
     '''
     Tet10 solid element; Node numbering is done like in ParaView and in [1]_
+
+    The node numbering is as follows:
     
-    
+    .. code::
+                 3
+               ,/|`\
+             ,/  |  `\
+           ,8    '.   `7
+         ,/       9     `\
+       ,/         |       `\
+      1--------4--'.--------0
+       `\.         |      ,/
+          `\.      |    ,6
+             `5.   '. ,/
+                `\. |/
+                   `2
+
     References
     ----------
-    .. [1] Felippa, Carlos: Advanced Finite Element Methods (ASEN 6367), 
+    .. [1] Felippa, Carlos: Advanced Finite Element Methods (ASEN 6367),
         Spring 2013. `Online Source`__
-    
+
     __ http://www.colorado.edu/engineering/CAS/courses.d/AFEM.d/AFEM.Ch10.d/
         AFEM.Ch10.index.html
 
@@ -890,10 +948,22 @@ class Tet10(Element):
         a = (5 - np.sqrt(5)) / 20
         b = (5 + 3*np.sqrt(5)) / 20
         w = 1/4
-        gauss_points_4 = ((a,a,a,b,w),
-                          (a,a,b,a,w),
+        gauss_points_4 = ((b,a,a,a,w),
                           (a,b,a,a,w),
-                          (b,a,a,a,w),)
+                          (a,a,b,a,w),
+                          (a,a,a,b,w),)
+        self.gauss_points = gauss_points_4
+
+        c1 = 1/4 + 3*sqrt(5)/4 # close corner node
+        c2 = -sqrt(5)/4 + 1/4  # far corner node
+        m1 = 1/4 + sqrt(5)/4   # close mid-node
+        m2 = -sqrt(5)/4 + 1/4  # far mid node
+        self.extrapolation_points = np.array(
+            [[c1, c2, c2, c2, m1, m2, m1, m1, m2, m2],
+             [c2, c1, c2, c2, m1, m1, m2, m2, m1, m2],
+             [c2, c2, c1, c2, m2, m1, m1, m2, m2, m1],
+             [c2, c2, c2, c1, m2, m2, m2, m1, m1, m1]]).T
+
 
 #        w1 = 0.030283678097089*6
 #        w2 = 0.006026785714286*6
@@ -927,7 +997,7 @@ class Tet10(Element):
 #                             (c4, a4, c4, a4, w4),
 #                             (c4, a4, a4, c4, w4))
 
-        self.gauss_points = gauss_points_4
+
 
     def _compute_tensors(self, X, u, t):
 
@@ -945,8 +1015,10 @@ class Tet10(Element):
         u_mat = u.reshape((10,3))
         self.K *= 0
         self.f *= 0
+        self.S *= 0
+        self.E *= 0
 
-        for L1, L2, L3, L4, w in self.gauss_points:
+        for n_gauss, (L1, L2, L3, L4, w) in enumerate(self.gauss_points):
 
             Jx1 = 4*L2*X5 + 4*L3*X7 + 4*L4*X8  + X1*(4*L1 - 1)
             Jx2 = 4*L1*X5 + 4*L3*X6 + 4*L4*X9  + X2*(4*L2 - 1)
@@ -1004,6 +1076,14 @@ class Tet10(Element):
 
             self.K += (K_geo + K_mat) * w
             self.f += B0.T @ S_v * det/6 * w
+
+            # extrapolation of gauss element
+            extrapol = self.extrapolation_points[:,n_gauss:n_gauss+1]
+            self.S += extrapol @ np.array([[E[0,0], E[0,1], E[0,2],
+                                            E[1,1], E[1,2], E[2,2]]])
+            self.E += extrapol @ np.array([[S[0,0], S[0,1], S[0,2],
+                                            S[1,1], S[1,2], S[2,2]]])
+
         return
 
     def _m_int(self, X, u, t=0):
@@ -1407,7 +1487,7 @@ if use_fortran:
         '''Wrapping funktion for fortran function call.'''
         self.K, self.f = amfe.f90_element.tet10_k_and_f( \
             X, u, self.material.S_Sv_and_C)
-        
+
 
     # overloading the routines with fortran routines
     Tri3._compute_tensors_python = Tri3._compute_tensors
@@ -1421,4 +1501,3 @@ if use_fortran:
     Tri6._m_int = compute_tri6_mass
     Tet4._compute_tensors = compute_tet4_tensors
     Tet10._compute_tensors = compute_tet10_tensors
-
