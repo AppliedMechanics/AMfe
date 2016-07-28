@@ -1465,7 +1465,7 @@ class LineQuadraticBoundary(BoundaryElement):
 if use_fortran:
     def compute_tri3_tensors(self, X, u, t):
         '''Wrapping funktion for fortran function call.'''
-        self.K, self.f = amfe.f90_element.tri3_k_and_f(\
+        self.K, self.f, self.S, self.E = amfe.f90_element.tri3_k_f_s_e(\
             X, u, self.material.thickness, self.material.S_Sv_and_C_2d)
 
     def compute_tri6_tensors(self, X, u, t):

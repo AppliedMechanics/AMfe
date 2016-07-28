@@ -52,17 +52,18 @@ subroutine compute_B_matrix(Bt, F, B, no_of_nodes, no_of_dims)
 end subroutine
 
 
-subroutine tri3_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
+subroutine tri3_k_f_s_e(X, u, K, f_int, t, S_exp, E_exp, S_Sv_and_C_2d)
     implicit none
 
 !   What is important here is that the
     real(8), intent(in) :: X(6), u(6), t
-    real(8), intent(out) :: K(6, 6), f_int(6)
+    real(8), intent(out) :: K(6, 6), f_int(6), S_exp(3, 6), E_exp(3, 6)
     real(8) :: X1, X2, X3, Y1, Y2, Y3, A0
     real(8) :: u_e(3,2), C_SE(3,3)
     real(8) :: K_geo_sm(3,3), K_mat(6,6), K_geo(6,6)
     real(8) :: B0_tilde(3,2),  B0(3,6)
     real(8) :: E(2,2), H(2,2), F(2,2), EYE(2,2), S(2,2), S_v(3)
+    real(8) :: extrapol(3,1)
 !   External functions that will be used afterwards
     external :: scatter_matrix
     external :: compute_b_matrix
@@ -78,6 +79,7 @@ subroutine tri3_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     Y3 = X(6)
 
     u_e = transpose(reshape(u, (/2, 3/)))
+    extrapol = reshape( (/ 1.0D0, 1.0D0, 1.0D0 /) , (/3, 1/))
 
     A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
 
@@ -109,8 +111,10 @@ subroutine tri3_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     K = K_mat + K_geo
 !     and last but not least the internal force
     f_int = matmul(transpose(B0), S_v)*A0*t
+    S_exp = matmul(extrapol, reshape((/S(1,1), S(1,2), 0.0D0, S(2,2), 0.0D0, 0.0D0/), (/1, 6/)))
+    E_exp = matmul(extrapol, reshape((/ E(1,1), E(1,2), 0.0D0, E(2,2), 0.0D0, 0.0D0/), (/1, 6/)))
 
-end subroutine tri3_k_and_f
+end subroutine tri3_k_f_s_e
 
 
 subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
