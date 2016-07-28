@@ -117,7 +117,7 @@ subroutine tri3_k_f_s_e(X, u, K, f_int, t, S_exp, E_exp, S_Sv_and_C_2d)
 end subroutine tri3_k_f_s_e
 
 
-subroutine tri6_k_and_f(X, u, K, f_int, t, S_exp, E_exp, S_Sv_and_C_2d)
+subroutine tri6_k_f_s_e(X, u, K, f_int, t, S_exp, E_exp, S_Sv_and_C_2d)
     implicit none
 
     integer :: i
@@ -246,7 +246,7 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_exp, E_exp, S_Sv_and_C_2d)
                 reshape((/ E(1,1), E(1,2), 0.0D0, E(2,2), 0.0D0, 0.0D0/), (/1, 6/)))
 
     end do
-end subroutine
+end subroutine tri6_k_f_s_e
 
 
 subroutine tri6_m(X, rho, t, M)
