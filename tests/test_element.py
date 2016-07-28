@@ -60,10 +60,14 @@ class ElementTest(unittest.TestCase):
         self.my_element._compute_tensors_python(self.X, self.u, t=0)
         K = self.my_element.K.copy()
         f = self.my_element.f.copy()
+        S = self.my_element.S.copy()
+        E = self.my_element.E.copy()
         # fortran routine
         self.my_element._compute_tensors(self.X, self.u, t=0)
         assert_almost_equal(self.my_element.K, K)
         assert_almost_equal(self.my_element.f, f)
+        assert_almost_equal(self.my_element.S, S)
+        assert_almost_equal(self.my_element.E, E)
 
 
 
