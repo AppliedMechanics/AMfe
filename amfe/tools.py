@@ -4,7 +4,7 @@ A collection of tools which to not fit to one topic of the other modules.
 Some tools here might be experimental.
 """
 
-__all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat', 
+__all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat',
            'append_to_filename', 'matshow_3d', 'amfe_dir', 'test']
 
 import os
@@ -146,9 +146,9 @@ def read_hbmat(filename):
     return matrix
 
 
-def append_to_filename(filename):
+def append_interactively(filename):
     '''
-    Ask, if a certain string should be appended to the filename.
+    Open an input dialog for interactively appending a string to a filename.
 
     This filename function should make it easy to save output files from
     numerical experiments containing a time stamp with an additonal tag
@@ -219,26 +219,26 @@ def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
 
 def reorder_sparse_matrix(A):
     '''
-    Reorder the sparse matrix A such that the bandwidth of the matrix is 
-    minimized using the Cuthill–McKee (RCM) algorithm. 
-    
+    Reorder the sparse matrix A such that the bandwidth of the matrix is
+    minimized using the Cuthill–McKee (RCM) algorithm.
+
     Parameters
     ----------
     A : CSR or CSC sprarse symmetric matrix
-        Sparse and symmetric matrix 
-    
+        Sparse and symmetric matrix
+
     Returns
     -------
     A_new : CSR or CSC sparse symmetric matrix
         reordered sparse and symmetric matrix
     perm : ndarray
         vector of row and column permutation
-    
+
     References
     ----------
     E. Cuthill and J. McKee, "Reducing the Bandwidth of Sparse Symmetric Matrices",
     ACM '69 Proceedings of the 1969 24th national conference, (1969).
-    
+
     '''
     perm = sp.sparse.csgraph.reverse_cuthill_mckee(A, symmetric_mode=True)
     return A[perm,:][:,perm], perm
@@ -246,16 +246,16 @@ def reorder_sparse_matrix(A):
 
 def amfe_dir():
     '''
-    Return the directory of the AMfe folder. 
-    
+    Return the directory of the AMfe folder.
+
     Returns
     -------
     dir : string
         string of the AMFE-directory
-    
+
     '''
     return os.path.dirname(os.path.dirname(__file__))
-    
+
 def test(*args, **kwargs):
     '''
     Run all tests for AMfe.

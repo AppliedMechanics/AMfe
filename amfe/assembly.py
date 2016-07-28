@@ -132,6 +132,9 @@ class Assembly():
     nodes_voigt : np.ndarray
         vector of all nodal coordinates in voigt-notation.
         Dimension is (ndofs_total, )
+    elements_on_node : np.ndarray
+        array containing the number of adjacent elements per node. Is necessary
+        for stress recovery.
 
     '''
     def __init__(self, mesh):
@@ -150,11 +153,11 @@ class Assembly():
 
         '''
         self.mesh = mesh
-        self.save_stresses = False
         self.element_indices = []
         self.neumann_indices = []
         self.C_csr = sp.sparse.csr_matrix([[]])
         self.nodes_voigt = sp.array([])
+        self.elements_on_node = None
 
     def preallocate_csr(self):
         '''
@@ -233,6 +236,10 @@ class Assembly():
         [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i)
                    for i in nodes], dtype=int).reshape(-1)
          for nodes in nm_nodes]
+
+        # compute nodes_frequency for stress recovery
+        nodes_vec = np.array(self.mesh.ele_nodes).ravel()
+        self.elements_on_node = np.bincount(nodes_vec)
 
 
 
@@ -427,26 +434,19 @@ class Assembly():
 
         for i, indices in enumerate(self.element_indices):
             node_indices = self.mesh.ele_nodes[i]
-            # X - zu den DOF-Nummern zugehoerige Koordinaten (Positionen)
             X_local = self.nodes_voigt[indices]
-            # Auslesen der localen Elementverschiebungen
             u_local = u[indices]
-            # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
             K, f, E, S = self.mesh.ele_obj[i].k_f_S_E_int(X_local, u_local, t)
-            # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
+
+            # Assembly of force, stiffness, strain and stress
             f_glob[indices] += f
-            # Einsortieren der lokalen Elementmatrix in die globale Matrix
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
-            # Assemble the stresses and strains
             E_global[node_indices, :] += E
             S_global[node_indices, :] += S
 
         # Correct strains such, that average is taken at the elements
-        nodes_vec = np.array(self.mesh.ele_nodes).ravel()
-        # calculate the frequency of every nodes in ele_nodes list
-        nodes_frequency = np.bincount(nodes_vec)
-        E_global = (E_global.T/nodes_frequency).T
-        S_global = (S_global.T/nodes_frequency).T
+        E_global = (E_global.T/self.elements_on_node).T
+        S_global = (S_global.T/self.elements_on_node).T
 
         return K_csr, f_glob, E_global, S_global
 
