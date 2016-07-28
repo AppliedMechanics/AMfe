@@ -958,6 +958,7 @@ class Tet10(Element):
         c2 = -sqrt(5)/4 + 1/4  # far corner node
         m1 = 1/4 + sqrt(5)/4   # close mid-node
         m2 = -sqrt(5)/4 + 1/4  # far mid node
+
         self.extrapolation_points = np.array(
             [[c1, c2, c2, c2, m1, m2, m1, m1, m2, m2],
              [c2, c1, c2, c2, m1, m1, m2, m2, m1, m2],

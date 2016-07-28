@@ -270,7 +270,10 @@ class Mesh:
     node_idx : int
         index describing, at which position in the Pandas Dataframe `el_df` 
         the nodes of the element start. 
-
+    u : list of ndarrays
+        List containing the displacements to be exported
+    timesteps : list of floats
+        List containt the timesteps to be exported
     '''
 
     def __init__(self):
