@@ -906,7 +906,7 @@ class Tet10(Element):
     Tet10 solid element; Node numbering is done like in ParaView and in [1]_
 
     The node numbering is as follows:
-    
+
     .. code::
                  3
                ,/|`\

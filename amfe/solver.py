@@ -4,7 +4,7 @@ Module for solving static and dynamic problems.
 
 __all__ = ['NewmarkIntegrator', 'solve_linear_displacement',
             'solve_nonlinear_displacement', 'give_mass_and_stiffness',
-            'HHTConstrained', 'integrate_linear_system', 
+            'HHTConstrained', 'integrate_linear_system',
             'integrate_nonlinear_system', 'solve_sparse', 'SpSolve']
 
 import time
@@ -15,7 +15,7 @@ from scipy.sparse import linalg
 
 pardiso_msg = '''
 ############################### WARNING #######################################
-# The fast Intel MKL library could not be used. Please install pyMKL in order 
+# The fast Intel MKL library could not be used. Please install pyMKL in order
 # to exploit the full speed of your computer.
 ###############################################################################
 '''
@@ -47,8 +47,8 @@ def norm_of_vector(array):
 
 abort_statement = '''
 ###############################################################################
-#### The current time integration has been aborted. No convergence was gained 
-#### within the number of given iteration steps.  
+#### The current time integration has been aborted. No convergence was gained
+#### within the number of given iteration steps.
 ###############################################################################
 '''
 
@@ -58,8 +58,8 @@ mtypes = {'spd':2,
 
 def solve_sparse(A, b, matrix_type='symm', verbose=False):
     '''
-    Abstractoin of the solution of the sparse system Ax=b using the fastest 
-    solver available.     
+    Abstractoin of the solution of the sparse system Ax=b using the fastest
+    solver available.
 
     Parameters
     ----------
@@ -68,31 +68,31 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
     b : ndarray
         right hand side of equation
     matrixd_type : {'spd', 'symm', 'unsymm'}, optional
-        Specifier for the matrix type: 
-        
+        Specifier for the matrix type:
+
         - 'spd' : symmetric positive definite
         - 'symm' : symmetric indefinite
         - 'unsymm' : generally unsymmetric
-    
+
     Returns
     -------
     x : ndarray
         solution of system Ax=b
-    
+
     Notes
     -----
     This tool uses the Intel MKL library provided by Anaconda. If the Intel MKL
-    is not installed, especially for large systems the computation time can go 
-    crazy. To adjust the number of threads used for the computation, it is 
+    is not installed, especially for large systems the computation time can go
+    crazy. To adjust the number of threads used for the computation, it is
     recommended to use the mkl-service module provided by Anaconda:
-    
+
     >>> import mkl
     >>> mkl.get_max_threads()
     2
     >>> mkl.set_num_threads(1)
     >>> mkl.get_max_threads()
     1
-        
+
     '''
     if use_pardiso:
         mtype = mtypes[matrix_type]
@@ -106,9 +106,9 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
 
 class SpSolve():
     '''
-    Solver class for solving the sparse system Ax=b for multiple right hand 
+    Solver class for solving the sparse system Ax=b for multiple right hand
     sides b using the fastest solver available, i.e. the Intel MKL Pardiso, if
-    available. 
+    available.
     '''
     def __init__(self, A, matrix_type='symm', verbose=False):
         '''
@@ -117,12 +117,12 @@ class SpSolve():
         A : sp.sparse.CSR
             sparse matrix in CSR-format
         matrixd_type : {'spd', 'symm', 'unsymm'}, optional
-            Specifier for the matrix type: 
-        
+            Specifier for the matrix type:
+
         - 'spd' : symmetric positive definite
         - 'symm' : symmetric indefinite
         - 'unsymm' : generally unsymmetric
-    
+
         '''
         if use_pardiso:
             mtype = mtypes[matrix_type]
@@ -130,11 +130,11 @@ class SpSolve():
             self.pSolve.run_pardiso(12) # Analysis and numerical factorization
         else:
             self.pSolve = sp.sparse.linalg.splu(A)
-    
+
     def solve(self, b):
         '''
-        Solve the system for the given right hand side b. 
-        
+        Solve the system for the given right hand side b.
+
         Parameters
         ----------
         b : ndarray
@@ -151,10 +151,10 @@ class SpSolve():
         else:
             x = self.pSolve.solve(b)
         return x
-    
+
     def clear(self):
         '''
-        Clear the memory, if possible. 
+        Clear the memory, if possible.
         '''
         if use_pardiso:
             self.pSolve.clear()
@@ -187,7 +187,7 @@ class NewmarkIntegrator():
 
     '''
 
-    def __init__(self, mechanical_system, alpha=0.001, verbose=False, 
+    def __init__(self, mechanical_system, alpha=0.001, verbose=False,
                  n_iter_max=30, conv_abort=True):
         '''
         Parameters
@@ -202,8 +202,8 @@ class NewmarkIntegrator():
         n_iter_max : int, optional
             number of maximum iteration in the newton correction process
         conv_abort : bool, optional
-            flag indicating, if the integration is aborted when no convergence 
-            is gained. 
+            flag indicating, if the integration is aborted when no convergence
+            is gained.
 
         Returns
         -------
@@ -351,7 +351,7 @@ class NewmarkIntegrator():
                     dq = dq_old.copy()
                     no_newton_convergence_flag = True
                     break
-                    
+
 
             print('Time:', t, 'No of iterations:', n_iter,
                   'Residual: {0:4.2E}'.format(res_abs))
@@ -361,13 +361,13 @@ class NewmarkIntegrator():
             t_clock_2 - t_clock_1))
         return
 
-def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt, 
-                               alpha=0.01, rtol=1E-8, atol=1E-6, verbose=False, 
-                               n_iter_max=30, conv_abort=True, 
+def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
+                               alpha=0.01, rtol=1E-8, atol=1E-6, verbose=False,
+                               n_iter_max=30, conv_abort=True,
                                write_iter=False):
     '''
-    Time integrate the nonlinear system using a generalized-alpha HHT-scheme. 
-    
+    Time integrate the nonlinear system using a generalized-alpha HHT-scheme.
+
     Parameters
     ----------
     mechanical_system : instance of MechanicalSystem
@@ -381,42 +381,42 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
     dt : float
         Time step size of the integrator.
     alpha : float, optional
-        HHT-damping factor for numerical damping. If alpha=0, no numerical 
+        HHT-damping factor for numerical damping. If alpha=0, no numerical
         damping is introduced, if alpha=0.3, the maximum numerical damping is
         introduced. Default value: 0.01
     rtol : float, optional
         Relative tolerance with respect to the maximum external force for the
         Newton-Raphson iteration. Default value: 1E-8.
     atol : float, optional
-        Absolute tolerance for the Newton_Raphson iteration. 
+        Absolute tolerance for the Newton_Raphson iteration.
         Default value: 1E-6.
     verbose : bool, optional
         Flag setting verbose output. Default: False.
     n_iter_max : int, optional
-        Number of maximum iterations per Newton-Raphson-procedure. Default 
+        Number of maximum iterations per Newton-Raphson-procedure. Default
         value is 30.
     conv_abort : bool, optional
-        Flag setting, if time integration is aborted in the case when no 
-        convergence is gained in the Newton-Raphson-Loop. Default value is 
+        Flag setting, if time integration is aborted in the case when no
+        convergence is gained in the Newton-Raphson-Loop. Default value is
         True.
     write_iter : bool, optional
         Flag setting, if every step of the Newton-Raphson iteration is written
-        to the MechanicalSystem object. Useful only for debugging, when no 
+        to the MechanicalSystem object. Useful only for debugging, when no
         convergence is gained. Default value: False.
-    
+
     Returns
     -------
     None
-    
+
     References
     ----------
     .. [1]  M. Géradin and D. J. Rixen. Mechanical vibrations: theory and
             application to structural dynamics. John Wiley & Sons, 2014.
             pp. 564.
-    .. [2]  O. A. Bauchau: Flexible Multibody Dynamics. Springer, 2011. 
+    .. [2]  O. A. Bauchau: Flexible Multibody Dynamics. Springer, 2011.
             pp. 664.
-    
-    
+
+
     '''
     t_clock_1 = time.time()
     eps = 1E-13
@@ -515,7 +515,7 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
                 if conv_abort:
                     print(abort_statement)
                     t_clock_2 = time.time()
-                    print('Time for time marching integration ' + 
+                    print('Time for time marching integration ' +
                           '{0:4.2f} seconds'.format(t_clock_2 - t_clock_1))
                     return
                     # raise Exception('No convergence in Newton-Loop!')
@@ -524,7 +524,7 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
                 dq = dq_old.copy()
                 no_newton_convergence_flag = True
                 break
-                
+
 
         print('Time:', t, 'h:', h, 'No of iterations:', n_iter,
               'Residual: {0:4.2E}'.format(res_abs))
@@ -533,8 +533,8 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
     print('Time for time marching integration {0:4.2f} seconds'.format(
         t_clock_2 - t_clock_1))
     return
-        
-        
+
+
 def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0):
     '''
     Perform an implicit time integration of the linearized system given with
@@ -737,8 +737,8 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
             abs_f_ext = np.sqrt(f_ext @ f_ext)
             abs_res = norm_of_vector(res)
             n_iter += 1
-            if verbose: 
-                print('Step', t, 'Iteration #', n_iter, 
+            if verbose:
+                print('Step', t, 'Iteration #', n_iter,
                       'Residal: {0:4.2E}'.format(abs_res))
             if wrt_iter:
                 mechanical_system.write_timestep(n_iter, u)
@@ -809,7 +809,7 @@ class HHTConstrained():
         ----------
         Bauchau, Olivier Andre: Flexible multibody dynamics, volume 176.
         Springer Science & Business Media, 2010.
-        
+
         '''
         self.beta = 1/4*(1 + alpha)**2
         self.gamma = 1/2 + alpha

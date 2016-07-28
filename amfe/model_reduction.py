@@ -257,7 +257,7 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
             v_i = LU_object.solve(F_i)
             c_i = - v_i @ M @ x_i
             Theta[:,i,j] = v_i + c_i*x_i
-    
+
     LU_object.clear()
     if symmetric:
         Theta = 1/2*(Theta + Theta.transpose((0,2,1)))
@@ -318,7 +318,7 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     return dx_i_dx_j
 
 
-def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS, 
+def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS,
                             verbose=True):
     '''
     Compute the static correction derivatives for the given basis V.
