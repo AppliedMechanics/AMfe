@@ -5,7 +5,7 @@ Some tools here might be experimental.
 """
 
 __all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat',
-           'append_to_filename', 'matshow_3d', 'amfe_dir', 'test']
+           'append_interactively', 'matshow_3d', 'amfe_dir', 'test']
 
 import os
 import numpy as np
