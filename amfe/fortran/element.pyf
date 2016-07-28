@@ -79,12 +79,14 @@ python module f90_element ! in
             external s_sv_and_c_2d
         end subroutine tri3_k_f_s_e
 
-        subroutine tri6_k_and_f(x,u,k,f_int,t,s_sv_and_c_2d) ! in :f90_element:element.f90
+        subroutine tri6_k_and_f(x,u,k,f_int,t,s_exp,e_exp,s_sv_and_c_2d) ! in :f90_element:element.f90
             use tri6_k_and_f__user__routines
             real(kind=8) dimension(12),intent(in) :: x
             real(kind=8) dimension(12),intent(in) :: u
             real(kind=8) dimension(12,12),intent(out) :: k
             real(kind=8) dimension(12),intent(out) :: f_int
+            real(kind=8) dimension(6,6),intent(out) :: s_exp
+            real(kind=8) dimension(6,6),intent(out) :: e_exp
             real(kind=8) intent(in) :: t
             external s_sv_and_c_2d
         end subroutine tri6_k_and_f

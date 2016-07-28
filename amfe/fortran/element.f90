@@ -117,12 +117,12 @@ subroutine tri3_k_f_s_e(X, u, K, f_int, t, S_exp, E_exp, S_Sv_and_C_2d)
 end subroutine tri3_k_f_s_e
 
 
-subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
+subroutine tri6_k_and_f(X, u, K, f_int, t, S_exp, E_exp, S_Sv_and_C_2d)
     implicit none
 
     integer :: i
     real(8), intent(in) :: X(12), u(12), t
-    real(8), intent(out) :: K(12, 12), f_int(12)
+    real(8), intent(out) :: K(12, 12), f_int(12), S_exp(6,6), E_exp(6,6)
     real(8) :: X1, X2, X3, Y1, Y2, Y3, X4, Y4, X5, Y5, X6, Y6, A0
     real(8) :: Jx1 ,Jx2 ,Jx3 ,Jy1 ,Jy2 ,Jy3, w
     real(8) :: u_e(6,2), C_SE(3,3)
@@ -130,7 +130,7 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     real(8) :: B0_tilde(6,2), B0(3,12)
     real(8) :: E(2,2), H(2,2), F(2,2), EYE(2,2), S(2,2), S_v(3)
 
-    real(8) :: gauss_points(3,3), weights(3)
+    real(8) :: gauss_points(3,3), weights(3), extrapol(6,3)
 !    real(8) :: w0, w1, w2, alpha1, alpha2, beta1, beta2
     real(8) :: L1, L2, L3, det
 
@@ -154,6 +154,9 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
 
     ! take care of the fortran matrix order (columns first!):
     u_e = transpose(reshape(u, (/2, 6/)))
+    extrapol(:,1) = (/ 5/3.0D0, -1/3.0D0, -1/3.0D0, 2/3.0D0, -1/3.0D0, 2/3.0D0 /)
+    extrapol(:,2) = (/-1/3.0D0, 5/3.0D0, -1/3.0D0, 2/3.0D0, 2/3.0D0, -1/3.0D0 /)
+    extrapol(:,3) = (/ -1/3.0D0, -1/3.0D0, 5/3.0D0, -1/3.0D0, 2/3.0D0, 2/3.0D0 /)
 
 !    ! take care of a precise description of 1/3 in order to avoid errors!
 !    w0 = 0.225D0
@@ -176,14 +179,16 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
 !    gauss_points(7,:) = (/ beta2, beta2, alpha2 /)
 
     weights = (/ 1/3.0D0, 1/3.0D0, 1/3.0D0 /)
-    gauss_points(1,:) = (/ 1/6.0D0, 1/6.0D0, 2/3.0D0 /)
+    gauss_points(1,:) = (/ 2/3.0D0, 1/6.0D0, 1/6.0D0 /)
     gauss_points(2,:) = (/ 1/6.0D0, 2/3.0D0, 1/6.0D0 /)
-    gauss_points(3,:) = (/ 2/3.0D0, 1/6.0D0, 1/6.0D0 /)
+    gauss_points(3,:) = (/ 1/6.0D0, 1/6.0D0, 2/3.0D0 /)
 
     EYE = reshape((/1, 0, 0, 1/), shape(EYE))
 
     K = 0.0
     f_int = 0.0
+    S_exp = 0.0
+    E_exp = 0.0
 
     ! loop over all quadrature points
     do i=1,3
@@ -234,6 +239,11 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
 
        K = K + w*(K_mat + K_geo)
        f_int = f_int + w*matmul(transpose(B0), S_v)*A0*t
+
+       S_exp = S_exp + matmul(reshape(extrapol(:,i), (/6,1/)), &
+                reshape((/S(1,1), S(1,2), 0.0D0, S(2,2), 0.0D0, 0.0D0/), (/1, 6/)))
+       E_exp = E_exp + matmul(reshape(extrapol(:,i), (/6,1/)), &
+                reshape((/ E(1,1), E(1,2), 0.0D0, E(2,2), 0.0D0, 0.0D0/), (/1, 6/)))
 
     end do
 end subroutine
