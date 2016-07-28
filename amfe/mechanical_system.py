@@ -39,11 +39,33 @@ class MechanicalSystem():
         Class handling the Dirichlet boundary conditions.
     neumann_class : instance of NeumannBoundary
         This boundary type is deprecated.
+    T_output : list of floats
+        List of timesteps saved.
+    u_output : list of ndarrays
+        List of unconstrained displacement arrays corresponding to the
+        timesteps in T_output.
+    S_output : list of ndarrays
+        List of stress arrays corresponding to the timesteps in T_output.
+    E_output : list of ndarrays
+        List of strain arrays corresponding to the timesteps in T_output.
+    stress : ndarray
+        Array of nodal stress of the last assembly run. Shape is
+        (no_of_nodes, 6).
+    strain : ndarray
+        Array of nodal strain of the last assembly run. Shape is
+        (no_of_nodes, 6).
+    stress_recovery : bool
+        Flag for option stress_recovery.
 
     '''
 
     def __init__(self, stress_recovery=False):
         '''
+        Parameters
+        ----------
+        stress_recovery : bool, optional
+            Flag, for setting stress recovery option. Default is False.
+
         '''
         self.stress_recovery = stress_recovery
         self.T_output = []
@@ -53,7 +75,7 @@ class MechanicalSystem():
         self.stress = None
         self.strain = None
 
-        # instanciate the important classes needed for the system:
+        # instantiate the important classes needed for the system:
         self.mesh_class = Mesh()
         self.assembly_class = Assembly(self.mesh_class)
         self.dirichlet_class = DirichletBoundary(np.nan)
