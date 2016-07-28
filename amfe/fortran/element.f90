@@ -333,17 +333,17 @@ subroutine tri6_m(X, rho, t, M)
 end subroutine
 
 
-subroutine tet4_k_and_f(X, u, K, f_int, S_Sv_and_C)
+subroutine tet4_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
     implicit none
 
     real(8), intent(in) :: X(12), u(12)
-    real(8), intent(out) :: K(12, 12), f_int(12)
+    real(8), intent(out) :: K(12, 12), f_int(12), S_exp(4,6), E_exp(4,6)
     real(8) :: X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4
     real(8) :: u_e(4,3), C_SE(6,6)
     real(8) :: K_geo_sm(4,4), K_mat(12,12), K_geo(12,12)
     real(8) :: B0_tilde(4,3), B0(6,12)
     real(8) :: E(3,3), H(3,3), F(3,3), EYE(3,3), S(3,3), S_v(6)
-    real(8) :: det
+    real(8) :: det, extrapol(4,1)
 
 !   External functions that will be used afterwards
     external :: scatter_matrix
@@ -367,6 +367,9 @@ subroutine tet4_k_and_f(X, u, K, f_int, S_Sv_and_C)
     EYE(1,1) = 1
     EYE(2,2) = 1
     EYE(3,3) = 1
+    extrapol = 1.0
+    S_exp = 0.0
+    E_exp = 0.0
 
     u_e = transpose(reshape(u, (/ 3, 4 /)))
     det = -X1*Y2*Z3 + X1*Y2*Z4 + X1*Y3*Z2 - X1*Y3*Z4 - X1*Y4*Z2 + X1*Y4*Z3 &
@@ -403,7 +406,10 @@ subroutine tet4_k_and_f(X, u, K, f_int, S_Sv_and_C)
     K = K_mat + K_geo
     f_int = matmul(transpose(B0), S_v) * det/6
 
-end subroutine
+    S_exp = matmul(extrapol, reshape((/S(1,1), S(1,2), S(1,3), S(2,2), S(2,3), S(3,3)/), (/1, 6/)))
+    E_exp = matmul(extrapol, reshape((/ E(1,1), E(1,2), E(1,3), E(2,2), E(2,3), E(3,3)/), (/1, 6/)))
+
+end subroutine tet4_k_f_s_e
 
 
 subroutine tet10_k_and_f(X, u, K, f_int, S_Sv_and_C)
