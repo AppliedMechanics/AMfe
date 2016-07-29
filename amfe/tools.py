@@ -243,18 +243,20 @@ def reorder_sparse_matrix(A):
     perm = sp.sparse.csgraph.reverse_cuthill_mckee(A, symmetric_mode=True)
     return A[perm,:][:,perm], perm
 
-
-def amfe_dir():
+def amfe_dir(filename=''):
     '''
-    Return the directory of the AMfe folder.
+    Return the absolute path of the filename given relative to the amfe
+    directory.
 
     Returns
     -------
-    dir : string
-        string of the AMFE-directory
+    dir : string, optional
+        string of the filename inside the AMFE-directory. Default value is '',
+        so the AMFE-directory is returned.
 
     '''
-    return os.path.dirname(os.path.dirname(__file__))
+    amfe_abs_path = os.path.dirname(os.path.dirname(__file__))
+    return os.path.join(amfe_abs_path, filename)
 
 def test(*args, **kwargs):
     '''
