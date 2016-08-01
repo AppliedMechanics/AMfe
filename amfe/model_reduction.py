@@ -104,7 +104,8 @@ def qm_reduce_mechanical_system(mechanical_system, V, Theta, overwrite=False):
 
 SQ_EPS = np.sqrt(np.finfo(float).eps)
 
-def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
+def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True,
+                     finite_diff='central'):
     '''
     Compute the real modal derivative of the given system using Nelson's formulation.
 
@@ -129,6 +130,10 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
         value 500 * machine_epsilon
     verbose : bool
         additional output provided; Default value True.
+    finite_diff : str {'central', 'upwind'}
+        Method for finite difference scheme. 'central' computes the finite difference
+        based on a central difference scheme, 'upwind' based on an upwind scheme. Note
+        that the upwind scheme can cause severe distortions of the modal derivative.
 
     Returns
     -------
@@ -165,9 +170,16 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
 
     ndof = x_i.shape[0]
     K = K_func(np.zeros(ndof))
-    dK_x_j = (K_func(x_j*h) - K)/h
-    d_omega_2_d_x_i = x_i @ dK_x_j @ x_i
-    F_i = (d_omega_2_d_x_i*M - dK_x_j) @ x_i
+    # finite difference scheme
+    if finite_diff == 'central':
+        dK_dx_j = (K_func(h*x_j) - K_func(-h*x_j))/(2*h)
+    elif finite_diff == 'upwind':
+        dK_dx_j = (K_func(x_j*h) - K)/h
+    else:
+        raise ValueError('Finite difference scheme is not valid.')
+    dK_dx_j = (K_func(x_j*h) - K)/h
+    d_omega_2_d_x_i = x_i @ dK_dx_j @ x_i
+    F_i = (d_omega_2_d_x_i*M - dK_dx_j) @ x_i
     K_dyn_i = K - omega_i**2 * M
     # fix the point with the maximum displacement of the vibration mode
     row_index = np.argmax(abs(x_i))
@@ -180,13 +192,13 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
         print('\nComputation of modal derivatives. ')
         print('Influence of the change of the eigenfrequency:', d_omega_2_d_x_i)
         print('The condition number of the problem is', np.linalg.cond(K_dyn_i))
-        res = (K - omega_i**2 * M).dot(dx_i_dx_j) - (d_omega_2_d_x_i*M - dK_x_j).dot(x_i)
+        res = (K - omega_i**2 * M).dot(dx_i_dx_j) - (d_omega_2_d_x_i*M - dK_dx_j).dot(x_i)
         print('The residual is', np.sqrt(res.dot(res)),
               ', the relative residual is', np.sqrt(res.dot(res))/np.sqrt(F_i.dot(F_i)))
     return dx_i_dx_j
 
 def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
-                           symmetric=True):
+                           symmetric=True, finite_diff='central'):
     r'''
     Compute the basis theta based on real modal derivatives.
 
@@ -209,6 +221,10 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
     symmetric : bool, optional
         flag for making the modal derivative matrix theta symmetric. Default is
         `True`.
+    finite_diff : str {'central', 'upwind'}
+        Method for finite difference scheme. 'central' computes the finite difference
+        based on a central difference scheme, 'upwind' based on an upwind scheme. Note
+        that the upwind scheme can cause severe distortions of the modal derivative.
 
     Returns
     -------
@@ -250,9 +266,15 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
         for j in range(no_of_modes): # looping over the rows
             x_j = V[:,j]
             # finite difference scheme
-            dK_x_j = (K_func(x_j*h) - K)/h
-            d_omega_2_d_x_i = x_i @ dK_x_j @ x_i
-            F_i = (d_omega_2_d_x_i*M - dK_x_j) @ x_i
+            if finite_diff == 'central':
+                dK_dx_j = (K_func(h*x_j) - K_func(-h*x_j))/(2*h)
+            elif finite_diff == 'upwind':
+                dK_dx_j = (K_func(h*x_j) - K)/h
+            else:
+                raise ValueError('Finite difference scheme is not valid.')
+
+            d_omega_2_d_x_i = x_i @ dK_dx_j @ x_i
+            F_i = (d_omega_2_d_x_i*M - dK_dx_j) @ x_i
             F_i[fix_idx] = 0
             v_i = LU_object.solve(F_i)
             c_i = - v_i @ M @ x_i
@@ -264,7 +286,8 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
     return Theta
 
 
-def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
+def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True,
+                                 finite_diff='central'):
     r'''
     Computes the static correction vectors
     :math:`\frac{\partial x_i}{\partial x_j}` of the system with a nonlinear
@@ -285,6 +308,11 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
         value 500 * machine_epsilon
     verbose : bool
         additional output provided; Default value True.
+    finite_diff : str {'central', 'upwind'}
+        Method for finite difference scheme. 'central' computes the finite difference
+        based on a central difference scheme, 'upwind' based on an upwind scheme. Note
+        that the upwind scheme can cause severe distortions of the static correction
+        derivative.
 
     Returns
     -------
@@ -299,6 +327,8 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     no mass normalization. This is a difference in contrast to the technique
     used in the related function modal_derivative.
 
+
+
     See Also
     --------
     modal_derivative
@@ -306,7 +336,12 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     '''
     ndof = x_i.shape[0]
     K = K_func(np.zeros(ndof))
-    dK_dx_j = (K_func(x_j*h) - K)/h
+    if finite_diff == 'central':
+        dK_dx_j = (K_func(h*x_j) - K_func(-h*x_j))/(2*h)
+    elif finite_diff == 'upwind':
+        dK_dx_j = (K_func(x_j*h) - K)/h
+    else:
+        raise ValueError('Finite difference scheme is not valid.')
     b = - dK_dx_j.dot(x_i) # rigth hand side of equation
     dx_i_dx_j = linalg.solve(K, b)
     if verbose:
@@ -319,7 +354,7 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
 
 
 def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS,
-                            verbose=True):
+                            verbose=True, finite_diff='central'):
     '''
     Compute the static correction derivatives for the given basis V.
 
@@ -342,6 +377,11 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS,
         epsilon
     verbose : bool, optional
         flag for verbosity. Default value: True
+    finite_diff : str {'central', 'upwind'}
+        Method for finite difference scheme. 'central' computes the finite difference
+        based on a central difference scheme, 'upwind' based on an upwind scheme. Note
+        that the upwind scheme can cause severe distortions of the static correction
+        derivative.
 
     Returns
     -------
@@ -368,7 +408,12 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS,
     for i in range(no_of_modes):
         if verbose:
             print('Computing finite difference K-matrix')
-        dK_dx_i = (K_func(h*V[:,i]) - K)/h
+        if finite_diff == 'central':
+            dK_dx_i = (K_func(h*V[:,i]) - K_func(-h*V[:,i]))/(2*h)
+        elif finite_diff == 'upwind':
+            dK_dx_i = (K_func(h*V[:,i]) - K)/h
+        else:
+            raise ValueError('Finite difference scheme is not valid.')
         b = - dK_dx_i @ V
         if verbose:
             print('Solving linear system #', i)
@@ -498,8 +543,8 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
         number of moments matched. Default value 3.
     mass_orth : bool, optional
         flag for setting orthogonality of returnd Krylov basis vectors. If
-        True, basis vectors are mass-orthogonal (V.T @ M @ V = eye). If False, basis vectors are
-        orthogonal (V.T @ V = eye)
+        True, basis vectors are mass-orthogonal (V.T @ M @ V = eye). If False,
+        basis vectors are orthogonal (V.T @ V = eye)
 
     Returns
     -------
