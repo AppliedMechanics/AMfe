@@ -87,6 +87,7 @@ Though Python is a general purpose programming language, it provides a great eco
 ##### Version Control with git:
 - [Cheat sheet with the important git commands](https://www.git-tower.com/blog/git-cheat-sheet/) Good cheatsheet with all the commands needed for git version control.
 - [Youtube: git-Workshop](https://youtu.be/Qthor07loHM) This workshop is extensive and time intensive but definetely worth the time spent. It is a great workshop introducing the concepts of git in a well paced manner ([The slides are also available](https://speakerdeck.com/singingwolfboy/get-started-with-git)).
+- [Youtube: git-Talk](https://youtu.be/ZDR433b0HJY) Very fast and informative technical talk on git. Though it is a little bit dated, it is definitely worth watching. 
 
 ##### gmsh:
 - [HowTo for generating structured meshes in gmsh](https://openfoamwiki.net/index.php/2D_Mesh_Tutorial_using_GMSH) This tutorial is about the generation of structured meshes in gmsh, in this case for the use in the CFD-Framework OpenFOAM. Nonetheless, everything can be used for AMfe as well.
