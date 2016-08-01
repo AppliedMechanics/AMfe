@@ -256,7 +256,7 @@ def amfe_dir(filename=''):
 
     '''
     amfe_abs_path = os.path.dirname(os.path.dirname(__file__))
-    return os.path.join(amfe_abs_path, filename)
+    return os.path.join(amfe_abs_path, filename.lstrip('/'))
 
 def test(*args, **kwargs):
     '''
