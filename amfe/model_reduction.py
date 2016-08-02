@@ -455,7 +455,7 @@ def theta_orth_v(Theta, V, M, overwrite=False):
     # Make sure, that V is M-orthogonal
     __, no_of_modes = V.shape
     V_M_space = M @ V
-    np.testing.assert_allclose(V.T @ V_M_space, np.eye(no_of_modes), atol=1E-13)
+    np.testing.assert_allclose(V.T @ V_M_space, np.eye(no_of_modes), atol=1E-14)
     if overwrite:
         Theta_ret = Theta
     else:
@@ -589,7 +589,7 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
     print('Krylov Basis constructed. The singular values of the basis are', sigmas)
     return V
 
-def mass_orth(V, M, overwrite=False):
+def mass_orth(V, M, overwrite=False, niter=2):
     '''
     Mass-orthogonalize the matrix V with respect to the mass matrix M with a
     Gram-Schmid-procedure.
@@ -603,6 +603,11 @@ def mass_orth(V, M, overwrite=False):
         Mass matrix. Shape is (ndim, ndim).
     overwrite : bool
         Flag setting, if matrix V should be overwritten.
+    niter : int
+        Number of Gram-Schmid runs for the orthogonalization. As the 
+        Gram-Schmid-procedure is not stable, more then one iteration are 
+        recommended. 
+
     Returns
     -------
     V_orth : ndarray
@@ -615,12 +620,13 @@ def mass_orth(V, M, overwrite=False):
         V_orth = V.copy()
 
     __, no_of_basis_vecs = V.shape
-    for i in range(no_of_basis_vecs):
-        v = V_orth[:,i]
-        v /= np.sqrt(v @ M @ v)
-        V_orth[:,i] = v
-        weights = v @ M @ V_orth[:,i+1:]
-        V_orth[:,i+1:] -= v.reshape((-1,1)) * weights
+    for run_no in range(niter):
+        for i in range(no_of_basis_vecs):
+            v = V_orth[:,i]
+            v /= np.sqrt(v @ M @ v)
+            V_orth[:,i] = v
+            weights = v @ M @ V_orth[:,i+1:]
+            V_orth[:,i+1:] -= v.reshape((-1,1)) * weights
     return V_orth
 
 
