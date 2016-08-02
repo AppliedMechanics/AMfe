@@ -455,7 +455,7 @@ def theta_orth_v(Theta, V, M, overwrite=False):
     # Make sure, that V is M-orthogonal
     __, no_of_modes = V.shape
     V_M_space = M @ V
-    np.testing.assert_allclose(V.T @ V_M_space, np.eye(no_of_modes), atol=3E-14)
+    np.testing.assert_allclose(V.T @ V_M_space, np.eye(no_of_modes), atol=1E-13)
     if overwrite:
         Theta_ret = Theta
     else:
