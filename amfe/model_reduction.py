@@ -5,7 +5,7 @@ Module of AMfe which handles the reduced order models.
 __all__ = ['reduce_mechanical_system', 'qm_reduce_mechanical_system',
            'modal_derivative', 'modal_derivative_theta',
            'static_correction_derivative', 'static_correction_theta',
-           'principal_angles', 'krylov_subspace', 'craig_bampton',
+           'principal_angles', 'krylov_subspace', 'mass_orth', 'craig_bampton',
            'vibration_modes', 'pod', 'theta_orth_v']
 
 import copy
@@ -588,6 +588,40 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
 
     print('Krylov Basis constructed. The singular values of the basis are', sigmas)
     return V
+
+def mass_orth(V, M, overwrite=False):
+    '''
+    Mass-orthogonalize the matrix V with respect to the mass matrix M with a
+    Gram-Schmid-procedure.
+
+    Parameters
+    ----------
+    V : ndarray
+        Matrix (e.g. projection basis) containing displacement vectors in the
+        column. Shape is (ndim, no_of_basis_vectors)
+    M : ndarray / sparse matrix.
+        Mass matrix. Shape is (ndim, ndim).
+    overwrite : bool
+        Flag setting, if matrix V should be overwritten.
+    Returns
+    -------
+    V_orth : ndarray
+        Mass-orthogonalized basis V
+
+    '''
+    if overwrite:
+        V_orth = V
+    else:
+        V_orth = V.copy()
+
+    __, no_of_basis_vecs = V.shape
+    for i in range(no_of_basis_vecs):
+        v = V_orth[:,i]
+        v /= np.sqrt(v @ M @ v)
+        V_orth[:,i] = v
+        weights = v @ M @ V_orth[:,i+1:]
+        V_orth[:,i+1:] -= v.reshape((-1,1)) * weights
+    return V_orth
 
 
 def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
