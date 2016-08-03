@@ -8,7 +8,10 @@ Example
 
 __all__ = ['apply_async']
 
-import dill
+try:
+    import dill
+except Exception:
+    print('Module dill not found. It is only used for the num_exp_toolbox.')
 
 # Stuff for paralle execution
 def run_dill_encoded(what):
