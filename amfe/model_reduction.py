@@ -6,7 +6,7 @@ __all__ = ['reduce_mechanical_system', 'qm_reduce_mechanical_system',
            'modal_derivative', 'modal_derivative_theta',
            'static_correction_derivative', 'static_correction_theta',
            'principal_angles', 'krylov_subspace', 'mass_orth', 'craig_bampton',
-           'vibration_modes', 'pod', 'theta_orth_v']
+           'vibration_modes', 'pod', 'theta_orth_v', 'linear_qm_basis']
 
 import copy
 import numpy as np
@@ -467,6 +467,43 @@ def theta_orth_v(Theta, V, M, overwrite=False):
             Theta_ret[:,j,k] -= V @ inner_prod[j,k,:]
     return Theta_ret
 
+
+def linear_qm_basis(V, theta, tol=1E-6):
+    '''
+    Make a linear basis containing the subspace spanned by V and theta by deflation.
+
+    Parameters
+    ----------
+    V : ndarray
+        linear basis
+    theta : ndarray
+        third order tensor filled with the modal derivatices associated with V
+    tol : float, optional
+        Tolerance for the deflation via SVD. The omitted singular values are
+        at least smaller than the largest one multiplied with tol.
+        Default value: 1E-6.
+
+    Returns
+    -------
+    V_ret : ndarray
+        linear basis containing the subspace spanned by V and theta.
+
+    '''
+    ndof, n = V.shape
+    V_raw = np.zeros((ndof, n*(n+3)//2))
+    V_raw[:,:n] = V[:,:]
+    for i in range(n):
+        for j in range(i+1):
+            idx = n + i*(i+1)//2 + j
+            V_raw[:,idx] = theta[:,i,j] / np.sqrt(theta[:,i,j] @ theta[:,i,j])
+
+    # Deflation algorithm
+    U, s, V_svd = sp.linalg.svd(V_raw, full_matrices=False)
+    idx_defl = s > s[0]*tol
+    V_ret = U[:,idx_defl]
+    return V_ret
+
+
 def principal_angles(V1, V2, cosine=True, principal_vectors=False):
     '''
     Return the cosine of the principal angles of the two bases V1 and V2.
@@ -604,9 +641,9 @@ def mass_orth(V, M, overwrite=False, niter=2):
     overwrite : bool
         Flag setting, if matrix V should be overwritten.
     niter : int
-        Number of Gram-Schmid runs for the orthogonalization. As the 
-        Gram-Schmid-procedure is not stable, more then one iteration are 
-        recommended. 
+        Number of Gram-Schmid runs for the orthogonalization. As the
+        Gram-Schmid-procedure is not stable, more then one iteration are
+        recommended.
 
     Returns
     -------

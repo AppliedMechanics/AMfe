@@ -5,11 +5,13 @@ Some tools here might be experimental.
 """
 
 __all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat',
-           'append_interactively', 'matshow_3d', 'amfe_dir', 'test']
+           'append_interactively', 'matshow_3d', 'amfe_dir', 'h5_read_u', 
+           'test']
 
 import os
 import numpy as np
 import scipy as sp
+import h5py
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -257,6 +259,47 @@ def amfe_dir(filename=''):
     '''
     amfe_abs_path = os.path.dirname(os.path.dirname(__file__))
     return os.path.join(amfe_abs_path, filename.lstrip('/'))
+
+
+def h5_read_u(h5filename):
+    '''
+    Extract the displacement field of a given hdf5-file. 
+
+    Parameters
+    ---------
+    filename : str
+
+    Returns
+    -------
+    u_constr : ndarray
+        the displacement time series of the dofs with constraints implied. 
+    u_unconstr : ndarray
+        the displacement time series of the dofs without constraints. I.e. the 
+        dofs are as in the mesh file. 
+    T : ndarray
+        time
+
+    '''
+    with h5py.File(h5filename, 'r') as f:
+        u_full = f['time_vals/Displacement'][:]
+        T = f['time'][:]
+        h5_mat = f['mesh/bmat']
+        csr_list = []
+        for par in ('data', 'indices', 'indptr', 'shape'):
+            csr_list.append(h5_mat[par][:])
+
+    bmat = sp.sparse.csr_matrix(tuple(csr_list[:3]), shape=tuple(csr_list[3]))
+
+    # If the problem is 2D but exported to 3D, u_full has to be reduced.
+    ndof_unconstr, ndof_constr = bmat.shape
+    if ndof_unconstr == u_full.shape[0]: # this is the 3D-case 
+        pass
+    elif ndof_unconstr*3//2 == u_full.shape[0]: # problem is 2D but u_full is 3D
+        mask = np.ones_like(u_full[:,0], dtype=bool)
+        mask[2::3] = False
+        u_full = u_full[mask, :]
+    return bmat.T @ u_full, u_full, T
+
 
 def test(*args, **kwargs):
     '''
