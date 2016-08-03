@@ -23,7 +23,8 @@ from .tools import *
 
 # Reduction stuff
 from .model_reduction import *
-# from .num_exp_toolbox import *
+# Commented out as a dill dependency is required only here
+# from .num_exp_toolbox import * 
 
 
 __author__ = 'Johannes Rutzmoser, Fabian Gruber'
