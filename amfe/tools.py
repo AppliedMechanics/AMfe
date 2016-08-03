@@ -5,7 +5,7 @@ Some tools here might be experimental.
 """
 
 __all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat',
-           'append_interactively', 'matshow_3d', 'amfe_dir', 'h5_read_u', 
+           'append_interactively', 'matshow_3d', 'amfe_dir', 'h5_read_u',
            'test']
 
 import os
@@ -263,21 +263,24 @@ def amfe_dir(filename=''):
 
 def h5_read_u(h5filename):
     '''
-    Extract the displacement field of a given hdf5-file. 
+    Extract the displacement field of a given hdf5-file.
 
     Parameters
     ---------
     filename : str
+        Full filename (with e.g. .hdf5 ending) of the hdf5 file.
 
     Returns
     -------
     u_constr : ndarray
-        the displacement time series of the dofs with constraints implied. 
+        Displacement time series of the dofs with constraints implied.
+        Shape is (ndof_constr, no_of_timesteps), i.e. u_constr[:,0] is the
+        first timestep.
     u_unconstr : ndarray
-        the displacement time series of the dofs without constraints. I.e. the 
-        dofs are as in the mesh file. 
+        Displacement time series of the dofs without constraints. I.e. the
+        dofs are as in the mesh file. Shape is (ndof_unconstr, no_of_timesteps).
     T : ndarray
-        time
+        Time. Shape is (no_of_timesteps,).
 
     '''
     with h5py.File(h5filename, 'r') as f:
@@ -292,7 +295,7 @@ def h5_read_u(h5filename):
 
     # If the problem is 2D but exported to 3D, u_full has to be reduced.
     ndof_unconstr, ndof_constr = bmat.shape
-    if ndof_unconstr == u_full.shape[0]: # this is the 3D-case 
+    if ndof_unconstr == u_full.shape[0]: # this is the 3D-case
         pass
     elif ndof_unconstr*3//2 == u_full.shape[0]: # problem is 2D but u_full is 3D
         mask = np.ones_like(u_full[:,0], dtype=bool)
