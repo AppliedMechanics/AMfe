@@ -15,6 +15,8 @@ from scipy import linalg
 
 from .mechanical_system import ReducedSystem, QMSystem
 from .solver import solve_sparse, SpSolve
+
+
 def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     '''
     Reduce the given mechanical system with the linear basis V.
@@ -49,6 +51,7 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     reduced_sys.u_red_output = []
     reduced_sys.M_constr = None
     return reduced_sys
+
 
 def qm_reduce_mechanical_system(mechanical_system, V, Theta, overwrite=False):
     '''
@@ -194,6 +197,7 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True,
         print('The residual is', np.sqrt(res.dot(res)),
               ', the relative residual is', np.sqrt(res.dot(res))/np.sqrt(F_i.dot(F_i)))
     return dx_i_dx_j
+
 
 def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
                            symmetric=True, finite_diff='central'):
@@ -559,6 +563,7 @@ def principal_angles(V1, V2, cosine=True, principal_vectors=False):
     else:
         return sigma
 
+
 def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
     '''
     Computes the Krylov Subspace associated with the input matrix b at the
@@ -623,6 +628,7 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
 
     print('Krylov Basis constructed. The singular values of the basis are', sigmas)
     return V
+
 
 def mass_orth(V, M, overwrite=False, niter=2):
     '''
@@ -802,6 +808,7 @@ def vibration_modes(mechanical_system, n=10, save=False):
             mechanical_system.write_timestep(om, V[:, i])
 
     return omega, V
+
 
 def pod(mechanical_system, n=None):
     '''
