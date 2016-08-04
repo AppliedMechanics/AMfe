@@ -103,7 +103,7 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
         else:
             x = sp.sparse.linalg.spsolve(A, b)
     else:
-        sp.linalg.solve(A, b)
+        x = sp.linalg.solve(A, b)
     return x
 
 
