@@ -59,7 +59,7 @@ mtypes = {'spd':2,
 def solve_sparse(A, b, matrix_type='symm', verbose=False):
     '''
     Abstractoin of the solution of the sparse system Ax=b using the fastest
-    solver available.
+    solver available for sparse and non-sparse matrices.
 
     Parameters
     ----------
@@ -71,7 +71,7 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
         Specifier for the matrix type:
 
         - 'spd' : symmetric positive definite
-        - 'symm' : symmetric indefinite
+        - 'symm' : symmetric indefinite, default. 
         - 'unsymm' : generally unsymmetric
 
     Returns
@@ -94,46 +94,17 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
     1
 
     '''
-    if use_pardiso:
-        mtype = mtypes[matrix_type]
-        pSolve = pardisoSolver(A, mtype=mtype, verbose=verbose)
-        x = pSolve.run_pardiso(13, b)
-        pSolve.clear()
-    else:
-        x = sp.sparse.linalg.spsolve(A, b)
-    return x
-
-
-def linsolve(A, b, matrix_type='symm', verbose=False):
-    '''
-    Solve the linear system A @ x = b where A might be sparse.
-
-    Parameters
-    ----------
-    A : ndarray or sp.sparse.CSR
-        Array or sparse matrix in CSR-format. Shape (ndim, ndim).
-    b : ndarray
-        Right hand side of equation. Can be either of shape (ndim,) to solve one
-        problem or of shape (ndim, no_of_rhs) to solve no_of_rhs problems. 
-    matrix_type : {'spd', 'symm', 'unsymm'}, optional
-        Specifier for the matrix type:
-
-    - 'spd' : symmetric positive definite
-    - 'symm' : symmetric indefinite
-    - 'unsymm' : generally unsymmetric
-
-    verbose : bool
-        Flag for
-
-    Returns
-    -------
-    x : ndarray
-        Solution of the linear system A @ x = b .
-    '''
     if sp.sparse.issparse(A):
-        return solve_sparse(A, b, matrix_type=matrix_type, verbose=verbose)
+        if use_pardiso:
+            mtype = mtypes[matrix_type]
+            pSolve = pardisoSolver(A, mtype=mtype, verbose=verbose)
+            x = pSolve.run_pardiso(13, b)
+            pSolve.clear()
+        else:
+            x = sp.sparse.linalg.spsolve(A, b)
     else:
-        return sp.linalg.solve(A, b)
+        sp.linalg.solve(A, b)
+    return x
 
 
 class SpSolve():

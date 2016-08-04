@@ -14,10 +14,7 @@ import scipy as sp
 from scipy import linalg
 
 from .mechanical_system import ReducedSystem, QMSystem
-from .solver import solve_sparse, SpSolve, linsolve
-
-    
-
+from .solver import solve_sparse, SpSolve
 def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     '''
     Reduce the given mechanical system with the linear basis V.
@@ -186,7 +183,7 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True,
     row_index = np.argmax(abs(x_i))
     K_dyn_i[:,row_index], K_dyn_i[row_index,:], K_dyn_i[row_index,row_index] = 0, 0, 1
     F_i[row_index] = 0
-    v_i = linsolve(K_dyn_i, F_i)
+    v_i = solve_sparse(K_dyn_i, F_i, matrix_type='symm')
     c_i = - v_i @ M @ x_i
     dx_i_dx_j = v_i + c_i*x_i
     if verbose:
@@ -344,7 +341,7 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True,
     else:
         raise ValueError('Finite difference scheme is not valid.')
     b = - dK_dx_j.dot(x_i) # rigth hand side of equation
-    dx_i_dx_j = linsolve(K, b)
+    dx_i_dx_j = solve_sparse(K, b, matrix_type='symm')
     if verbose:
         res = K.dot(dx_i_dx_j) + dK_dx_j.dot(x_i)
         print('\nComputation of static correction derivative. ')
@@ -736,7 +733,7 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
         f = - K[:,index]
         f[boundary_indices] = 0
         f[index] = 1
-        V_static_tmp[:,i] = linsolve(K_tmp, f)
+        V_static_tmp[:,i] = solve_sparse(K_tmp, f, matrix_type='symm')
     # Static Modes:
     V_static = np.zeros((ndof, no_of_inputs))
     for i in range(no_of_inputs):
