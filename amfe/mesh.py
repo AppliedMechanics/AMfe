@@ -73,11 +73,11 @@ def check_dir(*filenames):
     Parameters
     ----------
     *filenames : string or list of strings
-        string containing a path. 
-    
+        string containing a path.
+
     Returns
     -------
-    None        
+    None
     '''
     for filename in filenames:  # loop on files
         dir_name = os.path.dirname(filename)
@@ -268,9 +268,12 @@ class Mesh:
     element_boundary_class_dict : dict
         Dictionary containing objects of skin elements.
     node_idx : int
-        index describing, at which position in the Pandas Dataframe `el_df` 
-        the nodes of the element start. 
-
+        index describing, at which position in the Pandas Dataframe `el_df`
+        the nodes of the element start.
+    u : list of ndarrays
+        List containing the displacements to be exported
+    timesteps : list of floats
+        List containt the timesteps to be exported
     '''
 
     def __init__(self):
@@ -429,7 +432,7 @@ class Mesh:
             filename of the .msh-file
         scale_factor : float, optional
             scale factor for the mesh to adjust the units. The default value is
-            1, i.e. no scaling is done. 
+            1, i.e. no scaling is done.
 
         Returns
         -------
@@ -484,13 +487,13 @@ class Mesh:
 
         # conversion of the read strings to integer and floats
         for j in range(len(list_imported_mesh_format)):
-            list_imported_mesh_format[j] = [float(x) for x in 
+            list_imported_mesh_format[j] = [float(x) for x in
                                             list_imported_mesh_format[j].split()]
         for j in range(len(list_imported_nodes)):
-            list_imported_nodes[j] = [float(x) for x in 
+            list_imported_nodes[j] = [float(x) for x in
                                       list_imported_nodes[j].split()]
         for j in range(len(list_imported_elements)):
-            list_imported_elements[j] = [int(x) for x in 
+            list_imported_elements[j] = [int(x) for x in
                                          list_imported_elements[j].split()]
 
         # Construct Pandas Dataframe for the elements (self.el_df and df for shorter code)
@@ -531,7 +534,7 @@ class Mesh:
         self.nodes = np.array(list_imported_nodes)[:,1:1+self.no_of_dofs_per_node]
         self.nodes *= scale_factor # scaling of nodes
 
-        # Change the indices of Tet10-elements, as they are numbered differently 
+        # Change the indices of Tet10-elements, as they are numbered differently
         # from the numbers used in AMFE and ParaView (last two indices permuted)
         if 'Tet10' in element_types:
             row_loc = df['el_type'] == 'Tet10'
@@ -545,7 +548,7 @@ class Mesh:
         print('Mesh', filename, 'successfully imported.',
               '\nAssign a material to a physical group.')
         print('*************************************************************')
-
+        return
 
 
     def load_group_to_mesh(self, key, material, mesh_prop='phys_group'):
@@ -572,7 +575,7 @@ class Mesh:
         # asking for a group to be chosen, when no valid group is given
         df = self.el_df
         if mesh_prop not in df.columns:
-            print('The given mesh property "' + str(mesh_prop) + '" is not valid!', 
+            print('The given mesh property "' + str(mesh_prop) + '" is not valid!',
                   'Please enter a valid mesh prop from the following list:\n')
             for i in df.columns:
                 print(i)
@@ -615,28 +618,28 @@ class Mesh:
     def mesh_information(self, mesh_prop='phys_group'):
         '''
         Print some information about the current mesh
-        
+
         Parameters
         ----------
         mesh_prop : str, optional
-            mesh property of the loaded mesh. This mesh property is the basis 
-            for selection of parts of the mesh for materials and boundary 
-            conditions. The default value is 'phys_group' which is the physical 
-            group, if the mesh comes from gmsh. 
-        
+            mesh property of the loaded mesh. This mesh property is the basis
+            for selection of parts of the mesh for materials and boundary
+            conditions. The default value is 'phys_group' which is the physical
+            group, if the mesh comes from gmsh.
+
         Returns
         -------
         None
-        
+
         '''
         df = self.el_df
         if mesh_prop not in df.columns:
-            print('The given mesh property "' + str(mesh_prop) + '" is not valid!', 
+            print('The given mesh property "' + str(mesh_prop) + '" is not valid!',
                   'Please enter a valid mesh prop from the following list:\n')
             for i in df.columns:
                 print(i)
             return
-            
+
         phys_groups = pd.unique(df[mesh_prop])
         print('The loaded mesh contains', len(phys_groups),
               'physical groups:')
@@ -876,16 +879,16 @@ class Mesh:
                                          'Center':'Node',
                                          'NoOfComponents':6})]
         bmat : csrMatrix
-            CSR-Matrix describing the way, how the Dirichlet-BCs are applied: 
+            CSR-Matrix describing the way, how the Dirichlet-BCs are applied:
             u_unconstr = bmat @ u_constr
-            
+
 
         Returns
         -------
         None
 
-        Note
-        ----
+        Notes
+        -----
         Only one homogeneous mesh is exported. Thus only the mesh made of the
         elements which occur most often is exported. The other meshes are
         discarded.
@@ -945,7 +948,7 @@ class Mesh:
 
             h5_time = f.create_dataset('time', data=np.array(self.timesteps))
             h5_set_attributes(h5_time, h5_time_dict)
-            
+
             # export bmat if given
             if bmat is not None:
                 h5_bmat = f.create_group('mesh/bmat')

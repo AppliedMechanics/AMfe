@@ -52,17 +52,18 @@ subroutine compute_B_matrix(Bt, F, B, no_of_nodes, no_of_dims)
 end subroutine
 
 
-subroutine tri3_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
+subroutine tri3_k_f_s_e(X, u, K, f_int, t, S_exp, E_exp, S_Sv_and_C_2d)
     implicit none
 
 !   What is important here is that the
     real(8), intent(in) :: X(6), u(6), t
-    real(8), intent(out) :: K(6, 6), f_int(6)
+    real(8), intent(out) :: K(6, 6), f_int(6), S_exp(3, 6), E_exp(3, 6)
     real(8) :: X1, X2, X3, Y1, Y2, Y3, A0
     real(8) :: u_e(3,2), C_SE(3,3)
     real(8) :: K_geo_sm(3,3), K_mat(6,6), K_geo(6,6)
     real(8) :: B0_tilde(3,2),  B0(3,6)
     real(8) :: E(2,2), H(2,2), F(2,2), EYE(2,2), S(2,2), S_v(3)
+    real(8) :: extrapol(3,1)
 !   External functions that will be used afterwards
     external :: scatter_matrix
     external :: compute_b_matrix
@@ -78,6 +79,7 @@ subroutine tri3_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     Y3 = X(6)
 
     u_e = transpose(reshape(u, (/2, 3/)))
+    extrapol = reshape( (/ 1.0D0, 1.0D0, 1.0D0 /) , (/3, 1/))
 
     A0 = 0.5*((X3-X2)*(Y1-Y2) - (X1-X2)*(Y3-Y2))
 
@@ -109,16 +111,18 @@ subroutine tri3_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     K = K_mat + K_geo
 !     and last but not least the internal force
     f_int = matmul(transpose(B0), S_v)*A0*t
+    S_exp = matmul(extrapol, reshape((/S(1,1), S(1,2), 0.0D0, S(2,2), 0.0D0, 0.0D0/), (/1, 6/)))
+    E_exp = matmul(extrapol, reshape((/ E(1,1), E(1,2), 0.0D0, E(2,2), 0.0D0, 0.0D0/), (/1, 6/)))
 
-end subroutine tri3_k_and_f
+end subroutine tri3_k_f_s_e
 
 
-subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
+subroutine tri6_k_f_s_e(X, u, K, f_int, t, S_exp, E_exp, S_Sv_and_C_2d)
     implicit none
 
     integer :: i
     real(8), intent(in) :: X(12), u(12), t
-    real(8), intent(out) :: K(12, 12), f_int(12)
+    real(8), intent(out) :: K(12, 12), f_int(12), S_exp(6,6), E_exp(6,6)
     real(8) :: X1, X2, X3, Y1, Y2, Y3, X4, Y4, X5, Y5, X6, Y6, A0
     real(8) :: Jx1 ,Jx2 ,Jx3 ,Jy1 ,Jy2 ,Jy3, w
     real(8) :: u_e(6,2), C_SE(3,3)
@@ -126,7 +130,7 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
     real(8) :: B0_tilde(6,2), B0(3,12)
     real(8) :: E(2,2), H(2,2), F(2,2), EYE(2,2), S(2,2), S_v(3)
 
-    real(8) :: gauss_points(3,3), weights(3)
+    real(8) :: gauss_points(3,3), weights(3), extrapol(6,3)
 !    real(8) :: w0, w1, w2, alpha1, alpha2, beta1, beta2
     real(8) :: L1, L2, L3, det
 
@@ -150,6 +154,9 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
 
     ! take care of the fortran matrix order (columns first!):
     u_e = transpose(reshape(u, (/2, 6/)))
+    extrapol(:,1) = (/ 5/3.0D0, -1/3.0D0, -1/3.0D0, 2/3.0D0, -1/3.0D0, 2/3.0D0 /)
+    extrapol(:,2) = (/-1/3.0D0, 5/3.0D0, -1/3.0D0, 2/3.0D0, 2/3.0D0, -1/3.0D0 /)
+    extrapol(:,3) = (/ -1/3.0D0, -1/3.0D0, 5/3.0D0, -1/3.0D0, 2/3.0D0, 2/3.0D0 /)
 
 !    ! take care of a precise description of 1/3 in order to avoid errors!
 !    w0 = 0.225D0
@@ -172,14 +179,16 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
 !    gauss_points(7,:) = (/ beta2, beta2, alpha2 /)
 
     weights = (/ 1/3.0D0, 1/3.0D0, 1/3.0D0 /)
-    gauss_points(1,:) = (/ 1/6.0D0, 1/6.0D0, 2/3.0D0 /)
+    gauss_points(1,:) = (/ 2/3.0D0, 1/6.0D0, 1/6.0D0 /)
     gauss_points(2,:) = (/ 1/6.0D0, 2/3.0D0, 1/6.0D0 /)
-    gauss_points(3,:) = (/ 2/3.0D0, 1/6.0D0, 1/6.0D0 /)
+    gauss_points(3,:) = (/ 1/6.0D0, 1/6.0D0, 2/3.0D0 /)
 
     EYE = reshape((/1, 0, 0, 1/), shape(EYE))
 
     K = 0.0
     f_int = 0.0
+    S_exp = 0.0
+    E_exp = 0.0
 
     ! loop over all quadrature points
     do i=1,3
@@ -231,8 +240,13 @@ subroutine tri6_k_and_f(X, u, K, f_int, t, S_Sv_and_C_2d)
        K = K + w*(K_mat + K_geo)
        f_int = f_int + w*matmul(transpose(B0), S_v)*A0*t
 
+       S_exp = S_exp + matmul(reshape(extrapol(:,i), (/6,1/)), &
+                reshape((/S(1,1), S(1,2), 0.0D0, S(2,2), 0.0D0, 0.0D0/), (/1, 6/)))
+       E_exp = E_exp + matmul(reshape(extrapol(:,i), (/6,1/)), &
+                reshape((/ E(1,1), E(1,2), 0.0D0, E(2,2), 0.0D0, 0.0D0/), (/1, 6/)))
+
     end do
-end subroutine
+end subroutine tri6_k_f_s_e
 
 
 subroutine tri6_m(X, rho, t, M)
@@ -319,17 +333,17 @@ subroutine tri6_m(X, rho, t, M)
 end subroutine
 
 
-subroutine tet4_k_and_f(X, u, K, f_int, S_Sv_and_C)
+subroutine tet4_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
     implicit none
 
     real(8), intent(in) :: X(12), u(12)
-    real(8), intent(out) :: K(12, 12), f_int(12)
+    real(8), intent(out) :: K(12, 12), f_int(12), S_exp(4,6), E_exp(4,6)
     real(8) :: X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4
     real(8) :: u_e(4,3), C_SE(6,6)
     real(8) :: K_geo_sm(4,4), K_mat(12,12), K_geo(12,12)
     real(8) :: B0_tilde(4,3), B0(6,12)
     real(8) :: E(3,3), H(3,3), F(3,3), EYE(3,3), S(3,3), S_v(6)
-    real(8) :: det
+    real(8) :: det, extrapol(4,1)
 
 !   External functions that will be used afterwards
     external :: scatter_matrix
@@ -353,6 +367,9 @@ subroutine tet4_k_and_f(X, u, K, f_int, S_Sv_and_C)
     EYE(1,1) = 1
     EYE(2,2) = 1
     EYE(3,3) = 1
+    extrapol = 1.0
+    S_exp = 0.0
+    E_exp = 0.0
 
     u_e = transpose(reshape(u, (/ 3, 4 /)))
     det = -X1*Y2*Z3 + X1*Y2*Z4 + X1*Y3*Z2 - X1*Y3*Z4 - X1*Y4*Z2 + X1*Y4*Z3 &
@@ -389,14 +406,17 @@ subroutine tet4_k_and_f(X, u, K, f_int, S_Sv_and_C)
     K = K_mat + K_geo
     f_int = matmul(transpose(B0), S_v) * det/6
 
-end subroutine
+    S_exp = matmul(extrapol, reshape((/S(1,1), S(1,2), S(1,3), S(2,2), S(2,3), S(3,3)/), (/1, 6/)))
+    E_exp = matmul(extrapol, reshape((/ E(1,1), E(1,2), E(1,3), E(2,2), E(2,3), E(3,3)/), (/1, 6/)))
+
+end subroutine tet4_k_f_s_e
 
 
-subroutine tet10_k_and_f(X, u, K, f_int, S_Sv_and_C)
+subroutine tet10_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
     implicit none
 
     real(8), intent(in) :: X(30), u(30)
-    real(8), intent(out) :: K(30, 30), f_int(30)
+    real(8), intent(out) :: K(30, 30), f_int(30), S_exp(10,6), E_exp(10,6)
     real(8) :: X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4, X5, Y5, Z5
     real(8) :: X6, Y6, Z6, X7, Y7, Z7, X8, Y8, Z8, X9, Y9, Z9, X10, Y10, Z10
     real(8) :: Jx1, Jx2, Jx3, Jx4, Jy1, Jy2, Jy3, Jy4, Jz1, Jz2, Jz3, Jz4
@@ -406,8 +426,8 @@ subroutine tet10_k_and_f(X, u, K, f_int, S_Sv_and_C)
     real(8) :: K_geo_sm(10,10), K_mat(30,30), K_geo(30,30)
     real(8) :: B0_tilde(10,3), B0(6,30)
     real(8) :: E(3,3), H(3,3), F(3,3), EYE(3,3), S(3,3), S_v(6)
-    real(8) :: det
-    real(8) :: gauss_points(4,4), weights(4), a, b, w
+    real(8) :: det, extrapol(10,4)
+    real(8) :: gauss_points(4,4), weights(4), a, b, w, m1, m2
     integer :: i
 
 !   External functions that will be used afterwards
@@ -459,16 +479,31 @@ subroutine tet10_k_and_f(X, u, K, f_int, S_Sv_and_C)
     b = 0.585410196624968520D0
     w = 1/4D0
 
-    gauss_points(1,:) = (/ a, a, a, b /)
-    gauss_points(2,:) = (/ a, a, b, a /)
-    gauss_points(3,:) = (/ a, b, a, a /)
-    gauss_points(4,:) = (/ b, a, a, a /)
+    gauss_points(1,:) = (/ b, a, a, a /)
+    gauss_points(2,:) = (/ a, b, a, a /)
+    gauss_points(3,:) = (/ a, a, b, a /)
+    gauss_points(4,:) = (/ a, a, a, b /)
 
     weights = (/ w, w, w, w /)
+
+    c1 = 1/4.0D0 + 3.0D0*sqrt(5.0D0)/4.0D0 ! close corner node
+    c2 = -sqrt(5.0D0)/4.0D0 + 1/4.0D0  ! far corner node
+    m1 = 1/4.0D0 + sqrt(5.0D0)/4.0D0   ! close mid-node
+    m2 = -sqrt(5.0D0)/4.0D0 + 1/4.0D0  ! far mid node
+
+
+    extrapol(:,1) = (/ c1, c2, c2, c2, m1, m2, m1, m1, m2, m2 /)
+    extrapol(:,2) = (/ c2, c1, c2, c2, m1, m1, m2, m2, m1, m2 /)
+    extrapol(:,3) = (/ c2, c2, c1, c2, m2, m1, m1, m2, m2, m1 /)
+    extrapol(:,4) = (/ c2, c2, c2, c1, m2, m2, m2, m1, m1, m1 /)
+
+
 
     ! set the matrices and vectors to zero
     K = 0.0
     f_int = 0.0
+    S_exp = 0.0
+    E_exp = 0.0
 
     ! Loop over the gauss points
     do i = 1, 4
@@ -540,6 +575,11 @@ subroutine tet10_k_and_f(X, u, K, f_int, S_Sv_and_C)
 
         K = K + (K_mat + K_geo)*det/6 * w
         f_int = f_int + matmul(transpose(B0), S_v) * det/6 * w
+
+        S_exp = S_exp + matmul(reshape(extrapol(:,i), (/10,1/)), &
+                 reshape((/S(1,1), S(1,2), S(1,3), S(2,2), S(2,3), S(3,3)/), (/1, 6/)))
+        E_exp = E_exp + matmul(reshape(extrapol(:,i), (/10,1/)), &
+                 reshape((/ E(1,1), E(1,2), E(1,3), E(2,2), E(2,3), E(3,3)/), (/1, 6/)))
 
     end do
 

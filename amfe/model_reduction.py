@@ -5,8 +5,8 @@ Module of AMfe which handles the reduced order models.
 __all__ = ['reduce_mechanical_system', 'qm_reduce_mechanical_system',
            'modal_derivative', 'modal_derivative_theta',
            'static_correction_derivative', 'static_correction_theta',
-           'principal_angles', 'krylov_subspace', 'craig_bampton',
-           'vibration_modes', 'pod', 'theta_orth_v']
+           'principal_angles', 'krylov_subspace', 'mass_orth', 'craig_bampton',
+           'vibration_modes', 'pod', 'theta_orth_v', 'linear_qm_basis']
 
 import copy
 import numpy as np
@@ -15,8 +15,6 @@ from scipy import linalg
 
 from .mechanical_system import ReducedSystem, QMSystem
 from .solver import solve_sparse, SpSolve
-
-
 def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     '''
     Reduce the given mechanical system with the linear basis V.
@@ -104,7 +102,8 @@ def qm_reduce_mechanical_system(mechanical_system, V, Theta, overwrite=False):
 
 SQ_EPS = np.sqrt(np.finfo(float).eps)
 
-def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
+def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True,
+                     finite_diff='central'):
     '''
     Compute the real modal derivative of the given system using Nelson's formulation.
 
@@ -129,14 +128,18 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
         value 500 * machine_epsilon
     verbose : bool
         additional output provided; Default value True.
+    finite_diff : str {'central', 'upwind'}
+        Method for finite difference scheme. 'central' computes the finite difference
+        based on a central difference scheme, 'upwind' based on an upwind scheme. Note
+        that the upwind scheme can cause severe distortions of the modal derivative.
 
     Returns
     -------
     dx_i / dx_j : ndarray
         The modal derivative dx_i / dx_j with mass consideration
 
-    Note
-    ----
+    Notes
+    -----
     The the vectors x_i and x_j are internally mass normalized;
 
     See Also
@@ -165,28 +168,35 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True):
 
     ndof = x_i.shape[0]
     K = K_func(np.zeros(ndof))
-    dK_x_j = (K_func(x_j*h) - K)/h
-    d_omega_2_d_x_i = x_i @ dK_x_j @ x_i
-    F_i = (d_omega_2_d_x_i*M - dK_x_j) @ x_i
+    # finite difference scheme
+    if finite_diff == 'central':
+        dK_dx_j = (K_func(h*x_j) - K_func(-h*x_j))/(2*h)
+    elif finite_diff == 'upwind':
+        dK_dx_j = (K_func(x_j*h) - K)/h
+    else:
+        raise ValueError('Finite difference scheme is not valid.')
+    dK_dx_j = (K_func(x_j*h) - K)/h
+    d_omega_2_d_x_i = x_i @ dK_dx_j @ x_i
+    F_i = (d_omega_2_d_x_i*M - dK_dx_j) @ x_i
     K_dyn_i = K - omega_i**2 * M
     # fix the point with the maximum displacement of the vibration mode
     row_index = np.argmax(abs(x_i))
     K_dyn_i[:,row_index], K_dyn_i[row_index,:], K_dyn_i[row_index,row_index] = 0, 0, 1
     F_i[row_index] = 0
-    v_i = linalg.solve(K_dyn_i, F_i)
+    v_i = solve_sparse(K_dyn_i, F_i, matrix_type='symm')
     c_i = - v_i @ M @ x_i
     dx_i_dx_j = v_i + c_i*x_i
     if verbose:
         print('\nComputation of modal derivatives. ')
         print('Influence of the change of the eigenfrequency:', d_omega_2_d_x_i)
         print('The condition number of the problem is', np.linalg.cond(K_dyn_i))
-        res = (K - omega_i**2 * M).dot(dx_i_dx_j) - (d_omega_2_d_x_i*M - dK_x_j).dot(x_i)
+        res = (K - omega_i**2 * M).dot(dx_i_dx_j) - (d_omega_2_d_x_i*M - dK_dx_j).dot(x_i)
         print('The residual is', np.sqrt(res.dot(res)),
               ', the relative residual is', np.sqrt(res.dot(res))/np.sqrt(F_i.dot(F_i)))
     return dx_i_dx_j
 
 def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
-                           symmetric=True):
+                           symmetric=True, finite_diff='central'):
     r'''
     Compute the basis theta based on real modal derivatives.
 
@@ -209,6 +219,10 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
     symmetric : bool, optional
         flag for making the modal derivative matrix theta symmetric. Default is
         `True`.
+    finite_diff : str {'central', 'upwind'}
+        Method for finite difference scheme. 'central' computes the finite difference
+        based on a central difference scheme, 'upwind' based on an upwind scheme. Note
+        that the upwind scheme can cause severe distortions of the modal derivative.
 
     Returns
     -------
@@ -250,21 +264,28 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
         for j in range(no_of_modes): # looping over the rows
             x_j = V[:,j]
             # finite difference scheme
-            dK_x_j = (K_func(x_j*h) - K)/h
-            d_omega_2_d_x_i = x_i @ dK_x_j @ x_i
-            F_i = (d_omega_2_d_x_i*M - dK_x_j) @ x_i
+            if finite_diff == 'central':
+                dK_dx_j = (K_func(h*x_j) - K_func(-h*x_j))/(2*h)
+            elif finite_diff == 'upwind':
+                dK_dx_j = (K_func(h*x_j) - K)/h
+            else:
+                raise ValueError('Finite difference scheme is not valid.')
+
+            d_omega_2_d_x_i = x_i @ dK_dx_j @ x_i
+            F_i = (d_omega_2_d_x_i*M - dK_dx_j) @ x_i
             F_i[fix_idx] = 0
             v_i = LU_object.solve(F_i)
             c_i = - v_i @ M @ x_i
             Theta[:,i,j] = v_i + c_i*x_i
-    
+
     LU_object.clear()
     if symmetric:
         Theta = 1/2*(Theta + Theta.transpose((0,2,1)))
     return Theta
 
 
-def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
+def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True,
+                                 finite_diff='central'):
     r'''
     Computes the static correction vectors
     :math:`\frac{\partial x_i}{\partial x_j}` of the system with a nonlinear
@@ -285,6 +306,11 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
         value 500 * machine_epsilon
     verbose : bool
         additional output provided; Default value True.
+    finite_diff : str {'central', 'upwind'}
+        Method for finite difference scheme. 'central' computes the finite difference
+        based on a central difference scheme, 'upwind' based on an upwind scheme. Note
+        that the upwind scheme can cause severe distortions of the static correction
+        derivative.
 
     Returns
     -------
@@ -299,6 +325,8 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     no mass normalization. This is a difference in contrast to the technique
     used in the related function modal_derivative.
 
+
+
     See Also
     --------
     modal_derivative
@@ -306,9 +334,14 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     '''
     ndof = x_i.shape[0]
     K = K_func(np.zeros(ndof))
-    dK_dx_j = (K_func(x_j*h) - K)/h
+    if finite_diff == 'central':
+        dK_dx_j = (K_func(h*x_j) - K_func(-h*x_j))/(2*h)
+    elif finite_diff == 'upwind':
+        dK_dx_j = (K_func(x_j*h) - K)/h
+    else:
+        raise ValueError('Finite difference scheme is not valid.')
     b = - dK_dx_j.dot(x_i) # rigth hand side of equation
-    dx_i_dx_j = linalg.solve(K, b)
+    dx_i_dx_j = solve_sparse(K, b, matrix_type='symm')
     if verbose:
         res = K.dot(dx_i_dx_j) + dK_dx_j.dot(x_i)
         print('\nComputation of static correction derivative. ')
@@ -318,8 +351,8 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True):
     return dx_i_dx_j
 
 
-def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS, 
-                            verbose=True):
+def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS,
+                            verbose=True, finite_diff='central'):
     '''
     Compute the static correction derivatives for the given basis V.
 
@@ -342,6 +375,11 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS,
         epsilon
     verbose : bool, optional
         flag for verbosity. Default value: True
+    finite_diff : str {'central', 'upwind'}
+        Method for finite difference scheme. 'central' computes the finite difference
+        based on a central difference scheme, 'upwind' based on an upwind scheme. Note
+        that the upwind scheme can cause severe distortions of the static correction
+        derivative.
 
     Returns
     -------
@@ -368,7 +406,12 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS,
     for i in range(no_of_modes):
         if verbose:
             print('Computing finite difference K-matrix')
-        dK_dx_i = (K_func(h*V[:,i]) - K)/h
+        if finite_diff == 'central':
+            dK_dx_i = (K_func(h*V[:,i]) - K_func(-h*V[:,i]))/(2*h)
+        elif finite_diff == 'upwind':
+            dK_dx_i = (K_func(h*V[:,i]) - K)/h
+        else:
+            raise ValueError('Finite difference scheme is not valid.')
         b = - dK_dx_i @ V
         if verbose:
             print('Solving linear system #', i)
@@ -422,6 +465,43 @@ def theta_orth_v(Theta, V, M, overwrite=False):
             Theta_ret[:,j,k] -= V @ inner_prod[j,k,:]
     return Theta_ret
 
+
+def linear_qm_basis(V, theta, tol=1E-6):
+    '''
+    Make a linear basis containing the subspace spanned by V and theta by deflation.
+
+    Parameters
+    ----------
+    V : ndarray
+        linear basis
+    theta : ndarray
+        third order tensor filled with the modal derivatices associated with V
+    tol : float, optional
+        Tolerance for the deflation via SVD. The omitted singular values are
+        at least smaller than the largest one multiplied with tol.
+        Default value: 1E-6.
+
+    Returns
+    -------
+    V_ret : ndarray
+        linear basis containing the subspace spanned by V and theta.
+
+    '''
+    ndof, n = V.shape
+    V_raw = np.zeros((ndof, n*(n+3)//2))
+    V_raw[:,:n] = V[:,:]
+    for i in range(n):
+        for j in range(i+1):
+            idx = n + i*(i+1)//2 + j
+            V_raw[:,idx] = theta[:,i,j] / np.sqrt(theta[:,i,j] @ theta[:,i,j])
+
+    # Deflation algorithm
+    U, s, V_svd = sp.linalg.svd(V_raw, full_matrices=False)
+    idx_defl = s > s[0]*tol
+    V_ret = U[:,idx_defl]
+    return V_ret
+
+
 def principal_angles(V1, V2, cosine=True, principal_vectors=False):
     '''
     Return the cosine of the principal angles of the two bases V1 and V2.
@@ -450,8 +530,8 @@ def principal_angles(V1, V2, cosine=True, principal_vectors=False):
         array of principal vectors of subspace spanned by V2. Only returned if
         ``principal_vectors=True``.
 
-    Note
-    ----
+    Notes
+    -----
     Both matrices V1 and V2 have live in the same vector space, i.e. they have
     to have the same number of rows.
 
@@ -498,8 +578,8 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
         number of moments matched. Default value 3.
     mass_orth : bool, optional
         flag for setting orthogonality of returnd Krylov basis vectors. If
-        True, basis vectors are mass-orthogonal (V.T @ M @ V = eye). If False, basis vectors are
-        orthogonal (V.T @ V = eye)
+        True, basis vectors are mass-orthogonal (V.T @ M @ V = eye). If False,
+        basis vectors are orthogonal (V.T @ V = eye)
 
     Returns
     -------
@@ -543,6 +623,46 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
 
     print('Krylov Basis constructed. The singular values of the basis are', sigmas)
     return V
+
+def mass_orth(V, M, overwrite=False, niter=2):
+    '''
+    Mass-orthogonalize the matrix V with respect to the mass matrix M with a
+    Gram-Schmid-procedure.
+
+    Parameters
+    ----------
+    V : ndarray
+        Matrix (e.g. projection basis) containing displacement vectors in the
+        column. Shape is (ndim, no_of_basis_vectors)
+    M : ndarray / sparse matrix.
+        Mass matrix. Shape is (ndim, ndim).
+    overwrite : bool
+        Flag setting, if matrix V should be overwritten.
+    niter : int
+        Number of Gram-Schmid runs for the orthogonalization. As the
+        Gram-Schmid-procedure is not stable, more then one iteration are
+        recommended.
+
+    Returns
+    -------
+    V_orth : ndarray
+        Mass-orthogonalized basis V
+
+    '''
+    if overwrite:
+        V_orth = V
+    else:
+        V_orth = V.copy()
+
+    __, no_of_basis_vecs = V.shape
+    for run_no in range(niter):
+        for i in range(no_of_basis_vecs):
+            v = V_orth[:,i]
+            v /= np.sqrt(v @ M @ v)
+            V_orth[:,i] = v
+            weights = v @ M @ V_orth[:,i+1:]
+            V_orth[:,i+1:] -= v.reshape((-1,1)) * weights
+    return V_orth
 
 
 def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
@@ -588,8 +708,8 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     --------
     TODO
 
-    Note
-    ----
+    Notes
+    -----
     There is a filter-out command to remove the interface eigenvalues of the
     system.
 
@@ -613,7 +733,7 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
         f = - K[:,index]
         f[boundary_indices] = 0
         f[index] = 1
-        V_static_tmp[:,i] = linalg.solve(K_tmp, f)
+        V_static_tmp[:,i] = solve_sparse(K_tmp, f, matrix_type='symm')
     # Static Modes:
     V_static = np.zeros((ndof, no_of_inputs))
     for i in range(no_of_inputs):
@@ -660,8 +780,8 @@ def vibration_modes(mechanical_system, n=10, save=False):
         Array containing the vibration modes. Phi[:,0] is the first vibration
         mode corresponding to eigenfrequency omega[0]
 
-    Example
-    -------
+    Examples
+    --------
 
     Notes
     -----
@@ -704,8 +824,8 @@ def pod(mechanical_system, n=None):
         Array containing the POD vectors. V[:,0] contains the POD-vector
         associated with sigma[0] etc.
 
-    Example
-    -------
+    Examples
+    --------
     TODO
 
     '''

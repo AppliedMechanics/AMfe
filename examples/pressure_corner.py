@@ -4,14 +4,12 @@ Example showing a corner with pressure
 
 import amfe
 
-
-
 input_file = '../meshes/gmsh/pressure_corner.msh'
 output_file = '../results/pressure_corner/pressure_corner'
 
 
 my_material = amfe.KirchhoffMaterial(E=210E9, nu=0.3, rho=1E4, plane_stress=True)
-my_system = amfe.MechanicalSystem()
+my_system = amfe.MechanicalSystem(stress_recovery=True)
 my_system.load_mesh_from_gmsh(input_file, 11, my_material)
 my_system.apply_dirichlet_boundaries(9, 'x')
 my_system.apply_dirichlet_boundaries(10, 'y')
