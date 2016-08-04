@@ -14,30 +14,8 @@ import scipy as sp
 from scipy import linalg
 
 from .mechanical_system import ReducedSystem, QMSystem
-from .solver import solve_sparse, SpSolve
+from .solver import solve_sparse, SpSolve, linsolve
 
-
-def linsolve(A, b, matrix_type='symm', verbose=False):
-    '''
-    Solve the linear system A @ x = b where A might be sparse. 
-    
-    Parameters
-    ----------
-    A : ndarray or sparse matrix
-    b : ndarray
-    matrix_type : str 
-    verbose : bool
-    
-    
-    Returns
-    -------
-    x : ndarray
-        Solution of the linear system of equation. 
-    '''
-    if sp.sparse.issparse(A):
-        return solve_sparse(A, b, matrix_type=matrix_type, verbose=verbose)
-    else:
-        return sp.linalg.solve(A, b)
     
 
 def reduce_mechanical_system(mechanical_system, V, overwrite=False):

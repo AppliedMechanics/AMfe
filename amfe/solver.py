@@ -104,6 +104,38 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
     return x
 
 
+def linsolve(A, b, matrix_type='symm', verbose=False):
+    '''
+    Solve the linear system A @ x = b where A might be sparse.
+
+    Parameters
+    ----------
+    A : ndarray or sp.sparse.CSR
+        Array or sparse matrix in CSR-format. Shape (ndim, ndim).
+    b : ndarray
+        Right hand side of equation. Can be either of shape (ndim,) to solve one
+        problem or of shape (ndim, no_of_rhs) to solve no_of_rhs problems. 
+    matrix_type : {'spd', 'symm', 'unsymm'}, optional
+        Specifier for the matrix type:
+
+    - 'spd' : symmetric positive definite
+    - 'symm' : symmetric indefinite
+    - 'unsymm' : generally unsymmetric
+
+    verbose : bool
+        Flag for
+
+    Returns
+    -------
+    x : ndarray
+        Solution of the linear system A @ x = b .
+    '''
+    if sp.sparse.issparse(A):
+        return solve_sparse(A, b, matrix_type=matrix_type, verbose=verbose)
+    else:
+        return sp.linalg.solve(A, b)
+
+
 class SpSolve():
     '''
     Solver class for solving the sparse system Ax=b for multiple right hand
@@ -123,6 +155,8 @@ class SpSolve():
         - 'symm' : symmetric indefinite
         - 'unsymm' : generally unsymmetric
 
+        verbose : bool
+            Flag for verbosity.
         '''
         if use_pardiso:
             mtype = mtypes[matrix_type]
