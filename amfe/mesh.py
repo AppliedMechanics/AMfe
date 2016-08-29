@@ -893,7 +893,10 @@ class Mesh:
         el_type_export = np.unique(ele_types)[0]
         # Boolean matrix giving the indices for the elements to export
         el_type_ix = (ele_types == el_type_export)
+        
         # select the nodes to export an make an array of them
+        # As the list might be ragged, it has to be put to list and then to 
+        # array again. 
         connectivity_export = np.array(self.connectivity)[el_type_ix]
         connectivity_export = np.array(connectivity_export.tolist())
 

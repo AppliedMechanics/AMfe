@@ -188,7 +188,8 @@ class Assembly():
         max_dofs_per_element = np.max([len(i) for i in self.element_indices])
 
 
-        # Auxiliary Help-Matrix H
+        # Auxiliary Help-Matrix H which is the blueprint of the stiffness 
+        # matrix
         H = np.zeros((max_dofs_per_element, max_dofs_per_element))
 
         # preallocate the CSR-matrix
