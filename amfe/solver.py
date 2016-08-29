@@ -3,9 +3,9 @@ Module for solving static and dynamic problems.
 '''
 
 __all__ = ['NewmarkIntegrator', 'solve_linear_displacement',
-            'solve_nonlinear_displacement', 'give_mass_and_stiffness',
-            'HHTConstrained', 'integrate_linear_system',
-            'integrate_nonlinear_system', 'solve_sparse', 'SpSolve']
+           'solve_nonlinear_displacement', 'give_mass_and_stiffness',
+           'HHTConstrained', 'integrate_linear_system',
+           'integrate_nonlinear_system', 'solve_sparse', 'SpSolve']
 
 import time
 import numpy as np
@@ -367,8 +367,12 @@ class NewmarkIntegrator():
         return
 
 def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
-                               alpha=0.01, rtol=1E-8, atol=1E-6, verbose=False,
-                               n_iter_max=30, conv_abort=True,
+                               alpha=0.01, 
+                               rtol=1E-8, 
+                               atol=1E-6, 
+                               verbose=False,
+                               n_iter_max=30, 
+                               conv_abort=True,
                                write_iter=False):
     '''
     Time integrate the nonlinear system using a generalized-alpha HHT-scheme.
@@ -474,7 +478,7 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
         ddq *= 0
 
         S, res, f_ext = mechanical_system.S_and_res(q, dq, ddq, h,
-                                                         t, beta, gamma)
+                                                    t, beta, gamma)
         abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
         res_abs = norm_of_vector(res)
 
@@ -494,7 +498,7 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
 
             # update system matrices and vectors
             S, res, f_ext = mechanical_system.S_and_res(q, dq, ddq, h,
-                                                             t, beta, gamma)
+                                                        t, beta, gamma)
             res_abs = norm_of_vector(res)
             # abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
             n_iter += 1
