@@ -7,8 +7,8 @@ showing nonlinear displacements.
 import amfe
 
 
-input_file = '../meshes/gmsh/bar.msh'
-output_file = '../results/beam_nonlinear/beam_nonlinear'
+input_file = amfe.amfe_dir('meshes/gmsh/bar.msh')
+output_file = amfe.amfe_dir('results/beam_nonlinear/beam_nonlinear')
 
 
 my_material = amfe.KirchhoffMaterial(E=210E9, nu=0.3, rho=1E4, plane_stress=True)

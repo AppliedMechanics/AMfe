@@ -4,8 +4,8 @@ Example showing a corner with pressure
 
 import amfe
 
-input_file = '../meshes/gmsh/pressure_corner.msh'
-output_file = '../results/pressure_corner/pressure_corner'
+input_file = amfe.amfe_dir('meshes/gmsh/pressure_corner.msh')
+output_file = amfe.amfe_dir('results/pressure_corner/pressure_corner')
 
 
 my_material = amfe.KirchhoffMaterial(E=210E9, nu=0.3, rho=1E4, plane_stress=True)

@@ -11,9 +11,9 @@ import amfe
 
 
 
-gmsh_input_file = '../meshes/gmsh/c_bow_coarse.msh'
-paraview_output_file = '../results/c_bow_coarse' + \
-                        time.strftime("_%Y%m%d_%H%M%S") + '/bogen_grob'
+gmsh_input_file = amfe.amfe_dir('meshes/gmsh/c_bow_coarse.msh')
+paraview_output_file = amfe.amfe_dir('results/c_bow_coarse' + \
+                        time.strftime("_%Y%m%d_%H%M%S") + '/bogen_grob')
 
 
 my_material = amfe.KirchhoffMaterial()
