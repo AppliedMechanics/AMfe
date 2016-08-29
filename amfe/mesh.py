@@ -237,7 +237,7 @@ class Mesh:
     nodes : ndarray
         Array of x-y-z coordinates of the nodes. Dimension is
         (no_of_nodes, no_of_dofs_per_node).
-    ele_nodes : list
+    connectivity : list
         List of nodes indices belonging to one element.
     ele_obj : list
         List of element objects. The list contains actually only the pointers
@@ -284,7 +284,7 @@ class Mesh:
         None
         '''
         self.nodes         = np.array([])
-        self.ele_nodes     = []
+        self.connectivity     = []
         self.ele_obj       = []
         self.neumann_nodes = []
         self.neumann_obj   = []
@@ -334,7 +334,7 @@ class Mesh:
         '''
         self.no_of_nodes = len(self.nodes)
         self.no_of_dofs = self.no_of_nodes*self.no_of_dofs_per_node
-        self.no_of_elements = len(self.ele_nodes)
+        self.no_of_elements = len(self.connectivity)
 
 
     def import_csv(self, filename_nodes, filename_elements,
@@ -389,13 +389,13 @@ class Mesh:
                           2: "Bar2D"} # Bislang nur 2D-Element aus csv auslesbar
 
         print('Reading elements from csv...  ', end="")
-        self.ele_nodes = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
-        if self.ele_nodes.ndim == 1: # Wenn nur genau ein Element vorliegt
-            self.ele_nodes = np.array([self.ele_nodes])
+        self.connectivity = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
+        if self.connectivity.ndim == 1: # Wenn nur genau ein Element vorliegt
+            self.connectivity = np.array([self.connectivity])
         # Falls erste Spalte die Elementnummer angibt, wird diese hier
         # abgeschnitten, um nur die Knoten des Elements zu erhalten
         if explicit_node_numbering:
-            self.ele_nodes = self.ele_nodes[:,1:]
+            self.connectivity = self.connectivity[:,1:]
 
 
         if ele_type: # If element type is spezified, use this spezified type
@@ -405,7 +405,7 @@ class Mesh:
         # different number of nodes per element in 'mesh_type_dict')
         else:
             try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
-                (no_of_ele, no_of_nodes_per_ele) = self.ele_nodes.shape
+                (no_of_ele, no_of_nodes_per_ele) = self.connectivity.shape
                 mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
             except:
                 print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
@@ -583,12 +583,12 @@ class Mesh:
         elements_df = df[df[mesh_prop] == key]
 
         # add the nodes of the chosen group
-        ele_nodes = [np.nan for i in range(len(elements_df))]
+        connectivity = [np.nan for i in range(len(elements_df))]
         for i, ele in enumerate(elements_df.values):
-            ele_nodes[i] = np.array(ele[self.node_idx :
+            connectivity[i] = np.array(ele[self.node_idx :
                                         self.node_idx + amfe2no_of_nodes[ele[1]]],
                                     dtype=int)
-        self.ele_nodes.extend(ele_nodes)
+        self.connectivity.extend(connectivity)
 
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
@@ -600,7 +600,7 @@ class Mesh:
         self._update_mesh_props()
 
         # print some output stuff
-        print('\n', mesh_prop, key, 'with', len(ele_nodes), \
+        print('\n', mesh_prop, key, 'with', len(connectivity), \
               'elements successfully added.')
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
@@ -894,8 +894,8 @@ class Mesh:
         # Boolean matrix giving the indices for the elements to export
         el_type_ix = (ele_types == el_type_export)
         # select the nodes to export an make an array of them
-        ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
-        ele_nodes_export = np.array(ele_nodes_export.tolist())
+        connectivity_export = np.array(self.connectivity)[el_type_ix]
+        connectivity_export = np.array(connectivity_export.tolist())
 
         # make displacement 3D vector, as paraview only accepts 3D vectors
         q_array = np.array(self.u, dtype=float).T
@@ -929,7 +929,7 @@ class Mesh:
             h5_nodes = f.create_dataset('mesh/nodes', data=self.nodes)
             h5_nodes.attrs['ParaView'] = True
             h5_topology = f.create_dataset('mesh/topology',
-                                           data=ele_nodes_export,
+                                           data=connectivity_export,
                                            dtype=np.int)
             h5_topology.attrs['ParaView'] = True
             h5_topology.attrs['TopologyType'] = amfe2xmf[el_type_export]

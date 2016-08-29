@@ -223,14 +223,14 @@ class Assembly():
         -------
         None
         '''
-        ele_nodes = self.mesh.ele_nodes
+        connectivity = self.mesh.connectivity
         nm_nodes = self.mesh.neumann_nodes
         no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
 
         self.element_indices = \
         [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i)
                    for i in nodes], dtype=int).reshape(-1)
-         for nodes in ele_nodes]
+         for nodes in connectivity]
 
         self.neumann_indices = \
         [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i)
@@ -238,7 +238,7 @@ class Assembly():
          for nodes in nm_nodes]
 
         # compute nodes_frequency for stress recovery
-        nodes_vec = np.array(self.mesh.ele_nodes).ravel()
+        nodes_vec = np.array(self.mesh.connectivity).ravel()
         self.elements_on_node = np.bincount(nodes_vec)
 
 
@@ -433,7 +433,7 @@ class Assembly():
         S_global = np.zeros((no_of_nodes, 6))
 
         for i, indices in enumerate(self.element_indices):
-            node_indices = self.mesh.ele_nodes[i]
+            node_indices = self.mesh.connectivity[i]
             X_local = self.nodes_voigt[indices]
             u_local = u[indices]
             K, f, E, S = self.mesh.ele_obj[i].k_f_S_E_int(X_local, u_local, t)
