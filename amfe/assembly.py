@@ -224,7 +224,7 @@ class Assembly():
         None
         '''
         connectivity = self.mesh.connectivity
-        nm_nodes = self.mesh.neumann_nodes
+        nm_connectivity = self.mesh.neumann_connectivity
         no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
 
         self.element_indices = \
@@ -235,7 +235,7 @@ class Assembly():
         self.neumann_indices = \
         [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i)
                    for i in nodes], dtype=int).reshape(-1)
-         for nodes in nm_nodes]
+         for nodes in nm_connectivity]
 
         # compute nodes_frequency for stress recovery
         nodes_vec = np.array(self.mesh.connectivity).ravel()

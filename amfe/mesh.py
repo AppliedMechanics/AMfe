@@ -242,7 +242,7 @@ class Mesh:
     ele_obj : list
         List of element objects. The list contains actually only the pointers
         pointing to the element object
-    neumann_nodes : list
+    neumann_connectivity : list
         list of nodes indices belonging to one element for neumann BCs.
     neumann_obj : list
         List of element objects for the neumann boundary conditions.
@@ -284,9 +284,9 @@ class Mesh:
         None
         '''
         self.nodes         = np.array([])
-        self.connectivity     = []
+        self.connectivity  = []
         self.ele_obj       = []
-        self.neumann_nodes = []
+        self.neumann_connectivity = []
         self.neumann_obj   = []
         self.nodes_dirichlet     = np.array([], dtype=int)
         self.dofs_dirichlet      = np.array([], dtype=int)
@@ -688,12 +688,12 @@ class Mesh:
         elements_df = df[df[mesh_prop] == key]
 
         # add the nodes of the chosen group
-        nm_nodes = [np.nan for i in range(len(elements_df))]
+        nm_connectivity = [np.nan for i in range(len(elements_df))]
         for i, ele in enumerate(elements_df.values):
-            nm_nodes[i] = np.array(ele[self.node_idx :
+            nm_connectivity[i] = np.array(ele[self.node_idx :
                                        self.node_idx + amfe2no_of_nodes[ele[1]]],
                                    dtype=int)
-        self.neumann_nodes.extend(nm_nodes)
+        self.neumann_connectivity.extend(nm_connectivity)
 
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
@@ -708,7 +708,7 @@ class Mesh:
         self._update_mesh_props()
 
         # print some output stuff
-        print('\n', mesh_prop, key, 'with', len(nm_nodes),
+        print('\n', mesh_prop, key, 'with', len(nm_connectivity),
               'elements successfully added to Neumann Boundary.')
         print('Total number of neumann elements in mesh:', len(self.neumann_obj))
         print('Total number of elements in mesh:', len(self.ele_obj))
