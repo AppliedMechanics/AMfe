@@ -242,9 +242,6 @@ class Mesh:
     ele_obj : list
         List of element objects. The list contains actually only the pointers
         pointing to the element object
-    ele_types : list
-        List of strings containing the element types. Basically used for export
-        to postprocessing tools, where the element type is needed.
     neumann_nodes : list
         list of nodes indices belonging to one element for neumann BCs.
     neumann_obj : list
@@ -289,7 +286,6 @@ class Mesh:
         self.nodes         = np.array([])
         self.ele_nodes     = []
         self.ele_obj       = []
-        self.ele_types     = [] # Element-types for Export
         self.neumann_nodes = []
         self.neumann_obj   = []
         self.nodes_dirichlet     = np.array([], dtype=int)
@@ -416,9 +412,6 @@ class Mesh:
                 raise
 
         print('Element type is {0}...  '.format(mesh_type), end="")
-        # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet
-        # wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
-        self.ele_types = [mesh_type for i in self.ele_nodes]
         self._update_mesh_props()
         print('Reading elements successful.')
 
@@ -597,9 +590,6 @@ class Mesh:
                                     dtype=int)
         self.ele_nodes.extend(ele_nodes)
 
-        # ele_types for paraview export
-        self.ele_types.extend(elements_df['el_type'].values.tolist())
-
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
         ele_class_dict = copy.deepcopy(self.element_class_dict)
@@ -704,8 +694,6 @@ class Mesh:
                                        self.node_idx + amfe2no_of_nodes[ele[1]]],
                                    dtype=int)
         self.neumann_nodes.extend(nm_nodes)
-
-        # self.ele_types.extend(elements_df['el_type'].values.tolist())
 
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
@@ -901,7 +889,7 @@ class Mesh:
 
         # determine the part of the mesh which has most elements
         # only this part will be exported!
-        ele_types = np.array(self.ele_types, dtype=object)
+        ele_types = np.array([obj.name for obj in self.ele_obj], dtype=object)
         el_type_export = np.unique(ele_types)[0]
         # Boolean matrix giving the indices for the elements to export
         el_type_ix = (ele_types == el_type_export)

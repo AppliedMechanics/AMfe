@@ -140,7 +140,11 @@ class Element():
     ----------
     material : instance of amfe.HyperelasticMaterial
         Class containing the material behavior.
+    name : str
+        Name for the postprocessing tool to identify the characteristics of the 
+        element
     '''
+    name = None
 
     def __init__(self, material=None):
         '''
@@ -351,6 +355,7 @@ class Tri3(Element):
 
     '''
     plane_stress = True
+    name = 'Tri3'
 
     def __init__(self, *args, **kwargs):
         '''
@@ -446,6 +451,7 @@ class Tri6(Element):
     intermediate point of every face.
     '''
     plane_stress = True
+    name = 'Tri6'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -578,6 +584,7 @@ class Quad4(Element):
     '''
     Quadrilateral 2D element with bilinear shape functions.
     '''
+    name = 'Quad4'
 
     def __init__(self, *args, **kwargs):
         '''
@@ -676,6 +683,7 @@ class Quad8(Element):
     Plane Quadrangle with quadratic shape functions and 8 nodes. 4 nodes are
     at every corner, 4 nodes on every face.
     '''
+    name = 'Quad8'
 
     def __init__(self, *args, **kwargs):
         '''
@@ -818,6 +826,7 @@ class Tet4(Element):
     '''
     Tetraeder-Element with 4 nodes
     '''
+    name = 'Tet4'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -930,6 +939,7 @@ class Tet10(Element):
         AFEM.Ch10.index.html
 
     '''
+    name = 'Tet10'
 
     def __init__(self, *args, **kwargs):
         '''
@@ -1142,6 +1152,8 @@ class Tet10(Element):
             self.M += scatter_matrix(M_small, 3)
         return self.M
 
+    name = 'straight_line'
+    name = 'Tri3'
 
 
 class Bar2Dlumped(Element):
