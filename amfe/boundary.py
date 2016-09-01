@@ -13,7 +13,7 @@ class DirichletBoundary():
     The boundary-information is stored in the master_slave_list, which forms
     the interface for all homogeneous Dirichlet boundary condtions.
     '''
-    def __init__(self, no_of_unconstrained_dofs, master_slave_list=[]):
+    def __init__(self, no_of_unconstrained_dofs, master_slave_list=None):
         '''
         Parameters
         ----------
@@ -70,6 +70,8 @@ class DirichletBoundary():
         >>> DBT_symm = [20, [20, 21], np.array([1, -1])]
         >>> my_boundary = DirichletBoundary([DBT_symm, ])
         '''
+        if master_slave_list is None:
+            master_slave_list = []
         # number of all dofs of the full system without boundary conditions
         self.no_of_unconstrained_dofs = no_of_unconstrained_dofs
         self.master_slave_list = master_slave_list  # boundary list
@@ -177,7 +179,7 @@ class DirichletBoundary():
         for master_node, slave_node_list, b_matrix in self.master_slave_list:
 
             # a little hack in order to get the types right
-            if (type(b_matrix) != type(np.zeros(1))):
+            if type(b_matrix) != type(np.zeros(1)):
                 # Make a B-Matrix, if it's not there
                 b_matrix = np.ones(len(slave_node_list))
 
