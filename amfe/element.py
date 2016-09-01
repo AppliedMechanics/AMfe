@@ -93,7 +93,7 @@ def compute_B_matrix(B_tilde, F):
     no_of_nodes = B_tilde.shape[0]
     no_of_dims = B_tilde.shape[1] # spatial dofs per node, i.e. 2 for 2D or 3 for 3D
     b = B_tilde
-    B = np.zeros((no_of_dims*(no_of_dims+1)/2, no_of_nodes*no_of_dims))
+    B = np.zeros((no_of_dims*(no_of_dims+1)//2, no_of_nodes*no_of_dims))
     F11 = F[0,0]
     F12 = F[0,1]
     F21 = F[1,0]

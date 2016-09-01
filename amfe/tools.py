@@ -250,10 +250,15 @@ def amfe_dir(filename=''):
     '''
     Return the absolute path of the filename given relative to the amfe
     directory.
+    
+    Parameters
+    ----------
+    filename : string, optional
+        relative path to something inside the amfe directory. 
 
     Returns
     -------
-    dir : string, optional
+    dir : string
         string of the filename inside the AMFE-directory. Default value is '',
         so the AMFE-directory is returned.
 
