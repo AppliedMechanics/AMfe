@@ -515,7 +515,6 @@ class MechanicalSystem():
             self.E_output.append(self.strain.copy())
 
 
-
 class ReducedSystem(MechanicalSystem):
     '''
     Class for reduced systems.
@@ -645,9 +644,9 @@ class ReducedSystem(MechanicalSystem):
         new_field_list.append((u_red_export, u_red_dict))
 
         MechanicalSystem.export_paraview(self, filename, new_field_list)
-        filename_no_ext, _ = os.path.splitext(filename)
 
         # add V and Theta to the hdf5 file
+        filename_no_ext, _ = os.path.splitext(filename)
         with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
             f.create_dataset('reduction/V', data=self.V)
 

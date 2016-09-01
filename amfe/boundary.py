@@ -107,6 +107,7 @@ class DirichletBoundary():
         self.master_slave_list.append([None, dofs, None])
         self.update()
 
+
     def b_matrix(self):
         '''
         Parameters
