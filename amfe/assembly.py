@@ -189,7 +189,7 @@ class Assembly():
         max_dofs_per_element = np.max([len(i) for i in self.element_indices])
 
 
-        # Auxiliary Help-Matrix H which is the blueprint of the stiffness 
+        # Auxiliary Help-Matrix H which is the blueprint of the stiffness
         # matrix
         H = np.zeros((max_dofs_per_element, max_dofs_per_element))
 
@@ -674,7 +674,8 @@ class Assembly():
         Returns
         --------
         K : Dense ndarray
-            Constrained Hyper-reduced assembled stiffness matrix in sparse matrix csr format.
+            Constrained Hyper-reduced assembled stiffness matrix in sparse
+            matrix csr format.
         f : ndarray
             Constrained Hyper-reduced force vector
         '''
