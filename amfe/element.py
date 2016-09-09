@@ -911,7 +911,7 @@ class Tet4(Element):
 
 
 class Tet10(Element):
-    '''
+    r'''
     Tet10 solid element; Node numbering is done like in ParaView and in [1]_
 
     The node numbering is as follows:
