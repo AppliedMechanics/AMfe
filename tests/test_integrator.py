@@ -37,6 +37,9 @@ class DynamicalSystem():
     def write_timestep(self, t, q):
         self.t.append(t)
         self.q.append(q)
+    
+    def clear_timesteps(self):
+        pass
 
 
 class IntegratorTest(unittest.TestCase):

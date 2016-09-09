@@ -804,6 +804,7 @@ def vibration_modes(mechanical_system, n=10, save=False):
     omega = np.sqrt(lambda_)
 
     if save:
+        mechanical_system.clear_timesteps()
         for i, om in enumerate(omega):
             mechanical_system.write_timestep(om, V[:, i])
 

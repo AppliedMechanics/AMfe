@@ -441,6 +441,8 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
     '''
     t_clock_1 = time.time()
     iteration_info = [] # List tracking the number of iterations
+    mechanical_system.clear_timesteps()
+
     eps = 1E-13
 
     beta = 1/4*(1 + alpha)**2
@@ -595,6 +597,9 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     t_clock_1 = time.time()
     print('Starting linear time integration')
     eps = 1E-12 # epsilon for floating point round off errors
+    mechanical_system.clear_timesteps()
+
+    
     # Check, if the time step width and the spacing in time range fit together
     time_steps = time_range - np.roll(time_range, 1)
     remainder = (time_steps + eps) % dt
@@ -678,6 +683,7 @@ def solve_linear_displacement(mechanical_system, t=1, verbose=True):
         print('Assembling force and stiffness')
     K, f_int = mechanical_system.K_and_f(t=t)
     f_ext = mechanical_system.f_ext(None, None, t)
+    mechanical_system.clear_timesteps()
     mechanical_system.write_timestep(0, f_ext*0) # write zeros
     if verbose:
         print('Start solving linear static problem')
@@ -741,6 +747,7 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     '''
     t_clock_1 = time.time()
     iteration_info = [] # List tracking the number of iterations
+    mechanical_system.clear_timesteps()
 
     stepwidth = 1/no_of_load_steps
     K, f_int= mechanical_system.K_and_f()

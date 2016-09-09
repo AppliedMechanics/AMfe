@@ -324,7 +324,8 @@ class MechanicalSystem():
             self.u_output.append(np.zeros(self.mesh_class.no_of_dofs))
         print('Start exporting mesh for paraview to:\n    ', filename)
 
-        if self.stress_recovery:
+        if self.stress_recovery and len(self.S_output) > 0 \
+           and len(self.E_output) > 0:
             no_of_timesteps = len(self.T_output)
             S_array = np.array(self.S_output).reshape((no_of_timesteps, -1))
             E_array = np.array(self.E_output).reshape((no_of_timesteps, -1))
@@ -515,9 +516,24 @@ class MechanicalSystem():
         '''
         self.T_output.append(t)
         self.u_output.append(self.unconstrain_vec(u))
-        if self.stress_recovery:
+        # Check both, if stress recovery and if stress and strain is there
+        if self.stress_recovery and (self.stress is not None) and \
+           (self.strain is not None):
             self.S_output.append(self.stress.copy())
             self.E_output.append(self.strain.copy())
+    
+    def clear_timesteps(self):
+        '''
+        Clear the timesteps gathered internally
+        '''
+        self.T_output = []
+        self.u_output = []
+        self.S_output = []
+        self.E_output = []
+        self.stress = None
+        self.strain = None
+        self.iteration_info = np.array([])
+        return
 
 
 class ReducedSystem(MechanicalSystem):
@@ -656,6 +672,10 @@ class ReducedSystem(MechanicalSystem):
             f.create_dataset('reduction/V', data=self.V)
 
         return
+
+    def clear_timesteps(self):
+        MechanicalSystem.clear_timesteps(self)
+        self.u_red_output = []
 
 
 class HRSystem(ReducedSystem):
