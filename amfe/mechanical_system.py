@@ -56,7 +56,11 @@ class MechanicalSystem():
         (no_of_nodes, 6).
     stress_recovery : bool
         Flag for option stress_recovery.
-
+    iteration_info : ndarray
+        array containing the information of an iterative solution procedure.
+        iteration_info[:,0] is the time information, 
+        iteration_info[:,1] is the number of iteations,
+        iteration_info[:,3] is the residual. 
     '''
 
     def __init__(self, stress_recovery=False):
@@ -74,6 +78,7 @@ class MechanicalSystem():
         self.E_output = []
         self.stress = None
         self.strain = None
+        self.iteration_info = np.array([])
 
         # instantiate the important classes needed for the system:
         self.mesh_class = Mesh()

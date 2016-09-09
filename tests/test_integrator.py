@@ -69,14 +69,15 @@ class IntegratorTest(unittest.TestCase):
         alpha = 0.1
         system1 = self.my_system
         system2 = copy.deepcopy(self.my_system)
-        nl_integrator = amfe.NewmarkIntegrator(system1, alpha)
-        nl_integrator.delta_t = dt
-        nl_integrator.integrate(self.q_start, self.dq_start, self.T)
-        q_nl = sp.array(system1.q)
-        t_nl = sp.array(system1.t)
+
+        amfe.integrate_nonlinear_system(system1, self.q_start, self.dq_start, 
+                                     self.T, dt, alpha)        
 
         amfe.integrate_linear_system(system2, self.q_start, self.dq_start, 
-                                     self.T, dt, alpha)        
+                                     self.T, dt, alpha)      
+
+        q_nl = sp.array(system1.q)
+        t_nl = sp.array(system1.t)
         q_lin = sp.array(system2.q)
         t_lin = sp.array(system2.t)
         np.testing.assert_allclose(t_nl, t_lin, atol=1E-10)
