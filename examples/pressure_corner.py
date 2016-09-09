@@ -23,8 +23,8 @@ amfe.solve_nonlinear_displacement(my_system, no_of_load_steps=50,
 my_system.export_paraview(output_file)
 
 
-
 #%% Modal analysis
 
-# omega, V = amfe.vibration_modes(my_system, save=True)
+omega, V = amfe.vibration_modes(my_system, save=True)
 
+my_system.export_paraview(output_file)
