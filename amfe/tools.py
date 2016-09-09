@@ -107,6 +107,7 @@ def read_hbmat(filename):
     Thus do not trust matrices which are imported with this method. The method
     is correct, but the truncation error in the hbmat file of the floating
     point digits might cause some issues.
+
     '''
     with open(filename, 'r') as infile:
         matrix_data = infile.read().splitlines()
@@ -249,10 +250,15 @@ def amfe_dir(filename=''):
     '''
     Return the absolute path of the filename given relative to the amfe
     directory.
+    
+    Parameters
+    ----------
+    filename : string, optional
+        relative path to something inside the amfe directory. 
 
     Returns
     -------
-    dir : string, optional
+    dir : string
         string of the filename inside the AMFE-directory. Default value is '',
         so the AMFE-directory is returned.
 
@@ -267,7 +273,7 @@ def h5_read_u(h5filename):
 
     Parameters
     ---------
-    filename : str
+    h5filename : str
         Full filename (with e.g. .hdf5 ending) of the hdf5 file.
 
     Returns

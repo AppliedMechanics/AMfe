@@ -110,7 +110,8 @@ if use_fortran:
 
 class Assembly():
     '''
-    Class for the more fancy assembly of meshes with non-heterogeneous elements.
+    Class for the more fancy assembly of meshes with non-heterogeneous 
+    elements.
 
     Attributes
     ----------
@@ -188,7 +189,8 @@ class Assembly():
         max_dofs_per_element = np.max([len(i) for i in self.element_indices])
 
 
-        # Auxiliary Help-Matrix H
+        # Auxiliary Help-Matrix H which is the blueprint of the stiffness
+        # matrix
         H = np.zeros((max_dofs_per_element, max_dofs_per_element))
 
         # preallocate the CSR-matrix
@@ -207,8 +209,8 @@ class Assembly():
         self.C_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
                                           shape=(no_of_dofs, no_of_dofs), dtype=float)
         t2 = time.clock()
-        print('Done preallocating stiffness matrix with', no_of_elements, 'elements',
-              'and', no_of_dofs, 'dofs.')
+        print('Done preallocating stiffness matrix with', no_of_elements, 
+              'elements', 'and', no_of_dofs, 'dofs.')
         print('Time taken for preallocation:', t2 - t1, 'seconds.')
 
     def compute_element_indices(self):
@@ -223,22 +225,22 @@ class Assembly():
         -------
         None
         '''
-        ele_nodes = self.mesh.ele_nodes
-        nm_nodes = self.mesh.neumann_nodes
+        connectivity = self.mesh.connectivity
+        nm_connectivity = self.mesh.neumann_connectivity
         no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
 
         self.element_indices = \
         [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i)
                    for i in nodes], dtype=int).reshape(-1)
-         for nodes in ele_nodes]
+         for nodes in connectivity]
 
         self.neumann_indices = \
         [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i)
                    for i in nodes], dtype=int).reshape(-1)
-         for nodes in nm_nodes]
+         for nodes in nm_connectivity]
 
         # compute nodes_frequency for stress recovery
-        nodes_vec = np.array(self.mesh.ele_nodes).ravel()
+        nodes_vec = np.array(self.mesh.connectivity).ravel()
         self.elements_on_node = np.bincount(nodes_vec)
 
 
@@ -433,7 +435,7 @@ class Assembly():
         S_global = np.zeros((no_of_nodes, 6))
 
         for i, indices in enumerate(self.element_indices):
-            node_indices = self.mesh.ele_nodes[i]
+            node_indices = self.mesh.connectivity[i]
             X_local = self.nodes_voigt[indices]
             u_local = u[indices]
             K, f, E, S = self.mesh.ele_obj[i].k_f_S_E_int(X_local, u_local, t)
@@ -672,7 +674,8 @@ class Assembly():
         Returns
         --------
         K : Dense ndarray
-            Constrained Hyper-reduced assembled stiffness matrix in sparse matrix csr format.
+            Constrained Hyper-reduced assembled stiffness matrix in sparse
+            matrix csr format.
         f : ndarray
             Constrained Hyper-reduced force vector
         '''

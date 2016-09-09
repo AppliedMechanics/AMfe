@@ -93,7 +93,7 @@ def compute_B_matrix(B_tilde, F):
     no_of_nodes = B_tilde.shape[0]
     no_of_dims = B_tilde.shape[1] # spatial dofs per node, i.e. 2 for 2D or 3 for 3D
     b = B_tilde
-    B = np.zeros((no_of_dims*(no_of_dims+1)/2, no_of_nodes*no_of_dims))
+    B = np.zeros((no_of_dims*(no_of_dims+1)//2, no_of_nodes*no_of_dims))
     F11 = F[0,0]
     F12 = F[0,1]
     F21 = F[1,0]
@@ -140,7 +140,11 @@ class Element():
     ----------
     material : instance of amfe.HyperelasticMaterial
         Class containing the material behavior.
+    name : str
+        Name for the postprocessing tool to identify the characteristics of the 
+        element
     '''
+    name = None
 
     def __init__(self, material=None):
         '''
@@ -351,6 +355,7 @@ class Tri3(Element):
 
     '''
     plane_stress = True
+    name = 'Tri3'
 
     def __init__(self, *args, **kwargs):
         '''
@@ -446,6 +451,7 @@ class Tri6(Element):
     intermediate point of every face.
     '''
     plane_stress = True
+    name = 'Tri6'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -578,6 +584,7 @@ class Quad4(Element):
     '''
     Quadrilateral 2D element with bilinear shape functions.
     '''
+    name = 'Quad4'
 
     def __init__(self, *args, **kwargs):
         '''
@@ -676,6 +683,7 @@ class Quad8(Element):
     Plane Quadrangle with quadratic shape functions and 8 nodes. 4 nodes are
     at every corner, 4 nodes on every face.
     '''
+    name = 'Quad8'
 
     def __init__(self, *args, **kwargs):
         '''
@@ -818,6 +826,7 @@ class Tet4(Element):
     '''
     Tetraeder-Element with 4 nodes
     '''
+    name = 'Tet4'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -902,7 +911,7 @@ class Tet4(Element):
 
 
 class Tet10(Element):
-    '''
+    r'''
     Tet10 solid element; Node numbering is done like in ParaView and in [1]_
 
     The node numbering is as follows:
@@ -930,6 +939,7 @@ class Tet10(Element):
         AFEM.Ch10.index.html
 
     '''
+    name = 'Tet10'
 
     def __init__(self, *args, **kwargs):
         '''
@@ -1142,6 +1152,8 @@ class Tet10(Element):
             self.M += scatter_matrix(M_small, 3)
         return self.M
 
+    name = 'straight_line'
+    name = 'Tri3'
 
 
 class Bar2Dlumped(Element):

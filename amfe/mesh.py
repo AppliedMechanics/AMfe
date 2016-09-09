@@ -3,7 +3,7 @@ Mesh module of amfe. It handles the mesh from import, defining the dofs for the
 boundary conditions and the export.
 """
 
-__all__ = ['Mesh', 'MeshGenerator', 'create_xdmf_from_hdf5']
+__all__ = ['Mesh', 'create_xdmf_from_hdf5']
 
 import os
 import copy
@@ -237,15 +237,12 @@ class Mesh:
     nodes : ndarray
         Array of x-y-z coordinates of the nodes. Dimension is
         (no_of_nodes, no_of_dofs_per_node).
-    ele_nodes : list
+    connectivity : list
         List of nodes indices belonging to one element.
     ele_obj : list
         List of element objects. The list contains actually only the pointers
         pointing to the element object
-    ele_types : list
-        List of strings containing the element types. Basically used for export
-        to postprocessing tools, where the element type is needed.
-    neumann_nodes : list
+    neumann_connectivity : list
         list of nodes indices belonging to one element for neumann BCs.
     neumann_obj : list
         List of element objects for the neumann boundary conditions.
@@ -287,10 +284,9 @@ class Mesh:
         None
         '''
         self.nodes         = np.array([])
-        self.ele_nodes     = []
+        self.connectivity  = []
         self.ele_obj       = []
-        self.ele_types     = [] # Element-types for Export
-        self.neumann_nodes = []
+        self.neumann_connectivity = []
         self.neumann_obj   = []
         self.nodes_dirichlet     = np.array([], dtype=int)
         self.dofs_dirichlet      = np.array([], dtype=int)
@@ -338,7 +334,7 @@ class Mesh:
         '''
         self.no_of_nodes = len(self.nodes)
         self.no_of_dofs = self.no_of_nodes*self.no_of_dofs_per_node
-        self.no_of_elements = len(self.ele_nodes)
+        self.no_of_elements = len(self.connectivity)
 
 
     def import_csv(self, filename_nodes, filename_elements,
@@ -393,13 +389,13 @@ class Mesh:
                           2: "Bar2D"} # Bislang nur 2D-Element aus csv auslesbar
 
         print('Reading elements from csv...  ', end="")
-        self.ele_nodes = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
-        if self.ele_nodes.ndim == 1: # Wenn nur genau ein Element vorliegt
-            self.ele_nodes = np.array([self.ele_nodes])
+        self.connectivity = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
+        if self.connectivity.ndim == 1: # Wenn nur genau ein Element vorliegt
+            self.connectivity = np.array([self.connectivity])
         # Falls erste Spalte die Elementnummer angibt, wird diese hier
         # abgeschnitten, um nur die Knoten des Elements zu erhalten
         if explicit_node_numbering:
-            self.ele_nodes = self.ele_nodes[:,1:]
+            self.connectivity = self.connectivity[:,1:]
 
 
         if ele_type: # If element type is spezified, use this spezified type
@@ -409,16 +405,13 @@ class Mesh:
         # different number of nodes per element in 'mesh_type_dict')
         else:
             try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
-                (no_of_ele, no_of_nodes_per_ele) = self.ele_nodes.shape
+                (no_of_ele, no_of_nodes_per_ele) = self.connectivity.shape
                 mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
             except:
                 print('FEHLER beim Einlesen der Elemente. Typ nicht vorhanden.')
                 raise
 
         print('Element type is {0}...  '.format(mesh_type), end="")
-        # Hier wird davon ausgegangen, dass genau ein Elementtyp verwendet
-        # wurde, welcher jedem Eintrag des 'element_type'-Vektors zugewiesen wird
-        self.ele_types = [mesh_type for i in self.ele_nodes]
         self._update_mesh_props()
         print('Reading elements successful.')
 
@@ -590,15 +583,12 @@ class Mesh:
         elements_df = df[df[mesh_prop] == key]
 
         # add the nodes of the chosen group
-        ele_nodes = [np.nan for i in range(len(elements_df))]
+        connectivity = [np.nan for i in range(len(elements_df))]
         for i, ele in enumerate(elements_df.values):
-            ele_nodes[i] = np.array(ele[self.node_idx :
+            connectivity[i] = np.array(ele[self.node_idx :
                                         self.node_idx + amfe2no_of_nodes[ele[1]]],
                                     dtype=int)
-        self.ele_nodes.extend(ele_nodes)
-
-        # ele_types for paraview export
-        self.ele_types.extend(elements_df['el_type'].values.tolist())
+        self.connectivity.extend(connectivity)
 
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
@@ -610,7 +600,7 @@ class Mesh:
         self._update_mesh_props()
 
         # print some output stuff
-        print('\n', mesh_prop, key, 'with', len(ele_nodes), \
+        print('\n', mesh_prop, key, 'with', len(connectivity), \
               'elements successfully added.')
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
@@ -698,14 +688,12 @@ class Mesh:
         elements_df = df[df[mesh_prop] == key]
 
         # add the nodes of the chosen group
-        nm_nodes = [np.nan for i in range(len(elements_df))]
+        nm_connectivity = [np.nan for i in range(len(elements_df))]
         for i, ele in enumerate(elements_df.values):
-            nm_nodes[i] = np.array(ele[self.node_idx :
+            nm_connectivity[i] = np.array(ele[self.node_idx :
                                        self.node_idx + amfe2no_of_nodes[ele[1]]],
                                    dtype=int)
-        self.neumann_nodes.extend(nm_nodes)
-
-        # self.ele_types.extend(elements_df['el_type'].values.tolist())
+        self.neumann_connectivity.extend(nm_connectivity)
 
         # make a deep copy of the element class dict and apply the material
         # then add the element objects to the ele_obj list
@@ -720,7 +708,7 @@ class Mesh:
         self._update_mesh_props()
 
         # print some output stuff
-        print('\n', mesh_prop, key, 'with', len(nm_nodes),
+        print('\n', mesh_prop, key, 'with', len(nm_connectivity),
               'elements successfully added to Neumann Boundary.')
         print('Total number of neumann elements in mesh:', len(self.neumann_obj))
         print('Total number of elements in mesh:', len(self.ele_obj))
@@ -901,13 +889,16 @@ class Mesh:
 
         # determine the part of the mesh which has most elements
         # only this part will be exported!
-        ele_types = np.array(self.ele_types, dtype=object)
+        ele_types = np.array([obj.name for obj in self.ele_obj], dtype=object)
         el_type_export = np.unique(ele_types)[0]
         # Boolean matrix giving the indices for the elements to export
         el_type_ix = (ele_types == el_type_export)
+        
         # select the nodes to export an make an array of them
-        ele_nodes_export = np.array(self.ele_nodes)[el_type_ix]
-        ele_nodes_export = np.array(ele_nodes_export.tolist())
+        # As the list might be ragged, it has to be put to list and then to 
+        # array again. 
+        connectivity_export = np.array(self.connectivity)[el_type_ix]
+        connectivity_export = np.array(connectivity_export.tolist())
 
         # make displacement 3D vector, as paraview only accepts 3D vectors
         q_array = np.array(self.u, dtype=float).T
@@ -941,7 +932,7 @@ class Mesh:
             h5_nodes = f.create_dataset('mesh/nodes', data=self.nodes)
             h5_nodes.attrs['ParaView'] = True
             h5_topology = f.create_dataset('mesh/topology',
-                                           data=ele_nodes_export,
+                                           data=connectivity_export,
                                            dtype=np.int)
             h5_topology.attrs['ParaView'] = True
             h5_topology.attrs['TopologyType'] = amfe2xmf[el_type_export]
@@ -965,200 +956,4 @@ class Mesh:
 
         # Create the xdmf from the hdf5 file
         create_xdmf_from_hdf5(filename + '.hdf5')
-
         return
-
-
-
-class MeshGenerator:
-    '''
-    Klasse zum Erzeugen von zweidimensionalen Netzen, die Dreiecks- oder
-    Vierecksstruktur haben. Ausgabe in Netz-Files, die von der Netz-Klasse
-    wieder eingelesen werden können
-
-    '''
-
-    def __init__(self, x_len = 1, y_len = 1, x_no_elements = 2,
-                 y_no_elements = 2, height = 0,
-                 x_curve = False, y_curve = False, flat_mesh = True,
-                 mesh_style = 'Tri', pos_x0 = 0, pos_y0 = 0):
-        self.x_len = x_len
-        self.y_len = y_len
-        self.x_no_elements = x_no_elements
-        self.y_no_elements = y_no_elements
-        self.x_curve = x_curve
-        self.y_curve = y_curve
-        self.mesh_style = mesh_style
-        self.flat_mesh = flat_mesh
-        self.height = height
-        self.pos_x0 = pos_x0
-        self.pos_y0 = pos_y0
-        self.nodes = []
-        self.ele_nodes = []
-        # Make mesh 3D, if it is curved in one direction
-        if x_curve | y_curve:
-            self.flat_mesh = False
-        return
-
-    def _curved_mesh_get_phi_r(self, h, l):
-        '''
-        wenn ein gekruemmtes Netz vorliegt:
-        Bestimmung des Winkels phi und des Radiusses r aus der Hoehe und der Laenge
-
-        '''
-        # Abfangen, wenn Halbschale vorliegt
-        if l - 2*h < 1E-7:
-            phi = np.pi
-        else:
-            phi = 2*np.arctan(2*h*l/(l**2 - 4*h**2))
-        # Checkt, wenn die Schale ueber pi hinaus geht:
-        if phi<0:
-            phi += 2*np.pi
-        r = l/(2*np.sin(phi/2))
-        return phi, r
-
-    def build_mesh(self):
-        '''
-        Building the mesh by first producing the points, and secondly the elements
-        '''
-
-        def build_tri():
-            '''
-            Builds a triangular mesh
-            '''
-
-            # Length of one element
-            l_x = self.x_len / self.x_no_elements
-            l_y = self.y_len / self.y_no_elements
-            # Generating the nodes
-            node_number = 0 # node_number counter; node numbers start with 0
-            if self.flat_mesh is True:
-                for y_counter in range(self.y_no_elements + 1):
-                    for x_counter in range(self.x_no_elements + 1):
-                        self.nodes.append([l_x*x_counter, l_y*y_counter])
-                        node_number += 1
-            else:
-                # a 3d-mesh will be generated;
-                # the meshing has to be done with a little calculation in andvance
-                r_OO_x = np.array([0, 0, 0])
-                r_OO_y = np.array([0, 0, 0])
-                if self.x_curve:
-                    phi_x, r_x = self._curved_mesh_get_phi_r(self.height, self.x_len)
-                    delta_phi_x = phi_x/self.x_no_elements
-                    r_OO_x = np.array([0, 0, -r_x])
-                if self.y_curve:
-                    phi_y, r_y = self._curved_mesh_get_phi_r(self.height, self.y_len)
-                    delta_phi_y = phi_y/self.y_no_elements
-                    r_OO_y = np.array([0, 0, -r_y])
-                # Einfuehren von Ortsvektoren, die Vektorkette zum Element geben:
-                r_OP_x = np.array([0, 0, 0])
-                r_OP_y = np.array([0, 0, 0])
-                r_OO   = np.array([self.x_len/2, self.y_len/2, self.height])
-                for y_counter in range(self.y_no_elements + 1):
-                    for x_counter in range(self.x_no_elements + 1):
-                        if self.x_curve:
-                            phi = - phi_x/2 + delta_phi_x*x_counter
-                            r_OP_x = np.array([r_x*np.sin(phi), 0, r_x*np.cos(phi)])
-                        else:
-                            r_OP_x = np.array([- self.x_len/2 + l_x*x_counter, 0, 0])
-                        if self.y_curve:
-                            phi = - phi_y/2 + delta_phi_y*y_counter
-                            r_OP_y = np.array([0, r_y*np.sin(phi), r_y*np.cos(phi)])
-                        else:
-                            r_OP_y = np.array([0, - self.y_len/2 + l_y*y_counter, 0])
-                        r_OP = r_OP_x + r_OP_y + r_OO_x + r_OO_y + r_OO
-                        self.nodes.append([x for x in r_OP])
-            # ELEMENTS
-            # Building the elements which have to be tetrahedron
-            element_number = 0 # element_number counter; element numbers start with 0
-            for y_counter in range(self.y_no_elements):
-                for x_counter in range(self.x_no_elements):
-                    # first the lower triangulars
-                    first_node  = y_counter*(self.x_no_elements + 1) + x_counter + 0
-                    second_node = y_counter*(self.x_no_elements + 1) + x_counter + 1
-                    third_node  = (y_counter + 1)*(self.x_no_elements + 1) + \
-                                  x_counter + 0
-                    self.ele_nodes.append([first_node, second_node, third_node])
-                    element_number += 1
-                    # second the upper triangulars
-                    first_node  = (y_counter + 1)*(self.x_no_elements + 1) + \
-                                  x_counter + 1
-                    second_node = (y_counter + 1)*(self.x_no_elements + 1) + \
-                                  x_counter + 0
-                    third_node  = y_counter*(self.x_no_elements + 1) + x_counter + 1
-                    self.ele_nodes.append([first_node, second_node, third_node])
-                    element_number += 1
-
-
-        def build_quad4():
-            '''
-            Builds a rectangular mesh
-            '''
-            delta_x = self.x_len / self.x_no_elements
-            delta_y = self.y_len / self.y_no_elements
-
-            # nodes coordinates
-            for counter_y in range(self.y_no_elements+1):
-                for counter_x in range(self.x_no_elements+1):
-                    self.nodes.append([delta_x*counter_x + self.pos_x0,
-                                       delta_y*counter_y + self.pos_y0])
-
-            # node assignment to quadrilateral elements
-            for counter_y in range(self.y_no_elements):
-                for counter_x in range(self.x_no_elements):
-                    node1 = counter_x     + (counter_y - 0)*(self.x_no_elements + 1)
-                    node2 = counter_x + 1 + (counter_y - 0)*(self.x_no_elements + 1)
-                    node3 = counter_x + 1 + (counter_y + 1)*(self.x_no_elements + 1)
-                    node4 = counter_x     + (counter_y + 1)*(self.x_no_elements + 1)
-                    self.ele_nodes.append([node1, node2, node3, node4])
-
-
-        mesh_type_dict = {"Tri": build_tri,
-                          "Quad4": build_quad4}
-
-        mesh_type_dict[self.mesh_style]()
-        print('Mesh was generated: mesh_style =', self.mesh_style)
-
-
-
-
-    def save_mesh(self, filename_nodes, filename_elements):
-        '''
-        Speichert das Netz ab; Funktioniert fuer alle Elementtypen,
-        es muss also stets nur eine Liste vorhanden sein
-        '''
-
-        delimiter = ','
-        newline = '\n'
-
-        check_dir(filename_nodes, filename_elements)
-        with open(filename_nodes, 'w') as savefile_nodes: # Save nodes
-            # Header for file:
-            if self.flat_mesh:
-                header = 'x_coord' + delimiter + 'y_coord' + newline
-            else:
-                header = 'x_coord' + delimiter + 'y_coord' + delimiter + \
-                         'z_coord' + newline
-            savefile_nodes.write(header)
-            for nodes in self.nodes:
-                savefile_nodes.write(delimiter.join(str(x) for x in nodes) + newline)
-
-        with open(filename_elements, 'w') as savefile_elements: # Save elements
-            # Header for the file:
-            number_of_nodes = len(self.ele_nodes[0])
-            if number_of_nodes == 3:
-                savefile_elements.write('node_1' + delimiter + 'node_2' +
-                                        delimiter + 'node_3' + newline)
-            elif number_of_nodes == 4:
-                savefile_elements.write('node_1' + delimiter + 'node_2' +
-                                        delimiter + 'node_3' + delimiter +
-                                        'node_4' + newline)
-            elif number_of_nodes == 2:
-                savefile_elements.write('node_1' + delimiter + 'node_2' + newline)
-            else:
-                print("Hier lief etwas falsch. Anzahl der Knoten pro Element",
-                      "konnte nicht bestimmt werden.")
-
-            for elements in self.ele_nodes:
-                savefile_elements.write(delimiter.join(str(x) for x in elements)
-                                        + newline)

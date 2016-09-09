@@ -11,8 +11,8 @@ import scipy as sp
 import amfe
 
 
-input_file = '../meshes/gmsh/AMFE_logo.msh'
-output_file = '../results/AMFE_logo/logo_5'
+input_file = amfe.amfe_dir('meshes/gmsh/AMFE_logo.msh')
+output_file = amfe.amfe_dir('results/AMFE_logo/logo_5')
 
 
 material_1 = amfe.KirchhoffMaterial(E=5E6, rho=1E4)
