@@ -795,13 +795,20 @@ def vibration_modes(mechanical_system, n=10, save=False):
     to use the shift inverted mode for the solution of the mechanical
     eigenvalue problem with the largest eigenvalues. Generally no convergence
     is gained when the smallest eigenvalue is to be found.
+    
+    If the squared eigenvalue omega**2 is negative, as it might happen due to 
+    round-off errors with rigid body modes, the negative sign is traveled to 
+    the eigenfrequency omega, though this makes physically no sense... 
     '''
     K = mechanical_system.K()
     M = mechanical_system.M()
 
     lambda_, V = sp.sparse.linalg.eigsh(K, M=M, k=n, sigma=0, which='LM',
                                         maxiter=100)
-    omega = np.sqrt(lambda_)
+    omega = np.sqrt(abs(lambda_))
+    # Little bit of sick hack: The negative sign is transferred to the 
+    # eigenfrequencies
+    omega[lambda_ < 0] *= -1
 
     if save:
         mechanical_system.clear_timesteps()
