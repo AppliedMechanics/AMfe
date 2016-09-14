@@ -218,7 +218,7 @@ def create_xdmf_from_hdf5(filename):
                     if i <= field.shape[-1]: # field has time instance
                         col = str(i)
                     else: # field has no time instance, use first col
-                        col = 0
+                        col = '0'
                     field_hyperslab.text = '0 ' + col + ' 1 1 ' + \
                                             str(field.shape[0]) + ' 1'
                     field_hdf = SubElement(field_data, 'DataItem',
