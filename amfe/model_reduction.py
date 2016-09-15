@@ -105,7 +105,7 @@ def qm_reduce_mechanical_system(mechanical_system, V, Theta, overwrite=False):
 
 SQ_EPS = np.sqrt(np.finfo(float).eps)
 
-def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True,
+def modal_derivative(x_i, x_j, K_func, M, omega_i, h=1.0, verbose=True,
                      finite_diff='central'):
     '''
     Compute the real modal derivative of the given system using Nelson's formulation.
@@ -199,7 +199,7 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=500*SQ_EPS, verbose=True,
     return dx_i_dx_j
 
 
-def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
+def modal_derivative_theta(V, omega, K_func, M, h=1.0, verbose=True,
                            symmetric=True, finite_diff='central'):
     r'''
     Compute the basis theta based on real modal derivatives.
@@ -288,7 +288,7 @@ def modal_derivative_theta(V, omega, K_func, M, h=500*SQ_EPS, verbose=True,
     return Theta
 
 
-def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True,
+def static_correction_derivative(x_i, x_j, K_func, h=1.0, verbose=True,
                                  finite_diff='central'):
     r'''
     Computes the static correction vectors
@@ -355,8 +355,9 @@ def static_correction_derivative(x_i, x_j, K_func, h=500*SQ_EPS, verbose=True,
     return dx_i_dx_j
 
 
-def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS,
-                            verbose=True, finite_diff='central'):
+def static_correction_theta(V, K_func, M=None, omega=0, h=1.0,
+                            verbose=True, symmetric=True,
+                            finite_diff='central'):
     '''
     Compute the static correction derivatives for the given basis V.
 
@@ -423,11 +424,13 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=500*SQ_EPS,
         if verbose:
             print('Done solving linear system #', i)
     if verbose:
-        residual = np.sum(Theta - Theta.transpose(0,2,1))
+        residual = np.linalg.norm(Theta - Theta.transpose(0,2,1)) / \
+                   np.linalg.norm(Theta)
         print('The residual, i.e. the unsymmetric values, are', residual)
     LU_object.clear()
-    # make Theta symmetric
-    Theta = 1/2*(Theta + Theta.transpose(0,2,1))
+    if symmetric:
+        # make Theta symmetric
+        Theta = 1/2*(Theta + Theta.transpose(0,2,1))
     return Theta
 
 def theta_orth_v(Theta, V, M, overwrite=False):
@@ -795,10 +798,10 @@ def vibration_modes(mechanical_system, n=10, save=False):
     to use the shift inverted mode for the solution of the mechanical
     eigenvalue problem with the largest eigenvalues. Generally no convergence
     is gained when the smallest eigenvalue is to be found.
-    
-    If the squared eigenvalue omega**2 is negative, as it might happen due to 
-    round-off errors with rigid body modes, the negative sign is traveled to 
-    the eigenfrequency omega, though this makes physically no sense... 
+
+    If the squared eigenvalue omega**2 is negative, as it might happen due to
+    round-off errors with rigid body modes, the negative sign is traveled to
+    the eigenfrequency omega, though this makes physically no sense...
     '''
     K = mechanical_system.K()
     M = mechanical_system.M()
@@ -806,7 +809,7 @@ def vibration_modes(mechanical_system, n=10, save=False):
     lambda_, V = sp.sparse.linalg.eigsh(K, M=M, k=n, sigma=0, which='LM',
                                         maxiter=100)
     omega = np.sqrt(abs(lambda_))
-    # Little bit of sick hack: The negative sign is transferred to the 
+    # Little bit of sick hack: The negative sign is transferred to the
     # eigenfrequencies
     omega[lambda_ < 0] *= -1
 
