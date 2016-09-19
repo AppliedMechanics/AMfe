@@ -64,7 +64,8 @@ for element in element_mapping_list:
     amfe2xmf.update({element[0] : element[1]})
     amfe2no_of_nodes.update({element[0] : element[4]})
 
-
+nas2amfe = {'CTETRA' : 'Tet10',
+            'CHEXA' : 'Hexa8'}
 
 def check_dir(*filenames):
     '''
@@ -295,6 +296,7 @@ class Mesh:
         self.neumann_obj   = []
         self.nodes_dirichlet     = np.array([], dtype=int)
         self.dofs_dirichlet      = np.array([], dtype=int)
+        self.constraint_list = [] # experimental; Introduced for nastran meshes
         # the displacements; They are stored as a list of numpy-arrays with
         # shape (ndof, no_of_dofs_per_node):
         self.u                   = []
@@ -419,6 +421,117 @@ class Mesh:
         print('Element type is {0}...  '.format(mesh_type), end="")
         self._update_mesh_props()
         print('Reading elements successful.')
+        return
+    
+
+    def import_bdf(self, filename):
+        '''
+        Import a NASTRAN mesh.
+
+        Parameters
+        ----------
+        filename : string
+            filename of the .msh-file
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        This function is heavily experimental. It is just working for a subset
+        of NASTRAN input files and the goal is to capture the mesh and the
+        constraints of the model. The constraints are captured in the
+        constraint_list-object of the class.
+
+        The internal representation of the elements is done via a Pandas
+        Dataframe object.
+
+        '''
+        tag_start = 'BEGIN BULK'
+        tag_end = 'ENDDATA'
+        comment_tag = '$'
+        long_format_tag = '*'
+        print('*************************************************************')
+        print('\nLoading NASTRAN-mesh from', filename)
+
+        nodes_list = []
+        elements_list = []
+        constraint_list = []
+        # Flag indicating, that element was read in previous line
+        element_active = False
+
+        with open(filename, 'r') as infile:
+            file_data = infile.read().splitlines()
+
+        # Loop over all lines in the file
+        for line in file_data:
+            # Filter out comments
+            if comment_tag in line:
+                element_active = False
+                continue
+
+            if long_format_tag in line:
+                s = [line[i*16:(i+1)*16] for i in range(len(line)//16)]
+            else:
+                s = [line[i*8:(i+1)*8] for i in range(len(line)//8)]
+
+            if len(s) < 1: # Empty line
+                element_active = False
+                continue
+
+            # Get the nodes
+            if 'GRID' in s[0]:
+                nodes_list.append([int(s[1]),
+                                   float(s[3]), float(s[4]), float(s[5])])
+
+            elif s[0].strip() in nas2amfe:
+                elements_list.append(s)
+                element_active = 'Element'
+            elif 'RBE' in s[0]:
+                constraint_list.append(s)
+                element_active = 'Constraint'
+            elif s[0] != '        ': # There is an unknown element
+                element_active = False
+
+            # Catch the free lines where elements are continued
+            elif s[0] == '        ' and element_active:
+                if element_active == 'Element':
+                    elements_list[-1].extend(s[1:])
+                if element_active == 'Constraint':
+                    constraint_list[-1].extend(s[1:])
+
+        self.no_of_dofs_per_node = 3 # this is just hard coded right now...
+        self.nodes = np.array(nodes_list, dtype=float)[:,1:]
+        nodes_dict = pd.Series(index=np.array(nodes_list, dtype=int)[:,0],
+                               data=np.arange(len(nodes_list)))
+
+        for idx, ptr in enumerate(elements_list):
+            tmp = [nas2amfe[ptr.pop(0).strip()],
+                   int(ptr.pop(0)), int(ptr.pop(0))]
+            tmp.extend([nodes_dict[int(i)] for i in ptr])
+            elements_list[idx] = tmp
+
+        for idx, ptr in enumerate(constraint_list):
+            tmp = [ptr.pop(0).strip(), int(ptr.pop(0)), int(ptr.pop(1))]
+            tmp.append([nodes_dict[int(i)] for i in ptr[4:]])
+            constraint_list[idx] = tmp
+
+        self.constraint_list = constraint_list
+        self.el_df = df = pd.DataFrame(elements_list, dtype=int)
+        df.rename(copy=False, inplace=True,
+                  columns={0 : 'el_type',
+                           1 : 'idx_nastran',
+                           2 : 'phys_group',
+                          })
+        self.node_idx = 3
+        self._update_mesh_props()
+        # printing some information regarding the physical groups
+        print('Mesh', filename, 'successfully imported.',
+              '\nAssign a material to a physical group.')
+        print('*************************************************************')
+        return
+    
 
     def import_msh(self, filename, scale_factor=1.):
         '''
@@ -590,9 +703,11 @@ class Mesh:
         # add the nodes of the chosen group
         connectivity = [np.nan for i in range(len(elements_df))]
         for i, ele in enumerate(elements_df.values):
+            no_of_nodes = amfe2no_of_nodes[elements_df.el_type.iloc[i]]
             connectivity[i] = np.array(ele[self.node_idx :
-                                        self.node_idx + amfe2no_of_nodes[ele[1]]],
-                                    dtype=int)
+                                           self.node_idx + no_of_nodes], 
+                                       dtype=int)
+
         self.connectivity.extend(connectivity)
 
         # make a deep copy of the element class dict and apply the material
