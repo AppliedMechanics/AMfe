@@ -20,6 +20,7 @@ routines and reprogram the stuff for the own use.
 """
 
 __all__ = ['Element', 'Tri3', 'Tri6', 'Quad4', 'Quad8', 'Tet4', 'Tet10',
+           'Hexa8', 'Hexa20',
            'Bar2Dlumped', 'BoundaryElement', 'Tri3Boundary', 'Tri6Boundary',
            'LineLinearBoundary', 'LineQuadraticBoundary']
 
@@ -141,7 +142,7 @@ class Element():
     material : instance of amfe.HyperelasticMaterial
         Class containing the material behavior.
     name : str
-        Name for the postprocessing tool to identify the characteristics of the 
+        Name for the postprocessing tool to identify the characteristics of the
         element
     '''
     name = None
@@ -953,8 +954,6 @@ class Tet10(Element):
         self.E = np.zeros((10,6))
 
 
-#        gauss_points_1 = ((1/4, 1/4, 1/4, 1/4, 1), )
-
         a = (5 - np.sqrt(5)) / 20
         b = (5 + 3*np.sqrt(5)) / 20
         w = 1/4
@@ -974,40 +973,6 @@ class Tet10(Element):
              [c2, c1, c2, c2, m1, m1, m2, m2, m1, m2],
              [c2, c2, c1, c2, m2, m1, m1, m2, m2, m1],
              [c2, c2, c2, c1, m2, m2, m2, m1, m1, m1]]).T
-
-
-#        w1 = 0.030283678097089*6
-#        w2 = 0.006026785714286*6
-#        w3 = 0.011645249086029*6
-#        w4 = 0.010949141561386*6
-#
-#        a1 = 1/4
-#        a2 = 0.
-#        b2 = 1/3
-#        a3 = 72/99
-#        b3 =  9/99
-#        a4 = 0.066550153573664
-#        c4 = 0.433449846426336
-#
-#        gauss_points_15 = ((a1, a1, a1, a1, w1),
-#
-#                             (a2, b2, b2, b2, w2),
-#                             (b2, a2, b2, b2, w2),
-#                             (b2, b2, a2, b2, w2),
-#                             (b2, b2, b2, a2, w2),
-#
-#                             (a3, b3, b3, b3, w3),
-#                             (b3, a3, b3, b3, w3),
-#                             (b3, b3, a3, b3, w3),
-#                             (b3, b3, b3, a3, w3),
-#
-#                             (a4, a4, c4, c4, w4),
-#                             (a4, c4, a4, c4, w4),
-#                             (a4, c4, c4, a4, w4),
-#                             (c4, c4, a4, a4, w4),
-#                             (c4, a4, c4, a4, w4),
-#                             (c4, a4, a4, c4, w4))
-
 
 
     def _compute_tensors(self, X, u, t):
@@ -1151,6 +1116,184 @@ class Tet10(Element):
             M_small = N.dot(N.T) * det/6 * rho * w
             self.M += scatter_matrix(M_small, 3)
         return self.M
+
+
+class Hexa8(Element):
+    '''
+    Eight point Hexahedron element.
+
+         eta
+3----------2
+|\     ^   |\
+| \    |   | \
+|  \   |   |  \
+|   7------+---6
+|   |  +-- |-- | -> xi
+0---+---\--1   |
+ \  |    \  \  |
+  \ |     \  \ |
+   \|   zeta  \|
+    4----------5
+
+    '''
+    name = 'Hexa8'
+
+    def __init__(self, *args, **kwargs):
+        '''
+        '''
+        super().__init__(*args, **kwargs)
+
+        self.K = np.zeros((24,24))
+        self.f = np.zeros(24)
+        self.M = np.zeros((24,24))
+        self.S = np.zeros((8,6))
+        self.E = np.zeros((8,6))
+
+        a = np.sqrt(1/3)
+        self.gauss_points = ((-a,  a,  a, 1),
+                             ( a,  a,  a, 1),
+                             (-a, -a,  a, 1),
+                             ( a, -a,  a, 1),
+                             (-a,  a, -a, 1),
+                             ( a,  a, -a, 1),
+                             (-a, -a, -a, 1),
+                             ( a, -a, -a, 1),)
+
+        b = (-np.sqrt(3) + 1)**2*(np.sqrt(3) + 1)/8
+        c = (-np.sqrt(3) + 1)**3/8
+        d = (np.sqrt(3) + 1)**3/8
+        e = (np.sqrt(3) + 1)**2*(-np.sqrt(3) + 1)/8
+        self.extrapolation_points = np.array([[b, c, e, b, e, b, d, e],
+                                              [c, b, b, e, b, e, e, d],
+                                              [b, e, c, b, e, d, b, e],
+                                              [e, b, b, c, d, e, e, b],
+                                              [e, b, d, e, b, c, e, b],
+                                              [b, e, e, d, c, b, b, e],
+                                              [e, d, b, e, b, e, c, b],
+                                              [d, e, e, b, e, b, b, c]])
+
+
+    def _compute_tensors(self, X, u, t):
+        X_mat = X.reshape(-1, 3)
+        u_mat = u.reshape(-1, 3)
+
+        self.K *= 0
+        self.f *= 0
+        self.S *= 0
+        self.E *= 0
+
+        for n_gauss, (xi, eta, zeta, w) in enumerate(self.gauss_points):
+
+            dN_dxi = 1/8*np.array([
+                [-(-eta+1)*(-zeta+1), -(-xi+1)*(-zeta+1), -(-eta+1)*(-xi+1)],
+                [ (-eta+1)*(-zeta+1),  -(xi+1)*(-zeta+1),  -(-eta+1)*(xi+1)],
+                [  (eta+1)*(-zeta+1),   (xi+1)*(-zeta+1),   -(eta+1)*(xi+1)],
+                [ -(eta+1)*(-zeta+1),  (-xi+1)*(-zeta+1),  -(eta+1)*(-xi+1)],
+                [ -(-eta+1)*(zeta+1),  -(-xi+1)*(zeta+1),  (-eta+1)*(-xi+1)],
+                [  (-eta+1)*(zeta+1),   -(xi+1)*(zeta+1),   (-eta+1)*(xi+1)],
+                [   (eta+1)*(zeta+1),    (xi+1)*(zeta+1),    (eta+1)*(xi+1)],
+                [  -(eta+1)*(zeta+1),   (-xi+1)*(zeta+1),   (eta+1)*(-xi+1)]])
+            dX_dxi = X_mat.T @ dN_dxi
+            dxi_dX = np.linalg.inv(dX_dxi)
+            det = np.linalg.det(dX_dxi)
+            B0_tilde = dN_dxi @ dxi_dX
+            H = u_mat.T @ B0_tilde
+            F = H + np.eye(3)
+            E = 1/2*(H + H.T + H.T @ H)
+            S, S_v, C_SE = self.material.S_Sv_and_C(E)
+            B0 = compute_B_matrix(B0_tilde, F)
+            K_geo_small = B0_tilde @ S @ B0_tilde.T * det/8
+            K_geo = scatter_matrix(K_geo_small, 3)
+            K_mat = B0.T @ C_SE @ B0 * det/8
+
+            self.K += (K_geo + K_mat) * w
+            self.f += B0.T @ S_v * det/8 * w
+
+            # extrapolation of gauss element
+            extrapol = self.extrapolation_points[:,n_gauss:n_gauss+1]
+            self.S += extrapol @ np.array([[S[0,0], S[0,1], S[0,2],
+                                            S[1,1], S[1,2], S[2,2]]])
+            self.E += extrapol @ np.array([[E[0,0], E[0,1], E[0,2],
+                                            E[1,1], E[1,2], E[2,2]]])
+        return
+
+    def _m_int(self, X, u, t=0):
+        X_mat = X.reshape(-1, 3)
+
+        self.M *= 0
+        rho = self.material.rho
+
+        for n_gauss, (xi, eta, zeta, w) in enumerate(self.gauss_points):
+            N = np.array([
+                            [(-eta + 1)*(-xi + 1)*(-zeta + 1)/8],
+                            [ (-eta + 1)*(xi + 1)*(-zeta + 1)/8],
+                            [  (eta + 1)*(xi + 1)*(-zeta + 1)/8],
+                            [ (eta + 1)*(-xi + 1)*(-zeta + 1)/8],
+                            [ (-eta + 1)*(-xi + 1)*(zeta + 1)/8],
+                            [  (-eta + 1)*(xi + 1)*(zeta + 1)/8],
+                            [   (eta + 1)*(xi + 1)*(zeta + 1)/8],
+                            [  (eta + 1)*(-xi + 1)*(zeta + 1)/8]])
+
+            dN_dxi = 1/8*np.array([
+                [-(-eta+1)*(-zeta+1), -(-xi+1)*(-zeta+1), -(-eta+1)*(-xi+1)],
+                [ (-eta+1)*(-zeta+1),  -(xi+1)*(-zeta+1),  -(-eta+1)*(xi+1)],
+                [  (eta+1)*(-zeta+1),   (xi+1)*(-zeta+1),   -(eta+1)*(xi+1)],
+                [ -(eta+1)*(-zeta+1),  (-xi+1)*(-zeta+1),  -(eta+1)*(-xi+1)],
+                [ -(-eta+1)*(zeta+1),  -(-xi+1)*(zeta+1),  (-eta+1)*(-xi+1)],
+                [  (-eta+1)*(zeta+1),   -(xi+1)*(zeta+1),   (-eta+1)*(xi+1)],
+                [   (eta+1)*(zeta+1),    (xi+1)*(zeta+1),    (eta+1)*(xi+1)],
+                [  -(eta+1)*(zeta+1),   (-xi+1)*(zeta+1),   (eta+1)*(-xi+1)]])
+            dX_dxi = X_mat.T @ dN_dxi
+            det = np.linalg.det(dX_dxi)
+
+            M_small = N @ N.T * det/8 * rho * w
+            self.M += scatter_matrix(M_small, 3)
+
+        return
+
+class Hexa20(Element):
+    '''
+    20-node brick element.
+    '''
+    name = 'Hexa20'
+
+    def __init__(self, *args, **kwargs):
+        '''
+        '''
+        super().__init__(*args, **kwargs)
+
+        self.K = np.zeros((24,24))
+        self.f = np.zeros(24)
+        self.M = np.zeros((24,24))
+        self.S = np.zeros((8,6))
+        self.E = np.zeros((8,6))
+
+        a = (5 - np.sqrt(5)) / 20
+        b = (5 + 3*np.sqrt(5)) / 20
+        w = 1/4
+        gauss_points_4 = ((b,a,a,a,w),
+                          (a,b,a,a,w),
+                          (a,a,b,a,w),
+                          (a,a,a,b,w),)
+        self.gauss_points = gauss_points_4
+
+        c1 = 1/4 + 3*sqrt(5)/4 # close corner node
+        c2 = -sqrt(5)/4 + 1/4  # far corner node
+        m1 = 1/4 + sqrt(5)/4   # close mid-node
+        m2 = -sqrt(5)/4 + 1/4  # far mid node
+
+        self.extrapolation_points = np.array(
+            [[c1, c2, c2, c2, m1, m2, m1, m1, m2, m2],
+             [c2, c1, c2, c2, m1, m1, m2, m2, m1, m2],
+             [c2, c2, c1, c2, m2, m1, m1, m2, m2, m1],
+             [c2, c2, c2, c1, m2, m2, m2, m1, m1, m1]]).T
+
+
+    def _compute_tensors(self, X, u, t):
+        pass
+
+    def _m_int(self, X, u, t=0):
+        pass
 
 
 class Bar2Dlumped(Element):

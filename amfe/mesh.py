@@ -30,6 +30,10 @@ element_mapping_list = [
      'Linear Tetraeder / nodes on every corner'],
     ['Tet10',         'Tetrahedron_10',  11, 24, 10,
      'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
+    ['Hexa8',         'Hexahedron', 5, 12, 8,
+     'Linear brick element'],
+    ['Hexa20',         'Hex_20', 17, 25, 20,
+     'Linear brick element'],
     ['Tri6',          'Triangle_6',   9, 22,  6,
      'Quadratic triangle / 6 node second order triangle'],
     ['Tri3',          'Triangle',   2,  5,  3,
@@ -312,6 +316,8 @@ class Mesh:
         kwargs = { }
         self.element_class_dict = {'Tet4'  : Tet4(**kwargs),
                                    'Tet10' : Tet10(**kwargs),
+                                   'Hexa8' : Hexa8(**kwargs),
+                                   'Hexa20': Hexa20(**kwargs),
                                    'Tri3'  : Tri3(**kwargs),
                                    'Tri6'  : Tri6(**kwargs),
                                    'Quad4' : Quad4(**kwargs),
@@ -329,7 +335,7 @@ class Mesh:
 
         # actual set of implemented elements
         self.element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
-        self.element_3d_set = {'Tet4', 'Tet10'}
+        self.element_3d_set = {'Tet4', 'Tet10', 'Hexa8', 'Hexa20', }
 
         self.boundary_2d_set = {'straight_line', 'quadratic_line'}
         self.boundary_3d_set = {'straight_line', 'quadratic_line',
@@ -422,7 +428,7 @@ class Mesh:
         self._update_mesh_props()
         print('Reading elements successful.')
         return
-    
+
 
     def import_bdf(self, filename):
         '''
@@ -474,7 +480,7 @@ class Mesh:
             if long_format_tag in line: # Long format
                 s = [line[:8], ]
                 s.extend([line[i*16:(i+1)*16] for i in range(len(line)//16)])
-                # Note: here some more logics is necessary to handle line 
+                # Note: here some more logics is necessary to handle line
                 # continuation
             elif ',' in line: # Free field format
                 s = line.split(',')
@@ -536,7 +542,7 @@ class Mesh:
               '\nAssign a material to a physical group.')
         print('*************************************************************')
         return
-    
+
 
     def import_msh(self, filename, scale_factor=1.):
         '''
@@ -710,7 +716,7 @@ class Mesh:
         for i, ele in enumerate(elements_df.values):
             no_of_nodes = amfe2no_of_nodes[elements_df.el_type.iloc[i]]
             connectivity[i] = np.array(ele[self.node_idx :
-                                           self.node_idx + no_of_nodes], 
+                                           self.node_idx + no_of_nodes],
                                        dtype=int)
 
         self.connectivity.extend(connectivity)
@@ -1018,10 +1024,10 @@ class Mesh:
         el_type_export = np.unique(ele_types)[0]
         # Boolean matrix giving the indices for the elements to export
         el_type_ix = (ele_types == el_type_export)
-        
+
         # select the nodes to export an make an array of them
-        # As the list might be ragged, it has to be put to list and then to 
-        # array again. 
+        # As the list might be ragged, it has to be put to list and then to
+        # array again.
         connectivity_export = np.array(self.connectivity)[el_type_ix]
         connectivity_export = np.array(connectivity_export.tolist())
 

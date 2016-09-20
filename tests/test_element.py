@@ -294,6 +294,12 @@ def test_name_tri3():
 def test_name_tri6():
     assert('Tri6' == amfe.Tri6.name)
 
+def test_name_hexa8():
+    assert('Hexa8' == amfe.Hexa8.name)
+
+def test_name_hexa20():
+    assert('Hexa20' == amfe.Hexa20.name)
+
 #%%
 
 class TestB_matrix_compuation(unittest.TestCase):
