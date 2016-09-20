@@ -274,9 +274,25 @@ def test_tri6_pressure():
     # f has a negative sign. 
     np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7) 
 
+#%%
 
+def test_name_tet4():
+    assert('Tet4' == amfe.Tet4.name)
 
+def test_name_tet10():
+    assert('Tet10' == amfe.Tet10.name)
 
+def test_name_quad4():
+    assert('Quad4' == amfe.Quad4.name)
+
+def test_name_quad8():
+    assert('Quad8' == amfe.Quad8.name)
+
+def test_name_tri3():
+    assert('Tri3' == amfe.Tri3.name)
+
+def test_name_tri6():
+    assert('Tri6' == amfe.Tri6.name)
 
 #%%
 
