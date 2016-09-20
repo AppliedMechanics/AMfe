@@ -476,7 +476,7 @@ class Mesh:
                 s.extend([line[i*16:(i+1)*16] for i in range(len(line)//16)])
                 # Note: here some more logics is necessary to handle line 
                 # continuation
-            elif ',' in s: # Free field format
+            elif ',' in line: # Free field format
                 s = line.split(',')
             else: # The regular short format
                 s = [line[i*8:(i+1)*8] for i in range(len(line)//8)]
