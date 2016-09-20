@@ -240,7 +240,7 @@ class Assembly():
          for nodes in nm_connectivity]
 
         # compute nodes_frequency for stress recovery
-        nodes_vec = np.array(self.mesh.connectivity).ravel()
+        nodes_vec = np.concatenate(self.mesh.connectivity)
         self.elements_on_node = np.bincount(nodes_vec)
 
 
