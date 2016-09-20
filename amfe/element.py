@@ -1152,9 +1152,6 @@ class Tet10(Element):
             self.M += scatter_matrix(M_small, 3)
         return self.M
 
-    name = 'straight_line'
-    name = 'Tri3'
-
 
 class Bar2Dlumped(Element):
     '''
