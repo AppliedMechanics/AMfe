@@ -471,9 +471,14 @@ class Mesh:
                 element_active = False
                 continue
 
-            if long_format_tag in line:
-                s = [line[i*16:(i+1)*16] for i in range(len(line)//16)]
-            else:
+            if long_format_tag in line: # Long format
+                s = [line[:8], ]
+                s.extend([line[i*16:(i+1)*16] for i in range(len(line)//16)])
+                # Note: here some more logics is necessary to handle line 
+                # continuation
+            elif ',' in s: # Free field format
+                s = line.split(',')
+            else: # The regular short format
                 s = [line[i*8:(i+1)*8] for i in range(len(line)//8)]
 
             if len(s) < 1: # Empty line
