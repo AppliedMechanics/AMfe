@@ -1021,15 +1021,18 @@ class Mesh:
         # determine the part of the mesh which has most elements
         # only this part will be exported!
         ele_types = np.array([obj.name for obj in self.ele_obj], dtype=object)
-        el_type_export = np.unique(ele_types)[0]
-        # Boolean matrix giving the indices for the elements to export
-        el_type_ix = (ele_types == el_type_export)
+        el_type_export = np.unique(ele_types)
+        connectivties_dict = dict()
+        for el_type in el_type_export:
+            # Boolean matrix giving the indices for the elements to export
+            el_type_ix = (ele_types == el_type)
 
-        # select the nodes to export an make an array of them
-        # As the list might be ragged, it has to be put to list and then to
-        # array again.
-        connectivity_export = np.array(self.connectivity)[el_type_ix]
-        connectivity_export = np.array(connectivity_export.tolist())
+            # select the nodes to export an make an array of them
+            # As the list might be ragged, it has to be put to list and then to
+            # array again.
+            connectivity_export = np.array(self.connectivity)[el_type_ix]
+            connectivity_export = np.array(connectivity_export.tolist())
+            connectivties_dict[el_type] = connectivity_export
 
         # make displacement 3D vector, as paraview only accepts 3D vectors
         q_array = np.array(self.u, dtype=float).T
@@ -1062,11 +1065,12 @@ class Mesh:
         with h5py.File(filename + '.hdf5', 'w') as f:
             h5_nodes = f.create_dataset('mesh/nodes', data=self.nodes)
             h5_nodes.attrs['ParaView'] = True
-            h5_topology = f.create_dataset('mesh/topology',
-                                           data=connectivity_export,
-                                           dtype=np.int)
-            h5_topology.attrs['ParaView'] = True
-            h5_topology.attrs['TopologyType'] = amfe2xmf[el_type_export]
+            for el_type in connectivties_dict:
+                h5_topology = f.create_dataset('mesh/topology/' + el_type,
+                                               data=connectivties_dict[el_type],
+                                               dtype=np.int)
+                h5_topology.attrs['ParaView'] = True
+                h5_topology.attrs['TopologyType'] = amfe2xmf[el_type]
 
             h5_time = f.create_dataset('time', data=np.array(self.timesteps))
             h5_set_attributes(h5_time, h5_time_dict)
