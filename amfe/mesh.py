@@ -20,7 +20,7 @@ import numpy as np
 
 from .element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
 from .element import LineLinearBoundary, LineQuadraticBoundary, \
-    Tri3Boundary, Tri6Boundary
+    Tri3Boundary, Tri6Boundary, Hexa8, Hexa20
 
 # Element mapping is described here. If a new element is implemented, the
 # features for import and export should work when the followig list will be updated.
