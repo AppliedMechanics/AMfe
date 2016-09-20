@@ -23,3 +23,4 @@ my_assembly.preallocate_csr()
 u0 = np.zeros(my_mesh.no_of_dofs)
 K_unconstr, f_unconstr = my_assembly.assemble_k_and_f(u=u0, t=1)
 
+my_mesh.save_mesh_xdmf('results/nastran_meshes/mesh_nastran')
