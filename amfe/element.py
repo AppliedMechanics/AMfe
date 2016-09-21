@@ -1122,18 +1122,21 @@ class Hexa8(Element):
     '''
     Eight point Hexahedron element.
 
-         eta
-3----------2
-|\     ^   |\
-| \    |   | \
-|  \   |   |  \
-|   7------+---6
-|   |  +-- |-- | -> xi
-0---+---\--1   |
- \  |    \  \  |
-  \ |     \  \ |
-   \|   zeta  \|
-    4----------5
+    .. code::
+
+
+                 eta
+        3----------2
+        |\     ^   |\
+        | \    |   | \
+        |  \   |   |  \
+        |   7------+---6
+        |   |  +-- |-- | -> xi
+        0---+---\--1   |
+         \  |    \  \  |
+          \ |     \  \ |
+           \|   zeta  \|
+            4----------5
 
     '''
     name = 'Hexa8'
@@ -1202,12 +1205,12 @@ class Hexa8(Element):
             E = 1/2*(H + H.T + H.T @ H)
             S, S_v, C_SE = self.material.S_Sv_and_C(E)
             B0 = compute_B_matrix(B0_tilde, F)
-            K_geo_small = B0_tilde @ S @ B0_tilde.T * det/8
+            K_geo_small = B0_tilde @ S @ B0_tilde.T * det
             K_geo = scatter_matrix(K_geo_small, 3)
-            K_mat = B0.T @ C_SE @ B0 * det/8
+            K_mat = B0.T @ C_SE @ B0 * det
 
             self.K += (K_geo + K_mat) * w
-            self.f += B0.T @ S_v * det/8 * w
+            self.f += B0.T @ S_v * det * w
 
             # extrapolation of gauss element
             extrapol = self.extrapolation_points[:,n_gauss:n_gauss+1]
@@ -1246,10 +1249,10 @@ class Hexa8(Element):
             dX_dxi = X_mat.T @ dN_dxi
             det = np.linalg.det(dX_dxi)
 
-            M_small = N @ N.T * det/8 * rho * w
+            M_small = N @ N.T * det * rho * w
             self.M += scatter_matrix(M_small, 3)
 
-        return
+        return self.M
 
 class Hexa20(Element):
     '''

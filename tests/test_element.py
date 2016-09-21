@@ -10,7 +10,7 @@ import nose
 
 from numpy.testing import assert_allclose, assert_almost_equal
 import amfe
-from amfe import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10
+from amfe import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10, Hexa8, Hexa20
 from amfe import material
 
 def jacobian(func, X, u, t):
@@ -37,7 +37,8 @@ X_tet4 = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1], dtype=float)
 X_tet10 = np.array([0.,  0.,  0.,  2.,  0.,  0.,  0.,  2.,  0.,  0.,  0.,  2.,  1.,
                     0.,  0.,  1.,  1.,  0.,  0.,  1.,  0.,  0.,  0.,  1.,  1.,  0.,
                     1.,  0.,  1.,  1.])
-
+X_hexa8 = np.array([0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1],
+                   dtype=float)
 
 class ElementTest(unittest.TestCase):
     '''Base class for testing the elements with the jacobian'''
@@ -53,7 +54,7 @@ class ElementTest(unittest.TestCase):
         K, f = self.my_element.k_and_f_int(self.X, self.u, t=0)
         K_finite_diff = jacobian(self.my_element.f_int, self.X, self.u, t=0)
         np.testing.assert_allclose(K, K_finite_diff, rtol=rtol, atol=atol)
-    
+
     @nose.tools.nottest
     def check_python_vs_fortran(self):
         # python routine
@@ -119,6 +120,19 @@ class Tet10Test(ElementTest):
 
     def test_jacobi(self):
         self.jacobi_test_element(rtol=2E-3)
+
+class Hexa8Test(ElementTest):
+    def setUp(self):
+        self.initialize_element(Hexa8, X_hexa8)
+
+    def test_jacobi(self):
+        self.jacobi_test_element(rtol=2E-3)
+
+    def test_mass(self):
+        my_material = material.KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
+        my_element = Hexa8(my_material)
+        M = my_element.m_int(X_hexa8, np.zeros_like(X_hexa8), t=0)
+        np.testing.assert_almost_equal(np.sum(M), 3)
 
 #%%
 # Test the material consistency:
@@ -251,8 +265,8 @@ def test_line_pressure2():
 
 def test_tri6_pressure():
     '''
-    Test, if the Tri3 pressure element reveals the same behavior as a mass 
-    element, which is accelerated in one direction only. 
+    Test, if the Tri3 pressure element reveals the same behavior as a mass
+    element, which is accelerated in one direction only.
     '''
     my_material = amfe.KirchhoffMaterial(rho=1)
     my_tri6 = amfe.Tri6(my_material)
@@ -270,9 +284,9 @@ def test_tri6_pressure():
     u_3D = np.zeros(3*6)
     K, f = my_boundary.k_and_f_int(X_3D, u_3D)
     np.testing.assert_equal(K, np.zeros((18,18)))
-    # as the skin element produces a force acting on the right hand side, 
-    # f has a negative sign. 
-    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7) 
+    # as the skin element produces a force acting on the right hand side,
+    # f has a negative sign.
+    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
 
 #%%
 
@@ -338,15 +352,15 @@ class Test_fortran_vs_python(ElementTest):
     '''
     Compare the python and fortran element computation routines.
     '''
-    
+
     def test_tri3(self):
         self.initialize_element(Tri3, X_tri3)
         self.check_python_vs_fortran()
-    
+
     def test_tri6(self):
         self.initialize_element(Tri6, X_tri6)
         self.check_python_vs_fortran()
-            
+
     def test_mass_tri6(self):
         self.initialize_element(Tri6, X_tri6)
         self.my_element._m_int_python(self.X, self.u, t=0)
@@ -361,7 +375,7 @@ class Test_fortran_vs_python(ElementTest):
     def test_tet10(self):
         self.initialize_element(Tet10, X_tet10)
         self.check_python_vs_fortran()
-        
-        
+
+
 if __name__ == '__main__':
     unittest.main()
