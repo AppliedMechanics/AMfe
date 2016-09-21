@@ -180,6 +180,7 @@ def create_xdmf_from_hdf5(filename):
 
             time = SubElement(spatial_grid, 'Time', {'TimeType':'Single',
                                                      'Value':str(T)})
+            # loop over all mesh topologies
             for key in h5_topology.keys():
                 grid = SubElement(spatial_grid, 'Grid', {'Type':'Uniform'})
                 topology = SubElement(grid, 'Topology',
@@ -211,7 +212,8 @@ def create_xdmf_from_hdf5(filename):
                     if field.attrs['ParaView'] == np.True_:
                         field_attr = SubElement(grid, 'Attribute',
                                                 {'Name':field.attrs['Name'],
-                                                 'AttributeType':field.attrs['AttributeType'],
+                                                 'AttributeType':
+                                                    field.attrs['AttributeType'],
                                                  'Center':field.attrs['Center']})
                         no_of_components = field.attrs['NoOfComponents']
                         field_dim = (field.shape[0] // no_of_components, no_of_components)
