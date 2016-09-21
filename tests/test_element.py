@@ -39,6 +39,14 @@ X_tet10 = np.array([0.,  0.,  0.,  2.,  0.,  0.,  0.,  2.,  0.,  0.,  0.,  2.,  
                     1.,  0.,  1.,  1.])
 X_hexa8 = np.array([0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1],
                    dtype=float)
+X_hexa20  = np.array(
+      [ 0. ,  0. ,  0. ,  1. ,  0. ,  0. ,  1. ,  1. ,  0. ,  0. ,  1. ,
+        0. ,  0. ,  0. ,  1. ,  1. ,  0. ,  1. ,  1. ,  1. ,  1. ,  0. ,
+        1. ,  1. ,  0.5,  0. ,  0. ,  0. ,  0.5,  0. ,  0. ,  0. ,  0.5,
+        1. ,  0.5,  0. ,  1. ,  0. ,  0.5,  0.5,  1. ,  0. ,  1. ,  1. ,
+        0.5,  0. ,  1. ,  0.5,  0.5,  0. ,  1. ,  0. ,  0.5,  1. ,  1. ,
+        0.5,  1. ,  0.5,  1. ,  1. ])
+
 
 class ElementTest(unittest.TestCase):
     '''Base class for testing the elements with the jacobian'''
@@ -133,6 +141,20 @@ class Hexa8Test(ElementTest):
         my_element = Hexa8(my_material)
         M = my_element.m_int(X_hexa8, np.zeros_like(X_hexa8), t=0)
         np.testing.assert_almost_equal(np.sum(M), 3)
+
+class Hexa20Test(ElementTest):
+    def setUp(self):
+        self.initialize_element(Hexa20, X_hexa20)
+
+    def test_jacobi(self):
+        self.jacobi_test_element(rtol=2E-3)
+
+    def test_mass(self):
+        my_material = material.KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
+        my_element = Hexa20(my_material)
+        M = my_element.m_int(X_hexa20, np.zeros_like(X_hexa20), t=0)
+        np.testing.assert_almost_equal(np.sum(M), 3)
+
 
 #%%
 # Test the material consistency:
