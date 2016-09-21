@@ -85,6 +85,8 @@ def compute_stress_export(N_gauss, ele_point_coords_in_gauss_view):
 #   \|      w  \|           \|         \|          \|         \|
 #    4----------5            4----16----5           4----16----5
 
+#%% swap array for Hexa20 and ParaView
+swap = np.array([0,1,2,3,4,5,6,7,8,11,13,9,16,18,19,17,10,12,14,15])
 
 #%% Shape functions for Hexa8
 

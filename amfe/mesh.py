@@ -33,7 +33,7 @@ element_mapping_list = [
     ['Hexa8',         'Hexahedron', 5, 12, 8,
      'Linear brick element'],
     ['Hexa20',         'Hex_20', 17, 25, 20,
-     'Linear brick element'],
+     'Quadratic brick element'],
     ['Tri6',          'Triangle_6',   9, 22,  6,
      'Quadratic triangle / 6 node second order triangle'],
     ['Tri3',          'Triangle',   2,  5,  3,
@@ -70,6 +70,8 @@ for element in element_mapping_list:
 
 nas2amfe = {'CTETRA' : 'Tet10',
             'CHEXA' : 'Hexa8'}
+
+
 
 def check_dir(*filenames):
     '''
@@ -670,7 +672,13 @@ class Mesh:
             i = self.node_idx
             df.ix[row_loc, i + 9], df.ix[row_loc, i + 8] = \
             df.ix[row_loc, i + 8], df.ix[row_loc, i + 9]
-
+        # Same node nubmering issue with Hexa20
+        if 'Hexa20' in element_types:
+            row_loc = df['el_type'] == 'Hexa20'
+            hexa8_gmsh_swap = np.array([0,1,2,3,4,5,6,7,8,11,13,9,16,18,19,
+                                        17,10,12,14,15])
+            i = self.node_idx
+            df.ix[row_loc, i:] = df.ix[row_loc, i + hexa8_gmsh_swap].values
 
         self._update_mesh_props()
         # printing some information regarding the physical groups
