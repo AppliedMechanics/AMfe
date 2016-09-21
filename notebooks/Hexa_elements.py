@@ -112,8 +112,9 @@ N_new = build_hex_8_shape_fcts(point_coords)
 print(N_new - N)
 #%% Hexa20
 
-point_coords = sy.Matrix([[-1, -1, -1],
-                          [ 1, -1, -1],
+point_coords = sy.Matrix([
+[-1, -1, -1],
+[ 1, -1, -1],
 [ 1,  1, -1],
 [-1,  1, -1],
 [-1, -1,  1],
