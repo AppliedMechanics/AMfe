@@ -647,10 +647,10 @@ subroutine hexa8_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
 
     weights = (/ 1, 1, 1, 1, 1, 1, 1, 1 /)
 
-    b = (-sqrt(3.0D0) + 1)**2*(sqrt(3.0D0) + 1)/8
-    c = (-sqrt(3.0D0) + 1)**3/8
-    d = (sqrt(3.0D0) + 1)**3/8
-    g = (sqrt(3.0D0) + 1)**2*(-sqrt(3.0D0) + 1)/8
+    b = (-sqrt(3.0D0) + 1)**2*(sqrt(3.0D0) + 1)/8.0D0
+    c = (-sqrt(3.0D0) + 1)**3/8.0D0
+    d = (sqrt(3.0D0) + 1)**3/8.0D0
+    g = (sqrt(3.0D0) + 1)**2*(-sqrt(3.0D0) + 1)/8.0D0
     extrapol(1,:) = (/ b, c, g, b, g, b, d, g /)
     extrapol(2,:) = (/c, b, b, g, b, g, g, d /)
     extrapol(3,:) = (/b, g, c, b, g, d, b, g /)
@@ -674,7 +674,7 @@ subroutine hexa8_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
         zeta = gauss_points(i, 3)
         w  = weights(i)
 
-        dN_dxi(1,:) = (/ -(-eta+1)*(-zeta+1), -(-xi+1)*(-zeta+1), -(-eta+1)*(-xi+1) /)
+        dN_dxi(1,:) = (/-(-eta+1)*(-zeta+1), -(-xi+1)*(-zeta+1), -(-eta+1)*(-xi+1) /)
         dN_dxi(2,:) = (/ (-eta+1)*(-zeta+1),  -(xi+1)*(-zeta+1),  -(-eta+1)*(xi+1) /)
         dN_dxi(3,:) = (/  (eta+1)*(-zeta+1),   (xi+1)*(-zeta+1),   -(eta+1)*(xi+1) /)
         dN_dxi(4,:) = (/ -(eta+1)*(-zeta+1),  (-xi+1)*(-zeta+1),  -(eta+1)*(-xi+1) /)
@@ -682,6 +682,7 @@ subroutine hexa8_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
         dN_dxi(6,:) = (/  (-eta+1)*(zeta+1),   -(xi+1)*(zeta+1),   (-eta+1)*(xi+1) /)
         dN_dxi(7,:) = (/   (eta+1)*(zeta+1),    (xi+1)*(zeta+1),    (eta+1)*(xi+1) /)
         dN_dxi(8,:) = (/  -(eta+1)*(zeta+1),   (-xi+1)*(zeta+1),   (eta+1)*(-xi+1) /)
+        dN_dxi = dN_dxi / 8.0D0
 
         dX_dxi = matmul(transpose(X_mat), dN_dxi)
         call invert_3_by_3_matrix(dX_dxi, dxi_dX, det)

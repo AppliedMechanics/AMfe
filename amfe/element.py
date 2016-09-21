@@ -1177,8 +1177,8 @@ class Hexa8(Element):
 
 
     def _compute_tensors(self, X, u, t):
-        X_mat = X.reshape(-1, 3)
-        u_mat = u.reshape(-1, 3)
+        X_mat = X.reshape(8, 3)
+        u_mat = u.reshape(8, 3)
 
         self.K *= 0
         self.f *= 0
