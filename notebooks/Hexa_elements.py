@@ -275,3 +275,12 @@ q = (4 - np.sqrt(15))/6
 
 #%%
 dN_dxi = N.jacobian(xi_vec)
+
+
+#%% Inversion for FORTRAN
+
+symbs = sy.symbols('a1:4_1:4')
+A = sy.Matrix(symbs).reshape(3,3)
+det = A.det()
+A_inv = A.inv()
+A_inv_det = sy.simplify(A_inv*det)

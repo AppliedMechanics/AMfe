@@ -398,6 +398,11 @@ class Test_fortran_vs_python(ElementTest):
         self.initialize_element(Tet10, X_tet10)
         self.check_python_vs_fortran()
 
+    def test_hexa8(self):
+        self.initialize_element(Hexa8, X_hexa8)
+        self.check_python_vs_fortran()
+
+
 
 if __name__ == '__main__':
     unittest.main()

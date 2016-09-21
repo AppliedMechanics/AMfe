@@ -51,6 +51,29 @@ subroutine compute_B_matrix(Bt, F, B, no_of_nodes, no_of_dims)
 
 end subroutine
 
+subroutine invert_3_by_3_matrix(A, A_inv, det)
+    ! Invert the matrix A and compute the determinant
+    implicit none
+
+    real(8), intent(in) :: A(3,3)
+    real(8), intent(out) :: A_inv(3,3), det
+    real(8) :: a11, a12, a13, a21, a22, a23, a31, a32, a33
+    a11 = A(1,1)
+    a12 = A(1,2)
+    a13 = A(1,3)
+    a21 = A(2,1)
+    a22 = A(2,2)
+    a23 = A(2,3)
+    a31 = A(3,1)
+    a32 = A(3,2)
+    a33 = A(3,3)
+    det = a11*a22*a33 - a11*a23*a32 - a12*a21*a33 + a12*a23*a31 + a13*a21*a32 - a13*a22*a31
+    A_inv = reshape((/ a22*a33 - a23*a32, -a21*a33 + a23*a31, &
+                       a21*a32 - a22*a31, -a12*a33 + a13*a32, &
+                       a11*a33 - a13*a31, -a11*a32 + a12*a31, &
+                       a12*a23 - a13*a22, -a11*a23 + a13*a21, &
+                       a11*a22 - a12*a21 /), (/3,3/)) / det
+end subroutine
 
 subroutine tri3_k_f_s_e(X, u, K, f_int, t, S_exp, E_exp, S_Sv_and_C_2d)
     implicit none
@@ -583,4 +606,106 @@ subroutine tet10_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
 
     end do
 
+end subroutine
+
+subroutine hexa8_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
+    implicit none
+
+    real(8), intent(in) :: X(24), u(24)
+    real(8), intent(out) :: K(24, 24), f_int(24), S_exp(8,6), E_exp(8,6)
+    real(8) :: u_e(8,3), C_SE(6,6)
+    real(8) :: K_geo_sm(8,8), K_mat(24,24), K_geo(24,24)
+    real(8) :: B0_tilde(8,3), B0(6,24), X_mat(8,3)
+    real(8) :: E(3,3), H(3,3), F(3,3), EYE(3,3), S(3,3), S_v(6)
+    real(8) :: det, extrapol(8,8), dN_dxi(8,3), dxi_dX(3,3), dX_dxi(3,3)
+    real(8) :: gauss_points(8,3), weights(8), a, b, c, d, g, w, xi, eta, zeta
+    integer :: i
+
+    ! External functions that will be used afterwards
+    external :: scatter_matrix
+    external :: compute_b_matrix
+    external :: S_Sv_and_C
+    external :: invert_3_by_3_matrix
+
+
+    X_mat = transpose(reshape(X, (/ 3, 8/)))
+    u_e = transpose(reshape(u, (/ 3, 8/)))
+    EYE = 0.0D0
+    EYE(1,1) = 1
+    EYE(2,2) = 1
+    EYE(3,3) = 1
+
+    a = sqrt(1.0D0/3.0D0)
+    gauss_points(1,:) = (/-a,  a,  a /)
+    gauss_points(2,:) = (/ a,  a,  a /)
+    gauss_points(3,:) = (/-a, -a,  a /)
+    gauss_points(4,:) = (/ a, -a,  a /)
+    gauss_points(5,:) = (/-a,  a, -a /)
+    gauss_points(6,:) = (/ a,  a, -a /)
+    gauss_points(7,:) = (/-a, -a, -a /)
+    gauss_points(8,:) = (/ a, -a, -a /)
+
+    weights = (/ 1, 1, 1, 1, 1, 1, 1, 1 /)
+
+    b = (-sqrt(3.0D0) + 1)**2*(sqrt(3.0D0) + 1)/8
+    c = (-sqrt(3.0D0) + 1)**3/8
+    d = (sqrt(3.0D0) + 1)**3/8
+    g = (sqrt(3.0D0) + 1)**2*(-sqrt(3.0D0) + 1)/8
+    extrapol(1,:) = (/ b, c, g, b, g, b, d, g /)
+    extrapol(2,:) = (/c, b, b, g, b, g, g, d /)
+    extrapol(3,:) = (/b, g, c, b, g, d, b, g /)
+    extrapol(4,:) = (/g, b, b, c, d, g, g, b /)
+    extrapol(5,:) = (/g, b, d, g, b, c, g, b /)
+    extrapol(6,:) = (/b, g, g, d, c, b, b, g /)
+    extrapol(7,:) = (/g, d, b, g, b, g, c, b /)
+    extrapol(8,:) = (/d, g, g, b, g, b, b, c /)
+
+
+    ! set the matrices and vectors to zero
+    K = 0.0
+    f_int = 0.0
+    S_exp = 0.0
+    E_exp = 0.0
+
+    ! Loop over the gauss points
+    do i = 1, 8
+        xi = gauss_points(i, 1)
+        eta = gauss_points(i, 2)
+        zeta = gauss_points(i, 3)
+        w  = weights(i)
+
+        dN_dxi(1,:) = (/ -(-eta+1)*(-zeta+1), -(-xi+1)*(-zeta+1), -(-eta+1)*(-xi+1) /)
+        dN_dxi(2,:) = (/ (-eta+1)*(-zeta+1),  -(xi+1)*(-zeta+1),  -(-eta+1)*(xi+1) /)
+        dN_dxi(3,:) = (/  (eta+1)*(-zeta+1),   (xi+1)*(-zeta+1),   -(eta+1)*(xi+1) /)
+        dN_dxi(4,:) = (/ -(eta+1)*(-zeta+1),  (-xi+1)*(-zeta+1),  -(eta+1)*(-xi+1) /)
+        dN_dxi(5,:) = (/ -(-eta+1)*(zeta+1),  -(-xi+1)*(zeta+1),  (-eta+1)*(-xi+1) /)
+        dN_dxi(6,:) = (/  (-eta+1)*(zeta+1),   -(xi+1)*(zeta+1),   (-eta+1)*(xi+1) /)
+        dN_dxi(7,:) = (/   (eta+1)*(zeta+1),    (xi+1)*(zeta+1),    (eta+1)*(xi+1) /)
+        dN_dxi(8,:) = (/  -(eta+1)*(zeta+1),   (-xi+1)*(zeta+1),   (eta+1)*(-xi+1) /)
+
+        dX_dxi = matmul(transpose(X_mat), dN_dxi)
+        call invert_3_by_3_matrix(dX_dxi, dxi_dX, det)
+        B0_tilde = matmul(dN_dxi, dxi_dX)
+
+        H = matmul(transpose(u_e), B0_tilde)
+        F = H + EYE
+        E = 0.5*(H + transpose(H) + matmul(transpose(H), H))
+
+        call S_Sv_and_C(E, S, S_v, C_SE)
+        call compute_b_matrix(B0_tilde, F, B0, 8, 3)
+
+        K_mat = matmul(transpose(B0), matmul(C_SE, B0))
+        K_geo_sm = matmul(B0_tilde, matmul(S, transpose(B0_tilde)))
+
+        call scatter_matrix(K_geo_sm, K_geo, 3, 8, 8)
+
+        K = K + (K_mat + K_geo)*det * w
+        f_int = f_int + matmul(transpose(B0), S_v) * det * w
+
+        S_exp = S_exp + matmul(reshape(extrapol(:,i), (/8,1/)), &
+                 reshape((/S(1,1), S(1,2), S(1,3), S(2,2), S(2,3), S(3,3)/), (/1, 6/)))
+        E_exp = E_exp + matmul(reshape(extrapol(:,i), (/8,1/)), &
+                 reshape((/ E(1,1), E(1,2), E(1,3), E(2,2), E(2,3), E(3,3)/), (/1, 6/)))
+
+    end do
 end subroutine
