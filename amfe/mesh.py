@@ -158,6 +158,7 @@ def create_xdmf_from_hdf5(filename):
     Returns
     -------
     None
+
     '''
     filename_no_dir = os.path.split(filename)[-1]
     # filename_no_ext = os.path.splitext(filename)[0]
@@ -173,64 +174,68 @@ def create_xdmf_from_hdf5(filename):
                                                 'CollectionType':'Temporal'})
         # time loop
         for i, T in enumerate(f['time']):
-            grid = SubElement(time_grid, 'Grid', {'Type':'Uniform'})
+            spatial_grid= SubElement(time_grid, 'Grid',
+                                     {'Type':'Spatial',
+                                      'GridType':'Collection'})
 
-            time = SubElement(grid, 'Time', {'TimeType':'Single',
-                                             'Value':str(T)})
-            topology = SubElement(grid, 'Topology',
-                                  {'TopologyType':h5_topology.attrs['TopologyType'],
-                                   'NumberOfElements':str(h5_topology.shape[0])})
-            topology_data = SubElement(topology, 'DataItem',
+            time = SubElement(spatial_grid, 'Time', {'TimeType':'Single',
+                                                     'Value':str(T)})
+            for key in h5_topology.keys():
+                grid = SubElement(spatial_grid, 'Grid', {'Type':'Uniform'})
+                topology = SubElement(grid, 'Topology',
+                                  {'TopologyType':h5_topology[key].attrs['TopologyType'],
+                                   'NumberOfElements':str(h5_topology[key].shape[0])})
+                topology_data = SubElement(topology, 'DataItem',
                                        {'NumberType':'Int',
                                         'Format':'HDF',
-                                        'Dimensions':shape2str(h5_topology.shape)})
-            topology_data.text = filename_no_dir + ':/mesh/topology'
+                                        'Dimensions':shape2str(h5_topology[key].shape)})
+                topology_data.text = filename_no_dir + ':/mesh/topology/' + key
 
-            # Check, if mesh is 2D or 3D
-            xdmf_node_type = 'XYZ'
-            if h5_nodes.shape[-1] == 2:
-                xdmf_node_type = 'XY'
+                # Check, if mesh is 2D or 3D
+                xdmf_node_type = 'XYZ'
+                if h5_nodes.shape[-1] == 2:
+                    xdmf_node_type = 'XY'
 
-            geometry = SubElement(grid, 'Geometry',
-                                  {'Type':'Uniform',
-                                   'GeometryType':xdmf_node_type})
-            geometry_data_item = SubElement(geometry, 'DataItem',
-                                            {'NumberType':'Float',
-                                             'Format':'HDF',
-                                             'Dimensions':shape2str(h5_nodes.shape)})
-            geometry_data_item.text = filename_no_dir + ':/mesh/nodes'
+                geometry = SubElement(grid, 'Geometry',
+                                      {'Type':'Uniform',
+                                       'GeometryType':xdmf_node_type})
+                geometry_data_item = SubElement(geometry, 'DataItem',
+                                                {'NumberType':'Float',
+                                                 'Format':'HDF',
+                                                 'Dimensions':shape2str(h5_nodes.shape)})
+                geometry_data_item.text = filename_no_dir + ':/mesh/nodes'
 
-            # Attribute loop for export of displacements, stresses etc.
-            for key in h5_time_vals.keys():
-                field = h5_time_vals[key]
-                if field.attrs['ParaView'] == np.True_:
-                    field_attr = SubElement(grid, 'Attribute',
-                                            {'Name':field.attrs['Name'],
-                                             'AttributeType':field.attrs['AttributeType'],
-                                             'Center':field.attrs['Center']})
-                    no_of_components = field.attrs['NoOfComponents']
-                    field_dim = (field.shape[0] // no_of_components, no_of_components)
-                    field_data = SubElement(field_attr, 'DataItem',
-                                            {'ItemType':'HyperSlab',
-                                             'Dimensions':shape2str(field_dim)})
+                # Attribute loop for export of displacements, stresses etc.
+                for key in h5_time_vals.keys():
+                    field = h5_time_vals[key]
+                    if field.attrs['ParaView'] == np.True_:
+                        field_attr = SubElement(grid, 'Attribute',
+                                                {'Name':field.attrs['Name'],
+                                                 'AttributeType':field.attrs['AttributeType'],
+                                                 'Center':field.attrs['Center']})
+                        no_of_components = field.attrs['NoOfComponents']
+                        field_dim = (field.shape[0] // no_of_components, no_of_components)
+                        field_data = SubElement(field_attr, 'DataItem',
+                                                {'ItemType':'HyperSlab',
+                                                 'Dimensions':shape2str(field_dim)})
 
-                    field_hyperslab = SubElement(field_data, 'DataItem',
-                                                 {'Dimensions':'3 2',
-                                                  'Format':'XML'})
+                        field_hyperslab = SubElement(field_data, 'DataItem',
+                                                     {'Dimensions':'3 2',
+                                                      'Format':'XML'})
 
-                    # pick the i-th column via hyperslab; If no temporal values
-                    # are pumped out, use the first column
-                    if i <= field.shape[-1]: # field has time instance
-                        col = str(i)
-                    else: # field has no time instance, use first col
-                        col = '0'
-                    field_hyperslab.text = '0 ' + col + ' 1 1 ' + \
-                                            str(field.shape[0]) + ' 1'
-                    field_hdf = SubElement(field_data, 'DataItem',
-                                           {'Format':'HDF',
-                                            'NumberType':'Float',
-                                            'Dimensions':shape2str(field.shape)})
-                    field_hdf.text = filename_no_dir + ':/time_vals/' + key
+                        # pick the i-th column via hyperslab; If no temporal values
+                        # are pumped out, use the first column
+                        if i <= field.shape[-1]: # field has time instance
+                            col = str(i)
+                        else: # field has no time instance, use first col
+                            col = '0'
+                        field_hyperslab.text = '0 ' + col + ' 1 1 ' + \
+                                                str(field.shape[0]) + ' 1'
+                        field_hdf = SubElement(field_data, 'DataItem',
+                                               {'Format':'HDF',
+                                                'NumberType':'Float',
+                                                'Dimensions':shape2str(field.shape)})
+                        field_hdf.text = filename_no_dir + ':/time_vals/' + key
 
     # write xdmf-file
     xdmf_str = prettify_xml(xml_root)
