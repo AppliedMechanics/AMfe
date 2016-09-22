@@ -777,21 +777,21 @@ subroutine hexa20_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
                      wa*wa*wa, wa*w0*wa, w0*w0*wa, wa*w0*wa, wa*wa*wa, &
                      w0*wa*wa, wa*wa*wa /)
 
-         b1 = 13*sqrt(15.0D0)/36 + 17/12.0D0
-         b2 = (4 + sqrt(15.0D0))/9
-         b3 = (1 + sqrt(15.0D0))/36
-         b3 = (3 + sqrt(15.0D0))/27
+         b1 = 13.0D0*sqrt(15.0D0)/36.0D0 + 17.0D0/12.0D0
+         b2 = (4.0D0 + sqrt(15.0D0))/9.0D0
+         b3 = (1.0D0 + sqrt(15.0D0))/36.0D0
+         b3 = (3.0D0 + sqrt(15.0D0))/27.0D0
          b4 = 1/9.0D0
-         b5 = (1 - sqrt(15.0D0))/36
+         b5 = (1.0D0 - sqrt(15.0D0))/36.0D0
          b6 = -2/27.0D0
-         b7 = (3 - sqrt(15.0D0))/27
-         b8 = -13*sqrt(15.0D0)/36 + 17/12.0D0
-         b9 = (-4 + sqrt(15.0D0))/9
-         c4 = (3 + sqrt(15.0D0))/18
-         c5 = sqrt(15.0D0)/6 + 2/3.0D0
+         b7 = (3.0D0 - sqrt(15.0D0))/27.0D0
+         b8 = -13.0D0*sqrt(15.0D0)/36.0D0 + 17/12.0D0
+         b9 = (-4.0D0 + sqrt(15.0D0))/9.0D0
+         c4 = (3.0D0 + sqrt(15.0D0))/18.0D0
+         c5 = sqrt(15.0D0)/6.0D0 + 2/3.0D0
          c1 = 3/18.0D0
-         c2 = (- 3 + sqrt(15.0D0))/18
-         c3 = (4 - sqrt(15.0D0))/6
+         c2 = (- 3.0D0 + sqrt(15.0D0))/18.0D0
+         c3 = (4.0D0 - sqrt(15.0D0))/6.0D0
 
          extrapol(1,:) = (/ b1,-b2,b3,-b2,b3,b4,b3,b4,b5,-b2,b3,b4,b3,b6,b7,b4, &
                            b7,b9,b3,b4,b5,b4,b7,b9,b5,b9,b8 /)
@@ -842,7 +842,7 @@ subroutine hexa20_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
         E_exp = 0.0
 
         ! Loop over the gauss points
-        do i = 1, 8
+        do i = 1, 27
             xi = gauss_points(i, 1)
             eta = gauss_points(i, 2)
             zeta = gauss_points(i, 3)
