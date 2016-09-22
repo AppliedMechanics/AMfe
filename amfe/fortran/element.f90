@@ -710,3 +710,218 @@ subroutine hexa8_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
 
     end do
 end subroutine
+
+
+subroutine hexa20_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
+        implicit none
+
+        real(8), intent(in) :: X(60), u(60)
+        real(8), intent(out) :: K(60, 60), f_int(60), S_exp(20,6), E_exp(20,6)
+        real(8) :: u_e(20,3), C_SE(6,6)
+        real(8) :: K_geo_sm(20,20), K_mat(60,60), K_geo(60,60)
+        real(8) :: B0_tilde(20,3), B0(6,60), X_mat(20,3)
+        real(8) :: E(3,3), H(3,3), F(3,3), EYE(3,3), S(3,3), S_v(6)
+        real(8) :: det, extrapol(20,27), dN_dxi(20,3), dxi_dX(3,3), dX_dxi(3,3)
+        real(8) :: gauss_points(27,3), weights(27), a, w, wa, w0, xi, eta, zeta
+        real(8) :: b1, b2, b3, b4, b5, b6, b7, b8, b9, c1, c2, c3, c4, c5
+        integer :: i
+
+        ! External functions that will be used afterwards
+        external :: scatter_matrix
+        external :: compute_b_matrix
+        external :: S_Sv_and_C
+        external :: invert_3_by_3_matrix
+
+
+        X_mat = transpose(reshape(X, (/ 3, 20/)))
+        u_e = transpose(reshape(u, (/ 3, 20/)))
+        EYE = 0.0D0
+        EYE(1,1) = 1
+        EYE(2,2) = 1
+        EYE(3,3) = 1
+
+        a = sqrt(3.0D0/5.0D0)
+        wa = 5/9.0D0
+        w0 = 8/9.0D0
+        gauss_points(1,:) = (/ -a, -a, -a /)
+        gauss_points(2,:) = (/ 0.0D0 , -a, -a /)
+        gauss_points(3,:) = (/  a, -a, -a /)
+        gauss_points(4,:) = (/ -a, 0.0D0 , -a /)
+        gauss_points(5,:) = (/ 0.0D0 , 0.0D0 , -a /)
+        gauss_points(6,:) = (/  a, 0.0D0 , -a /)
+        gauss_points(7,:) = (/ -a,  a, -a /)
+        gauss_points(8,:) = (/ 0.0D0 ,  a, -a /)
+        gauss_points(9,:) = (/  a,  a, -a /)
+        gauss_points(10,:) = (/ -a, -a, 0.0D0  /)
+        gauss_points(11,:) = (/ 0.0D0 , -a, 0.0D0  /)
+        gauss_points(12,:) = (/  a, -a, 0.0D0  /)
+        gauss_points(13,:) = (/ -a, 0.0D0 , 0.0D0  /)
+        gauss_points(14,:) = (/ 0.0D0 , 0.0D0 , 0.0D0  /)
+        gauss_points(15,:) = (/  a, 0.0D0 , 0.0D0  /)
+        gauss_points(16,:) = (/ -a,  a, 0.0D0  /)
+        gauss_points(17,:) = (/ 0.0D0 ,  a, 0.0D0  /)
+        gauss_points(18,:) = (/  a,  a, 0.0D0  /)
+        gauss_points(19,:) = (/ -a, -a,  a /)
+        gauss_points(20,:) = (/ 0.0D0 , -a,  a /)
+        gauss_points(21,:) = (/  a, -a,  a /)
+        gauss_points(22,:) = (/ -a, 0.0D0 ,  a /)
+        gauss_points(23,:) = (/ 0.0D0 , 0.0D0 ,  a /)
+        gauss_points(24,:) = (/  a, 0.0D0 ,  a /)
+        gauss_points(25,:) = (/ -a,  a,  a /)
+        gauss_points(26,:) = (/ 0.0D0 ,  a,  a /)
+        gauss_points(27,:) = (/  a,  a,  a /)
+        weights = (/ wa*wa*wa, w0*wa*wa, wa*wa*wa, wa*w0*wa, w0*w0*wa, &
+                     wa*w0*wa, wa*wa*wa, w0*wa*wa, wa*wa*wa, wa*wa*w0, &
+                     w0*wa*w0, wa*wa*w0, wa*w0*w0, w0*w0*w0, wa*w0*w0, &
+                     wa*wa*w0, w0*wa*w0, wa*wa*w0, wa*wa*wa, w0*wa*wa, &
+                     wa*wa*wa, wa*w0*wa, w0*w0*wa, wa*w0*wa, wa*wa*wa, &
+                     w0*wa*wa, wa*wa*wa /)
+
+         b1 = 13*sqrt(15.0D0)/36 + 17/12.0D0
+         b2 = (4 + sqrt(15.0D0))/9
+         b3 = (1 + sqrt(15.0D0))/36
+         b3 = (3 + sqrt(15.0D0))/27
+         b4 = 1/9.0D0
+         b5 = (1 - sqrt(15.0D0))/36
+         b6 = -2/27.0D0
+         b7 = (3 - sqrt(15.0D0))/27
+         b8 = -13*sqrt(15.0D0)/36 + 17/12.0D0
+         b9 = (-4 + sqrt(15.0D0))/9
+         c4 = (3 + sqrt(15.0D0))/18
+         c5 = sqrt(15.0D0)/6 + 2/3.0D0
+         c1 = 3/18.0D0
+         c2 = (- 3 + sqrt(15.0D0))/18
+         c3 = (4 - sqrt(15.0D0))/6
+
+         extrapol(1,:) = (/ b1,-b2,b3,-b2,b3,b4,b3,b4,b5,-b2,b3,b4,b3,b6,b7,b4, &
+                           b7,b9,b3,b4,b5,b4,b7,b9,b5,b9,b8 /)
+         extrapol(2,:) = (/ b3,-b2,b1,b4,b3,-b2,b5,b4,b3,b4,b3,-b2,b7,b6,b3,b9, &
+                           b7,b4,b5,b4,b3,b9,b7,b4,b8,b9,b5 /)
+         extrapol(3,:) = (/ b5,b4,b3,b4,b3,-b2,b3,-b2,b1,b9,b7,b4,b7,b6,b3,b4, &
+                           b3,-b2,b8,b9,b5,b9,b7,b4,b5,b4,b3 /)
+         extrapol(4,:) = (/ b3,b4,b5,-b2,b3,b4,b1,-b2,b3,b4,b7,b9,b3,b6,b7, &
+                           -b2,b3,b4,b5,b9,b8,b4,b7,b9,b3,b4,b5 /)
+         extrapol(5,:) = (/ b3,b4,b5,b4,b7,b9,b5,b9,b8,-b2,b3,b4,b3,b6,b7,b4, &
+                           b7,b9,b1,-b2,b3,-b2,b3,b4,b3,b4,b5 /)
+         extrapol(6,:) = (/ b5,b4,b3,b9,b7,b4,b8,b9,b5,b4,b3,-b2,b7,b6,b3,b9, &
+                           b7,b4,b3,-b2,b1,b4,b3,-b2,b5,b4,b3 /)
+         extrapol(7,:) = (/ b8,b9,b5,b9,b7,b4,b5,b4,b3,b9,b7,b4,b7,b6,b3,b4, &
+                           b3,-b2,b5,b4,b3,b4,b3,-b2,b3,-b2,b1 /)
+         extrapol(8,:) = (/ b5,b9,b8,b4,b7,b9,b3,b4,b5,b4,b7,b9,b3,b6,b7,-b2, &
+                           b3,b4,b3,b4,b5,-b2,b3,b4,b1,-b2,b3 /)
+         extrapol(9,:) = (/ c4,c5,c4,-c4,-c4,-c4,c1,-c1,c1,-c4,-c4,-c4,b4,b4, &
+                           b4,c2,c2,c2,c1,-c1,c1,c2,c2,c2,-c2,c3,-c2 /)
+         extrapol(10,:) = (/ c1,-c4,c4,-c1,-c4,c5,c1,-c4,c4,c2,b4,-c4,c2,b4,-c4, &
+                           c2,b4,-c4,-c2,c2,c1,c3,c2,-c1,-c2,c2,c1 /)
+         extrapol(11,:) = (/ c1,-c1,c1,-c4,-c4,-c4,c4,c5,c4,c2,c2,c2,b4,b4,b4, &
+                           -c4,-c4,-c4,-c2,c3,-c2,c2,c2,c2,c1,-c1,c1 /)
+         extrapol(12,:) = (/ c4,-c4,c1,c5,-c4,-c1,c4,-c4,c1,-c4,b4,c2,-c4,b4,c2, &
+                           -c4,b4,c2,c1,c2,-c2,-c1,c2,c3,c1,c2,-c2 /)
+         extrapol(13,:) = (/ c1,-c1,c1,c2,c2,c2,-c2,c3,-c2,-c4,-c4,-c4,b4,b4,b4, &
+                           c2,c2,c2,c4,c5,c4,-c4,-c4,-c4,c1,-c1,c1 /)
+         extrapol(14,:) = (/ -c2,c2,c1,c3,c2,-c1,-c2,c2,c1,c2,b4,-c4,c2,b4,-c4, &
+                           c2,b4,-c4,c1,-c4,c4,-c1,-c4,c5,c1,-c4,c4 /)
+         extrapol(15,:) = (/ -c2,c3,-c2,c2,c2,c2,c1,-c1,c1,c2,c2,c2,b4,b4,b4, &
+                           -c4,-c4,-c4,c1,-c1,c1,-c4,-c4,-c4,c4,c5,c4 /)
+         extrapol(16,:) = (/ c1,c2,-c2,-c1,c2,c3,c1,c2,-c2,-c4,b4,c2,-c4,b4,c2, &
+                           -c4,b4,c2,c4,-c4,c1,c5,-c4,-c1,c4,-c4,c1 /)
+         extrapol(17,:) = (/ c4,-c4,c1,-c4,b4,c2,c1,c2,-c2,c5,-c4,-c1,-c4,b4, &
+                           c2,-c1,c2,c3,c4,-c4,c1,-c4,b4,c2,c1,c2,-c2 /)
+         extrapol(18,:) = (/ c1,-c4,c4,c2,b4,-c4,-c2,c2,c1,-c1,-c4,c5,c2,b4,-c4, &
+                           c3,c2,-c1,c1,-c4,c4,c2,b4,-c4,-c2,c2,c1 /)
+         extrapol(19,:) = (/ -c2,c2,c1,c2,b4,-c4,c1,-c4,c4,c3,c2,-c1,c2,b4,-c4, &
+                           -c1,-c4,c5,-c2,c2,c1,c2,b4,-c4,c1,-c4,c4 /)
+         extrapol(20,:) = (/ c1,c2,-c2,-c4,b4,c2,c4,-c4,c1,-c1,c2,c3,-c4,b4,c2, &
+                           c5,-c4,-c1,c1,c2,-c2,-c4,b4,c2,c4,-c4,c1 /)
+
+
+        ! set the matrices and vectors to zero
+        K = 0.0
+        f_int = 0.0
+        S_exp = 0.0
+        E_exp = 0.0
+
+        ! Loop over the gauss points
+        do i = 1, 8
+            xi = gauss_points(i, 1)
+            eta = gauss_points(i, 2)
+            zeta = gauss_points(i, 3)
+            w  = weights(i)
+
+            dN_dxi(1,:) = (/ (eta-1)*(zeta-1)*(eta+2*xi+zeta+1), &
+                             (xi-1)*(zeta-1)*(2*eta+xi+zeta+1), &
+                             (eta-1)*(xi-1)*(eta+xi+2*zeta+1) /)
+            dN_dxi(2,:) = (/ (eta-1)*(zeta-1)*(-eta+2*xi-zeta-1), &
+                             (xi+1)*(zeta-1)*(-2*eta+xi-zeta-1), &
+                             (eta-1)*(xi+1)*(-eta+xi-2*zeta-1) /)
+            dN_dxi(3,:) = (/ (eta+1)*(zeta-1)*(-eta-2*xi+zeta+1), &
+                             (xi+1)*(zeta-1)*(-2*eta-xi+zeta+1), &
+                             (eta+1)*(xi+1)*(-eta-xi+2*zeta+1) /)
+            dN_dxi(4,:) = (/ (eta+1)*(zeta-1)*(eta-2*xi-zeta-1), &
+                             (xi-1)*(zeta-1)*(2*eta-xi-zeta-1), &
+                             (eta+1)*(xi-1)*(eta-xi-2*zeta-1) /)
+            dN_dxi(5,:) = (/(eta-1)*(zeta+1)*(-eta-2*xi+zeta-1), &
+                            (xi-1)*(zeta+1)*(-2*eta-xi+zeta-1), &
+                            (eta-1)*(xi-1)*(-eta-xi+2*zeta-1) /)
+            dN_dxi(6,:) = (/ (eta-1)*(zeta+1)*(eta-2*xi-zeta+1), &
+                             (xi+1)*(zeta+1)*(2*eta-xi-zeta+1), &
+                             (eta-1)*(xi+1)*(eta-xi-2*zeta+1) /)
+            dN_dxi(7,:) = (/ (eta+1)*(zeta+1)*(eta+2*xi+zeta-1), &
+                             (xi+1)*(zeta+1)*(2*eta+xi+zeta-1), &
+                             (eta+1)*(xi+1)*(eta+xi+2*zeta-1) /)
+            dN_dxi(8,:) = (/(eta+1)*(zeta+1)*(-eta+2*xi-zeta+1), &
+                            (xi-1)*(zeta+1)*(-2*eta+xi-zeta+1), &
+                            (eta+1)*(xi-1)*(-eta+xi-2*zeta+1) /)
+            dN_dxi(9,:) = (/-4*xi*(eta-1)*(zeta-1), -2*(xi**2-1)*(zeta-1), &
+                            -2*(eta-1)*(xi**2-1) /)
+            dN_dxi(10,:) = (/ 2*(eta**2-1)*(zeta-1), 4*eta*(xi+1)*(zeta-1), &
+                              2*(eta**2-1)*(xi+1) /)
+            dN_dxi(11,:) = (/ 4*xi*(eta+1)*(zeta-1),  2*(xi**2-1)*(zeta-1), &
+                              2*(eta+1)*(xi**2-1) /)
+            dN_dxi(12,:) = (/-2*(eta**2-1)*(zeta-1),-4*eta*(xi-1)*(zeta-1), &
+                             -2*(eta**2-1)*(xi-1) /)
+            dN_dxi(13,:) = (/ 4*xi*(eta-1)*(zeta+1),  2*(xi**2-1)*(zeta+1), &
+                              2*(eta-1)*(xi**2-1) /)
+            dN_dxi(14,:) = (/-2*(eta**2-1)*(zeta+1),-4*eta*(xi+1)*(zeta+1), &
+                             -2*(eta**2-1)*(xi+1) /)
+            dN_dxi(15,:) = (/-4*xi*(eta+1)*(zeta+1), -2*(xi**2-1)*(zeta+1), &
+                             -2*(eta+1)*(xi**2-1) /)
+            dN_dxi(16,:) = (/ 2*(eta**2-1)*(zeta+1), 4*eta*(xi-1)*(zeta+1), &
+                              2*(eta**2-1)*(xi-1) /)
+            dN_dxi(17,:) = (/-2*(eta-1)*(zeta**2-1), -2*(xi-1)*(zeta**2-1), &
+                             -4*zeta*(eta-1)*(xi-1) /)
+            dN_dxi(18,:) = (/ 2*(eta-1)*(zeta**2-1),  2*(xi+1)*(zeta**2-1), &
+                              4*zeta*(eta-1)*(xi+1) /)
+            dN_dxi(19,:) = (/-2*(eta+1)*(zeta**2-1), -2*(xi+1)*(zeta**2-1), &
+                             -4*zeta*(eta+1)*(xi+1) /)
+            dN_dxi(20,:) = (/ 2*(eta+1)*(zeta**2-1),  2*(xi-1)*(zeta**2-1), &
+                              4*zeta*(eta+1)*(xi-1) /)
+
+            dN_dxi = dN_dxi / 8.0D0
+
+            dX_dxi = matmul(transpose(X_mat), dN_dxi)
+            call invert_3_by_3_matrix(dX_dxi, dxi_dX, det)
+            B0_tilde = matmul(dN_dxi, dxi_dX)
+
+            H = matmul(transpose(u_e), B0_tilde)
+            F = H + EYE
+            E = 0.5*(H + transpose(H) + matmul(transpose(H), H))
+
+            call S_Sv_and_C(E, S, S_v, C_SE)
+            call compute_b_matrix(B0_tilde, F, B0, 20, 3)
+
+            K_mat = matmul(transpose(B0), matmul(C_SE, B0))
+            K_geo_sm = matmul(B0_tilde, matmul(S, transpose(B0_tilde)))
+
+            call scatter_matrix(K_geo_sm, K_geo, 3, 20, 20)
+
+            K = K + (K_mat + K_geo)*det * w
+            f_int = f_int + matmul(transpose(B0), S_v) * det * w
+
+            S_exp = S_exp + matmul(reshape(extrapol(:,i), (/20,1/)), &
+                     reshape((/S(1,1), S(1,2), S(1,3), S(2,2), S(2,3), S(3,3)/), (/1, 6/)))
+            E_exp = E_exp + matmul(reshape(extrapol(:,i), (/20,1/)), &
+                     reshape((/ E(1,1), E(1,2), E(1,3), E(2,2), E(2,3), E(3,3)/), (/1, 6/)))
+
+        end do
+end subroutine

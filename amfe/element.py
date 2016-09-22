@@ -1881,6 +1881,11 @@ if use_fortran:
         self.K, self.f, self.S, self.E = amfe.f90_element.hexa8_k_f_s_e( \
             X, u, self.material.S_Sv_and_C)
 
+    def compute_hexa20_tensors(self, X, u, t):
+        '''Wrapping funktion for fortran function call.'''
+        self.K, self.f, self.S, self.E = amfe.f90_element.hexa20_k_f_s_e( \
+            X, u, self.material.S_Sv_and_C)
+
 
     # overloading the routines with fortran routines
     Tri3._compute_tensors_python = Tri3._compute_tensors
@@ -1889,6 +1894,8 @@ if use_fortran:
     Tet4._compute_tensors_python = Tet4._compute_tensors
     Tet10._compute_tensors_python = Tet10._compute_tensors
     Hexa8._compute_tensors_python = Hexa8._compute_tensors
+    Hexa20._compute_tensors_python = Hexa20._compute_tensors
+
 
     Tri3._compute_tensors = compute_tri3_tensors
     Tri6._compute_tensors = compute_tri6_tensors
@@ -1896,3 +1903,4 @@ if use_fortran:
     Tet4._compute_tensors = compute_tet4_tensors
     Tet10._compute_tensors = compute_tet10_tensors
     Hexa8._compute_tensors = compute_hexa8_tensors
+    Hexa20._compute_tensors = compute_hexa20_tensors
