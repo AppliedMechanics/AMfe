@@ -441,7 +441,7 @@ class Mesh:
         return
 
 
-    def import_bdf(self, filename):
+    def import_bdf(self, filename, scale_factor=1.):
         '''
         Import a NASTRAN mesh.
 
@@ -525,6 +525,8 @@ class Mesh:
 
         self.no_of_dofs_per_node = 3 # this is just hard coded right now...
         self.nodes = np.array(nodes_list, dtype=float)[:,1:]
+        self.nodes *= scale_factor # scaling of nodes
+
         nodes_dict = pd.Series(index=np.array(nodes_list, dtype=int)[:,0],
                                data=np.arange(len(nodes_list)))
 
