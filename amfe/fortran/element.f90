@@ -723,7 +723,7 @@ subroutine hexa20_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
         real(8) :: E(3,3), H(3,3), F(3,3), EYE(3,3), S(3,3), S_v(6)
         real(8) :: det, extrapol(20,27), dN_dxi(20,3), dxi_dX(3,3), dX_dxi(3,3)
         real(8) :: gauss_points(27,3), weights(27), a, w, wa, w0, xi, eta, zeta
-        real(8) :: b1, b2, b3, b4, b5, b6, b7, b8, b9, c1, c2, c3, c4, c5
+        real(8) :: b1, b2, b3, b4, b5, b6, b7, b8, b9, c1, c2, c3, c4, c5, c6
         integer :: i
 
         ! External functions that will be used afterwards
@@ -777,62 +777,100 @@ subroutine hexa20_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
                      wa*wa*wa, wa*w0*wa, w0*w0*wa, wa*w0*wa, wa*wa*wa, &
                      w0*wa*wa, wa*wa*wa /)
 
-         b1 = 13.0D0*sqrt(15.0D0)/36.0D0 + 17.0D0/12.0D0
-         b2 = (4.0D0 + sqrt(15.0D0))/9.0D0
-         b3 = (1.0D0 + sqrt(15.0D0))/36.0D0
-         b3 = (3.0D0 + sqrt(15.0D0))/27.0D0
-         b4 = 1/9.0D0
-         b5 = (1.0D0 - sqrt(15.0D0))/36.0D0
-         b6 = -2/27.0D0
-         b7 = (3.0D0 - sqrt(15.0D0))/27.0D0
-         b8 = -13.0D0*sqrt(15.0D0)/36.0D0 + 17/12.0D0
-         b9 = (-4.0D0 + sqrt(15.0D0))/9.0D0
-         c4 = (3.0D0 + sqrt(15.0D0))/18.0D0
-         c5 = sqrt(15.0D0)/6.0D0 + 2/3.0D0
-         c1 = 3/18.0D0
-         c2 = (- 3.0D0 + sqrt(15.0D0))/18.0D0
-         c3 = (4.0D0 - sqrt(15.0D0))/6.0D0
+        !  b1 = 13.0D0*sqrt(15.0D0)/36.0D0 + 17.0D0/12.0D0
+        !  b2 = (4.0D0 + sqrt(15.0D0))/9.0D0
+        !  b3 = (1.0D0 + sqrt(15.0D0))/36.0D0
+        !  b3 = (3.0D0 + sqrt(15.0D0))/27.0D0
+        !  b4 = 1/9.0D0
+        !  b5 = (1.0D0 - sqrt(15.0D0))/36.0D0
+        !  b6 = -2/27.0D0
+        !  b7 = (3.0D0 - sqrt(15.0D0))/27.0D0
+        !  b8 = -13.0D0*sqrt(15.0D0)/36.0D0 + 17/12.0D0
+        !  b9 = (-4.0D0 + sqrt(15.0D0))/9.0D0
+        !  c4 = (3.0D0 + sqrt(15.0D0))/18.0D0
+        !  c5 = sqrt(15.0D0)/6.0D0 + 2/3.0D0
+        !  c1 = 3/18.0D0
+        !  c2 = (- 3.0D0 + sqrt(15.0D0))/18.0D0
+        !  c3 = (4.0D0 - sqrt(15.0D0))/6.0D0
 
-         extrapol(1,:) = (/ b1,-b2,b3,-b2,b3,b4,b3,b4,b5,-b2,b3,b4,b3,b6,b7,b4, &
-                           b7,b9,b3,b4,b5,b4,b7,b9,b5,b9,b8 /)
-         extrapol(2,:) = (/ b3,-b2,b1,b4,b3,-b2,b5,b4,b3,b4,b3,-b2,b7,b6,b3,b9, &
-                           b7,b4,b5,b4,b3,b9,b7,b4,b8,b9,b5 /)
-         extrapol(3,:) = (/ b5,b4,b3,b4,b3,-b2,b3,-b2,b1,b9,b7,b4,b7,b6,b3,b4, &
-                           b3,-b2,b8,b9,b5,b9,b7,b4,b5,b4,b3 /)
-         extrapol(4,:) = (/ b3,b4,b5,-b2,b3,b4,b1,-b2,b3,b4,b7,b9,b3,b6,b7, &
-                           -b2,b3,b4,b5,b9,b8,b4,b7,b9,b3,b4,b5 /)
-         extrapol(5,:) = (/ b3,b4,b5,b4,b7,b9,b5,b9,b8,-b2,b3,b4,b3,b6,b7,b4, &
-                           b7,b9,b1,-b2,b3,-b2,b3,b4,b3,b4,b5 /)
-         extrapol(6,:) = (/ b5,b4,b3,b9,b7,b4,b8,b9,b5,b4,b3,-b2,b7,b6,b3,b9, &
-                           b7,b4,b3,-b2,b1,b4,b3,-b2,b5,b4,b3 /)
-         extrapol(7,:) = (/ b8,b9,b5,b9,b7,b4,b5,b4,b3,b9,b7,b4,b7,b6,b3,b4, &
-                           b3,-b2,b5,b4,b3,b4,b3,-b2,b3,-b2,b1 /)
-         extrapol(8,:) = (/ b5,b9,b8,b4,b7,b9,b3,b4,b5,b4,b7,b9,b3,b6,b7,-b2, &
-                           b3,b4,b3,b4,b5,-b2,b3,b4,b1,-b2,b3 /)
-         extrapol(9,:) = (/ c4,c5,c4,-c4,-c4,-c4,c1,-c1,c1,-c4,-c4,-c4,b4,b4, &
-                           b4,c2,c2,c2,c1,-c1,c1,c2,c2,c2,-c2,c3,-c2 /)
-         extrapol(10,:) = (/ c1,-c4,c4,-c1,-c4,c5,c1,-c4,c4,c2,b4,-c4,c2,b4,-c4, &
-                           c2,b4,-c4,-c2,c2,c1,c3,c2,-c1,-c2,c2,c1 /)
-         extrapol(11,:) = (/ c1,-c1,c1,-c4,-c4,-c4,c4,c5,c4,c2,c2,c2,b4,b4,b4, &
-                           -c4,-c4,-c4,-c2,c3,-c2,c2,c2,c2,c1,-c1,c1 /)
-         extrapol(12,:) = (/ c4,-c4,c1,c5,-c4,-c1,c4,-c4,c1,-c4,b4,c2,-c4,b4,c2, &
-                           -c4,b4,c2,c1,c2,-c2,-c1,c2,c3,c1,c2,-c2 /)
-         extrapol(13,:) = (/ c1,-c1,c1,c2,c2,c2,-c2,c3,-c2,-c4,-c4,-c4,b4,b4,b4, &
-                           c2,c2,c2,c4,c5,c4,-c4,-c4,-c4,c1,-c1,c1 /)
-         extrapol(14,:) = (/ -c2,c2,c1,c3,c2,-c1,-c2,c2,c1,c2,b4,-c4,c2,b4,-c4, &
-                           c2,b4,-c4,c1,-c4,c4,-c1,-c4,c5,c1,-c4,c4 /)
-         extrapol(15,:) = (/ -c2,c3,-c2,c2,c2,c2,c1,-c1,c1,c2,c2,c2,b4,b4,b4, &
-                           -c4,-c4,-c4,c1,-c1,c1,-c4,-c4,-c4,c4,c5,c4 /)
-         extrapol(16,:) = (/ c1,c2,-c2,-c1,c2,c3,c1,c2,-c2,-c4,b4,c2,-c4,b4,c2, &
-                           -c4,b4,c2,c4,-c4,c1,c5,-c4,-c1,c4,-c4,c1 /)
-         extrapol(17,:) = (/ c4,-c4,c1,-c4,b4,c2,c1,c2,-c2,c5,-c4,-c1,-c4,b4, &
-                           c2,-c1,c2,c3,c4,-c4,c1,-c4,b4,c2,c1,c2,-c2 /)
-         extrapol(18,:) = (/ c1,-c4,c4,c2,b4,-c4,-c2,c2,c1,-c1,-c4,c5,c2,b4,-c4, &
-                           c3,c2,-c1,c1,-c4,c4,c2,b4,-c4,-c2,c2,c1 /)
-         extrapol(19,:) = (/ -c2,c2,c1,c2,b4,-c4,c1,-c4,c4,c3,c2,-c1,c2,b4,-c4, &
-                           -c1,-c4,c5,-c2,c2,c1,c2,b4,-c4,c1,-c4,c4 /)
-         extrapol(20,:) = (/ c1,c2,-c2,-c4,b4,c2,c4,-c4,c1,-c1,c2,c3,-c4,b4,c2, &
-                           c5,-c4,-c1,c1,c2,-c2,-c4,b4,c2,c4,-c4,c1 /)
+         b1 = 13*sqrt(15.0D0)/36 + 17/12.0D0
+         b2 = (4 + sqrt(15.0D0))/9
+         b3 = (1 + sqrt(15.0D0))/36
+         b4 = (3 + sqrt(15.0D0))/27
+         b5 = 1/9.0D0
+         b6 = (1 - sqrt(15.0D0))/36
+         b7 = -2/27.0D0
+         b8 = (3 - sqrt(15.0D0))/27
+         b9 = -13*sqrt(15.0D0)/36 + 17/12.0D0
+         c1 = (-4 + sqrt(15.0D0))/9
+         c2 = (3 + sqrt(15.0D0))/18
+         c3 = sqrt(15.0D0)/6 + 2/3.0D0
+         c4 = 3/18.0D0
+         c5 = (- 3 + sqrt(15.0D0))/18
+         c6 = (4 - sqrt(15.0D0))/6
+
+        extrapol(1,:) = (/ b1,-b2,b3,-b2,b4,b5,b3,b5,b6,-b2,b4,b5,b4,b7,b8,b5,b8,c1,b3,b5,b6,b5,b8,c1,b6,c1,b9 /)
+        extrapol(2,:) = (/ b3,-b2,b1,b5,b4,-b2,b6,b5,b3,b5,b4,-b2,b8,b7,b4,c1,b8,b5,b6,b5,b3,c1,b8,b5,b9,c1,b6 /)
+        extrapol(3,:) = (/ b6,b5,b3,b5,b4,-b2,b3,-b2,b1,c1,b8,b5,b8,b7,b4,b5,b4,-b2,b9,c1,b6,c1,b8,b5,b6,b5,b3 /)
+        extrapol(4,:) = (/ b3,b5,b6,-b2,b4,b5,b1,-b2,b3,b5,b8,c1,b4,b7,b8,-b2,b4,b5,b6,c1,b9,b5,b8,c1,b3,b5,b6 /)
+        extrapol(5,:) = (/ b3,b5,b6,b5,b8,c1,b6,c1,b9,-b2,b4,b5,b4,b7,b8,b5,b8,c1,b1,-b2,b3,-b2,b4,b5,b3,b5,b6 /)
+        extrapol(6,:) = (/ b6,b5,b3,c1,b8,b5,b9,c1,b6,b5,b4,-b2,b8,b7,b4,c1,b8,b5,b3,-b2,b1,b5,b4,-b2,b6,b5,b3 /)
+        extrapol(7,:) = (/ b9,c1,b6,c1,b8,b5,b6,b5,b3,c1,b8,b5,b8,b7,b4,b5,b4,-b2,b6,b5,b3,b5,b4,-b2,b3,-b2,b1 /)
+        extrapol(8,:) = (/ b6,c1,b9,b5,b8,c1,b3,b5,b6,b5,b8,c1,b4,b7,b8,-b2,b4,b5,b3,b5,b6,-b2,b4,b5,b1,-b2,b3 /)
+        extrapol(9,:) = (/ c2,c3,c2,-c2,-c2,-c2,c4,-c4,c4,-c2,-c2,-c2,b5,b5,b5,c5,c5,c5,c4,-c4,c4,c5,c5,c5,-c5,c6,-c5 /)
+        extrapol(10,:) = (/ c4,-c2,c2,-c4,-c2,c3,c4,-c2,c2,c5,b5,-c2,c5,b5,-c2,c5,b5,-c2,-c5,c5,c4,c6,c5,-c4,-c5,c5,c4 /)
+        extrapol(11,:) = (/ c4,-c4,c4,-c2,-c2,-c2,c2,c3,c2,c5,c5,c5,b5,b5,b5,-c2,-c2,-c2,-c5,c6,-c5,c5,c5,c5,c4,-c4,c4 /)
+        extrapol(12,:) = (/ c2,-c2,c4,c3,-c2,-c4,c2,-c2,c4,-c2,b5,c5,-c2,b5,c5,-c2,b5,c5,c4,c5,-c5,-c4,c5,c6,c4,c5,-c5 /)
+        extrapol(13,:) = (/ c4,-c4,c4,c5,c5,c5,-c5,c6,-c5,-c2,-c2,-c2,b5,b5,b5,c5,c5,c5,c2,c3,c2,-c2,-c2,-c2,c4,-c4,c4 /)
+        extrapol(14,:) = (/ -c5,c5,c4,c6,c5,-c4,-c5,c5,c4,c5,b5,-c2,c5,b5,-c2,c5,b5,-c2,c4,-c2,c2,-c4,-c2,c3,c4,-c2,c2 /)
+        extrapol(15,:) = (/ -c5,c6,-c5,c5,c5,c5,c4,-c4,c4,c5,c5,c5,b5,b5,b5,-c2,-c2,-c2,c4,-c4,c4,-c2,-c2,-c2,c2,c3,c2 /)
+        extrapol(16,:) = (/ c4,c5,-c5,-c4,c5,c6,c4,c5,-c5,-c2,b5,c5,-c2,b5,c5,-c2,b5,c5,c2,-c2,c4,c3,-c2,-c4,c2,-c2,c4 /)
+        extrapol(17,:) = (/ c2,-c2,c4,-c2,b5,c5,c4,c5,-c5,c3,-c2,-c4,-c2,b5,c5,-c4,c5,c6,c2,-c2,c4,-c2,b5,c5,c4,c5,-c5 /)
+        extrapol(18,:) = (/ c4,-c2,c2,c5,b5,-c2,-c5,c5,c4,-c4,-c2,c3,c5,b5,-c2,c6,c5,-c4,c4,-c2,c2,c5,b5,-c2,-c5,c5,c4 /)
+        extrapol(19,:) = (/ -c5,c5,c4,c5,b5,-c2,c4,-c2,c2,c6,c5,-c4,c5,b5,-c2,-c4,-c2,c3,-c5,c5,c4,c5,b5,-c2,c4,-c2,c2 /)
+        extrapol(20,:) = (/ c4,c5,-c5,-c2,b5,c5,c2,-c2,c4,-c4,c5,c6,-c2,b5,c5,c3,-c2,-c4,c4,c5,-c5,-c2,b5,c5,c2,-c2,c4 /)
+
+
+        !  extrapol(1,:) = (/ b1,-b2,b3,-b2,b3,b4,b3,b4,b5,-b2,b3,b4,b3,b6,b7,b4, &
+        !                    b7,b9,b3,b4,b5,b4,b7,b9,b5,b9,b8 /)
+        !  extrapol(2,:) = (/ b3,-b2,b1,b4,b3,-b2,b5,b4,b3,b4,b3,-b2,b7,b6,b3,b9, &
+        !                    b7,b4,b5,b4,b3,b9,b7,b4,b8,b9,b5 /)
+        !  extrapol(3,:) = (/ b5,b4,b3,b4,b3,-b2,b3,-b2,b1,b9,b7,b4,b7,b6,b3,b4, &
+        !                    b3,-b2,b8,b9,b5,b9,b7,b4,b5,b4,b3 /)
+        !  extrapol(4,:) = (/ b3,b4,b5,-b2,b3,b4,b1,-b2,b3,b4,b7,b9,b3,b6,b7, &
+        !                    -b2,b3,b4,b5,b9,b8,b4,b7,b9,b3,b4,b5 /)
+        !  extrapol(5,:) = (/ b3,b4,b5,b4,b7,b9,b5,b9,b8,-b2,b3,b4,b3,b6,b7,b4, &
+        !                    b7,b9,b1,-b2,b3,-b2,b3,b4,b3,b4,b5 /)
+        !  extrapol(6,:) = (/ b5,b4,b3,b9,b7,b4,b8,b9,b5,b4,b3,-b2,b7,b6,b3,b9, &
+        !                    b7,b4,b3,-b2,b1,b4,b3,-b2,b5,b4,b3 /)
+        !  extrapol(7,:) = (/ b8,b9,b5,b9,b7,b4,b5,b4,b3,b9,b7,b4,b7,b6,b3,b4, &
+        !                    b3,-b2,b5,b4,b3,b4,b3,-b2,b3,-b2,b1 /)
+        !  extrapol(8,:) = (/ b5,b9,b8,b4,b7,b9,b3,b4,b5,b4,b7,b9,b3,b6,b7,-b2, &
+        !                    b3,b4,b3,b4,b5,-b2,b3,b4,b1,-b2,b3 /)
+        !  extrapol(9,:) = (/ c4,c5,c4,-c4,-c4,-c4,c1,-c1,c1,-c4,-c4,-c4,b4,b4, &
+        !                    b4,c2,c2,c2,c1,-c1,c1,c2,c2,c2,-c2,c3,-c2 /)
+        !  extrapol(10,:) = (/ c1,-c4,c4,-c1,-c4,c5,c1,-c4,c4,c2,b4,-c4,c2,b4,-c4, &
+        !                    c2,b4,-c4,-c2,c2,c1,c3,c2,-c1,-c2,c2,c1 /)
+        !  extrapol(11,:) = (/ c1,-c1,c1,-c4,-c4,-c4,c4,c5,c4,c2,c2,c2,b4,b4,b4, &
+        !                    -c4,-c4,-c4,-c2,c3,-c2,c2,c2,c2,c1,-c1,c1 /)
+        !  extrapol(12,:) = (/ c4,-c4,c1,c5,-c4,-c1,c4,-c4,c1,-c4,b4,c2,-c4,b4,c2, &
+        !                    -c4,b4,c2,c1,c2,-c2,-c1,c2,c3,c1,c2,-c2 /)
+        !  extrapol(13,:) = (/ c1,-c1,c1,c2,c2,c2,-c2,c3,-c2,-c4,-c4,-c4,b4,b4,b4, &
+        !                    c2,c2,c2,c4,c5,c4,-c4,-c4,-c4,c1,-c1,c1 /)
+        !  extrapol(14,:) = (/ -c2,c2,c1,c3,c2,-c1,-c2,c2,c1,c2,b4,-c4,c2,b4,-c4, &
+        !                    c2,b4,-c4,c1,-c4,c4,-c1,-c4,c5,c1,-c4,c4 /)
+        !  extrapol(15,:) = (/ -c2,c3,-c2,c2,c2,c2,c1,-c1,c1,c2,c2,c2,b4,b4,b4, &
+        !                    -c4,-c4,-c4,c1,-c1,c1,-c4,-c4,-c4,c4,c5,c4 /)
+        !  extrapol(16,:) = (/ c1,c2,-c2,-c1,c2,c3,c1,c2,-c2,-c4,b4,c2,-c4,b4,c2, &
+        !                    -c4,b4,c2,c4,-c4,c1,c5,-c4,-c1,c4,-c4,c1 /)
+        !  extrapol(17,:) = (/ c4,-c4,c1,-c4,b4,c2,c1,c2,-c2,c5,-c4,-c1,-c4,b4, &
+        !                    c2,-c1,c2,c3,c4,-c4,c1,-c4,b4,c2,c1,c2,-c2 /)
+        !  extrapol(18,:) = (/ c1,-c4,c4,c2,b4,-c4,-c2,c2,c1,-c1,-c4,c5,c2,b4,-c4, &
+        !                    c3,c2,-c1,c1,-c4,c4,c2,b4,-c4,-c2,c2,c1 /)
+        !  extrapol(19,:) = (/ -c2,c2,c1,c2,b4,-c4,c1,-c4,c4,c3,c2,-c1,c2,b4,-c4, &
+        !                    -c1,-c4,c5,-c2,c2,c1,c2,b4,-c4,c1,-c4,c4 /)
+        !  extrapol(20,:) = (/ c1,c2,-c2,-c4,b4,c2,c4,-c4,c1,-c1,c2,c3,-c4,b4,c2, &
+        !                    c5,-c4,-c1,c1,c2,-c2,-c4,b4,c2,c4,-c4,c1 /)
 
 
         ! set the matrices and vectors to zero
