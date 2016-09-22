@@ -20,7 +20,7 @@ import numpy as np
 
 from .element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
 from .element import LineLinearBoundary, LineQuadraticBoundary, \
-    Tri3Boundary, Tri6Boundary, Hexa8, Hexa20
+    Tri3Boundary, Tri6Boundary, Hexa8, Hexa20, Quad4Boundary, Quad8Boundary
 
 # Element mapping is described here. If a new element is implemented, the
 # features for import and export should work when the followig list will be updated.
@@ -340,7 +340,9 @@ class Mesh:
             'straight_line' : LineLinearBoundary(**kwargs),
             'quadratic_line': LineQuadraticBoundary(**kwargs),
             'Tri3'          : Tri3Boundary(**kwargs),
-            'Tri6'          : Tri6Boundary(**kwargs),}
+            'Tri6'          : Tri6Boundary(**kwargs),
+            'Quad4'         : Quad4Boundary(**kwargs),
+            'Quad8'         : Quad8Boundary(**kwargs),}
 
         # actual set of implemented elements
         self.element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }

@@ -15,10 +15,18 @@ my_system = amfe.MechanicalSystem()
 my_system.load_mesh_from_gmsh(gmsh_input_file, 30, my_material)
 my_system.apply_dirichlet_boundaries(31, 'xyz')
 
-# Test the paraview basic output 
+#my_system.apply_neumann_boundaries(32, 1E8, np.array([0,0,1]),
+#                                   time_func=lambda t: t)
+# pulling the system
+my_system.apply_neumann_boundaries(32, -1E10, 'normal',
+                                   time_func=lambda t: t)
+
+# Test the paraview basic output
 # my_system.export_paraview(paraview_output_file)
 
 #%%
+amfe.solve_nonlinear_displacement(my_system, no_of_load_steps=20)
+my_system.export_paraview(paraview_output_file)
 
 #%%
 omega, V = amfe.vibration_modes(my_system, save=True)

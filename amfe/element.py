@@ -22,6 +22,7 @@ routines and reprogram the stuff for the own use.
 __all__ = ['Element', 'Tri3', 'Tri6', 'Quad4', 'Quad8', 'Tet4', 'Tet10',
            'Hexa8', 'Hexa20',
            'Bar2Dlumped', 'BoundaryElement', 'Tri3Boundary', 'Tri6Boundary',
+           'Quad4Boundary', 'Quad8Boundary',
            'LineLinearBoundary', 'LineQuadraticBoundary']
 
 import numpy as np
@@ -600,7 +601,6 @@ class Quad4(Element):
         self.E = np.zeros((4,6))
 
         # Gauss-Point-Handling:
-#        g1 = 0.577350269189626
         g1 = 1/np.sqrt(3)
 
         self.gauss_points = ((-g1, -g1, 1.),
@@ -698,22 +698,6 @@ class Quad8(Element):
         self.S = np.zeros((8,6))
         self.E = np.zeros((8,6))
 
-#        # Gauss-Point-Handling
-#        g3 = 0.861136311594053
-#        w3 = 0.347854845137454
-#        g4 = 0.339981043584856
-#        w4 = 0.652145154862546
-#        self.gauss_points = (
-#            (-g3, -g3, w3*w3), (-g4, -g3, w4*w3), ( g3,-g3, w3*w3), ( g4,-g3, w4*w3),
-#            (-g3, -g4, w3*w4), (-g4, -g4, w4*w4), ( g3,-g4, w3*w4), ( g4,-g4, w4*w4),
-#            (-g3,  g3, w3*w3), (-g4,  g3, w4*w3), ( g3, g3, w3*w3), ( g4, g3, w4*w3),
-#            (-g3,  g4, w3*w4), (-g4,  g4, w4*w4), ( g3, g4, w3*w4), ( g4, g4, w4*w4))
-#
-#        g2 = 0.577350269189626
-#        w2 = 1.
-#        self.gauss_points = ((-g2, -g2, w2), (-g2, g2, w2),
-#                             ( g2, -g2, w2), ( g2, g2, w2))
-#
         # Quadrature like ANSYS or ABAQUS:
         g = np.sqrt(3/5)
         w = 5/9
@@ -1756,21 +1740,6 @@ class Tri6Boundary(BoundaryElement):
                     (1/6, 2/3, 1/6, 1/3),
                     (2/3, 1/6, 1/6, 1/3))
 
-#    alpha1 = 0.0597158717
-#    beta1 = 0.4701420641 # 1/(np.sqrt(15)-6)
-#    w1 = 0.1323941527
-#
-#    alpha2 = 0.7974269853 #
-#    beta2 = 0.1012865073 # 1/(np.sqrt(15)+6)
-#    w2 = 0.1259391805
-#
-#    gauss_points = ((1/3, 1/3, 1/3, 0.225),
-#                    (alpha1, beta1, beta1, w1),
-#                    (beta1, alpha1, beta1, w1),
-#                    (beta1, beta1, alpha1, w1),
-#                    (alpha2, beta2, beta2, w2),
-#                    (beta2, alpha2, beta2, w2),
-#                    (beta2, beta2, alpha2, w2))
 
     def __init__(self, val, direct, time_func=None, shadow_area=False):
         super().__init__(val=val, direct=direct, time_func=time_func,
@@ -1802,6 +1771,101 @@ class Tri6Boundary(BoundaryElement):
             v2 = dx_dL[:,1] - dx_dL[:,0]
             n = np.cross(v1, v2)
             f_mat += np.outer(N, n) / 2 * w
+        # no minus sign as force will be on the right hand side of eqn.
+        self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
+
+class Quad4Boundary(BoundaryElement):
+    '''
+    Quad4 boundary element for 3D-Problems.
+    '''
+    g1 = 1/np.sqrt(3)
+
+    gauss_points = ((-g1, -g1, 1.),
+                    ( g1, -g1, 1.),
+                    ( g1,  g1, 1.),
+                    (-g1,  g1, 1.))
+
+    def __init__(self, val, direct, time_func=None, shadow_area=False):
+        super().__init__(val=val, direct=direct, time_func=time_func,
+                         shadow_area=shadow_area, ndof=12)
+        return
+
+    def _compute_tensors(self, X, u, t):
+        '''
+        Compute the full pressure contribution by performing gauss integration.
+
+        '''
+        f_mat = np.zeros((4,3))
+        x_vec = (X+u).reshape((4, 3))
+
+        # gauss point evaluation of full pressure field
+        for xi, eta, w in self.gauss_points:
+
+            N = np.array([  [(-eta + 1)*(-xi + 1)/4],
+                            [ (-eta + 1)*(xi + 1)/4],
+                            [  (eta + 1)*(xi + 1)/4],
+                            [ (eta + 1)*(-xi + 1)/4]])
+
+            dN_dxi = np.array([ [ eta/4 - 1/4,  xi/4 - 1/4],
+                                [-eta/4 + 1/4, -xi/4 - 1/4],
+                                [ eta/4 + 1/4,  xi/4 + 1/4],
+                                [-eta/4 - 1/4, -xi/4 + 1/4]])
+
+            dx_dxi = x_vec.T @ dN_dxi
+            n = np.cross(dx_dxi[:,1], dx_dxi[:,0])
+            f_mat += np.outer(N, n) * w
+        # no minus sign as force will be on the right hand side of eqn.
+        self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
+
+class Quad8Boundary(BoundaryElement):
+    '''
+    Quad8 boundary element for 3D-Problems.
+    '''
+    g = np.sqrt(3/5)
+    w = 5/9
+    w0 = 8/9
+    gauss_points = ((-g, -g,  w*w), ( g, -g,  w*w ), ( g,  g,   w*w),
+                    (-g,  g,  w*w), ( 0, -g, w0*w ), ( g,  0,  w*w0),
+                    ( 0,  g, w0*w), (-g,  0,  w*w0), ( 0,  0, w0*w0))
+
+    def __init__(self, val, direct, time_func=None, shadow_area=False):
+        super().__init__(val=val, direct=direct, time_func=time_func,
+                         shadow_area=shadow_area, ndof=24)
+        return
+
+    def _compute_tensors(self, X, u, t):
+        '''
+        Compute the full pressure contribution by performing gauss integration.
+
+        '''
+        f_mat = np.zeros((8,3))
+        x_vec = (X+u).reshape((8, 3))
+
+        # gauss point evaluation of full pressure field
+        for xi, eta, w in self.gauss_points:
+
+            N = np.array([  [(-eta + 1)*(-xi + 1)*(-eta - xi - 1)/4],
+                            [ (-eta + 1)*(xi + 1)*(-eta + xi - 1)/4],
+                            [   (eta + 1)*(xi + 1)*(eta + xi - 1)/4],
+                            [  (eta + 1)*(-xi + 1)*(eta - xi - 1)/4],
+                            [             (-eta + 1)*(-xi**2 + 1)/2],
+                            [              (-eta**2 + 1)*(xi + 1)/2],
+                            [              (eta + 1)*(-xi**2 + 1)/2],
+                            [             (-eta**2 + 1)*(-xi + 1)/2]])
+
+            dN_dxi = np.array([
+                [-(eta - 1)*(eta + 2*xi)/4, -(2*eta + xi)*(xi - 1)/4],
+                [ (eta - 1)*(eta - 2*xi)/4,  (2*eta - xi)*(xi + 1)/4],
+                [ (eta + 1)*(eta + 2*xi)/4,  (2*eta + xi)*(xi + 1)/4],
+                [-(eta + 1)*(eta - 2*xi)/4, -(2*eta - xi)*(xi - 1)/4],
+                [             xi*(eta - 1),            xi**2/2 - 1/2],
+                [          -eta**2/2 + 1/2,            -eta*(xi + 1)],
+                [            -xi*(eta + 1),           -xi**2/2 + 1/2],
+                [           eta**2/2 - 1/2,             eta*(xi - 1)]])
+
+            dx_dxi = x_vec.T @ dN_dxi
+            n = np.cross(dx_dxi[:,1], dx_dxi[:,0])
+            f_mat += np.outer(N, n) * w
         # no minus sign as force will be on the right hand side of eqn.
         self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
 
@@ -1875,7 +1939,7 @@ if use_fortran:
         '''Wrapping funktion for fortran function call.'''
         self.K, self.f, self.S, self.E = amfe.f90_element.tet10_k_f_s_e( \
             X, u, self.material.S_Sv_and_C)
-    
+
     def compute_hexa8_tensors(self, X, u, t):
         '''Wrapping funktion for fortran function call.'''
         self.K, self.f, self.S, self.E = amfe.f90_element.hexa8_k_f_s_e( \

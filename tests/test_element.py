@@ -310,6 +310,49 @@ def test_tri6_pressure():
     # f has a negative sign.
     np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
 
+def test_quad4_pressure():
+    my_material = amfe.KirchhoffMaterial(rho=1)
+    my_quad4 = amfe.Quad4(my_material)
+    X = X_quad4
+    u = np.zeros(8)
+    X += sp.rand(8)*0.2
+    M = my_quad4.m_int(X, u)
+    t = np.array([ 0.,  1.,  0.,  1.,  0.,  1.,  0.,  1., ])
+    f_2d = M @ t
+    f_1d = f_2d[1::2]
+    my_boundary = amfe.Quad4Boundary(val=1., direct='normal')
+    X_3D = np.zeros(3*4)
+    X_3D[0::3] = X[0::2]
+    X_3D[1::3] = X[1::2]
+    u_3D = np.zeros(3*4)
+    K, f = my_boundary.k_and_f_int(X_3D, u_3D)
+    np.testing.assert_equal(K, np.zeros((12,12)))
+    # as the skin element produces a force acting on the right hand side,
+    # f has a negative sign.
+    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
+
+def test_quad8_pressure():
+    my_material = amfe.KirchhoffMaterial(rho=1)
+    my_quad8 = amfe.Quad8(my_material)
+    X = X_quad8
+    u = np.zeros(16)
+    X += sp.rand(16)*0.2
+    M = my_quad8.m_int(X, u)
+    t = np.zeros(16)
+    t[1::2] = 1
+    f_2d = M @ t
+    f_1d = f_2d[1::2]
+    my_boundary = amfe.Quad8Boundary(val=1., direct='normal')
+    X_3D = np.zeros(3*8)
+    X_3D[0::3] = X[0::2]
+    X_3D[1::3] = X[1::2]
+    u_3D = np.zeros(3*8)
+    K, f = my_boundary.k_and_f_int(X_3D, u_3D)
+    np.testing.assert_equal(K, np.zeros((24,24)))
+    # as the skin element produces a force acting on the right hand side,
+    # f has a negative sign.
+    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
+
 #%%
 
 def test_name_tet4():
