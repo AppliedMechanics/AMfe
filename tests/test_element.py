@@ -73,10 +73,10 @@ class ElementTest(unittest.TestCase):
         E = self.my_element.E.copy()
         # fortran routine
         self.my_element._compute_tensors(self.X, self.u, t=0)
-        assert_almost_equal(self.my_element.K, K)
-        assert_almost_equal(self.my_element.f, f)
-        assert_almost_equal(self.my_element.S, S)
-        assert_almost_equal(self.my_element.E, E)
+        assert_allclose(self.my_element.K, K)
+        assert_allclose(self.my_element.f, f)
+        assert_allclose(self.my_element.S, S)
+        assert_allclose(self.my_element.E, E)
 
 
 
@@ -147,7 +147,7 @@ class Hexa20Test(ElementTest):
         self.initialize_element(Hexa20, X_hexa20)
 
     def test_jacobi(self):
-        self.jacobi_test_element(rtol=2E-3)
+        self.jacobi_test_element(rtol=5E-3)
 
     def test_mass(self):
         my_material = material.KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
