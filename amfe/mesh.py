@@ -941,6 +941,37 @@ class Mesh:
         if output is 'external':
             return nodes_dirichlet, dofs_dirichlet
 
+    def deflate_mesh(self):
+        '''
+        Deflate the mesh, i.e. delete nodes which are not connected to an
+        element in the ele_obj-list.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        '''
+
+        nodes_vec = np.concatenate(self.connectivity)
+        elements_on_node = np.bincount(nodes_vec)
+        mask = elements_on_node == 0 # all nodes which never show up
+        idx_transform = np.zeros(len(self.connectivity))
+        idx_transform[mask] = np.arange(len(idx_transform[mask]))
+        self.nodes = self.nodes[mask]
+        # deflate the connectivities
+        for i, nodes in enumerate(self.connectivity):
+            self.connectivity[i] = idx_transform[nodes]
+        for i, nodes in enumerate(self.neumann_connectivity):
+            self.neumann_connectivity[i] = idx_transform[nodes]
+
+        # deflate the element_dataframe
+        for col in self.el_df.iloc[:,self.node_idx:]:
+            nan_mask = col != np.nan
+            col[nan_mask] = idx_transform[col.values[nan_mask]]
+
 
     def set_displacement(self, u):
         '''
