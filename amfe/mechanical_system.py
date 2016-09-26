@@ -58,9 +58,9 @@ class MechanicalSystem():
         Flag for option stress_recovery.
     iteration_info : ndarray
         array containing the information of an iterative solution procedure.
-        iteration_info[:,0] is the time information, 
+        iteration_info[:,0] is the time information,
         iteration_info[:,1] is the number of iteations,
-        iteration_info[:,3] is the residual. 
+        iteration_info[:,3] is the residual.
     '''
 
     def __init__(self, stress_recovery=False):
@@ -125,6 +125,25 @@ class MechanicalSystem():
         self.mesh_class.load_group_to_mesh(phys_group, material)
         self.no_of_dofs_per_node = self.mesh_class.no_of_dofs_per_node
 
+        self.assembly_class.preallocate_csr()
+        self.dirichlet_class.no_of_unconstrained_dofs = self.mesh_class.no_of_dofs
+        self.dirichlet_class.update()
+
+
+    def deflate_mesh(self):
+        '''
+        Remove free floating nodes not connected to a selected element from
+        the mesh.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        '''
+        self.mesh_class.deflate_mesh()
         self.assembly_class.preallocate_csr()
         self.dirichlet_class.no_of_unconstrained_dofs = self.mesh_class.no_of_dofs
         self.dirichlet_class.update()
@@ -521,7 +540,7 @@ class MechanicalSystem():
            (self.strain is not None):
             self.S_output.append(self.stress.copy())
             self.E_output.append(self.strain.copy())
-    
+
     def clear_timesteps(self):
         '''
         Clear the timesteps gathered internally

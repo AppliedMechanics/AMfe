@@ -944,7 +944,7 @@ class Mesh:
     def deflate_mesh(self):
         '''
         Deflate the mesh, i.e. delete nodes which are not connected to an
-        element in the ele_obj-list.
+        element.
 
         Parameters
         ----------
