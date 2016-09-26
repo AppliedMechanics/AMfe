@@ -956,9 +956,9 @@ class Mesh:
         '''
 
         nodes_vec = np.concatenate(self.connectivity)
-        elements_on_node = np.bincount(nodes_vec)
-        mask = elements_on_node == 0 # all nodes which never show up
-        idx_transform = np.zeros(len(self.connectivity))
+        elements_on_node = np.bincount(np.array(nodes_vec, dtype=int))
+        mask = elements_on_node != 0 # all nodes which show up at least once
+        idx_transform = np.zeros(len(self.nodes), dtype=int)
         idx_transform[mask] = np.arange(len(idx_transform[mask]))
         self.nodes = self.nodes[mask]
         # deflate the connectivities
@@ -968,10 +968,19 @@ class Mesh:
             self.neumann_connectivity[i] = idx_transform[nodes]
 
         # deflate the element_dataframe
-        for col in self.el_df.iloc[:,self.node_idx:]:
-            nan_mask = col != np.nan
-            col[nan_mask] = idx_transform[col.values[nan_mask]]
+        df = self.el_df
+        for col in df.iloc[:,self.node_idx:]:
+            nan_mask = np.isfinite(df[col].values)
+            indices = np.array(df[col].values[nan_mask], dtype=int)
+            df[col].values[nan_mask] = idx_transform[indices]
 
+        self._update_mesh_props()
+        print('**************************************************************')
+        print('Mesh successfully deflated. ',
+              '\nNumber of nodes in old mesh:', len(mask),
+              '\nNumber of nodes in deflated mesh:', np.count_nonzero(mask),
+              '\nNumer of deflated nodes:', len(mask) - np.count_nonzero(mask))
+        print('**************************************************************')
 
     def set_displacement(self, u):
         '''

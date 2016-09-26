@@ -18,6 +18,9 @@ my_mesh.load_group_to_mesh(1, my_material)
 my_mesh.load_group_to_mesh(10, my_material)
 my_mesh.load_group_to_mesh(20, my_material)
 
+#%% Deflate the mesh
+my_mesh.deflate_mesh()
+
 #%%
 
 my_assembly = amfe.Assembly(my_mesh)
