@@ -26,7 +26,7 @@ from .boundary import DirichletBoundary, NeumannBoundary
 
 class MechanicalSystem():
     '''
-    Mase class for mechanical systems with the goal to black-box the routines
+    Master class for mechanical systems with the goal to black-box the routines
     of assembly and element selection.
 
     Attributes
