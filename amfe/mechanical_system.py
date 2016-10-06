@@ -504,6 +504,37 @@ class MechanicalSystem():
 
         return S, res, f_ext
 
+
+
+    def Jac_and_res_genAlpha(self, q, dq, ddq, q_old, dq_old, ddq_old,
+                             f_ext_old, dt, t, alpha_m, alpha_f, beta,
+                             gamma):# RT - Ch.L. - 6. Oktober 2016
+        '''
+        Computation of Jacobian and residual for generalized-alpha time
+        integration scheme.
+        
+        TODO
+
+        '''
+        # compute mass matrix only if it has not been computed yet
+        if self.M_constr is None:
+            self.M()
+        
+        ddq_m = (1.0 - alpha_m) * ddq + alpha_m * ddq_old
+        q_f = (1.0 - alpha_f) * q + alpha_f * q_old
+        
+        K_f, f_f = self.K_and_f(q_f, t)
+        
+        f_ext = self.f_ext(q, dq, t)
+        f_ext_f = (1.0 - alpha_f)*f_ext + alpha_f * f_ext_old
+        
+        Jac = (1.0 - alpha_f)*K_f + (1.0 - alpha_m)/(beta*dt**2)*self.M_constr
+        res = f_f - f_ext_f + self.M_constr @ ddq_m
+        
+        return Jac, res, f_ext
+    
+    
+    
     def write_timestep(self, t, u):
         '''
         write the timestep to the mechanical_system class
