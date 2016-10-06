@@ -2,7 +2,7 @@
 Module for solving static and dynamic problems.
 '''
 
-__all__ = ['NewmarkIntegrator', 'GeneralizedAlphaIntegrator', 'solve_linear_displacement',
+__all__ = ['NewmarkIntegrator', 'integrate_nonlinear_system_genAlpha', 'solve_linear_displacement',
            'solve_nonlinear_displacement', 'give_mass_and_stiffness',
            'HHTConstrained', 'integrate_linear_system',
            'integrate_nonlinear_system', 'solve_sparse', 'SpSolve']
@@ -375,174 +375,166 @@ class NewmarkIntegrator():
 
 
 
-class GeneralizedAlphaIntegrator():# RT - Ch.L. - 6. Oktober 2016
+def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
+                                        time_range, delta_t, rho_inf,
+                                        rtol=1.0E-9, atol=1.0E-6, verbose=True,
+                                        n_iter_max=100, conv_abort=True,
+                                        write_iter=True, track_niter=True):
+                                        # RT -- Ch.L. -- 6. Oktober 2016
     '''
     Time integration of the non-linear second-order system using the
     gerneralized-alpha scheme.
     
+    Parameters
+    ----------
+    ...
+    rho_inf : float, >= 0, <= 1
+        high-frequency spectral radius
+    ...
+    
     TODO
     
     '''
+    t_clock_1 = time.time()
+    iteration_info = []
+    mechanical_system.clear_timesteps()
     
-    def __init__(self, mechanical_system, delta_t, rho_inf):
-        '''
-        Parameters
-        ----------
-        mechanical_system : instance of amfe.MechanicalSystem
-        delta_t : float
-            time step size for time integration
-        rho_inf : float, >= 0, <= 1
-            high-frequency spectral radius
-        
-        TODO
-        
-        '''
-        self.alpha_m = (2*rho_inf - 1.0)/(rho_inf + 1.0)
-        self.alpha_f = rho_inf / (rho_inf + 1.0)
-        self.beta = 0.25*(1.0 - self.alpha_m + self.alpha_f)**2
-        self.gamma = 0.5 - self.alpha_m + self.alpha_f
-        self.delta_t = delta_t
-        self.rtol = 1.0E-9
-        self.atol = 1.0E-12
-        self.verbose = True
-        self.n_iter_max = 100
-        self.mechanical_system = mechanical_system
-        self.write_iter = True
-        self.conv_abort = False
+    eps = 1E-13
     
-    def integrate(self, q_init, dq_init, time_range):
-        '''
-        Integrates the system using generalized alpha method.
-
-        Parameters
-        -----------
-        q_init : ndarray
-            initial displacement
-        dq_start : ndarray
-            initial velocity
-        time_range : ndarray
-            output time step vector
+    alpha_m = (2*rho_inf - 1.0)/(rho_inf + 1.0)
+    alpha_f = rho_inf / (rho_inf + 1.0)
+    beta = 0.25*(1.0 - alpha_m + alpha_f)**2
+    gamma = 0.5 - alpha_m + alpha_f
+    
+    # initialize variables
+    t = 0
+    q = q_init.copy()
+    dq = dq_init.copy()
+    ddq = np.zeros_like(q_init)
+    f_ext = np.zeros_like(q_init)
+    dt = delta_t
+    abs_f_ext = atol
+    no_newton_convergence_flag = False
+    time_index = 0
+    
+    # time step loop
+    while time_index < len(time_range):
         
-        TODO
-
-        '''
-        t_clock_1 = time.time()
-        eps = 1E-13
+        # write output
+        if t + eps >= time_range[time_index]:
+            mechanical_system.write_timestep(t, q.copy())
+            time_index += 1
+            if time_index == len(time_range):
+                break
         
-        alpha_m = self. alpha_m
-        alpha_f = self.alpha_f
-        beta = self.beta
-        gamma = self.gamma
-        
-        # initialize variables
-        t = 0
-        q = q_init.copy()
-        dq = dq_init.copy()
-        ddq = np.zeros_like(q_init)
-        f_ext = np.zeros_like(q_init)
-        abs_f_ext = self.atol
-        no_newton_convergence_flag = False
-        time_index = 0
-        
-        # time step loop
-        while time_index < len(time_range):
-
-            # write output
-            if t + eps >= time_range[time_index]:
-                self.mechanical_system.write_timestep(t, q.copy())
-                time_index += 1
-                if time_index == len(time_range):
-                    break
-            
+        # half step size if Newton-Raphson iteration did not converge
+        if no_newton_convergence_flag:
+            dt /= 2.0
+            no_newton_convergence_flag = False
+        else:
             # fit time tolerance
-            if t + self.delta_t + eps >= time_range[time_index]:
+            if t + delta_t + eps >= time_range[time_index]:
                 dt = time_range[time_index] - t
             else:
-                dt = self.delta_t
+                dt = delta_t
+        
+        # save old variables
+        t_old = t
+        q_old = q.copy()
+        dq_old = dq.copy()
+        ddq_old = ddq.copy()
+        f_ext_old = f_ext.copy()
+        
+        # predict new variables using old variables
+        t += dt
+        q += dt*dq + dt**2*(0.5 - beta)*ddq
+        dq += dt*(1.0 - gamma)*ddq
+        ddq *= 0
+        
+        Jac, res, f_ext = mechanical_system.Jac_and_res_genAlpha(q, dq, ddq,
+                                                                 q_old, dq_old,
+                                                                 ddq_old,
+                                                                 f_ext_old, dt,
+                                                                 t, alpha_m,
+                                                                 alpha_f, beta,
+                                                                 gamma)
+        abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
+        res_abs = norm_of_vector(res)
+        
+        # Newton-Raphson iteration loop
+        n_iter = 0
+        while res_abs > rtol*abs_f_ext + atol:
             
-            # half step size if Newton-Raphson iteration did not converge
-            if no_newton_convergence_flag:
-                dt /= 2.0
-                no_newton_convergence_flag = False
+            if sp.sparse.issparse(Jac):
+                delta_q = - solve_sparse(Jac, res)
+            else:
+                delta_q = - sp.linalg.solve(Jac, res)
             
-            # save old variables
-            t_old = t
-            q_old = q.copy()
-            dq_old = dq.copy()
-            ddq_old = ddq.copy()
-            f_ext_old = f_ext.copy()
+            # update variables
+            q += delta_q
+            dq += gamma/(beta*dt)*delta_q
+            ddq += 1.0/(beta*dt**2)*delta_q
             
-            # predict new variables using old variables
-            t += dt
-            q += dt*dq + dt**2*(0.5 - beta)*ddq
-            dq += dt*(1.0 - gamma)*ddq
-            ddq *= 0
+            # update system matrices and vectors
+            Jac, res, f_ext = mechanical_system.Jac_and_res_genAlpha(q, dq, ddq,
+                                                                     q_old, dq_old,
+                                                                     ddq_old,
+                                                                     f_ext_old, dt,
+                                                                     t, alpha_m,
+                                                                     alpha_f, beta,
+                                                                     gamma)
             
-            Jac, res, f_ext = self.mechanical_system.Jac_and_res_genAlpha(
-                                q, dq, ddq, q_old, dq_old, ddq_old, f_ext_old,
-                                dt, t, alpha_m, alpha_f, beta, gamma)
-            abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
             res_abs = norm_of_vector(res)
+            # abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
+            n_iter += 1
             
-            # Newton-Raphson iteration loop
-            n_iter = 0
-            while res_abs > self.rtol*abs_f_ext + self.atol:
-                
+            if verbose:
                 if sp.sparse.issparse(Jac):
-                    delta_q = - solve_sparse(Jac, res)
+                    cond_nr = 0.0
                 else:
-                    delta_q = - sp.linalg.solve(Jac, res)
-                
-                # update variables
-                q += delta_q
-                dq += gamma/(beta*dt)*delta_q
-                ddq += 1.0/(beta*dt**2)*delta_q
-                
-                # update system matrices and vectors
-                Jac, res, f_ext = self.mechanical_system.Jac_and_res_genAlpha(
-                                    q, dq, ddq, q_old, dq_old, ddq_old,
-                                    f_ext_old, dt, t, alpha_m, alpha_f, beta,
-                                    gamma)
-                
-                res_abs = norm_of_vector(res)
-                abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
-                n_iter += 1
-                
-                if self.verbose:
-                    if sp.sparse.issparse(Jac):
-                        cond_nr = 0
-                    else:
-                        cond_nr = np.linalg.cond(Jac)
-                    print('Iteration = ', n_iter,
-                          ', residual = {0:6.3E}, condition number of Jacobian = {1:6.3E}'.format(
-                          res_abs, cond_nr))
-                
-                # write state
-                if self.write_iter:
-                    t_write = t + dt/100*n_iter
-                    self.mechanical_system.write_timestep(t_write, q.copy())
-                
-                # catch failing Newton-Raphson iteration converge
-                if n_iter > self.n_iter_max:
-                    if self.conv_abort:
-                        print(abort_statement)
-                        return
-                    t = t_old
-                    q = q_old.copy()
-                    dq = dq_old.copy()
-                    f_ext = f_ext_old.copy()
-                    no_newton_convergence_flag = True
-                    break
-                # end of Newton-Raphson iteration loop
+                    cond_nr = np.linalg.cond(Jac)
+                print('Iteration = ', n_iter,
+                      ', residual = {0:6.3E}, cond. num. of Jac. = {1:6.3E}'.format(
+                      res_abs, cond_nr))
             
-            print('========== Time = ', t, ', number of iterations = ', n_iter,
-                  ', residual = {0:6.3E}'.format(res_abs), ' ==========\n')
+            # write state
+            if write_iter:
+                t_write = t + dt/100*n_iter
+                mechanical_system.write_timestep(t_write, q.copy())
+            
+            # catch failing Newton-Raphson iteration converge
+            if n_iter > n_iter_max:
+                if conv_abort:
+                    print(abort_statement)
+                    t_clock_2 = time.time()
+                    print('Time for time marching integration = {0:6.3f} seconds.'.format(
+                        t_clock_2 - t_clock_1))
+                    return
+                t = t_old
+                q = q_old.copy()
+                dq = dq_old.copy()
+                f_ext = f_ext_old.copy()
+                no_newton_convergence_flag = True
+                break
+            
+            # end of Newton-Raphson iteration loop
+        
+        print('========== Time = ', t, ', time step = ', dt,
+              ', number of iterations = ', n_iter,
+              ', residual = {0:6.3E}'.format(res_abs), ' ==========\n')
+        if track_niter:
+            iteration_info.append((t, n_iter, res_abs))
+        
         # end of time step loop
-       
-        t_clock_2 = time.time()
-        print('Time for time marching integration = {0:6.3f} seconds.'.format(
-            t_clock_2 - t_clock_1))
-        return
+    
+    # write iteration info to mechanical system
+    mechanical_system.iteration_info = np.array(iteration_info)
+    
+    # measure integration end time
+    t_clock_2 = time.time()
+    print('Time for time marching integration {0:4.2f} seconds'.format(
+        t_clock_2 - t_clock_1))
+    return
 
 
 
