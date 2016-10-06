@@ -2,7 +2,8 @@
 Module for solving static and dynamic problems.
 '''
 
-__all__ = ['NewmarkIntegrator', 'integrate_nonlinear_system_genAlpha', 'solve_linear_displacement',
+__all__ = ['NewmarkIntegrator', 'integrate_nonlinear_system_genAlpha',
+           'integrate_linear_system_genAlpha', 'solve_linear_displacement',
            'solve_nonlinear_displacement', 'give_mass_and_stiffness',
            'HHTConstrained', 'integrate_linear_system',
            'integrate_nonlinear_system', 'solve_sparse', 'SpSolve']
@@ -432,7 +433,7 @@ def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
             dt /= 2.0
             no_newton_convergence_flag = False
         else:
-            # fit time tolerance
+            # fit time stepsize
             if t + delta_t + eps >= time_range[time_index]:
                 dt = time_range[time_index] - t
             else:
@@ -529,6 +530,102 @@ def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
     
     # write iteration info to mechanical system
     mechanical_system.iteration_info = np.array(iteration_info)
+    
+    # measure integration end time
+    t_clock_2 = time.time()
+    print('Time for time marching integration {0:4.2f} seconds'.format(
+        t_clock_2 - t_clock_1))
+    return
+
+
+
+def integrate_linear_system_genAlpha(mechanical_system, q_init, dq_init,
+                                     time_range, delta_t, rho_inf):
+    '''
+    Time integration of the linearized second-order system using the
+    gerneralized-alpha scheme.
+    
+    Parameters
+    ----------
+    ...
+    rho_inf : float, >= 0, <= 1
+        high-frequency spectral radius
+    ...
+    
+    TODO
+    
+    '''
+    t_clock_1 = time.time()
+    eps = 1.0E-13
+    mechanical_system.clear_timesteps()
+    
+    # check fitting of time step size and spacing in time range
+    time_steps = time_range - np.roll(time_range, 1)
+    remainder = (time_steps + eps) % delta_t
+    if np.any(remainder > eps*10.0):
+        raise ValueError('The time step size and the time range vector do not',
+                         ' fit. Make the time increments in the time_range ',
+                         'vector integer multiples of delta_t.')
+    
+    alpha_m = (2*rho_inf - 1.0)/(rho_inf + 1.0)
+    alpha_f = rho_inf / (rho_inf + 1.0)
+    beta = 0.25*(1.0 - alpha_m + alpha_f)**2
+    gamma = 0.5 - alpha_m + alpha_f
+    
+    # initialize variables, matrices and vectors
+    t = 0
+    q = q_init.copy()
+    dq = dq_init.copy()
+    # evaluate initial acceleration
+    K = mechanical_system.K()
+    M = mechanical_system.M()
+    f_ext = mechanical_system.f_ext(q, dq, t)
+    ddq = solve_sparse(M, f_ext - K @ q)
+    time_index = 0
+    dt = delta_t
+    S = (1.0 - alpha_m)*M + dt**2*beta*(1.0 - alpha_f)*K
+    S_inv = SpSolve(S, matrix_type='symm')
+    
+    # time step loop
+    while time_index < len(time_range):
+        
+        # write output
+        if t + eps >= time_range[time_index]:
+            mechanical_system.write_timestep(t, q.copy())
+            time_index += 1
+            if time_index == len(time_range):
+                break
+        
+        # fit time stepsize
+        if t + eps + delta_t >= time_range[time_index]:
+            dt = time_range[time_index] - t
+        else:
+            dt = delta_t
+        
+        # save old variables
+        q_old = q.copy()
+        #dq_old = dq.copy()
+        ddq_old = ddq.copy()
+        f_ext_old = f_ext.copy()
+        
+        # predict new variables using old variables
+        t += dt
+        q += dt*dq + dt**2*(0.5 - beta)*ddq
+        dq += dt*(1.0 - gamma)*ddq
+        
+        # solve system
+        f_ext = mechanical_system.f_ext(q, dq, t)
+        f_ext_f = (1.0 - alpha_f)*f_ext + alpha_f*f_ext_old
+        ddq = S_inv.solve(
+            f_ext_f - alpha_m * M @ ddq_old - (1.0 - alpha_f) * K @ q - alpha_f * K @ q_old)
+
+        # update variables
+        q += dt**2*beta*ddq
+        dq += dt*gamma*ddq
+        
+        print('========== Time = ', t, ', time step = ', dt, ' ==========\n')
+        
+        # end of time step loop
     
     # measure integration end time
     t_clock_2 = time.time()
@@ -727,7 +824,6 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
     print('Time for time marching integration {0:4.2f} seconds'.format(
         t_clock_2 - t_clock_1))
     return
-
 
 def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0):
     '''

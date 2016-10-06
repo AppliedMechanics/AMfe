@@ -545,13 +545,13 @@ class MechanicalSystem():
         if self.M_constr is None:
             self.M()
         
-        ddq_m = (1.0 - alpha_m) * ddq + alpha_m * ddq_old
-        q_f = (1.0 - alpha_f) * q + alpha_f * q_old
+        ddq_m = (1.0 - alpha_m)*ddq + alpha_m*ddq_old
+        q_f = (1.0 - alpha_f)*q + alpha_f*q_old
         
         K_f, f_f = self.K_and_f(q_f, t)
         
         f_ext = self.f_ext(q, dq, t)
-        f_ext_f = (1.0 - alpha_f)*f_ext + alpha_f * f_ext_old
+        f_ext_f = (1.0 - alpha_f)*f_ext + alpha_f*f_ext_old
         
         Jac = (1.0 - alpha_f)*K_f + (1.0 - alpha_m)/(beta*dt**2)*self.M_constr
         res = f_f - f_ext_f + self.M_constr @ ddq_m
