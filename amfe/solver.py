@@ -215,6 +215,13 @@ class NewmarkIntegrator():
         None
 
         '''
+        depr_string = '\n' + \
+        '************************** WARNING **************************\n' + \
+        '******** The class NewmarkIntegrator is deprecated. *********\n' + \
+        '********** Use integrate_nonlinear_system instead. **********\n' + \
+        '*************************************************************\n'
+        raise DeprecationWarning(depr_string)
+
         self.beta = 1/4*(1 + alpha)**2
         self.gamma = 1/2 + alpha
         self.delta_t = 1E-3
@@ -546,7 +553,8 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
                                verbose=False,
                                n_iter_max=30, 
                                conv_abort=True,
-                               write_iter=False):
+                               write_iter=False,
+                               track_niter=False):
     '''
     Time integrate the nonlinear system using a generalized-alpha HHT-scheme.
 
@@ -585,6 +593,10 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
         Flag setting, if every step of the Newton-Raphson iteration is written
         to the MechanicalSystem object. Useful only for debugging, when no
         convergence is gained. Default value: False.
+    track_niter : bool, optional
+        Flag for the iteration-count. If True, the number of iterations in the 
+        Newton-Raphson-Loop is counted and saved to iteration_info in the 
+        mechanical system. 
 
     Returns
     -------
@@ -601,6 +613,9 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
 
     '''
     t_clock_1 = time.time()
+    iteration_info = [] # List tracking the number of iterations
+    mechanical_system.clear_timesteps()
+
     eps = 1E-13
 
     beta = 1/4*(1 + alpha)**2
@@ -710,7 +725,12 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
 
         print('Time:', t, 'h:', h, 'No of iterations:', n_iter,
               'Residual: {0:4.2E}'.format(res_abs))
-    # end of time loop
+        if track_niter:
+            iteration_info.append((t, n_iter, res_abs))
+
+    # glue the array of the iterations on the mechanical system
+    mechanical_system.iteration_info = np.array(iteration_info)
+    # end of integration time
     t_clock_2 = time.time()
     print('Time for time marching integration {0:4.2f} seconds'.format(
         t_clock_2 - t_clock_1))
@@ -750,6 +770,9 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     t_clock_1 = time.time()
     print('Starting linear time integration')
     eps = 1E-12 # epsilon for floating point round off errors
+    mechanical_system.clear_timesteps()
+
+    
     # Check, if the time step width and the spacing in time range fit together
     time_steps = time_range - np.roll(time_range, 1)
     remainder = (time_steps + eps) % dt
@@ -833,6 +856,7 @@ def solve_linear_displacement(mechanical_system, t=1, verbose=True):
         print('Assembling force and stiffness')
     K, f_int = mechanical_system.K_and_f(t=t)
     f_ext = mechanical_system.f_ext(None, None, t)
+    mechanical_system.clear_timesteps()
     mechanical_system.write_timestep(0, f_ext*0) # write zeros
     if verbose:
         print('Start solving linear static problem')
@@ -845,7 +869,8 @@ def solve_linear_displacement(mechanical_system, t=1, verbose=True):
 def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
                                  t=0, rtol=1E-8, atol=1E-14, newton_damping=1,
                                  n_max_iter=1000, smplfd_nwtn_itr=1,
-                                 wrt_iter=False, verbose=True):
+                                 wrt_iter=False, verbose=True, 
+                                 track_niter=False):
     '''
     Solver for the nonlinear system applied directly on the mechanical system.
 
@@ -878,6 +903,11 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         export every iteration step to ParaView.
     verbose : bool, optional
         print messages if necessary
+    track_niter : bool, optional
+        Flag for the iteration-count. If True, the number of iterations in the 
+        Newton-Raphson-Loop is counted and saved to iteration_info in the 
+        mechanical system. 
+
 
     Returns
     -------
@@ -889,6 +919,9 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
 
     '''
     t_clock_1 = time.time()
+    iteration_info = [] # List tracking the number of iterations
+    mechanical_system.clear_timesteps()
+
     stepwidth = 1/no_of_load_steps
     K, f_int= mechanical_system.K_and_f()
     ndof = K.shape[0]
@@ -925,6 +958,13 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
             if wrt_iter:
                 mechanical_system.write_timestep(n_iter, u)
         mechanical_system.write_timestep(t, u)
+        # export iteration infos if wanted
+        if track_niter:
+            iteration_info.append((t, n_iter, abs_res))
+    
+    # glue the array of the iterations on the mechanical system
+    mechanical_system.iteration_info = np.array(iteration_info)
+
     t_clock_2 = time.time()
     print('Time for solving nonlinear displacements: {0:4.2f} seconds'.format(
         t_clock_2 - t_clock_1))

@@ -6,7 +6,7 @@ Some tools here might be experimental.
 
 __all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat',
            'append_interactively', 'matshow_3d', 'amfe_dir', 'h5_read_u',
-           'test']
+           'test', 'reorder_sparse_matrix']
 
 import os
 import numpy as np
@@ -250,10 +250,15 @@ def amfe_dir(filename=''):
     '''
     Return the absolute path of the filename given relative to the amfe
     directory.
+    
+    Parameters
+    ----------
+    filename : string, optional
+        relative path to something inside the amfe directory. 
 
     Returns
     -------
-    dir : string, optional
+    dir : string
         string of the filename inside the AMFE-directory. Default value is '',
         so the AMFE-directory is returned.
 

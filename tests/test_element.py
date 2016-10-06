@@ -10,7 +10,7 @@ import nose
 
 from numpy.testing import assert_allclose, assert_almost_equal
 import amfe
-from amfe import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10
+from amfe import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10, Hexa8, Hexa20
 from amfe import material
 
 def jacobian(func, X, u, t):
@@ -37,6 +37,15 @@ X_tet4 = np.array([0, 0, 0,  1, 0, 0,  0, 1, 0,  0, 0, 1], dtype=float)
 X_tet10 = np.array([0.,  0.,  0.,  2.,  0.,  0.,  0.,  2.,  0.,  0.,  0.,  2.,  1.,
                     0.,  0.,  1.,  1.,  0.,  0.,  1.,  0.,  0.,  0.,  1.,  1.,  0.,
                     1.,  0.,  1.,  1.])
+X_hexa8 = np.array([0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1],
+                   dtype=float)
+X_hexa20  = np.array(
+      [ 0. ,  0. ,  0. ,  1. ,  0. ,  0. ,  1. ,  1. ,  0. ,  0. ,  1. ,
+        0. ,  0. ,  0. ,  1. ,  1. ,  0. ,  1. ,  1. ,  1. ,  1. ,  0. ,
+        1. ,  1. ,  0.5,  0. ,  0. ,  1. ,  0.5,  0. ,  0.5,  1. ,  0. ,
+        0. ,  0.5,  0. ,  0.5,  0. ,  1. ,  1. ,  0.5,  1. ,  0.5,  1. ,
+        1. ,  0. ,  0.5,  1. ,  0. ,  0. ,  0.5,  1. ,  0. ,  0.5,  1. ,
+        1. ,  0.5,  0. ,  1. ,  0.5])
 
 
 class ElementTest(unittest.TestCase):
@@ -53,7 +62,7 @@ class ElementTest(unittest.TestCase):
         K, f = self.my_element.k_and_f_int(self.X, self.u, t=0)
         K_finite_diff = jacobian(self.my_element.f_int, self.X, self.u, t=0)
         np.testing.assert_allclose(K, K_finite_diff, rtol=rtol, atol=atol)
-    
+
     @nose.tools.nottest
     def check_python_vs_fortran(self):
         # python routine
@@ -64,10 +73,10 @@ class ElementTest(unittest.TestCase):
         E = self.my_element.E.copy()
         # fortran routine
         self.my_element._compute_tensors(self.X, self.u, t=0)
-        assert_almost_equal(self.my_element.K, K)
-        assert_almost_equal(self.my_element.f, f)
-        assert_almost_equal(self.my_element.S, S)
-        assert_almost_equal(self.my_element.E, E)
+        assert_allclose(self.my_element.K, K)
+        assert_allclose(self.my_element.f, f)
+        assert_allclose(self.my_element.S, S)
+        assert_allclose(self.my_element.E, E)
 
 
 
@@ -119,6 +128,33 @@ class Tet10Test(ElementTest):
 
     def test_jacobi(self):
         self.jacobi_test_element(rtol=2E-3)
+
+class Hexa8Test(ElementTest):
+    def setUp(self):
+        self.initialize_element(Hexa8, X_hexa8)
+
+    def test_jacobi(self):
+        self.jacobi_test_element(rtol=2E-3)
+
+    def test_mass(self):
+        my_material = material.KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
+        my_element = Hexa8(my_material)
+        M = my_element.m_int(X_hexa8, np.zeros_like(X_hexa8), t=0)
+        np.testing.assert_almost_equal(np.sum(M), 3)
+
+class Hexa20Test(ElementTest):
+    def setUp(self):
+        self.initialize_element(Hexa20, X_hexa20)
+
+    def test_jacobi(self):
+        self.jacobi_test_element(rtol=5E-3)
+
+    def test_mass(self):
+        my_material = material.KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
+        my_element = Hexa20(my_material)
+        M = my_element.m_int(X_hexa20, np.zeros_like(X_hexa20), t=0)
+        np.testing.assert_almost_equal(np.sum(M), 3)
+
 
 #%%
 # Test the material consistency:
@@ -251,8 +287,8 @@ def test_line_pressure2():
 
 def test_tri6_pressure():
     '''
-    Test, if the Tri3 pressure element reveals the same behavior as a mass 
-    element, which is accelerated in one direction only. 
+    Test, if the Tri3 pressure element reveals the same behavior as a mass
+    element, which is accelerated in one direction only.
     '''
     my_material = amfe.KirchhoffMaterial(rho=1)
     my_tri6 = amfe.Tri6(my_material)
@@ -270,13 +306,78 @@ def test_tri6_pressure():
     u_3D = np.zeros(3*6)
     K, f = my_boundary.k_and_f_int(X_3D, u_3D)
     np.testing.assert_equal(K, np.zeros((18,18)))
-    # as the skin element produces a force acting on the right hand side, 
-    # f has a negative sign. 
-    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7) 
+    # as the skin element produces a force acting on the right hand side,
+    # f has a negative sign.
+    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
 
+def test_quad4_pressure():
+    my_material = amfe.KirchhoffMaterial(rho=1)
+    my_quad4 = amfe.Quad4(my_material)
+    X = X_quad4
+    u = np.zeros(8)
+    X += sp.rand(8)*0.2
+    M = my_quad4.m_int(X, u)
+    t = np.array([ 0.,  1.,  0.,  1.,  0.,  1.,  0.,  1., ])
+    f_2d = M @ t
+    f_1d = f_2d[1::2]
+    my_boundary = amfe.Quad4Boundary(val=1., direct='normal')
+    X_3D = np.zeros(3*4)
+    X_3D[0::3] = X[0::2]
+    X_3D[1::3] = X[1::2]
+    u_3D = np.zeros(3*4)
+    K, f = my_boundary.k_and_f_int(X_3D, u_3D)
+    np.testing.assert_equal(K, np.zeros((12,12)))
+    # as the skin element produces a force acting on the right hand side,
+    # f has a negative sign.
+    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
 
+def test_quad8_pressure():
+    my_material = amfe.KirchhoffMaterial(rho=1)
+    my_quad8 = amfe.Quad8(my_material)
+    X = X_quad8
+    u = np.zeros(16)
+    X += sp.rand(16)*0.2
+    M = my_quad8.m_int(X, u)
+    t = np.zeros(16)
+    t[1::2] = 1
+    f_2d = M @ t
+    f_1d = f_2d[1::2]
+    my_boundary = amfe.Quad8Boundary(val=1., direct='normal')
+    X_3D = np.zeros(3*8)
+    X_3D[0::3] = X[0::2]
+    X_3D[1::3] = X[1::2]
+    u_3D = np.zeros(3*8)
+    K, f = my_boundary.k_and_f_int(X_3D, u_3D)
+    np.testing.assert_equal(K, np.zeros((24,24)))
+    # as the skin element produces a force acting on the right hand side,
+    # f has a negative sign.
+    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
 
+#%%
 
+def test_name_tet4():
+    assert('Tet4' == amfe.Tet4.name)
+
+def test_name_tet10():
+    assert('Tet10' == amfe.Tet10.name)
+
+def test_name_quad4():
+    assert('Quad4' == amfe.Quad4.name)
+
+def test_name_quad8():
+    assert('Quad8' == amfe.Quad8.name)
+
+def test_name_tri3():
+    assert('Tri3' == amfe.Tri3.name)
+
+def test_name_tri6():
+    assert('Tri6' == amfe.Tri6.name)
+
+def test_name_hexa8():
+    assert('Hexa8' == amfe.Hexa8.name)
+
+def test_name_hexa20():
+    assert('Hexa20' == amfe.Hexa20.name)
 
 #%%
 
@@ -316,15 +417,15 @@ class Test_fortran_vs_python(ElementTest):
     '''
     Compare the python and fortran element computation routines.
     '''
-    
+
     def test_tri3(self):
         self.initialize_element(Tri3, X_tri3)
         self.check_python_vs_fortran()
-    
+
     def test_tri6(self):
         self.initialize_element(Tri6, X_tri6)
         self.check_python_vs_fortran()
-            
+
     def test_mass_tri6(self):
         self.initialize_element(Tri6, X_tri6)
         self.my_element._m_int_python(self.X, self.u, t=0)
@@ -339,7 +440,15 @@ class Test_fortran_vs_python(ElementTest):
     def test_tet10(self):
         self.initialize_element(Tet10, X_tet10)
         self.check_python_vs_fortran()
-        
-        
+
+    def test_hexa8(self):
+        self.initialize_element(Hexa8, X_hexa8)
+        self.check_python_vs_fortran()
+
+    def test_hexa20(self):
+        self.initialize_element(Hexa20, X_hexa20)
+        self.check_python_vs_fortran()
+
+
 if __name__ == '__main__':
     unittest.main()

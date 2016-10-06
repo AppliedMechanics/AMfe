@@ -110,7 +110,8 @@ if use_fortran:
 
 class Assembly():
     '''
-    Class for the more fancy assembly of meshes with non-heterogeneous elements.
+    Class for the more fancy assembly of meshes with non-heterogeneous 
+    elements.
 
     Attributes
     ----------
@@ -188,7 +189,7 @@ class Assembly():
         max_dofs_per_element = np.max([len(i) for i in self.element_indices])
 
 
-        # Auxiliary Help-Matrix H which is the blueprint of the stiffness 
+        # Auxiliary Help-Matrix H which is the blueprint of the stiffness
         # matrix
         H = np.zeros((max_dofs_per_element, max_dofs_per_element))
 
@@ -208,8 +209,8 @@ class Assembly():
         self.C_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
                                           shape=(no_of_dofs, no_of_dofs), dtype=float)
         t2 = time.clock()
-        print('Done preallocating stiffness matrix with', no_of_elements, 'elements',
-              'and', no_of_dofs, 'dofs.')
+        print('Done preallocating stiffness matrix with', no_of_elements, 
+              'elements', 'and', no_of_dofs, 'dofs.')
         print('Time taken for preallocation:', t2 - t1, 'seconds.')
 
     def compute_element_indices(self):
@@ -239,7 +240,7 @@ class Assembly():
          for nodes in nm_connectivity]
 
         # compute nodes_frequency for stress recovery
-        nodes_vec = np.array(self.mesh.connectivity).ravel()
+        nodes_vec = np.concatenate(self.mesh.connectivity)
         self.elements_on_node = np.bincount(nodes_vec)
 
 
@@ -673,7 +674,8 @@ class Assembly():
         Returns
         --------
         K : Dense ndarray
-            Constrained Hyper-reduced assembled stiffness matrix in sparse matrix csr format.
+            Constrained Hyper-reduced assembled stiffness matrix in sparse
+            matrix csr format.
         f : ndarray
             Constrained Hyper-reduced force vector
         '''

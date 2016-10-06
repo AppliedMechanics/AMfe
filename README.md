@@ -96,11 +96,22 @@ Though Python is a general purpose programming language, it provides a great eco
 
 The best IDE for Python is Spyder, which has sort of a MATLAB-Style look and feel. Other editors integrate very well into Python like Atom, as well as PyCharm, which is an IDE for Python.
 
-I personally work with Spyder and Atom. Spyder is part of anaconda and can be installed via
+I personally work with Spyder and Atom. Spyder is part of anaconda and provides nice features like built-in debugging, static code analysis with `pylint` and a profiling tool to measure the performance of the code. 
 
-     conda install spyder
+---------------------------------------
+**Hint** 
 
-Spyder also provides nice features like built-in debugging, static code analysis with pylint and a profiling tool to measure the performance of the code.
+On Mac OS X `Spyder 2` may run very slow, as there are some issues with the graphical frontent library, pyqt4. These issues are resolved on `Spyder 3` by using pyqt5, which can already be installed on anaconda as beta version resolving all these issues. To install `Spyder 3`, use either 
+
+    conda update qt pyqt
+    conda install -c qttesting qt pyqt
+    conda install -c spyder-ide spyder==3.0.0b6
+   
+or (which worked better for me)
+   
+    pip install --pre -U spyder
+
+-------------------------------------
 
 ### Profiling the code
 

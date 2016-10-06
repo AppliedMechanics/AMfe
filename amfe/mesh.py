@@ -20,7 +20,7 @@ import numpy as np
 
 from .element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
 from .element import LineLinearBoundary, LineQuadraticBoundary, \
-    Tri3Boundary, Tri6Boundary
+    Tri3Boundary, Tri6Boundary, Hexa8, Hexa20, Quad4Boundary, Quad8Boundary
 
 # Element mapping is described here. If a new element is implemented, the
 # features for import and export should work when the followig list will be updated.
@@ -30,6 +30,10 @@ element_mapping_list = [
      'Linear Tetraeder / nodes on every corner'],
     ['Tet10',         'Tetrahedron_10',  11, 24, 10,
      'Quadratic Tetraeder / 4 nodes at the corners, 6 nodes at the faces'],
+    ['Hexa8',         'Hexahedron', 5, 12, 8,
+     'Linear brick element'],
+    ['Hexa20',         'Hex_20', 17, 25, 20,
+     'Quadratic brick element'],
     ['Tri6',          'Triangle_6',   9, 22,  6,
      'Quadratic triangle / 6 node second order triangle'],
     ['Tri3',          'Triangle',   2,  5,  3,
@@ -63,6 +67,9 @@ for element in element_mapping_list:
     amfe2vtk.update( {element[0] : element[3]})
     amfe2xmf.update({element[0] : element[1]})
     amfe2no_of_nodes.update({element[0] : element[4]})
+
+nas2amfe = {'CTETRA' : 'Tet10',
+            'CHEXA' : 'Hexa8'}
 
 
 
@@ -153,6 +160,7 @@ def create_xdmf_from_hdf5(filename):
     Returns
     -------
     None
+
     '''
     filename_no_dir = os.path.split(filename)[-1]
     # filename_no_ext = os.path.splitext(filename)[0]
@@ -168,59 +176,70 @@ def create_xdmf_from_hdf5(filename):
                                                 'CollectionType':'Temporal'})
         # time loop
         for i, T in enumerate(f['time']):
-            grid = SubElement(time_grid, 'Grid', {'Type':'Uniform'})
+            spatial_grid= SubElement(time_grid, 'Grid',
+                                     {'Type':'Spatial',
+                                      'GridType':'Collection'})
 
-            time = SubElement(grid, 'Time', {'TimeType':'Single',
-                                             'Value':str(T)})
-            topology = SubElement(grid, 'Topology',
-                                  {'TopologyType':h5_topology.attrs['TopologyType'],
-                                   'NumberOfElements':str(h5_topology.shape[0])})
-            topology_data = SubElement(topology, 'DataItem',
+            time = SubElement(spatial_grid, 'Time', {'TimeType':'Single',
+                                                     'Value':str(T)})
+            # loop over all mesh topologies
+            for key in h5_topology.keys():
+                grid = SubElement(spatial_grid, 'Grid', {'Type':'Uniform'})
+                topology = SubElement(grid, 'Topology',
+                                  {'TopologyType':h5_topology[key].attrs['TopologyType'],
+                                   'NumberOfElements':str(h5_topology[key].shape[0])})
+                topology_data = SubElement(topology, 'DataItem',
                                        {'NumberType':'Int',
                                         'Format':'HDF',
-                                        'Dimensions':shape2str(h5_topology.shape)})
-            topology_data.text = filename_no_dir + ':/mesh/topology'
+                                        'Dimensions':shape2str(h5_topology[key].shape)})
+                topology_data.text = filename_no_dir + ':/mesh/topology/' + key
 
-            # Check, if mesh is 2D or 3D
-            xdmf_node_type = 'XYZ'
-            if h5_nodes.shape[-1] == 2:
-                xdmf_node_type = 'XY'
+                # Check, if mesh is 2D or 3D
+                xdmf_node_type = 'XYZ'
+                if h5_nodes.shape[-1] == 2:
+                    xdmf_node_type = 'XY'
 
-            geometry = SubElement(grid, 'Geometry',
-                                  {'Type':'Uniform',
-                                   'GeometryType':xdmf_node_type})
-            geometry_data_item = SubElement(geometry, 'DataItem',
-                                            {'NumberType':'Float',
-                                             'Format':'HDF',
-                                             'Dimensions':shape2str(h5_nodes.shape)})
-            geometry_data_item.text = filename_no_dir + ':/mesh/nodes'
+                geometry = SubElement(grid, 'Geometry',
+                                      {'Type':'Uniform',
+                                       'GeometryType':xdmf_node_type})
+                geometry_data_item = SubElement(geometry, 'DataItem',
+                                                {'NumberType':'Float',
+                                                 'Format':'HDF',
+                                                 'Dimensions':shape2str(h5_nodes.shape)})
+                geometry_data_item.text = filename_no_dir + ':/mesh/nodes'
 
-            # Attribute loop for export of displacements, stresses etc.
-            for key in h5_time_vals.keys():
-                field = h5_time_vals[key]
-                if field.attrs['ParaView'] == np.True_:
-                    field_attr = SubElement(grid, 'Attribute',
-                                            {'Name':field.attrs['Name'],
-                                             'AttributeType':field.attrs['AttributeType'],
-                                             'Center':field.attrs['Center']})
-                    no_of_components = field.attrs['NoOfComponents']
-                    field_dim = (field.shape[0] // no_of_components, no_of_components)
-                    field_data = SubElement(field_attr, 'DataItem',
-                                            {'ItemType':'HyperSlab',
-                                             'Dimensions':shape2str(field_dim)})
+                # Attribute loop for export of displacements, stresses etc.
+                for key in h5_time_vals.keys():
+                    field = h5_time_vals[key]
+                    if field.attrs['ParaView'] == np.True_:
+                        field_attr = SubElement(grid, 'Attribute',
+                                                {'Name':field.attrs['Name'],
+                                                 'AttributeType':
+                                                    field.attrs['AttributeType'],
+                                                 'Center':field.attrs['Center']})
+                        no_of_components = field.attrs['NoOfComponents']
+                        field_dim = (field.shape[0] // no_of_components, no_of_components)
+                        field_data = SubElement(field_attr, 'DataItem',
+                                                {'ItemType':'HyperSlab',
+                                                 'Dimensions':shape2str(field_dim)})
 
-                    field_hyperslab = SubElement(field_data, 'DataItem',
-                                                 {'Dimensions':'3 2',
-                                                  'Format':'XML'})
+                        field_hyperslab = SubElement(field_data, 'DataItem',
+                                                     {'Dimensions':'3 2',
+                                                      'Format':'XML'})
 
-                    # pick the i-th column via hyperslab
-                    field_hyperslab.text = '0 ' + str(i) + ' 1 1 ' + \
-                                            str(field.shape[0]) + ' 1'
-                    field_hdf = SubElement(field_data, 'DataItem',
-                                           {'Format':'HDF',
-                                            'NumberType':'Float',
-                                            'Dimensions':shape2str(field.shape)})
-                    field_hdf.text = filename_no_dir + ':/time_vals/' + key
+                        # pick the i-th column via hyperslab; If no temporal values
+                        # are pumped out, use the first column
+                        if i <= field.shape[-1]: # field has time instance
+                            col = str(i)
+                        else: # field has no time instance, use first col
+                            col = '0'
+                        field_hyperslab.text = '0 ' + col + ' 1 1 ' + \
+                                                str(field.shape[0]) + ' 1'
+                        field_hdf = SubElement(field_data, 'DataItem',
+                                               {'Format':'HDF',
+                                                'NumberType':'Float',
+                                                'Dimensions':shape2str(field.shape)})
+                        field_hdf.text = filename_no_dir + ':/time_vals/' + key
 
     # write xdmf-file
     xdmf_str = prettify_xml(xml_root)
@@ -290,6 +309,7 @@ class Mesh:
         self.neumann_obj   = []
         self.nodes_dirichlet     = np.array([], dtype=int)
         self.dofs_dirichlet      = np.array([], dtype=int)
+        self.constraint_list = [] # experimental; Introduced for nastran meshes
         # the displacements; They are stored as a list of numpy-arrays with
         # shape (ndof, no_of_dofs_per_node):
         self.u                   = []
@@ -305,6 +325,8 @@ class Mesh:
         kwargs = { }
         self.element_class_dict = {'Tet4'  : Tet4(**kwargs),
                                    'Tet10' : Tet10(**kwargs),
+                                   'Hexa8' : Hexa8(**kwargs),
+                                   'Hexa20': Hexa20(**kwargs),
                                    'Tri3'  : Tri3(**kwargs),
                                    'Tri6'  : Tri6(**kwargs),
                                    'Quad4' : Quad4(**kwargs),
@@ -318,11 +340,13 @@ class Mesh:
             'straight_line' : LineLinearBoundary(**kwargs),
             'quadratic_line': LineQuadraticBoundary(**kwargs),
             'Tri3'          : Tri3Boundary(**kwargs),
-            'Tri6'          : Tri6Boundary(**kwargs),}
+            'Tri6'          : Tri6Boundary(**kwargs),
+            'Quad4'         : Quad4Boundary(**kwargs),
+            'Quad8'         : Quad8Boundary(**kwargs),}
 
         # actual set of implemented elements
         self.element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
-        self.element_3d_set = {'Tet4', 'Tet10'}
+        self.element_3d_set = {'Tet4', 'Tet10', 'Hexa8', 'Hexa20', }
 
         self.boundary_2d_set = {'straight_line', 'quadratic_line'}
         self.boundary_3d_set = {'straight_line', 'quadratic_line',
@@ -414,6 +438,124 @@ class Mesh:
         print('Element type is {0}...  '.format(mesh_type), end="")
         self._update_mesh_props()
         print('Reading elements successful.')
+        return
+
+
+    def import_bdf(self, filename, scale_factor=1.):
+        '''
+        Import a NASTRAN mesh.
+
+        Parameters
+        ----------
+        filename : string
+            filename of the .msh-file
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        This function is heavily experimental. It is just working for a subset
+        of NASTRAN input files and the goal is to capture the mesh and the
+        constraints of the model. The constraints are captured in the
+        constraint_list-object of the class.
+
+        The internal representation of the elements is done via a Pandas
+        Dataframe object.
+
+        '''
+        tag_start = 'BEGIN BULK'
+        tag_end = 'ENDDATA'
+        comment_tag = '$'
+        long_format_tag = '*'
+        print('*************************************************************')
+        print('\nLoading NASTRAN-mesh from', filename)
+
+        nodes_list = []
+        elements_list = []
+        constraint_list = []
+        # Flag indicating, that element was read in previous line
+        element_active = False
+
+        with open(filename, 'r') as infile:
+            file_data = infile.read().splitlines()
+
+        # Loop over all lines in the file
+        for line in file_data:
+            # Filter out comments
+            if comment_tag in line:
+                element_active = False
+                continue
+
+            if long_format_tag in line: # Long format
+                s = [line[:8], ]
+                s.extend([line[i*16:(i+1)*16] for i in range(len(line)//16)])
+                # Note: here some more logics is necessary to handle line
+                # continuation
+            elif ',' in line: # Free field format
+                s = line.split(',')
+            else: # The regular short format
+                s = [line[i*8:(i+1)*8] for i in range(len(line)//8)]
+
+            if len(s) < 1: # Empty line
+                element_active = False
+                continue
+
+            # Get the nodes
+            if 'GRID' in s[0]:
+                nodes_list.append([int(s[1]),
+                                   float(s[3]), float(s[4]), float(s[5])])
+
+            elif s[0].strip() in nas2amfe:
+                elements_list.append(s)
+                element_active = 'Element'
+            elif 'RBE' in s[0]:
+                constraint_list.append(s)
+                element_active = 'Constraint'
+            elif s[0] != '        ': # There is an unknown element
+                element_active = False
+
+            # Catch the free lines where elements are continued
+            elif s[0] == '        ' and element_active:
+                if element_active == 'Element':
+                    elements_list[-1].extend(s[1:])
+                if element_active == 'Constraint':
+                    constraint_list[-1].extend(s[1:])
+
+        self.no_of_dofs_per_node = 3 # this is just hard coded right now...
+        self.nodes = np.array(nodes_list, dtype=float)[:,1:]
+        self.nodes *= scale_factor # scaling of nodes
+
+        nodes_dict = pd.Series(index=np.array(nodes_list, dtype=int)[:,0],
+                               data=np.arange(len(nodes_list)))
+
+        for idx, ptr in enumerate(elements_list):
+            tmp = [nas2amfe[ptr.pop(0).strip()],
+                   int(ptr.pop(0)), int(ptr.pop(0))]
+            tmp.extend([nodes_dict[int(i)] for i in ptr])
+            elements_list[idx] = tmp
+
+        for idx, ptr in enumerate(constraint_list):
+            tmp = [ptr.pop(0).strip(), int(ptr.pop(0)), int(ptr.pop(1))]
+            tmp.append([nodes_dict[int(i)] for i in ptr[4:]])
+            constraint_list[idx] = tmp
+
+        self.constraint_list = constraint_list
+        self.el_df = df = pd.DataFrame(elements_list, dtype=int)
+        df.rename(copy=False, inplace=True,
+                  columns={0 : 'el_type',
+                           1 : 'idx_nastran',
+                           2 : 'phys_group',
+                          })
+        self.node_idx = 3
+        self._update_mesh_props()
+        # printing some information regarding the physical groups
+        print('Mesh', filename, 'successfully imported.',
+              '\nAssign a material to a physical group.')
+        print('*************************************************************')
+        return
+
 
     def import_msh(self, filename, scale_factor=1.):
         '''
@@ -534,7 +676,13 @@ class Mesh:
             i = self.node_idx
             df.ix[row_loc, i + 9], df.ix[row_loc, i + 8] = \
             df.ix[row_loc, i + 8], df.ix[row_loc, i + 9]
-
+        # Same node nubmering issue with Hexa20
+        if 'Hexa20' in element_types:
+            row_loc = df['el_type'] == 'Hexa20'
+            hexa8_gmsh_swap = np.array([0,1,2,3,4,5,6,7,8,11,13,9,16,18,19,
+                                        17,10,12,14,15])
+            i = self.node_idx
+            df.ix[row_loc, i:] = df.ix[row_loc, i + hexa8_gmsh_swap].values
 
         self._update_mesh_props()
         # printing some information regarding the physical groups
@@ -585,9 +733,11 @@ class Mesh:
         # add the nodes of the chosen group
         connectivity = [np.nan for i in range(len(elements_df))]
         for i, ele in enumerate(elements_df.values):
+            no_of_nodes = amfe2no_of_nodes[elements_df.el_type.iloc[i]]
             connectivity[i] = np.array(ele[self.node_idx :
-                                        self.node_idx + amfe2no_of_nodes[ele[1]]],
-                                    dtype=int)
+                                           self.node_idx + no_of_nodes],
+                                       dtype=int)
+
         self.connectivity.extend(connectivity)
 
         # make a deep copy of the element class dict and apply the material
@@ -791,6 +941,46 @@ class Mesh:
         if output is 'external':
             return nodes_dirichlet, dofs_dirichlet
 
+    def deflate_mesh(self):
+        '''
+        Deflate the mesh, i.e. delete nodes which are not connected to an
+        element.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        '''
+
+        nodes_vec = np.concatenate(self.connectivity)
+        elements_on_node = np.bincount(np.array(nodes_vec, dtype=int))
+        mask = elements_on_node != 0 # all nodes which show up at least once
+        idx_transform = np.zeros(len(self.nodes), dtype=int)
+        idx_transform[mask] = np.arange(len(idx_transform[mask]))
+        self.nodes = self.nodes[mask]
+        # deflate the connectivities
+        for i, nodes in enumerate(self.connectivity):
+            self.connectivity[i] = idx_transform[nodes]
+        for i, nodes in enumerate(self.neumann_connectivity):
+            self.neumann_connectivity[i] = idx_transform[nodes]
+
+        # deflate the element_dataframe
+        df = self.el_df
+        for col in df.iloc[:,self.node_idx:]:
+            nan_mask = np.isfinite(df[col].values)
+            indices = np.array(df[col].values[nan_mask], dtype=int)
+            df[col].values[nan_mask] = idx_transform[indices]
+
+        self._update_mesh_props()
+        print('**************************************************************')
+        print('Mesh successfully deflated. ',
+              '\nNumber of nodes in old mesh:', len(mask),
+              '\nNumber of nodes in deflated mesh:', np.count_nonzero(mask),
+              '\nNumer of deflated nodes:', len(mask) - np.count_nonzero(mask))
+        print('**************************************************************')
 
     def set_displacement(self, u):
         '''
@@ -890,15 +1080,18 @@ class Mesh:
         # determine the part of the mesh which has most elements
         # only this part will be exported!
         ele_types = np.array([obj.name for obj in self.ele_obj], dtype=object)
-        el_type_export = np.unique(ele_types)[0]
-        # Boolean matrix giving the indices for the elements to export
-        el_type_ix = (ele_types == el_type_export)
-        
-        # select the nodes to export an make an array of them
-        # As the list might be ragged, it has to be put to list and then to 
-        # array again. 
-        connectivity_export = np.array(self.connectivity)[el_type_ix]
-        connectivity_export = np.array(connectivity_export.tolist())
+        el_type_export = np.unique(ele_types)
+        connectivties_dict = dict()
+        for el_type in el_type_export:
+            # Boolean matrix giving the indices for the elements to export
+            el_type_ix = (ele_types == el_type)
+
+            # select the nodes to export an make an array of them
+            # As the list might be ragged, it has to be put to list and then to
+            # array again.
+            connectivity_export = np.array(self.connectivity)[el_type_ix]
+            connectivity_export = np.array(connectivity_export.tolist())
+            connectivties_dict[el_type] = connectivity_export
 
         # make displacement 3D vector, as paraview only accepts 3D vectors
         q_array = np.array(self.u, dtype=float).T
@@ -931,11 +1124,12 @@ class Mesh:
         with h5py.File(filename + '.hdf5', 'w') as f:
             h5_nodes = f.create_dataset('mesh/nodes', data=self.nodes)
             h5_nodes.attrs['ParaView'] = True
-            h5_topology = f.create_dataset('mesh/topology',
-                                           data=connectivity_export,
-                                           dtype=np.int)
-            h5_topology.attrs['ParaView'] = True
-            h5_topology.attrs['TopologyType'] = amfe2xmf[el_type_export]
+            for el_type in connectivties_dict:
+                h5_topology = f.create_dataset('mesh/topology/' + el_type,
+                                               data=connectivties_dict[el_type],
+                                               dtype=np.int)
+                h5_topology.attrs['ParaView'] = True
+                h5_topology.attrs['TopologyType'] = amfe2xmf[el_type]
 
             h5_time = f.create_dataset('time', data=np.array(self.timesteps))
             h5_set_attributes(h5_time, h5_time_dict)

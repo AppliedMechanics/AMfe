@@ -56,7 +56,11 @@ class MechanicalSystem():
         (no_of_nodes, 6).
     stress_recovery : bool
         Flag for option stress_recovery.
-
+    iteration_info : ndarray
+        array containing the information of an iterative solution procedure.
+        iteration_info[:,0] is the time information,
+        iteration_info[:,1] is the number of iteations,
+        iteration_info[:,3] is the residual.
     '''
 
     def __init__(self, stress_recovery=False):
@@ -74,6 +78,7 @@ class MechanicalSystem():
         self.E_output = []
         self.stress = None
         self.strain = None
+        self.iteration_info = np.array([])
 
         # instantiate the important classes needed for the system:
         self.mesh_class = Mesh()
@@ -120,6 +125,25 @@ class MechanicalSystem():
         self.mesh_class.load_group_to_mesh(phys_group, material)
         self.no_of_dofs_per_node = self.mesh_class.no_of_dofs_per_node
 
+        self.assembly_class.preallocate_csr()
+        self.dirichlet_class.no_of_unconstrained_dofs = self.mesh_class.no_of_dofs
+        self.dirichlet_class.update()
+
+
+    def deflate_mesh(self):
+        '''
+        Remove free floating nodes not connected to a selected element from
+        the mesh.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        '''
+        self.mesh_class.deflate_mesh()
         self.assembly_class.preallocate_csr()
         self.dirichlet_class.no_of_unconstrained_dofs = self.mesh_class.no_of_dofs
         self.dirichlet_class.update()
@@ -319,7 +343,8 @@ class MechanicalSystem():
             self.u_output.append(np.zeros(self.mesh_class.no_of_dofs))
         print('Start exporting mesh for paraview to:\n    ', filename)
 
-        if self.stress_recovery:
+        if self.stress_recovery and len(self.S_output) > 0 \
+           and len(self.E_output) > 0:
             no_of_timesteps = len(self.T_output)
             S_array = np.array(self.S_output).reshape((no_of_timesteps, -1))
             E_array = np.array(self.E_output).reshape((no_of_timesteps, -1))
@@ -541,10 +566,24 @@ class MechanicalSystem():
         '''
         self.T_output.append(t)
         self.u_output.append(self.unconstrain_vec(u))
-        if self.stress_recovery:
+        # Check both, if stress recovery and if stress and strain is there
+        if self.stress_recovery and (self.stress is not None) and \
+           (self.strain is not None):
             self.S_output.append(self.stress.copy())
             self.E_output.append(self.strain.copy())
 
+    def clear_timesteps(self):
+        '''
+        Clear the timesteps gathered internally
+        '''
+        self.T_output = []
+        self.u_output = []
+        self.S_output = []
+        self.E_output = []
+        self.stress = None
+        self.strain = None
+        self.iteration_info = np.array([])
+        return
 
 
 class ReducedSystem(MechanicalSystem):
@@ -676,13 +715,17 @@ class ReducedSystem(MechanicalSystem):
         new_field_list.append((u_red_export, u_red_dict))
 
         MechanicalSystem.export_paraview(self, filename, new_field_list)
-        filename_no_ext, _ = os.path.splitext(filename)
 
         # add V and Theta to the hdf5 file
+        filename_no_ext, _ = os.path.splitext(filename)
         with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
             f.create_dataset('reduction/V', data=self.V)
 
         return
+
+    def clear_timesteps(self):
+        MechanicalSystem.clear_timesteps(self)
+        self.u_red_output = []
 
 
 class HRSystem(ReducedSystem):
