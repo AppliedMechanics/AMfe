@@ -11,17 +11,14 @@ import numpy as np
 import scipy as sp
 import time
 
-# make amfe running
-import sys
-sys.path.insert(0,'..')
 import amfe
 
 # test gmsh input-output functionality
 
-gmsh_input_file = '../meshes/test_meshes/bar_3d.msh'
+gmsh_input_file = amfe.amfe_dir('meshes/test_meshes/bar_3d.msh')
 
 #gmsh_input_file = 'meshes/test_meshes/bar_Tet4_finest_phys_group.msh'
-paraview_output_file = '../results/gmsh_test/gmsh_import'
+paraview_output_file = amfe.amfe_dir('results/gmsh_test/gmsh_import')
 
 #%%
 
