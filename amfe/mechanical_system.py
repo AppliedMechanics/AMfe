@@ -537,29 +537,29 @@ class MechanicalSystem():
         '''
         Computation of Jacobian and residual for generalized-alpha time
         integration scheme.
-        
+
         TODO
 
         '''
         # compute mass matrix only if it has not been computed yet
         if self.M_constr is None:
             self.M()
-        
+
         ddq_m = (1.0 - alpha_m)*ddq + alpha_m*ddq_old
         q_f = (1.0 - alpha_f)*q + alpha_f*q_old
-        
+
         K_f, f_f = self.K_and_f(q_f, t)
-        
+
         f_ext = self.f_ext(q, dq, t)
         f_ext_f = (1.0 - alpha_f)*f_ext + alpha_f*f_ext_old
-        
+
         Jac = (1.0 - alpha_f)*K_f + (1.0 - alpha_m)/(beta*dt**2)*self.M_constr
         res = f_f - f_ext_f + self.M_constr @ ddq_m
-        
+
         return Jac, res, f_ext
-    
-    
-    
+
+
+
     def write_timestep(self, t, u):
         '''
         write the timestep to the mechanical_system class
@@ -567,8 +567,12 @@ class MechanicalSystem():
         self.T_output.append(t)
         self.u_output.append(self.unconstrain_vec(u))
         # Check both, if stress recovery and if stress and strain is there
-        if self.stress_recovery and (self.stress is not None) and \
-           (self.strain is not None):
+        if self.stress_recovery:
+            # catch the case when no stress was computed, for instance in time
+            # integration
+            if self.stress is None and self.strain is None:
+                self.stress = np.zeros((self.mesh_class.no_of_nodes,6))
+                self.strain = np.zeros((self.mesh_class.no_of_nodes,6))
             self.S_output.append(self.stress.copy())
             self.E_output.append(self.strain.copy())
 

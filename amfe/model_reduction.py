@@ -48,6 +48,7 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False):
         reduced_sys = copy.deepcopy(mechanical_system)
     reduced_sys.__class__ = ReducedSystem
     reduced_sys.V = V.copy()
+    reduced_sys.V_unconstr = reduced_sys.dirichlet_class.unconstrain_vec(V)
     reduced_sys.u_red_output = []
     reduced_sys.M_constr = None
     return reduced_sys
@@ -849,4 +850,5 @@ def pod(mechanical_system, n=None):
     '''
     S = np.array(mechanical_system.u_output).T
     U, sigma, __ = sp.linalg.svd(S, full_matrices=False)
-    return U[:,:n], sigma[:n]
+    U_return = mechanical_system.constrain_vec(U[:,:n])
+    return sigma[:n], U_return

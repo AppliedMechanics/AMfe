@@ -72,7 +72,7 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
         Specifier for the matrix type:
 
         - 'spd' : symmetric positive definite
-        - 'symm' : symmetric indefinite, default. 
+        - 'symm' : symmetric indefinite, default.
         - 'unsymm' : generally unsymmetric
 
     Returns
@@ -636,11 +636,11 @@ def integrate_linear_system_genAlpha(mechanical_system, q_init, dq_init,
 
 
 def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
-                               alpha=0.01, 
-                               rtol=1E-8, 
-                               atol=1E-6, 
+                               alpha=0.01,
+                               rtol=1E-8,
+                               atol=1E-6,
                                verbose=False,
-                               n_iter_max=30, 
+                               n_iter_max=30,
                                conv_abort=True,
                                write_iter=False,
                                track_niter=False):
@@ -683,9 +683,9 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
         to the MechanicalSystem object. Useful only for debugging, when no
         convergence is gained. Default value: False.
     track_niter : bool, optional
-        Flag for the iteration-count. If True, the number of iterations in the 
-        Newton-Raphson-Loop is counted and saved to iteration_info in the 
-        mechanical system. 
+        Flag for the iteration-count. If True, the number of iterations in the
+        Newton-Raphson-Loop is counted and saved to iteration_info in the
+        mechanical system.
 
     Returns
     -------
@@ -860,7 +860,7 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     eps = 1E-12 # epsilon for floating point round off errors
     mechanical_system.clear_timesteps()
 
-    
+
     # Check, if the time step width and the spacing in time range fit together
     time_steps = time_range - np.roll(time_range, 1)
     remainder = (time_steps + eps) % dt
@@ -949,15 +949,16 @@ def solve_linear_displacement(mechanical_system, t=1, verbose=True):
     if verbose:
         print('Start solving linear static problem')
     u = linalg.spsolve(K, f_ext - f_int)
-    mechanical_system.write_timestep(1, u)
+    mechanical_system.write_timestep(t, u)
     if verbose:
         print('Static problem solved')
+    return u
 
 
 def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
                                  t=0, rtol=1E-8, atol=1E-14, newton_damping=1,
                                  n_max_iter=1000, smplfd_nwtn_itr=1,
-                                 wrt_iter=False, verbose=True, 
+                                 wrt_iter=False, verbose=True,
                                  track_niter=False):
     '''
     Solver for the nonlinear system applied directly on the mechanical system.
@@ -992,9 +993,9 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     verbose : bool, optional
         print messages if necessary
     track_niter : bool, optional
-        Flag for the iteration-count. If True, the number of iterations in the 
-        Newton-Raphson-Loop is counted and saved to iteration_info in the 
-        mechanical system. 
+        Flag for the iteration-count. If True, the number of iterations in the
+        Newton-Raphson-Loop is counted and saved to iteration_info in the
+        mechanical system.
 
 
     Returns
@@ -1049,7 +1050,7 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         # export iteration infos if wanted
         if track_niter:
             iteration_info.append((t, n_iter, abs_res))
-    
+
     # glue the array of the iterations on the mechanical system
     mechanical_system.iteration_info = np.array(iteration_info)
 
