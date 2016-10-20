@@ -473,7 +473,7 @@ def theta_orth_v(Theta, V, M, overwrite=False):
     return Theta_ret
 
 
-def linear_qm_basis(V, theta, tol=1E-6):
+def linear_qm_basis(V, theta, M, tol=1E-6):
     '''
     Make a linear basis containing the subspace spanned by V and theta by deflation.
 
@@ -500,7 +500,7 @@ def linear_qm_basis(V, theta, tol=1E-6):
     for i in range(n):
         for j in range(i+1):
             idx = n + i*(i+1)//2 + j
-            V_raw[:,idx] = theta[:,i,j] / np.sqrt(theta[:,i,j] @ theta[:,i,j])
+            V_raw[:,idx] = theta[:,i,j] / np.sqrt(theta[:,i,j] @ M @ theta[:,i,j])
 
     # Deflation algorithm
     U, s, V_svd = sp.linalg.svd(V_raw, full_matrices=False)
