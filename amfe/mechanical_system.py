@@ -1106,7 +1106,7 @@ class QMSystem(MechanicalSystem):
 
         # computing the residual
         res_accel = M_unreduced @ (P @ ddu)
-        res_gyro = 1/2*M_unreduced @ (theta @ du) @ du
+        res_gyro = M_unreduced @ (theta @ du) @ du
         res_full = res_accel + res_gyro + f_unreduced - f_ext_unred
         # the different contributions to stiffness
         K1 = theta.T @ res_full
@@ -1114,7 +1114,7 @@ class QMSystem(MechanicalSystem):
         K3 = P.T @ K_unreduced @ P
         K = K1 + K2 + K3
         # gyroscopic matrix and reduced mass matrix
-        G = P.T @ M_unreduced @ (theta @ du)
+        G = P.T @ M_unreduced @ (2*theta @ du)
         M = P.T @ M_unreduced @ P
 
         res = P.T @ res_full
