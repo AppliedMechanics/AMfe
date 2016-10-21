@@ -28,7 +28,7 @@ my_system.apply_neumann_boundaries(85, 1E5, (1,1,0), harmonic_excitation)
 omega, V = amfe.vibration_modes(my_system)
 #%%
 
-dt = 0.005
+dt = 0.001
 T = np.arange(0, 10, dt)
 ndof = my_system.K().shape[0]
 q0 = np.zeros(ndof)

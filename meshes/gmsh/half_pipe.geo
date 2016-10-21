@@ -55,3 +55,4 @@ Physical Surface(146) = {120, 76, 32}; // bottom front
 Physical Surface(147) = {134, 90, 46}; // bottom back
 Physical Surface(148) = {64}; // rip front
 Physical Surface(149) = {86}; // rip back
+Physical Volume(150) = {2, 4, 6, 1, 3, 5}; // the full mesh
