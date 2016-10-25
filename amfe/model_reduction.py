@@ -498,12 +498,14 @@ def linear_qm_basis(V, theta, M=None, tol=1E-6):
     ndof, n = V.shape
     V_raw = np.zeros((ndof, n*(n+3)//2))
     V_raw[:,:n] = V[:,:]
-    if M is None:
-        M = np.eye(ndof)
     for i in range(n):
         for j in range(i+1):
             idx = n + i*(i+1)//2 + j
-            V_raw[:,idx] = theta[:,i,j] / np.sqrt(theta[:,i,j].T @ M @ theta[:,i,j])
+            if M is None:
+                theta_norm = np.sqrt(theta[:,i,j].T @ theta[:,i,j])
+            else:
+                theta_norm = np.sqrt(theta[:,i,j].T @ M @ theta[:,i,j])
+            V_raw[:,idx] = theta[:,i,j] / theta_norm
 
     # Deflation algorithm
     U, s, V_svd = sp.linalg.svd(V_raw, full_matrices=False)
