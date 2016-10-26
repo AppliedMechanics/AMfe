@@ -163,7 +163,11 @@ Extrude {{0, 0, 1}, {0, 0, 0}, 2*Pi/3} {
   Layers{20}; 
   Recombine;
 }
-Recombine;
+
 Transfinite Surface "*";
 Recombine Surface "*";
 Transfinite Volume "*";
+
+Physical Volume(977) = {42, 40, 41, 39, 36, 37, 38, 35, 32, 33, 34, 31, 30, 27, 28, 24, 26, 25, 23, 22, 21, 18, 17, 19, 20, 16, 15, 29, 1, 2, 3, 4, 5, 6, 7, 8, 10, 9, 11, 12, 14, 13};
+Physical Surface(978) = {659, 351, 951}; // Bottom surface
+Physical Surface(979) = {703, 87, 395}; // Top surface
