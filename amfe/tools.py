@@ -6,11 +6,14 @@ Some tools here might be experimental.
 
 __all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat',
            'append_interactively', 'matshow_3d', 'amfe_dir', 'h5_read_u',
-           'test', 'reorder_sparse_matrix']
+           'test', 'reorder_sparse_matrix', 'eggtimer']
 
 import os
 import numpy as np
 import scipy as sp
+import time
+import subprocess
+import sys
 import h5py
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -250,11 +253,11 @@ def amfe_dir(filename=''):
     '''
     Return the absolute path of the filename given relative to the amfe
     directory.
-    
+
     Parameters
     ----------
     filename : string, optional
-        relative path to something inside the amfe directory. 
+        relative path to something inside the amfe directory.
 
     Returns
     -------
@@ -308,6 +311,72 @@ def h5_read_u(h5filename):
         mask[2::3] = False
         u_full = u_full[mask, :]
     return bmat.T @ u_full, u_full, T
+
+
+def eggtimer(fkt):
+    '''
+    Egg timer for functions which reminds via speech, when the function has
+    terminated.
+
+    The intention of this function is, that the user gets reminded, when longer
+    simulations are over.
+
+    Parameters
+    ----------
+    fkt : function
+        any function
+
+    Returns
+    -------
+    fkt : function
+        function decorated with eggtimer. It reminds you via speech, when the
+        function has terminated.
+
+    Examples
+    --------
+    Import eggtimer function:
+
+    >>> from amfe import eggtimer
+
+    working directly on function:
+
+    >>> def square(a):
+    ...     return a**2
+    ...
+    >>> timed_square = eggtimer(square)
+    >>> timed_square(6)
+    36
+
+    working as decorator:
+
+    >>> @eggtimer
+    ... def square(a):
+    ...     return a**2
+    ...
+    >>> square(6)
+    36
+
+    '''
+    def fkt_wrapper(*args, **kwargs):
+        t1 = time.time()
+        return_vals = fkt(*args, **kwargs)
+        t2 = time.time()
+        speech = '"Your job has finished. ' \
+                      + 'It took {0:0.0f} seconds."'.format(t2-t1)
+        headline = 'Python job finished'
+        text = 'The job you egg-clocked in amfe took {0:0.0f} seconds'.format(t2-t1)
+
+        if sys.platform == 'linux': # Linux
+            subprocess.call(['notify-send', headline, text])
+            subprocess.call(['speech-dispatcher']) #start speech dispatcher
+            subprocess.call(['spd-say', speech])
+        elif sys.platform == 'darwin': # OS X
+            subprocess.call(['say', '-v', 'Samantha', speech])
+            notification_text = 'display notification ' + \
+                                '"{0}" with title "{1}"'.format(headline, text)
+            subprocess.call(['osascript', '-e', notification_text])
+        return return_vals
+    return fkt_wrapper
 
 
 def test(*args, **kwargs):
