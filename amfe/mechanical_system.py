@@ -4,7 +4,8 @@ system, defined by certain parameters or a multibody system.
 """
 
 __all__ = ['MechanicalSystem', 'ReducedSystem', 'ConstrainedMechanicalSystem',
-           'QMSystem', 'HRSystem']
+           'QMSystem',
+           ]
 
 import time
 import os
@@ -93,6 +94,7 @@ class MechanicalSystem():
 
         # initializations to be overwritten by loading functions
         self.M_constr = None
+        self.D_constr = None
         self.no_of_dofs_per_node = None
 
         # external force to be overwritten by user-defined external forces
@@ -418,6 +420,27 @@ class MechanicalSystem():
 
         return self.constrain_matrix(K_unconstr)
 
+    def D(self, u=None, t=0):
+        '''
+        Return the damping matrix of the mechanical system
+
+        Parameters
+        ----------
+        u : ndarray, optional
+            Displacement field in voigt notation
+        t : float, optional
+            Time
+
+        Returns
+        -------
+        K : sp.sparse.sparse_matrix
+            Stiffness matrix with applied constraints in sparse csr-format
+        '''
+        if self.D_constr is None:
+            return self.K()*0
+        else:
+            return self.D_constr
+
     def f_int(self, u, t=0):
         '''Return the elastic restoring force of the system '''
         _, f_unconstr = \
@@ -524,9 +547,14 @@ class MechanicalSystem():
 
         K, f = self.K_and_f(u, t)
         f_ext = self.f_ext(u, du, t)
-        S = K + 1/(beta*dt**2)*self.M_constr
-        res = f - f_ext + self.M_constr @ ddu
-
+        if self.D_constr is None:
+            S = K + 1/(beta*dt**2)*self.M_constr
+            res = f - f_ext + self.M_constr @ ddu
+        else: # damping
+            S = K \
+                + gamma/(beta*dt) * self.D_constr \
+                + 1/(beta*dt**2) * self.M_constr
+            res = f - f_ext + self.M_constr @ ddu + self.D_constr @ du
         return S, res, f_ext
 
 
@@ -558,7 +586,26 @@ class MechanicalSystem():
 
         return Jac, res, f_ext
 
+    def apply_rayleigh_damping(self, alpha, beta):
+        '''
+        Apply Rayleigh damping to the system.
 
+        The damping matrix D is defined as
+
+        D = alpha*M + beta*K
+
+        Parameters
+        ----------
+        alpha : float
+            damping coefficient for the mass matrix
+        beta : float
+            damping coefficient for the stiffness matrix
+
+        '''
+        if self.M_constr is None:
+            self.M()
+        self.D_constr = alpha*self.M_constr + beta*self.K()
+        return
 
     def write_timestep(self, t, u):
         '''

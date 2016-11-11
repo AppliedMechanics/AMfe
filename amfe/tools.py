@@ -6,7 +6,9 @@ Some tools here might be experimental.
 
 __all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat',
            'append_interactively', 'matshow_3d', 'amfe_dir', 'h5_read_u',
-           'test', 'reorder_sparse_matrix', 'eggtimer']
+           'test', 'reorder_sparse_matrix', 'eggtimer',
+           'rayleigh_coefficients',
+           ]
 
 import os
 import numpy as np
@@ -221,6 +223,33 @@ def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
     barplot = ax.bar3d(xx, yy, zz, dx, dy, dz, color=colors, alpha=alpha)
     # fig.colorbar(barplot)
     return barplot
+
+
+def rayleigh_coefficients(zeta, omega_1, omega_2):
+    '''
+    Compute the coefficients for rayleigh damping such, that the modal damping
+    for the given two eigenfrequencies is zeta
+
+    Parameters
+    ----------
+    zeta : float
+        modal damping for modes 1 and 2
+    omega_1 : float
+        first eigenfrequency in [rad/s]
+    omega_2 : float
+        second eigenfrequency in [rad/s]
+
+    Returns
+    -------
+    alpha : float
+        rayleigh damping coefficient for the mass matrix
+    beta : float
+        rayleigh damping for the stiffness matrix
+
+    '''
+    beta = 2*zeta/(omega_1 + omega_2)
+    alpha = omega_1*omega_2*beta
+    return alpha, beta
 
 
 def reorder_sparse_matrix(A):

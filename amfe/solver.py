@@ -874,7 +874,8 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
     gamma = 1/2 + alpha
     K = mechanical_system.K()
     M = mechanical_system.M()
-    S = M + beta * dt**2 * K
+    D = mechanical_system.D()
+    S = M + gamma * dt * D + beta * dt**2 * K
 #    S_inv = sp.sparse.linalg.splu(S)
     S_inv = SpSolve(S, matrix_type='symm')
     # S_inv.solve(rhs_vec) # method to solve the system efficiently
