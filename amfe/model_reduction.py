@@ -51,6 +51,10 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     reduced_sys.V_unconstr = reduced_sys.dirichlet_class.unconstrain_vec(V)
     reduced_sys.u_red_output = []
     reduced_sys.M_constr = None
+    # reduce Rayleigh damping matrix
+    if reduced_sys.D_constr is not None:
+        reduced_sys.D_constr = V.T @ reduced_sys.D_constr @ V
+
     return reduced_sys
 
 
@@ -97,6 +101,10 @@ def qm_reduce_mechanical_system(mechanical_system, V, Theta, overwrite=False):
     reduced_sys.__class__ = QMSystem
     reduced_sys.V = V.copy()
     reduced_sys.Theta = Theta.copy()
+
+    # reduce Rayleigh damping matrix
+    if reduced_sys.D_constr is not None:
+        reduced_sys.D_constr = V.T @ reduced_sys.D_constr @ V
 
     # define internal variables
     reduced_sys.u_red_output = []
