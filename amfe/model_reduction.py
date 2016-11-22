@@ -6,7 +6,9 @@ __all__ = ['reduce_mechanical_system', 'qm_reduce_mechanical_system',
            'modal_derivative', 'modal_derivative_theta',
            'static_correction_derivative', 'static_correction_theta',
            'principal_angles', 'krylov_subspace', 'mass_orth', 'craig_bampton',
-           'vibration_modes', 'pod', 'theta_orth_v', 'linear_qm_basis']
+           'vibration_modes', 'pod', 'theta_orth_v', 'linear_qm_basis',
+           'mac',
+           ]
 
 import copy
 import numpy as np
@@ -864,3 +866,40 @@ def pod(mechanical_system, n=None):
     U, sigma, __ = sp.linalg.svd(S, full_matrices=False)
     U_return = mechanical_system.constrain_vec(U[:,:n])
     return sigma[:n], U_return
+
+
+def mac(U, V):
+    r'''
+    Compute the Modal Assurance Criterion of the vectors stacked in U and V:
+
+    .. math::
+        U = [u_1, \dots, u_n], V = [v_1, \dots, v_n] \\
+        MAC_{i,j} = \frac{(u_i^Tv_j)^2}{u_i^T u_i \cdot v_j^T v_j}
+
+
+    Parameters
+    ----------
+    U : ndarray, shape(N, no_of_modes)
+        Array with one set of vectors
+    V : ndarray, shape(N, no_of_modes)
+        Array with another set of vectors
+
+    Returns
+    -------
+    mac : ndarray, shape(no_of_modes, no_of_modes)
+        mac criterion array showing, how the modes coincide. The rows are
+        associated with the vectors in U, the columns with the vectors in V.
+        mac[i,j] gives the squared correlation coefficient of the vecotor
+        U[:,i] and V[:,j].
+
+    References
+    ----------
+    .. [1]  Géradin, Michel and Rixen, Daniel: Mechanical Vibrations.
+            John Wiley & Sons, 2014. p.499.
+
+    '''
+    nominator =  (U.T @ V)**2
+    diag_u_squared = np.einsum('ij, ij->j', U, U)
+    diag_v_squared = np.einsum('ij, ij->j', V, V)
+    denominator = np.outer(diag_u_squared, diag_v_squared)
+    return nominator / denominator
