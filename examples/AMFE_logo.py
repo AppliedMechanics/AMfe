@@ -48,13 +48,13 @@ print('The vibration modes eigenfrequencies (1/s) are:\n', om/(2*np.pi))
 
 #amfe.solve_linear_displacement(my_system)
 #amfe.solve_nonlinear_displacement(my_system, no_of_load_steps=50)
-#
+
+# time integration
+dt = 1E-2
+T = np.arange(0,4,dt)
 ndof = my_system.dirichlet_class.no_of_constrained_dofs
-my_integrator = amfe.NewmarkIntegrator(my_system, alpha=0.01)
-my_integrator.delta_t = 0.5E-3
-my_integrator.verbose = True
-my_integrator.integrate(np.zeros(ndof), np.zeros(ndof), 
-                                         np.arange(0,4,1E-2))
+q0 = dq0 = np.zeros(ndof)
+amfe.integrate_nonlinear_system(my_system, q0, dq0, T, dt, alpha=0.01)
 
 
 my_system.export_paraview(output_file)
