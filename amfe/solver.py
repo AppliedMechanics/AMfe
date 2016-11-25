@@ -48,7 +48,7 @@ def norm_of_vector(array):
 
 abort_statement = '''
 ###############################################################################
-#### The current time integration has been aborted. No convergence was gained
+#### The current computation has been aborted. No convergence was gained
 #### within the number of given iteration steps.
 ###############################################################################
 '''
@@ -958,9 +958,13 @@ def solve_linear_displacement(mechanical_system, t=1, verbose=True):
 
 def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
                                  t=0, rtol=1E-8, atol=1E-14, newton_damping=1,
-                                 n_max_iter=1000, smplfd_nwtn_itr=1,
-                                 wrt_iter=False, verbose=True,
-                                 track_niter=False):
+                                 n_max_iter=1000,
+                                 smplfd_nwtn_itr=1,
+                                 wrt_iter=False,
+                                 verbose=True,
+                                 track_niter=False,
+                                 conv_abort=True,
+                                 ):
     '''
     Solver for the nonlinear system applied directly on the mechanical system.
 
@@ -997,6 +1001,10 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         Flag for the iteration-count. If True, the number of iterations in the
         Newton-Raphson-Loop is counted and saved to iteration_info in the
         mechanical system.
+    conv_abort : bool, optional
+        Flag setting, if time integration is aborted in the case when no
+        convergence is gained in the Newton-Raphson-Loop. Default value is
+        True.
 
 
     Returns
@@ -1047,6 +1055,12 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
                       'Residal: {0:4.2E}'.format(abs_res))
             if wrt_iter:
                 mechanical_system.write_timestep(n_iter, u)
+            if (n_iter >= n_max_iter) and conv_abort:
+                print(abort_statement)
+                t_clock_2 = time.time()
+                print('Time for static solution: ' +
+                      '{0:4.2f} seconds'.format(t_clock_2 - t_clock_1))
+                return
         mechanical_system.write_timestep(t, u)
         # export iteration infos if wanted
         if track_niter:
