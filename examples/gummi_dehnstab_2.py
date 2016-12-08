@@ -1,26 +1,29 @@
 # -*- coding: utf-8 -*-
 """
-This file is heavily deprecated. 
+This file is heavily deprecated.
 """
 
-import sys
 import time
 
 import numpy as np
 import scipy as sp
 
-
-# this is the way how to import the amfe-toolbox
-sys.path.insert(0,'..')
 import amfe
 
-
+warning = '''
+###############################################################################
+#############    This file is heavily deprecated. Don't use it.   #############
+###############################################################################
+'''
+print(warning)
 
 # Mesh generation
-
+input_file = amfe.amfe_dir('meshes/gmsh/2D_Rectangle_tri6_dehnstab.msh')
 # Building the mechanical system
+my_materal = amfe.KirchhoffMaterial(E=210E9, nu=0.3, rho=1E4)
 my_mechanical_system = amfe.MechanicalSystem()
-my_mechanical_system.load_mesh_from_gmsh('../meshes/gmsh/2D_Rectangle_tri6_dehnstab.msh')
+my_mechanical_system.load_mesh_from_gmsh(input_file, phys_group=0,
+                                         material=my_materal)
 
 
 
@@ -53,4 +56,3 @@ t2 = time.time()
 print('Time for solving the static problem:', t2-t1)
 export_path = '../results/gummi_mit_loch' + time.strftime("_%Y%m%d_%H%M%S") + '/gummi_mit_loch'
 my_mechanical_system.export_paraview(export_path)
-
