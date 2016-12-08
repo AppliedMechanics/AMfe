@@ -10,6 +10,7 @@ tensor E. This computation is carried out in this module.
 
 __all__ = ['HyperelasticMaterial',
            'KirchhoffMaterial',
+           'LinearMaterial',
            'NeoHookean',
            'MooneyRivlin',
            ]
@@ -27,6 +28,7 @@ Python was not able to load the fast fortran material routines.
 ''')
 
 #use_fortran = False
+
 
 class HyperelasticMaterial():
     '''
@@ -180,6 +182,8 @@ class KirchhoffMaterial(HyperelasticMaterial):
         S = np.array([[S_v[0], S_v[2]], [S_v[2], S_v[1]]])
         return S, S_v, self.C_SE_2d
 
+# For simplicity: rename KirchhoffMaterial
+LinearMaterial = KirchhoffMaterial
 
 #%%
 # @inherit_docs(HyperelasticMaterial)
