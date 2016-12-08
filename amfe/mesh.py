@@ -3,7 +3,9 @@ Mesh module of amfe. It handles the mesh from import, defining the dofs for the
 boundary conditions and the export.
 """
 
-__all__ = ['Mesh', 'create_xdmf_from_hdf5']
+__all__ = ['Mesh',
+           'create_xdmf_from_hdf5',
+           ]
 
 import os
 import copy

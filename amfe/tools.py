@@ -4,9 +4,17 @@ A collection of tools which to not fit to one topic of the other modules.
 Some tools here might be experimental.
 """
 
-__all__ = ['node2total', 'total2node', 'inherit_docs', 'read_hbmat',
-           'append_interactively', 'matshow_3d', 'amfe_dir', 'h5_read_u',
-           'test', 'reorder_sparse_matrix', 'eggtimer',
+__all__ = ['node2total',
+           'total2node',
+           'inherit_docs',
+           'read_hbmat',
+           'append_interactively',
+           'matshow_3d',
+           'amfe_dir',
+           'h5_read_u',
+           'test',
+           'reorder_sparse_matrix',
+           'eggtimer',
            'rayleigh_coefficients',
            ]
 

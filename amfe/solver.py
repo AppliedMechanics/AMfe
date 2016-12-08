@@ -2,11 +2,18 @@
 Module for solving static and dynamic problems.
 '''
 
-__all__ = ['NewmarkIntegrator', 'integrate_nonlinear_system_genAlpha',
-           'integrate_linear_system_genAlpha', 'solve_linear_displacement',
-           'solve_nonlinear_displacement', 'give_mass_and_stiffness',
-           'HHTConstrained', 'integrate_linear_system',
-           'integrate_nonlinear_system', 'solve_sparse', 'SpSolve']
+__all__ = ['NewmarkIntegrator',
+           'integrate_nonlinear_system_genAlpha',
+           'integrate_linear_system_genAlpha',
+           'solve_linear_displacement',
+           'solve_nonlinear_displacement',
+           'give_mass_and_stiffness',
+           'HHTConstrained',
+           'integrate_linear_system',
+           'integrate_nonlinear_system',
+           'solve_sparse',
+           'SpSolve',
+           ]
 
 import time
 import numpy as np

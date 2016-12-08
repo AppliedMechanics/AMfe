@@ -4,7 +4,7 @@
 """
 Module for advanced nonlinear finite element analysis. This software is
 developed and maintained at the Chair for Applied Mechanics,
-Technische Universität München.
+Technical University of Munich.
 
 Authors:
 Johannes Rutzmoser, Fabian Gruber
@@ -24,7 +24,7 @@ from .tools import *
 # Reduction stuff
 from .model_reduction import *
 # Commented out as a dill dependency is required only here
-from .num_exp_toolbox import * 
+from .num_exp_toolbox import *
 
 
 __author__ = 'Johannes Rutzmoser, Fabian Gruber'

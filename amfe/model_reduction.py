@@ -2,12 +2,21 @@
 Module of AMfe which handles the reduced order models.
 """
 
-__all__ = ['reduce_mechanical_system', 'qm_reduce_mechanical_system',
-           'modal_derivative', 'modal_derivative_theta',
-           'static_correction_derivative', 'static_correction_theta',
-           'principal_angles', 'krylov_subspace', 'mass_orth', 'craig_bampton',
-           'vibration_modes', 'pod', 'theta_orth_v', 'linear_qm_basis',
-           'mac',
+__all__ = ['reduce_mechanical_system',
+           'qm_reduce_mechanical_system',
+           'modal_derivative',
+           'modal_derivative_theta',
+           'static_correction_derivative',
+           'static_correction_theta',
+           'principal_angles',
+           'krylov_subspace',
+           'mass_orth',
+           'craig_bampton',
+           'vibration_modes',
+           'pod',
+           'theta_orth_v',
+           'linear_qm_basis',
+           'modal_assurance',
            ]
 
 import copy
@@ -86,7 +95,6 @@ def qm_reduce_mechanical_system(mechanical_system, V, Theta, overwrite=False):
 
     Example
     -------
-
 
     '''
     # consistency check

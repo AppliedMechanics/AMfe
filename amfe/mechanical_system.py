@@ -3,7 +3,9 @@ Module handling the whole mechanical system, no matter if it's a finite element
 system, defined by certain parameters or a multibody system.
 """
 
-__all__ = ['MechanicalSystem', 'ReducedSystem', 'ConstrainedMechanicalSystem',
+__all__ = ['MechanicalSystem',
+           'ReducedSystem',
+           'ConstrainedMechanicalSystem',
            'QMSystem',
            ]
 

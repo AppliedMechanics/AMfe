@@ -1,6 +1,10 @@
 """
 Basic assembly module for the finite element code. Assumes to have all elements
 in the inertial frame.
+
+Provides an Assembly class which knows the mesh. It can assemble the vector of nonlinear forces, the mass matrix and the tangential stiffness matrix. Some parts of the code -- mostly the indexing of the sparse matrices -- are substituted by fortran routines, as they allow for a huge speedup.
+
+
 """
 
 __all__ = ['Assembly']
@@ -14,7 +18,7 @@ from scipy import sparse
 from scipy import linalg
 
 
-
+# Trying to import the fortran routines
 use_fortran = False
 try:
     import amfe.f90_assembly
@@ -29,7 +33,6 @@ def get_index_of_csr_data(i,j, indptr, indices):
 
     Parameters
     ----------
-
     i : int
         row index of the CSR-matrix
     j : int
@@ -41,14 +44,12 @@ def get_index_of_csr_data(i,j, indptr, indices):
 
     Returns
     -------
-
     k : int
         index of the value array of the CSR-matrix, in which value [i,j] is
         stored.
 
     Notes
     -----
-
     This routine works only, if the tuple i,j is acutally a real entry of the
     Matrix. Otherwise the value k=0 will be returned and an Error Message will
     be provided.
@@ -70,7 +71,6 @@ def fill_csr_matrix(indptr, indices, vals, K, k_indices):
 
     Parameters
     ----------
-
     indptr : ndarray
         indptr-array of a preallocated CSR-Matrix
     indices : ndarray
@@ -87,7 +87,6 @@ def fill_csr_matrix(indptr, indices, vals, K, k_indices):
 
     Returns
     -------
-
     None
 
     '''
@@ -110,7 +109,7 @@ if use_fortran:
 
 class Assembly():
     '''
-    Class for the more fancy assembly of meshes with non-heterogeneous 
+    Class for the more fancy assembly of meshes with non-heterogeneous
     elements.
 
     Attributes
@@ -162,7 +161,11 @@ class Assembly():
 
     def preallocate_csr(self):
         '''
-        Precompute the values and allocate the matrices for efficient assembly.
+        Compute the sparsity pattern of the assembled matrices and store an
+        empty matrix in self.C_csr.
+
+        The matrix self.C_csr serves as a 'blueprint' matrix which is filled in
+        the assembly process.
 
         Parameters
         ----------
@@ -175,7 +178,7 @@ class Assembly():
 
         Notes
         -----
-        This preallocation routine can take some while.
+        This preallocation routine can take some while for large matrices. Furthermore it is not implemented memory-efficient, so for large systems and low RAM this might be an issue...
 
         '''
         print('Preallocating the stiffness matrix')
@@ -209,13 +212,16 @@ class Assembly():
         self.C_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
                                           shape=(no_of_dofs, no_of_dofs), dtype=float)
         t2 = time.clock()
-        print('Done preallocating stiffness matrix with', no_of_elements, 
-              'elements', 'and', no_of_dofs, 'dofs.')
-        print('Time taken for preallocation:', t2 - t1, 'seconds.')
+        print('Done preallocating stiffness matrix with', no_of_elements,
+              'elements and', no_of_dofs, 'dofs.')
+        print('Time taken for preallocation: {0:2.2f} seconds.'.format(t2 - t1))
 
     def compute_element_indices(self):
         '''
-        Compute the element indices which are necessary for assembly.
+        Compute the element indices which are the global dofs of every element.
+
+        The element_indices are a list, where every element of the list denotes
+        the dofs of the element in the correct order.
 
         Parameters
         ----------
@@ -316,16 +322,17 @@ class Assembly():
         K_csr = self.C_csr.copy()
         f_glob = np.zeros(self.mesh.no_of_dofs)
 
-        # Schleife ueber alle Elemente
-        # (i - Elementnummer, indices - DOF-Nummern des Elements)
+        # Loop over all elements
+        # (i - element index, indices - DOF indices of the element)
         for i, indices in enumerate(self.element_indices):
-            # X - zu den DOF-Nummern zugehoerige Koordinaten (Positionen)
+            # X - The undeformed positions of the i-th element
             X_local = self.nodes_voigt[indices]
-            # Auslesen der localen Elementverschiebungen
+            # the displacements of the i-th element
             u_local = u[indices]
-            # K wird die Elementmatrix und f wird der Elementlastvektor zugewiesen
+            # K computation of the element tangential stiffness matrix and
+            # nonlinear force
             K, f = self.mesh.ele_obj[i].k_and_f_int(X_local, u_local, t)
-            # Einsortieren des lokalen Elementlastvektors in den globalen Lastvektor
+            # adding the local force to the global one
             f_glob[indices] += f
 
             # this is equal to

@@ -1,6 +1,8 @@
 """Module for handling the Dirichlet and Neumann boundary. """
 
-__all__ = ['DirichletBoundary', 'NeumannBoundary']
+__all__ = ['DirichletBoundary',
+           'NeumannBoundary',
+           ]
 
 import numpy as np
 import scipy as sp

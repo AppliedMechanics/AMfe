@@ -19,15 +19,29 @@ routines and reprogram the stuff for the own use.
 
 """
 
-__all__ = ['Element', 'Tri3', 'Tri6', 'Quad4', 'Quad8', 'Tet4', 'Tet10',
-           'Hexa8', 'Hexa20',
-           'Bar2Dlumped', 'BoundaryElement', 'Tri3Boundary', 'Tri6Boundary',
-           'Quad4Boundary', 'Quad8Boundary',
-           'LineLinearBoundary', 'LineQuadraticBoundary']
+__all__ = ['Element',
+           'Tri3',
+           'Tri6',
+           'Quad4',
+           'Quad8',
+           'Tet4',
+           'Tet10',
+           'Hexa8',
+           'Hexa20',
+           'Bar2Dlumped',
+           'BoundaryElement',
+           'Tri3Boundary',
+           'Tri6Boundary',
+           'Quad4Boundary',
+           'Quad8Boundary',
+           'LineLinearBoundary',
+           'LineQuadraticBoundary',
+           ]
 
 import numpy as np
 from numpy import sqrt
 
+# Try to import Fortran routines
 use_fortran = False
 
 try:
@@ -127,7 +141,7 @@ def compute_B_matrix(B_tilde, F):
                      F21*b[i,1] + F22*b[i,0], F31*b[i,1] + F32*b[i,0]]]
     return B
 
-
+# Overloading the python fuctions with Fortran functions, if possible
 if use_fortran:
     compute_B_matrix = amfe.f90_element.compute_b_matrix
     scatter_matrix = amfe.f90_element.scatter_matrix
@@ -145,6 +159,7 @@ class Element():
     name : str
         Name for the postprocessing tool to identify the characteristics of the
         element
+
     '''
     name = None
 

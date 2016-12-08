@@ -1,11 +1,18 @@
 """
-Created on Mon Nov 30 12:30:03 2015
+Module for material handling withing the FE context.
 
-@author: johannesr
+Up to now, only Hyperelastic materials are implemented. Hyperelastic Materials
+are Materials, where the constitutive law can be expressed such, that the second
+Piola-Kirchhoff stress tensor S is a function of the Green-Lagrange strain
+tensor E. This computation is carried out in this module.
+
 """
 
-__all__ = ['HyperelasticMaterial', 'KirchhoffMaterial', 'NeoHookean',
-           'MooneyRivlin']
+__all__ = ['HyperelasticMaterial',
+           'KirchhoffMaterial',
+           'NeoHookean',
+           'MooneyRivlin',
+           ]
 
 import numpy as np
 
