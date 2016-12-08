@@ -13,6 +13,7 @@ __all__ = ['reduce_mechanical_system',
            'mass_orth',
            'craig_bampton',
            'vibration_modes',
+           'modal_analysis',
            'pod',
            'theta_orth_v',
            'linear_qm_basis',
@@ -843,6 +844,7 @@ def vibration_modes(mechanical_system, n=10, save=False):
 
     return omega, V
 
+modal_analysis = vibration_modes
 
 def pod(mechanical_system, n=None):
     '''
