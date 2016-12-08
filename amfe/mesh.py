@@ -70,6 +70,7 @@ for element in element_mapping_list:
     amfe2xmf.update({element[0] : element[1]})
     amfe2no_of_nodes.update({element[0] : element[4]})
 
+# Some conversion stuff fron NASTRAN to AMFE
 nas2amfe = {'CTETRA' : 'Tet10',
             'CHEXA' : 'Hexa8'}
 
@@ -392,6 +393,7 @@ class Mesh:
         TODO
 
         '''
+        print('This function is deprecated! It does not work properly!')
         #######################################################################
         # NODES
         #######################################################################

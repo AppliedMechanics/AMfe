@@ -1096,7 +1096,6 @@ class QMSystem(MechanicalSystem):
     '''
     Quadratic Manifold Finite Element system.
 
-
     '''
 
     def __init__(self, **kwargs):
