@@ -876,9 +876,10 @@ def pod(mechanical_system, n=None):
     return sigma[:n], U_return
 
 
-def mac(U, V):
+def modal_assurance(U, V):
     r'''
-    Compute the Modal Assurance Criterion of the vectors stacked in U and V:
+    Compute the Modal Assurance Criterion (MAC) of the vectors stacked
+    in U and V:
 
     .. math::
         U = [u_1, \dots, u_n], V = [v_1, \dots, v_n] \\
