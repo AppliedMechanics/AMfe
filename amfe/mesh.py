@@ -74,6 +74,9 @@ for element in element_mapping_list:
 nas2amfe = {'CTETRA' : 'Tet10',
             'CHEXA' : 'Hexa8'}
 
+# Same for Abaqus
+abaq2amfe = {'C3D10M' : 'Tet10',
+             'C3D8I' : 'Hexa8'}
 
 
 def check_dir(*filenames):
@@ -442,6 +445,119 @@ class Mesh:
         print('Element type is {0}...  '.format(mesh_type), end="")
         self._update_mesh_props()
         print('Reading elements successful.')
+        return
+
+    def import_inp(self, filename, scale_factor=1.):
+        '''
+        Import Abaqus input file.
+
+        Parameters
+        ----------
+        filename : string
+            filename of the .msh-file
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        This function is heavily experimental. It is just working for a subset
+        of Abaqus input files and the goal is to capture the mesh of the model.
+
+        The internal representation of the elements is done via a Pandas
+        Dataframe object.
+
+        '''
+        node_tag = '*NODE'
+        element_tag = '*ELEMENT'
+        comment_tag = '**'
+        print('*************************************************************')
+        print('\nLoading Abaqus-mesh from', filename)
+        nodes_list = []
+        elements_list = []
+        # Flag indicating, that element was read in previous line
+        line_continuation = False
+        current_scope = False
+        current_ele_type = False
+        buf = []
+
+
+        #################
+        with open(filename, 'r') as infile:
+            file_data = infile.read().splitlines()
+
+        # Loop over all lines in the file
+        for line in file_data:
+            s = [x.strip() for x in line.split(',')]
+            # Filter out comments
+            if comment_tag in line:
+                continue
+
+            elif line.startswith(node_tag):
+                current_scope = 'node'
+                continue
+
+            elif line.startswith(element_tag):
+                current_scope = 'element'
+                s = [x.strip() for x in line.split(',')]
+                print(s)
+                current_ele_type = [a[5:] for a in s if a.startswith('TYPE=')][0]
+                current_ele_set = [a[6:] for a in s if a.startswith('ELSET=')][0]
+                continue
+
+            elif line.startswith('*'):
+                current_scope = None
+                continue
+
+            elif ',' in line: # line contains data
+
+                if current_scope == 'node':
+                    s = line.split(',')
+                    if s[-1].strip() == '': # line has comma at its end
+                        buf.extend(s)
+                        continue
+                    else:
+                        nodes_list.append(buf + s)
+                        buf = []
+
+                if current_scope == 'element':
+                    s = line.split(',')
+                    if s[-1].strip() == '': # line has comma at its end
+                        buf.extend(s)
+                        continue
+                    else:
+                        elements_list.append([current_ele_type,
+                                              current_ele_set]
+                                             + buf + s)
+                        buf = []
+
+
+        self.no_of_dofs_per_node = 3 # this is just hard coded right now...
+        self.nodes_list = nodes_list
+        self.nodes = np.array(nodes_list, dtype=float)[:,1:]
+        self.nodes *= scale_factor # scaling of nodes
+
+        nodes_dict = pd.Series(index=np.array(nodes_list, dtype=int)[:,0],
+                               data=np.arange(len(nodes_list)))
+
+        for idx, ptr in enumerate(elements_list):
+            tmp = [abaq2amfe[ptr.pop(0).strip()],
+                   int(ptr.pop(0)), int(ptr.pop(0))]
+            tmp.extend([nodes_dict[int(i)] for i in ptr])
+            elements_list[idx] = tmp
+        self.el_df = df = pd.DataFrame(elements_list, dtype=int)
+        df.rename(copy=False, inplace=True,
+                  columns={0 : 'el_type',
+                           1 : 'idx_abaq',
+                           2 : 'phys_group',
+                          })
+        self.node_idx = 3
+        self._update_mesh_props()
+        # printing some information regarding the physical groups
+        print('Mesh', filename, 'successfully imported.',
+              '\nAssign a material to a physical group.')
+        print('*************************************************************')
         return
 
 
