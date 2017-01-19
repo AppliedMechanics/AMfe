@@ -539,10 +539,6 @@ class Mesh:
         nodes_dict = pd.Series(index=np.array(nodes_arr[:,0], dtype=int),
                                data=np.arange(nodes_arr.shape[0]))
 
-        # some output stuff
-        self.elements_list = elements_list
-        self.nodes_dict = nodes_dict
-
         for idx, ptr in enumerate(elements_list):
             # pop the first two elements as they are information
             tmp = [abaq2amfe[ptr.pop(0).strip()], ptr.pop(0), ptr.pop(0),]
