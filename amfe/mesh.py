@@ -491,66 +491,68 @@ class Mesh:
         for line in file_data:
             s = [x.strip() for x in line.split(',')]
             # Filter out comments
-            if comment_tag in line:
+            if comment_tag in s[0]:
                 continue
 
-            elif line.startswith(node_tag):
+            elif s[0] == node_tag:
                 current_scope = 'node'
+                print('A node tag has been found:')
+                print(s)
                 continue
 
-            elif line.startswith(element_tag):
+            elif s[0] == element_tag:
                 current_scope = 'element'
-                s = [x.strip() for x in line.split(',')]
+                print('An elment tag has been found:')
                 print(s)
                 current_ele_type = [a[5:] for a in s if a.startswith('TYPE=')][0]
                 current_ele_set = [a[6:] for a in s if a.startswith('ELSET=')][0]
                 continue
 
-            elif line.startswith('*'):
+            elif s[0].startswith('*'):
                 current_scope = None
                 continue
 
-            elif ',' in line: # line contains data
+            elif current_scope == 'node':
+                if s[-1].strip() == '': # line has comma at its end
+                    buf.extend(s[:-1])
+                    continue
+                else:
+                    nodes_list.append(buf + s)
+                    buf = []
 
-                if current_scope == 'node':
-                    s = line.split(',')
-                    if s[-1].strip() == '': # line has comma at its end
-                        buf.extend(s)
-                        continue
-                    else:
-                        nodes_list.append(buf + s)
-                        buf = []
-
-                if current_scope == 'element':
-                    s = line.split(',')
-                    if s[-1].strip() == '': # line has comma at its end
-                        buf.extend(s)
-                        continue
-                    else:
-                        elements_list.append([current_ele_type,
-                                              current_ele_set]
-                                             + buf + s)
-                        buf = []
+            elif current_scope == 'element':
+                s = line.split(',')
+                if s[-1].strip() == '': # line has comma at its end
+                    buf.extend(s[:-1])
+                    continue
+                else:
+                    elements_list.append([current_ele_type,
+                                          current_ele_set]
+                                         + buf + s)
+                    buf = []
 
 
         self.no_of_dofs_per_node = 3 # this is just hard coded right now...
-        self.nodes_list = nodes_list
-        self.nodes = np.array(nodes_list, dtype=float)[:,1:]
-        self.nodes *= scale_factor # scaling of nodes
+        nodes_arr = np.array(nodes_list, dtype=float)
+        self.nodes = nodes_arr[:,1:] * scale_factor
 
-        nodes_dict = pd.Series(index=np.array(nodes_list, dtype=int)[:,0],
-                               data=np.arange(len(nodes_list)))
+        nodes_dict = pd.Series(index=np.array(nodes_arr[:,0], dtype=int),
+                               data=np.arange(nodes_arr.shape[0]))
+
+        # some output stuff
+        self.elements_list = elements_list
+        self.nodes_dict = nodes_dict
 
         for idx, ptr in enumerate(elements_list):
-            tmp = [abaq2amfe[ptr.pop(0).strip()],
-                   int(ptr.pop(0)), int(ptr.pop(0))]
+            # pop the first two elements as they are information
+            tmp = [abaq2amfe[ptr.pop(0).strip()], ptr.pop(0), ptr.pop(0),]
             tmp.extend([nodes_dict[int(i)] for i in ptr])
             elements_list[idx] = tmp
         self.el_df = df = pd.DataFrame(elements_list, dtype=int)
         df.rename(copy=False, inplace=True,
                   columns={0 : 'el_type',
-                           1 : 'idx_abaq',
-                           2 : 'phys_group',
+                           1 : 'phys_group',
+                           2 : 'idx_abaqus',
                           })
         self.node_idx = 3
         self._update_mesh_props()
