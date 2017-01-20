@@ -76,7 +76,13 @@ nas2amfe = {'CTETRA' : 'Tet10',
 
 # Same for Abaqus
 abaq2amfe = {'C3D10M' : 'Tet10',
-             'C3D8I' : 'Hexa8'}
+             'C3D8I' : 'Hexa8',
+             'C3D4' : 'Tet4',
+             'C3D6' : 'Prism6', # 6 node prism
+             'C3D8I' : 'Hexa8', # acutally the better version
+             'B31' : None,
+             'CONN3D2' : None,
+             }
 
 
 def check_dir(*filenames):
@@ -476,8 +482,6 @@ class Mesh:
         print('\nLoading Abaqus-mesh from', filename)
         nodes_list = []
         elements_list = []
-        # Flag indicating, that element was read in previous line
-        line_continuation = False
         current_scope = False
         current_ele_type = False
         buf = []
