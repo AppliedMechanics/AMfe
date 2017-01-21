@@ -8,14 +8,35 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 
-def proj_quad4(X, p, eps=1E-10, niter_max=20, verbose=False):
+def proj_quad4(X, p, niter_max=20, eps=1E-10, verbose=False):
     '''
-    Compute the shape function weights and the element coordinates for the
-    given point p relativ to the element with nodal coordinates X.
+    Commpute properties for point p projected on quad4 master element.
 
     Parameters
     ----------
+    X : np.ndarray, shape = (12,)
+        points of the quad4 element in reference configuratoin
+    p : np.ndarray, shape = (3,)
+        point which should be tied onto the master element
+    niter_max : int, optional
+        number of maximum iterations of the Newton-Raphson iteration.
+        Default value: 20
+    eps : float, optional
+        tolerance for the Newton-Raphson iteration. Default value: 1E-10
+    verbose : bool, optional
+        flag for verbose behavior. Default value: False
 
+    Returns
+    -------
+    valid_element : bool
+        boolean flag setting, if point lies withinn the master element
+    N : ndarray, shape (4,)
+        weights of the nodal coordinates
+    local_basis : ndarray, shape (3,3)
+        local tangential basis. local_basis[:,0] forms the normal vector,
+        local_basis[:,1:] the vectors along xi and eta
+    xi_vec : ndarray, shape(2,)
+        position of p in the local element coordinate system
     '''
     # Newton solver to find the element coordinates xi, eta of point p
     X_mat = X.reshape((-1,3))
@@ -47,6 +68,10 @@ def proj_quad4(X, p, eps=1E-10, niter_max=20, verbose=False):
         jac = X_mat.T @ dN_dxi
         res = X_mat.T @ N - p
         n_iter += 1
+    if np.min(N) >= 0:
+        valid_element = True
+    else:
+        valid_element = False
     if verbose:
         print('Projection of point to Quad4',
               'in {0:1d} iterations'.format(n_iter))
@@ -59,17 +84,17 @@ def proj_quad4(X, p, eps=1E-10, niter_max=20, verbose=False):
     rot_basis[:,0] = normal
     rot_basis[:,1] = e1
     rot_basis[:,2] = e2
-    return N, xi_vec, rot_basis
+    return valid_element, N, rot_basis, xi_vec
 
 
 #%%
 X_quad4 = np.array([0,0,0,1,0,0,1,1,0,0,1,0], dtype=float)
 rand = np.random.rand(12)*0.4
 
-p = np.array([1, 1, 0])
+p = np.array([1/2, 1, 0])
 
 x = X_quad4 + rand
-N, xi_vec, A = proj_quad4(x, p, verbose=True)
+valid, N, A, xi_vec = proj_quad4(x, p, verbose=True)
 
 print(xi_vec, N)
 
@@ -80,12 +105,12 @@ ax.plot(x[0::3], x[1::3], x[2::3])
 ax.scatter(p[0], p[1], p[2])
 
 #%% Big asessment
-
-for i in range(1000):
+%%time
+for i in range(10000):
     X_quad4 = np.array([0,0,0,1,0,0,1,1,0,0,1,0], dtype=float)
     rand = np.random.rand(12)*0.4
     p = np.array([1/2, 1/2, 0])
     x = X_quad4 + rand
-    N, xi_vec, A = proj_quad4(x, p, verbose=False)
+    valid, N, A, xi_vec = proj_quad4(x, p, verbose=False)
 
 #%%
