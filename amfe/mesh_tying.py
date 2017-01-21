@@ -11,8 +11,13 @@ from mpl_toolkits.mplot3d import Axes3D
 def proj_quad4(X, p, eps=1E-10, niter_max=20, verbose=False):
     '''
     Compute the shape function weights and the element coordinates for the
-    given point p relativ to the element with nodal coordinates X
+    given point p relativ to the element with nodal coordinates X.
+
+    Parameters
+    ----------
+
     '''
+    # Newton solver to find the element coordinates xi, eta of point p
     X_mat = X.reshape((-1,3))
     xi, eta = xi_vec = np.array([0.,0.]) # starting point 0
     N = np.array([(-eta + 1)*(-xi + 1)/4,
@@ -45,16 +50,26 @@ def proj_quad4(X, p, eps=1E-10, niter_max=20, verbose=False):
     if verbose:
         print('Projection of point to Quad4',
               'in {0:1d} iterations'.format(n_iter))
-    return N, xi_vec
+    normal = np.cross(jac[:,0], jac[:,1])
+    normal /= np.sqrt(normal @ normal)
+    e1 = jac[:,0]
+    e1 /= np.sqrt(e1 @ e1)
+    e2 = np.cross(normal, e1)
+    rot_basis = np.zeros((3,3))
+    rot_basis[:,0] = normal
+    rot_basis[:,1] = e1
+    rot_basis[:,2] = e2
+    return N, xi_vec, rot_basis
+
 
 #%%
 X_quad4 = np.array([0,0,0,1,0,0,1,1,0,0,1,0], dtype=float)
 rand = np.random.rand(12)*0.4
 
-p = np.array([1/2, 1/2, 0])
+p = np.array([1, 1, 0])
 
 x = X_quad4 + rand
-N, xi_vec = proj_quad4(x, p, verbose=True)
+N, xi_vec, A = proj_quad4(x, p, verbose=True)
 
 print(xi_vec, N)
 
@@ -63,3 +78,14 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.plot(x[0::3], x[1::3], x[2::3])
 ax.scatter(p[0], p[1], p[2])
+
+#%% Big asessment
+
+for i in range(1000):
+    X_quad4 = np.array([0,0,0,1,0,0,1,1,0,0,1,0], dtype=float)
+    rand = np.random.rand(12)*0.4
+    p = np.array([1/2, 1/2, 0])
+    x = X_quad4 + rand
+    N, xi_vec, A = proj_quad4(x, p, verbose=False)
+
+#%%
