@@ -87,6 +87,31 @@ def proj_quad4(X, p, niter_max=20, eps=1E-10, verbose=False):
     return valid_element, N, rot_basis, xi_vec
 
 
+def point_distances(a, b, ndim=3):
+    '''
+    Find the nearest neighbor of point cloud a to point cloud b
+
+    Parameters
+    ----------
+    a : ndarray
+        point coordinate array
+    b : ndarray
+        point coordinate array
+    ndim : int, optional
+        dimension of the problem. Default value: 3
+
+    Returns
+    -------
+    A : ndarray
+        Distance array of a to b. A[:,i] gives the distances of all points in a
+        to point b[i]
+    '''
+    A = a.reshape((-1,1,ndim))
+    B = b.reshape((1,-1,ndim))
+    dist_square = np.einsum('ijk->ij', (A - B)**2)
+    return np.sqrt(dist_square)
+
+
 #%%
 X_quad4 = np.array([0,0,0,1,0,0,1,1,0,0,1,0], dtype=float)
 rand = np.random.rand(12)*0.4
@@ -105,7 +130,7 @@ ax.plot(x[0::3], x[1::3], x[2::3])
 ax.scatter(p[0], p[1], p[2])
 
 #%% Big asessment
-%%time
+#%%time
 for i in range(10000):
     X_quad4 = np.array([0,0,0,1,0,0,1,1,0,0,1,0], dtype=float)
     rand = np.random.rand(12)*0.4
@@ -114,3 +139,16 @@ for i in range(10000):
     valid, N, A, xi_vec = proj_quad4(x, p, verbose=False)
 
 #%%
+
+
+
+#%%
+a = np.zeros((10,3))
+a[:,0] = np.arange(10)
+b = a
+
+
+dist = point_distances(a,b)
+# this is the way how to move along the best elements
+idxs = dist.argsort()
+
