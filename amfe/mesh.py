@@ -475,17 +475,17 @@ class Mesh:
         Dataframe object.
 
         '''
-        node_tag = '*NODE'
-        element_tag = '*ELEMENT'
-        comment_tag = '**'
+
         print('*************************************************************')
         print('\nLoading Abaqus-mesh from', filename)
         nodes_list = []
         elements_list = []
-        current_scope = False
-        current_ele_type = False
-        buf = []
+        surface_list = []
+        buf = [] # buffer for handling line continuations
 
+        current_scope = None
+        current_type = None
+        current_name = None
 
         #################
         with open(filename, 'r') as infile:
@@ -494,22 +494,31 @@ class Mesh:
         # Loop over all lines in the file
         for line in file_data:
             s = [x.strip() for x in line.split(',')]
+
             # Filter out comments
-            if comment_tag in s[0]:
+            if '**' in s[0]:
                 continue
 
-            elif s[0] == node_tag:
+            elif s[0] == '*NODE': # Nodes are coming
                 current_scope = 'node'
                 print('A node tag has been found:')
                 print(s)
                 continue
 
-            elif s[0] == element_tag:
+            elif s[0] == '*ELEMENT':
                 current_scope = 'element'
                 print('An elment tag has been found:')
                 print(s)
-                current_ele_type = [a[5:] for a in s if a.startswith('TYPE=')][0]
-                current_ele_set = [a[6:] for a in s if a.startswith('ELSET=')][0]
+                current_type = [a[5:] for a in s if a.startswith('TYPE=')][0]
+                current_name = [a[6:] for a in s if a.startswith('ELSET=')][0]
+                continue
+
+            elif s[0] == '*SURFACE':
+                current_scope = 'surface'
+                print('A surface tag has been found:')
+                print(s)
+                current_type = [a[5:] for a in s if a.startswith('TYPE=')][0]
+                current_name = [a[6:] for a in s if a.startswith('NAME=')][0]
                 continue
 
             elif s[0].startswith('*'):
@@ -530,9 +539,16 @@ class Mesh:
                     buf.extend(s[:-1])
                     continue
                 else:
-                    elements_list.append([current_ele_type,
-                                          current_ele_set]
-                                         + buf + s)
+                    elements_list.append([current_type, current_name] + buf + s)
+                    buf = []
+
+            elif current_scope == 'surface':
+                s = line.split(',')
+                if s[-1].strip() == '': # line has comma at its end
+                    buf.extend(s[:-1])
+                    continue
+                else:
+                    surface_list.append([current_type, current_name] + buf + s)
                     buf = []
 
 
