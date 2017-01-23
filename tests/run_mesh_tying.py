@@ -126,15 +126,73 @@ distances = sp.spatial.distance.cdist(my_mesh.nodes[slave_nodes], ele_center_poi
 element_ranking = np.argsort(distances, axis=1)
 
 #%%
+tying_type = 'fixed'
+#tying_type = 'slide'
+
+dof_delete_set = []
+B = np.eye(my_mesh.no_of_dofs)
+
+# loop over all slave points
 for i, ranking_table in enumerate(element_ranking):
     slave_node_idx = slave_nodes[i]
-    for ele_index in ranking_table: # Go through the suggestions of the heuristics
-        master_element = master_ele[ele_index]
-        X = my_mesh.nodes[master_element]
+    # Go through the suggestions of the heuristics and compute weights
+    for ele_index in ranking_table:
+        master_nodes_idx = master_ele[ele_index]
+        X = my_mesh.nodes[master_nodes_idx]
         slave_node = my_mesh.nodes[slave_node_idx]
         valid, N, local_basis, xi_vec = proj_quad4(X, slave_node)
         print(valid)
         if valid:
             break
+        else:
+            print('A non valid master element was chosen.')
+    # Now build the B-matrix or something like that...
+    if tying_type == 'fixed':
+
+        for dim in range(ndim):
+            master_nodes_dofs = master_nodes_idx * ndim + dim
+            slave_node_dof = slave_node_idx * ndim + dim
+            B[slave_node_dof, master_nodes_dofs] = N
+            dof_delete_set.append(slave_node_dof)
+
+    elif tying_type == 'slide':
+        pass
+    else:
+        print('I don not know the mesh tying type', tying_type)
+
 
 #%%
+#delete = np.sort(dof_delete_set)
+#mask = np.ones(my_mesh.no_of_dofs, dtype=bool)
+#mask[delete] = False
+#B = B[:,mask]
+#plt.matshow(B)
+#B = sp.sparse.csr_matrix(B)
+
+#%%
+
+my_system = amfe.MechanicalSystem()
+my_system.load_mesh_from_gmsh(input_file, 2, my_material)
+my_system.mesh_class.load_group_to_mesh(1, my_material)
+my_system.assembly_class.preallocate_csr()
+my_system.apply_dirichlet_boundaries(3, 'xyz')
+my_system.apply_neumann_boundaries(key=4, val=1E10, direct=(1, 0, 0),
+                                   time_func=lambda t: t)
+
+#%% Some dirty hack to monkeypatch B
+dof_delete_set.extend(my_system.mesh_class.dofs_dirichlet)
+delete = np.sort(dof_delete_set)
+mask = np.ones(my_mesh.no_of_dofs, dtype=bool)
+mask[delete] = False
+B_masked = B[:,mask]
+plt.matshow(B_masked)
+B_sys = sp.sparse.csr_matrix(B_masked)
+my_system.dirichlet_class.B = B_sys
+my_system.dirichlet_class.no_of_constrained_dofs = B_sys.shape[1]
+
+#%%
+
+#amfe.solve_linear_displacement(my_system)
+amfe.solve_nonlinear_displacement(my_system)
+
+my_system.export_paraview(output_file + '_linear_static')
