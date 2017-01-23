@@ -155,12 +155,16 @@ distances = sp.spatial.distance.cdist(my_mesh.nodes[slave_nodes], ele_center_poi
 element_ranking = np.argsort(distances, axis=1)
 
 #%%
-ele_type = 'Quad8'
+ele_type = 'Quad4'
 #tying_type = 'fixed'
 tying_type = 'slide'
 
 dof_delete_set = []
 B = np.eye(my_mesh.no_of_dofs)
+
+row = []
+col = []
+val = []
 
 # loop over all slave points
 for i, ranking_table in enumerate(element_ranking):
@@ -172,7 +176,6 @@ for i, ranking_table in enumerate(element_ranking):
         slave_node = my_mesh.nodes[slave_node_idx]
         valid, N, local_basis, xi = proj_point_to_element(X, slave_node,
                                                           ele_type=ele_type)
-        print(valid)
         if valid:
             break
         else:
@@ -183,16 +186,33 @@ for i, ranking_table in enumerate(element_ranking):
         for dim in range(ndim):
             master_nodes_dofs = master_nodes_idx * ndim + dim
             slave_node_dof = slave_node_idx * ndim + dim
+
             B[slave_node_dof, slave_node_dof] -= 1 # remove diagonal entry
+            row.append(slave_node_dof)
+            col.append(slave_node_dof)
+            val.append(-1)
+
             B[slave_node_dof, master_nodes_dofs] += N
+            row.extend(np.ones_like(master_nodes_dofs) * slave_node_dof)
+            col.extend(master_nodes_dofs)
+            val.extend(N)
+
             dof_delete_set.append(slave_node_dof)
 
     elif tying_type == 'slide':
         normal = local_basis[:,0]
         slave_node_dofs = np.arange(ndim) + slave_node_idx * ndim
         B[slave_node_dofs, slave_node_dofs] -= 1
+        row.extend(slave_node_dofs)
+        col.extend(slave_node_dofs)
+        val.extend(- np.ones_like(slave_node_dofs))
 
         B[np.ix_(slave_node_dofs, slave_node_dofs[1:])] += local_basis[:,1:]
+        row.extend(np.ravel(slave_node_dofs.reshape(ndim, 1)
+                            @ np.ones((1,ndim-1)) ))
+        col.extend(np.ravel(np.ones((ndim,1))
+                            @ slave_node_dofs[1:].reshape(1,-1)))
+        val.extend(np.ravel(local_basis[:,1:]))
 
         # delete the first element of the slave_node_dofs
         dof_delete_set.append(slave_node_dofs[0])
@@ -202,9 +222,13 @@ for i, ranking_table in enumerate(element_ranking):
             master_nodes_dofs = master_nodes_idx * ndim + dim
             slave_node_dof = slave_node_idx * ndim + dim
             B[slave_node_dof, master_nodes_dofs] += N * normal[dim]
+            row.extend(np.ones_like(master_nodes_dofs) * slave_node_dof)
+            col.extend(master_nodes_dofs)
+            val.extend(N * normal[dim])
     else:
         print("I don't know the mesh tying type", tying_type)
 
+#%% Test stuff
 
 #%%
 #delete = np.sort(dof_delete_set)
@@ -221,7 +245,7 @@ my_system.load_mesh_from_gmsh(input_file, 2, my_material)
 my_system.mesh_class.load_group_to_mesh(1, my_material)
 my_system.assembly_class.preallocate_csr()
 my_system.apply_dirichlet_boundaries(3, 'xyz')
-my_system.apply_neumann_boundaries(key=4, val=1E3, direct=(1, 1, 1),
+my_system.apply_neumann_boundaries(key=4, val=1E10, direct=(1, 1, 1),
                                    time_func=lambda t: t)
 
 #%% Some dirty hack to monkeypatch B
@@ -235,17 +259,27 @@ B_sys = sp.sparse.csr_matrix(B_masked)
 my_system.dirichlet_class.B = B_sys
 my_system.dirichlet_class.no_of_constrained_dofs = B_sys.shape[1]
 
+#%% Test if everything works fine...
+
+B_sparse = sp.sparse.eye(my_mesh.no_of_dofs) \
+         + sp.sparse.csr_matrix((val, (row, col)),
+                                shape=(my_mesh.no_of_dofs, my_mesh.no_of_dofs))
+
+B_sys_2 = B_sparse[:,mask]
+
+B_diff = B_sys - B_sys_2
+
 #%%
 
-#amfe.solve_linear_displacement(my_system)
-#my_system.export_paraview(output_file + '_linear_static')
+amfe.solve_linear_displacement(my_system)
+my_system.export_paraview(output_file + '_linear_static')
 
 #amfe.solve_nonlinear_displacement(my_system)
 #my_system.export_paraview(output_file + '_nonlinear_static')
 
-dq0 = q0 = np.zeros(B_sys.shape[1])
-dt = 0.01
-amfe.integrate_nonlinear_system(my_system, q0, dq0, np.arange(0,10,dt), dt,
-                                rtol=1E-6, track_niter=True)
-
-my_system.export_paraview(output_file + '_nonlinear_dynamic')
+#dq0 = q0 = np.zeros(B_sys.shape[1])
+#dt = 0.01
+#amfe.integrate_nonlinear_system(my_system, q0, dq0, np.arange(0,10,dt), dt,
+#                                rtol=1E-6, track_niter=True)
+#
+#my_system.export_paraview(output_file + '_nonlinear_dynamic')
