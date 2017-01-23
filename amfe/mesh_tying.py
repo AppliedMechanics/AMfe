@@ -8,7 +8,51 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def proj_quad4(X, p, niter_max=20, eps=1E-10, verbose=False):
+
+def quad4_shape_functions(xi_vec):
+    xi, eta = xi_vec
+    N = np.array([(-eta + 1)*(-xi + 1)/4,
+                  (-eta + 1)*(xi + 1)/4,
+                  (eta + 1)*(xi + 1)/4,
+                  (eta + 1)*(-xi + 1)/4])
+    dN_dxi = np.array([[ eta/4 - 1/4,  xi/4 - 1/4],
+                       [-eta/4 + 1/4, -xi/4 - 1/4],
+                       [ eta/4 + 1/4,  xi/4 + 1/4],
+                       [-eta/4 - 1/4, -xi/4 + 1/4]])
+    return N, dN_dxi
+
+
+def quad8_shape_functions(xi_vec):
+    xi, eta = xi_vec
+    N = np.array([  (-eta + 1)*(-xi + 1)*(-eta - xi - 1)/4,
+                     (-eta + 1)*(xi + 1)*(-eta + xi - 1)/4,
+                       (eta + 1)*(xi + 1)*(eta + xi - 1)/4,
+                      (eta + 1)*(-xi + 1)*(eta - xi - 1)/4,
+                                 (-eta + 1)*(-xi**2 + 1)/2,
+                                  (-eta**2 + 1)*(xi + 1)/2,
+                                  (eta + 1)*(-xi**2 + 1)/2,
+                                 (-eta**2 + 1)*(-xi + 1)/2])
+
+    dN_dxi = np.array([
+        [-(eta - 1)*(eta + 2*xi)/4, -(2*eta + xi)*(xi - 1)/4],
+        [ (eta - 1)*(eta - 2*xi)/4,  (2*eta - xi)*(xi + 1)/4],
+        [ (eta + 1)*(eta + 2*xi)/4,  (2*eta + xi)*(xi + 1)/4],
+        [-(eta + 1)*(eta - 2*xi)/4, -(2*eta - xi)*(xi - 1)/4],
+        [             xi*(eta - 1),            xi**2/2 - 1/2],
+        [          -eta**2/2 + 1/2,            -eta*(xi + 1)],
+        [            -xi*(eta + 1),           -xi**2/2 + 1/2],
+        [           eta**2/2 - 1/2,             eta*(xi - 1)]])
+
+    return N, dN_dxi
+
+
+shape_function_dict = {'Quad4' : quad4_shape_functions,
+                       'Quad8' : quad8_shape_functions,
+                       }
+
+
+def proj_point_to_element(X, p, ele_type='Quad4', niter_max=20, eps=1E-10,
+                      verbose=False):
     '''
     Commpute properties for point p projected on quad4 master element.
 
@@ -35,45 +79,31 @@ def proj_quad4(X, p, niter_max=20, eps=1E-10, verbose=False):
     local_basis : ndarray, shape (3,3)
         local tangential basis. local_basis[:,0] forms the normal vector,
         local_basis[:,1:] the vectors along xi and eta
-    xi_vec : ndarray, shape(2,)
+    xi : ndarray, shape(2,)
         position of p in the local element coordinate system
     '''
     # Newton solver to find the element coordinates xi, eta of point p
     X_mat = X.reshape((-1,3))
-    xi, eta = xi_vec = np.array([0.,0.]) # starting point 0
-    N = np.array([(-eta + 1)*(-xi + 1)/4,
-                  (-eta + 1)*(xi + 1)/4,
-                  (eta + 1)*(xi + 1)/4,
-                  (eta + 1)*(-xi + 1)/4])
-    dN_dxi = np.array([[ eta/4 - 1/4,  xi/4 - 1/4],
-                       [-eta/4 + 1/4, -xi/4 - 1/4],
-                       [ eta/4 + 1/4,  xi/4 + 1/4],
-                       [-eta/4 - 1/4, -xi/4 + 1/4]])
+    xi = np.array([0.,0.]) # starting point 0
+    shape_function = shape_function_dict[ele_type]
+    N, dN_dxi = shape_function(xi)
     res = X_mat.T @ N - p
     jac = X_mat.T @ dN_dxi
 
     n_iter = 0
     while res.T @ jac @ jac.T @ res > eps and niter_max > n_iter:
-        delta_xi_vec = sp.linalg.solve(jac.T @ jac, - jac.T @ res)
-        xi_vec += delta_xi_vec
-        xi, eta = xi_vec
-        N = np.array([(-eta + 1)*(-xi + 1)/4,
-                      (-eta + 1)*(xi + 1)/4,
-                      (eta + 1)*(xi + 1)/4,
-                      (eta + 1)*(-xi + 1)/4])
-        dN_dxi = np.array([[ eta/4 - 1/4,  xi/4 - 1/4],
-                           [-eta/4 + 1/4, -xi/4 - 1/4],
-                           [ eta/4 + 1/4,  xi/4 + 1/4],
-                           [-eta/4 - 1/4, -xi/4 + 1/4]])
+        delta_xi = sp.linalg.solve(jac.T @ jac, - jac.T @ res)
+        xi += delta_xi
+        N, dN_dxi = shape_function(xi)
         jac = X_mat.T @ dN_dxi
         res = X_mat.T @ N - p
         n_iter += 1
-    if np.min(N) >= 0:
+    if xi[0] >= -1 and xi[0] <= 1 and xi[1] >= -1 and xi[1] <= 1:
         valid_element = True
     else:
         valid_element = False
     if verbose:
-        print('Projection of point to Quad4',
+        print('Projection of point to', ele_type,
               'in {0:1d} iterations'.format(n_iter))
     normal = np.cross(jac[:,0], jac[:,1])
     normal /= np.sqrt(normal @ normal)
@@ -84,74 +114,95 @@ def proj_quad4(X, p, niter_max=20, eps=1E-10, verbose=False):
     rot_basis[:,0] = normal
     rot_basis[:,1] = e1
     rot_basis[:,2] = e2
-    return valid_element, N, rot_basis, xi_vec
+    return valid_element, N, rot_basis, xi
 
 
-def point_distances(a, b, ndim=3):
+def add_master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
+                                tying_type = 'fixed'):
     '''
-    Find the nearest neighbor of point cloud a to point cloud b.
-
-    Parameters
-    ----------
-    a : ndarray
-        point coordinate array
-    b : ndarray
-        point coordinate array
-    ndim : int, optional
-        dimension of the problem. Default value: 3
-
-    Returns
-    -------
-    A : ndarray
-        Distance array of a to b. A[:,i] gives the distances of all points in a
-        to point b[i]
+    Add a master-slave relationship to the given mesh
     '''
-    A = a.reshape((-1,1,ndim))
-    B = b.reshape((1,-1,ndim))
-    dist_square = np.einsum('ijk->ij', (A - B)**2)
-    return np.sqrt(dist_square)
+    no_of_nodes, ndim = nodes.shape
+    ele_center_points = np.zeros((len(master_nodes), ndim))
+    master_ele_nodes = []
 
+    # compute the element center points
+    for i, element_raw in enumerate(master_nodes):
+        element = np.array(element_raw[np.isfinite(element_raw)], dtype=int)
+        master_ele_nodes.append(element)
+        node_xyz = nodes[element]
+        ele_center_points[i,:] = node_xyz.mean(axis=0)
 
-#%%
-X_quad4 = np.array([0,0,0,1,0,0,1,1,0,0,1,0], dtype=float)
-rand = np.random.rand(12)*0.4
+    distances = sp.spatial.distance.cdist(nodes[slave_nodes], ele_center_points)
+    element_ranking = np.argsort(distances, axis=1)
 
-p = np.array([1/2, 1, 0])
+    dof_delete_set = []
+    # B = np.eye(no_of_dofs)
 
-x = X_quad4 + rand
-valid, N, A, xi_vec = proj_quad4(x, p, verbose=True)
+    row = []
+    col = []
+    val = []
 
-print(xi_vec, N)
+    # loop over all slave points
+    for i, ranking_table in enumerate(element_ranking):
+        slave_node_idx = slave_nodes[i]
+        # Go through the suggestions of the heuristics and compute weights
+        for ele_index in ranking_table:
+            master_nodes_idx = master_ele_nodes[ele_index]
+            X = nodes[master_nodes_idx]
+            slave_node = nodes[slave_node_idx]
+            valid, N, local_basis, xi = proj_point_to_element(X, slave_node,
+                                                              ele_type=master_obj[i])
+            if valid:
+                break
+            else:
+                print('A non valid master element was chosen.')
+        # Now build the B-matrix or something like that...
+        if tying_type == 'fixed':
 
-#%%
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.plot(x[0::3], x[1::3], x[2::3])
-ax.scatter(p[0], p[1], p[2])
+            for dim in range(ndim):
+                master_nodes_dofs = master_nodes_idx * ndim + dim
+                slave_node_dof = slave_node_idx * ndim + dim
 
-#%% Big asessment
-#%%time
-for i in range(10000):
-    X_quad4 = np.array([0,0,0,1,0,0,1,1,0,0,1,0], dtype=float)
-    rand = np.random.rand(12)*0.4
-    p = np.array([1/2, 1/2, 0])
-    x = X_quad4 + rand
-    valid, N, A, xi_vec = proj_quad4(x, p, verbose=False)
+                # B[slave_node_dof, slave_node_dof] -= 1 # remove diagonal entry
+                row.append(slave_node_dof)
+                col.append(slave_node_dof)
+                val.append(-1)
 
-#%%
+                # B[slave_node_dof, master_nodes_dofs] += N
+                row.extend(np.ones_like(master_nodes_dofs) * slave_node_dof)
+                col.extend(master_nodes_dofs)
+                val.extend(N)
 
-sp.spatial.distance.cdist() # is much faster!
+                dof_delete_set.append(slave_node_dof)
 
+        elif tying_type == 'slide':
+            normal = local_basis[:,0]
+            slave_node_dofs = np.arange(ndim) + slave_node_idx * ndim
+            # B[slave_node_dofs, slave_node_dofs] -= 1
+            row.extend(slave_node_dofs)
+            col.extend(slave_node_dofs)
+            val.extend(- np.ones_like(slave_node_dofs))
 
-#%%
-a = np.zeros((10,3))
-a[:,0] = np.arange(10)
-b = a
+            # B[np.ix_(slave_node_dofs, slave_node_dofs[1:])] += local_basis[:,1:]
+            row.extend(np.ravel(slave_node_dofs.reshape(ndim, 1)
+                                @ np.ones((1,ndim-1), dtype=int) ))
+            col.extend(np.ravel(np.ones((ndim,1), dtype=int)
+                                @ slave_node_dofs[1:].reshape(1,-1)))
+            val.extend(np.ravel(local_basis[:,1:]))
 
+            # delete the first element of the slave_node_dofs
+            dof_delete_set.append(slave_node_dofs[0])
 
-dist = point_distances(a,b)
-# this is the way how to move along the best elements
-idxs = dist.argsort()
-
-#%% Compute the B matrix
+            # Handling for the normal force constraing
+            for dim in range(ndim):
+                master_nodes_dofs = master_nodes_idx * ndim + dim
+                slave_node_dof = slave_node_idx * ndim + dim
+                # B[slave_node_dof, master_nodes_dofs] += N * normal[dim]
+                row.extend(np.ones_like(master_nodes_dofs) * slave_node_dof)
+                col.extend(master_nodes_dofs)
+                val.extend(N * normal[dim])
+        else:
+            print("I don't know the mesh tying type", tying_type)
+    return dof_delete_set, row, col, val
 

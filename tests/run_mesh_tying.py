@@ -283,3 +283,34 @@ my_system.export_paraview(output_file + '_linear_static')
 #                                rtol=1E-6, track_niter=True)
 #
 #my_system.export_paraview(output_file + '_nonlinear_dynamic')
+
+
+#%% Do some tests for checking the element projection
+
+#%%
+X_quad4 = np.array([0,0,0,1,0,0,1,1,0,0,1,0], dtype=float)
+rand = np.random.rand(12)*0.4
+
+p = np.array([1/2, 1, 0])
+
+x = X_quad4 + rand
+valid, N, A, xi_vec = proj_point_to_element(x, p, ele_type='Quad4',
+                                            verbose=True)
+
+print(xi_vec, N)
+
+#%%
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.plot(x[0::3], x[1::3], x[2::3])
+ax.scatter(p[0], p[1], p[2])
+
+#%% Assess computation times
+#%%time
+for i in range(10000):
+    X_quad4 = np.array([0,0,0,1,0,0,1,1,0,0,1,0], dtype=float)
+    rand = np.random.rand(12)*0.4
+    p = np.array([1/2, 1/2, 0])
+    x = X_quad4 + rand
+    valid, N, A, xi_vec = proj_point_to_element(x, p, ele_type='Quad4',
+                                                verbose=False)
