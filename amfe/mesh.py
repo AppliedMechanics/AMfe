@@ -76,7 +76,6 @@ nas2amfe = {'CTETRA' : 'Tet10',
 
 # Same for Abaqus
 abaq2amfe = {'C3D10M' : 'Tet10',
-             'C3D8I' : 'Hexa8',
              'C3D4' : 'Tet4',
              'C3D6' : 'Prism6', # 6 node prism
              'C3D8I' : 'Hexa8', # acutally the better version
