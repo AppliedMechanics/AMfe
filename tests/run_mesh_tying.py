@@ -209,8 +209,8 @@ for i, ranking_table in enumerate(element_ranking):
 
         B[np.ix_(slave_node_dofs, slave_node_dofs[1:])] += local_basis[:,1:]
         row.extend(np.ravel(slave_node_dofs.reshape(ndim, 1)
-                            @ np.ones((1,ndim-1)) ))
-        col.extend(np.ravel(np.ones((ndim,1))
+                            @ np.ones((1,ndim-1), dtype=int) ))
+        col.extend(np.ravel(np.ones((ndim,1), dtype=int)
                             @ slave_node_dofs[1:].reshape(1,-1)))
         val.extend(np.ravel(local_basis[:,1:]))
 
