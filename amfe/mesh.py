@@ -571,6 +571,26 @@ class Mesh:
                            2 : 'idx_abaqus',
                           })
         self.node_idx = 3
+
+        # surface handling
+        self.surface_df = s_df = pd.DataFrame(surface_list)
+        s_df.rename(copy=False, inplace=True,
+                    columns={0 : 'type',
+                             1 : 'name',
+                             2 : 'val',
+                             3 : 'property'})
+
+        node_s_df = s_df[s_df['type'] == 'NODE'].copy()
+        nodal_values = nodes_dict[pd.to_numeric(node_s_df['val'])].values
+        node_s_df['node'] = pd.Series(nodal_values, index=node_s_df.index,
+                                      dtype=int)
+
+        self.node_s_df = node_s_df
+        self.nodes_dict = nodes_dict
+
+#        ele_s_df = s_df[s_df['type'] == 'ELEMENT']
+#        ele_s_df = el_df[idx_abaqus]ele_s_df['val']
+
         self._update_mesh_props()
         # printing some information regarding the physical groups
         print('Mesh', filename, 'successfully imported.',
