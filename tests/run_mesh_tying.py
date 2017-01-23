@@ -156,7 +156,18 @@ for i, ranking_table in enumerate(element_ranking):
             dof_delete_set.append(slave_node_dof)
 
     elif tying_type == 'slide':
-        pass
+        normal = local_basis[:,0]
+        slave_node_dofs = np.arange(ndim) + slave_node_idx * ndim
+        B[np.ix_(slave_node_dofs, slave_node_dofs[1:])] = local_basis[:,1:]
+
+        # delete the first element of the slave_node_dofs
+        dof_delete_set.append(slave_node_dofs[0])
+
+        # Handling for the normal force constraing
+        for dim in range(ndim):
+            master_nodes_dofs = master_nodes_idx * ndim + dim
+            slave_node_dof = slave_node_idx * ndim + dim
+            B[slave_node_dof, master_nodes_dofs] = N * normal[dim]
     else:
         print('I don not know the mesh tying type', tying_type)
 
@@ -176,7 +187,7 @@ my_system.load_mesh_from_gmsh(input_file, 2, my_material)
 my_system.mesh_class.load_group_to_mesh(1, my_material)
 my_system.assembly_class.preallocate_csr()
 my_system.apply_dirichlet_boundaries(3, 'xyz')
-my_system.apply_neumann_boundaries(key=4, val=1E10, direct=(1, 0, 0),
+my_system.apply_neumann_boundaries(key=4, val=1E10, direct=(1, 1, 1),
                                    time_func=lambda t: t)
 
 #%% Some dirty hack to monkeypatch B
@@ -193,6 +204,14 @@ my_system.dirichlet_class.no_of_constrained_dofs = B_sys.shape[1]
 #%%
 
 #amfe.solve_linear_displacement(my_system)
-amfe.solve_nonlinear_displacement(my_system)
+#my_system.export_paraview(output_file + '_linear_static')
 
-my_system.export_paraview(output_file + '_linear_static')
+#amfe.solve_nonlinear_displacement(my_system)
+#my_system.export_paraview(output_file + '_nonlinear_static')
+
+#dq0 = q0 = np.zeros(B_sys.shape[1])
+#dt = 0.001
+#amfe.integrate_nonlinear_system(my_system, q0, dq0, np.arange(0,10,dt), dt)
+#
+#my_system.export_paraview(output_file + '_nonlinear_dynamic')
+
