@@ -3,9 +3,9 @@ Mesh tying module allowing for master-slave nodal interaction
 """
 import numpy as np
 import scipy as sp
+from scipy import spatial
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
 
 
 def proj_quad4(X, p, niter_max=20, eps=1E-10, verbose=False):
@@ -89,7 +89,7 @@ def proj_quad4(X, p, niter_max=20, eps=1E-10, verbose=False):
 
 def point_distances(a, b, ndim=3):
     '''
-    Find the nearest neighbor of point cloud a to point cloud b
+    Find the nearest neighbor of point cloud a to point cloud b.
 
     Parameters
     ----------
@@ -140,6 +140,7 @@ for i in range(10000):
 
 #%%
 
+sp.spatial.distance.cdist() # is much faster!
 
 
 #%%
@@ -151,4 +152,6 @@ b = a
 dist = point_distances(a,b)
 # this is the way how to move along the best elements
 idxs = dist.argsort()
+
+#%% Compute the B matrix
 
