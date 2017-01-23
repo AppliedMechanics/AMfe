@@ -83,6 +83,28 @@ abaq2amfe = {'C3D10M' : 'Tet10',
              'CONN3D2' : None,
              }
 
+abaq_faces = {
+'Hexa8': {'S1' : np.array([0, 1, 2, 3]),
+          'S2' : np.array([4, 7, 6, 5]),
+          'S3' : np.array([0, 4, 5, 1]),
+          'S4' : np.array([1, 5, 6, 2]),
+          'S5' : np.array([2, 6, 7, 3]),
+          'S6' : np.array([3, 7, 4, 0]),
+          'name' : 'Quad4',},
+
+'Tet4': {'S1' : np.array([0, 1, 2]),
+         'S2' : np.array([0, 3, 1]),
+         'S3' : np.array([1, 3, 2]),
+         'S4' : np.array([2, 3, 0]),
+         'name' : 'Tri3',},
+
+'Tet10': {'S1' : np.array([0, 1, 2, 4, 5, 6]),
+          'S2' : np.array([0, 3, 1, 7, 8, 4]),
+          'S3' : np.array([1, 3, 2, 8, 9, 5]),
+          'S4' : np.array([2, 3, 0, 9, 7, 6]),
+          'name' : 'Tri6',},
+
+}
 
 def check_dir(*filenames):
     '''
@@ -571,21 +593,27 @@ class Mesh:
                           })
         self.node_idx = 3
 
-        # surface handling
-        self.surface_df = s_df = pd.DataFrame(surface_list)
-        s_df.rename(copy=False, inplace=True,
-                    columns={0 : 'type',
-                             1 : 'name',
-                             2 : 'val',
-                             3 : 'property'})
+        ele_dict = pd.Series(index=df['idx_abaqus'].values,
+                             data=np.arange(df['idx_abaqus'].values.shape[0]))
 
-        node_s_df = s_df[s_df['type'] == 'NODE'].copy()
-        nodal_values = nodes_dict[pd.to_numeric(node_s_df['val'])].values
-        node_s_df['node'] = pd.Series(nodal_values, index=node_s_df.index,
-                                      dtype=int)
+        for row in surface_list:
+            if row[0] == 'ELEMENT':
+                ele_idx = ele_dict[int(row[2])]
+                element = df.iloc[ele_idx, :].values
+                face_dict = abaq_faces[element[0]]
+                node_indices = face_dict[row[3].strip()]
+                nodes = element[self.node_idx:][node_indices]
+                elements_list.append([face_dict['name'], row[1], None] + nodes.tolist())
+            if row[0] == 'NODE':
+                nodes = nodes_dict[int(row[2])]
+                elements_list.append(['point', row[1], None, nodes])
 
-        self.node_s_df = node_s_df
-        self.nodes_dict = nodes_dict
+        self.el_df = df = pd.DataFrame(elements_list, dtype=int)
+        df.rename(copy=False, inplace=True,
+                  columns={0 : 'el_type',
+                           1 : 'phys_group',
+                           2 : 'idx_abaqus',
+                          })
 
 #        ele_s_df = s_df[s_df['type'] == 'ELEMENT']
 #        ele_s_df = el_df[idx_abaqus]ele_s_df['val']
