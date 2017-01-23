@@ -10,7 +10,47 @@ import amfe
 
 #%%
 
-def proj_quad4(X, p, niter_max=20, eps=1E-10, verbose=False):
+def quad4_shape_functions(xi_vec):
+    xi, eta = xi_vec
+    N = np.array([(-eta + 1)*(-xi + 1)/4,
+                  (-eta + 1)*(xi + 1)/4,
+                  (eta + 1)*(xi + 1)/4,
+                  (eta + 1)*(-xi + 1)/4])
+    dN_dxi = np.array([[ eta/4 - 1/4,  xi/4 - 1/4],
+                       [-eta/4 + 1/4, -xi/4 - 1/4],
+                       [ eta/4 + 1/4,  xi/4 + 1/4],
+                       [-eta/4 - 1/4, -xi/4 + 1/4]])
+    return N, dN_dxi
+
+def quad8_shape_functions(xi_vec):
+    xi, eta = xi_vec
+    N = np.array([  (-eta + 1)*(-xi + 1)*(-eta - xi - 1)/4,
+                     (-eta + 1)*(xi + 1)*(-eta + xi - 1)/4,
+                       (eta + 1)*(xi + 1)*(eta + xi - 1)/4,
+                      (eta + 1)*(-xi + 1)*(eta - xi - 1)/4,
+                                 (-eta + 1)*(-xi**2 + 1)/2,
+                                  (-eta**2 + 1)*(xi + 1)/2,
+                                  (eta + 1)*(-xi**2 + 1)/2,
+                                 (-eta**2 + 1)*(-xi + 1)/2])
+
+    dN_dxi = np.array([
+        [-(eta - 1)*(eta + 2*xi)/4, -(2*eta + xi)*(xi - 1)/4],
+        [ (eta - 1)*(eta - 2*xi)/4,  (2*eta - xi)*(xi + 1)/4],
+        [ (eta + 1)*(eta + 2*xi)/4,  (2*eta + xi)*(xi + 1)/4],
+        [-(eta + 1)*(eta - 2*xi)/4, -(2*eta - xi)*(xi - 1)/4],
+        [             xi*(eta - 1),            xi**2/2 - 1/2],
+        [          -eta**2/2 + 1/2,            -eta*(xi + 1)],
+        [            -xi*(eta + 1),           -xi**2/2 + 1/2],
+        [           eta**2/2 - 1/2,             eta*(xi - 1)]])
+
+    return N, dN_dxi
+
+shape_function_dict = {'Quad4' : quad4_shape_functions,
+                       'Quad8' : quad8_shape_functions,
+                       }
+
+def proj_point_to_element(X, p, ele_type='Quad4', niter_max=20, eps=1E-10,
+                      verbose=False):
     '''
     Commpute properties for point p projected on quad4 master element.
 
@@ -37,40 +77,26 @@ def proj_quad4(X, p, niter_max=20, eps=1E-10, verbose=False):
     local_basis : ndarray, shape (3,3)
         local tangential basis. local_basis[:,0] forms the normal vector,
         local_basis[:,1:] the vectors along xi and eta
-    xi_vec : ndarray, shape(2,)
+    xi : ndarray, shape(2,)
         position of p in the local element coordinate system
     '''
     # Newton solver to find the element coordinates xi, eta of point p
     X_mat = X.reshape((-1,3))
-    xi, eta = xi_vec = np.array([0.,0.]) # starting point 0
-    N = np.array([(-eta + 1)*(-xi + 1)/4,
-                  (-eta + 1)*(xi + 1)/4,
-                  (eta + 1)*(xi + 1)/4,
-                  (eta + 1)*(-xi + 1)/4])
-    dN_dxi = np.array([[ eta/4 - 1/4,  xi/4 - 1/4],
-                       [-eta/4 + 1/4, -xi/4 - 1/4],
-                       [ eta/4 + 1/4,  xi/4 + 1/4],
-                       [-eta/4 - 1/4, -xi/4 + 1/4]])
+    xi = np.array([0.,0.]) # starting point 0
+    shape_function = shape_function_dict[ele_type]
+    N, dN_dxi = shape_function(xi)
     res = X_mat.T @ N - p
     jac = X_mat.T @ dN_dxi
 
     n_iter = 0
     while res.T @ jac @ jac.T @ res > eps and niter_max > n_iter:
-        delta_xi_vec = sp.linalg.solve(jac.T @ jac, - jac.T @ res)
-        xi_vec += delta_xi_vec
-        xi, eta = xi_vec
-        N = np.array([(-eta + 1)*(-xi + 1)/4,
-                      (-eta + 1)*(xi + 1)/4,
-                      (eta + 1)*(xi + 1)/4,
-                      (eta + 1)*(-xi + 1)/4])
-        dN_dxi = np.array([[ eta/4 - 1/4,  xi/4 - 1/4],
-                           [-eta/4 + 1/4, -xi/4 - 1/4],
-                           [ eta/4 + 1/4,  xi/4 + 1/4],
-                           [-eta/4 - 1/4, -xi/4 + 1/4]])
+        delta_xi = sp.linalg.solve(jac.T @ jac, - jac.T @ res)
+        xi += delta_xi
+        N, dN_dxi = shape_function(xi)
         jac = X_mat.T @ dN_dxi
         res = X_mat.T @ N - p
         n_iter += 1
-    if np.min(N) >= 0:
+    if xi[0] >= -1 and xi[0] <= 1 and xi[1] >= -1 and xi[1] <= 1:
         valid_element = True
     else:
         valid_element = False
@@ -86,7 +112,7 @@ def proj_quad4(X, p, niter_max=20, eps=1E-10, verbose=False):
     rot_basis[:,0] = normal
     rot_basis[:,1] = e1
     rot_basis[:,2] = e2
-    return valid_element, N, rot_basis, xi_vec
+    return valid_element, N, rot_basis, xi
 
 #%%
 
@@ -114,11 +140,14 @@ slave_elements = df[df['phys_group']  == 6]
 slave_nodes = np.unique(slave_elements.iloc[:,my_mesh.node_idx:].values)
 slave_nodes = np.array(slave_nodes[np.isfinite(slave_nodes)], dtype=int)
 
-master_ele = master_elements.iloc[:,my_mesh.node_idx:my_mesh.node_idx + 4].values
+master_ele = master_elements.iloc[:,my_mesh.node_idx:].values
 
-ele_center_points = np.zeros((master_ele.shape[0], ndim))
+ele_center_points = np.zeros((len(master_ele), ndim))
+master_ele_nodes = []
 
-for i, element in enumerate(master_ele):
+for i, element_raw in enumerate(master_ele):
+    element = np.array(element_raw[np.isfinite(element_raw)], dtype=int)
+    master_ele_nodes.append(element)
     node_xyz = my_mesh.nodes[element]
     ele_center_points[i,:] = node_xyz.mean(axis=0)
 
@@ -126,6 +155,7 @@ distances = sp.spatial.distance.cdist(my_mesh.nodes[slave_nodes], ele_center_poi
 element_ranking = np.argsort(distances, axis=1)
 
 #%%
+ele_type = 'Quad8'
 tying_type = 'fixed'
 #tying_type = 'slide'
 
@@ -137,10 +167,11 @@ for i, ranking_table in enumerate(element_ranking):
     slave_node_idx = slave_nodes[i]
     # Go through the suggestions of the heuristics and compute weights
     for ele_index in ranking_table:
-        master_nodes_idx = master_ele[ele_index]
+        master_nodes_idx = master_ele_nodes[ele_index]
         X = my_mesh.nodes[master_nodes_idx]
         slave_node = my_mesh.nodes[slave_node_idx]
-        valid, N, local_basis, xi_vec = proj_quad4(X, slave_node)
+        valid, N, local_basis, xi = proj_point_to_element(X, slave_node,
+                                                          ele_type=ele_type)
         print(valid)
         if valid:
             break
@@ -203,8 +234,8 @@ my_system.dirichlet_class.no_of_constrained_dofs = B_sys.shape[1]
 
 #%%
 
-#amfe.solve_linear_displacement(my_system)
-#my_system.export_paraview(output_file + '_linear_static')
+amfe.solve_linear_displacement(my_system)
+my_system.export_paraview(output_file + '_linear_static')
 
 #amfe.solve_nonlinear_displacement(my_system)
 #my_system.export_paraview(output_file + '_nonlinear_static')
@@ -214,4 +245,3 @@ my_system.dirichlet_class.no_of_constrained_dofs = B_sys.shape[1]
 #amfe.integrate_nonlinear_system(my_system, q0, dq0, np.arange(0,10,dt), dt)
 #
 #my_system.export_paraview(output_file + '_nonlinear_dynamic')
-
