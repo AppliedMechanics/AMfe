@@ -618,6 +618,24 @@ class Mesh:
                            2 : 'idx_abaqus',
                           })
 
+##        for row in surface_list:
+#        self.surface_list = surface_list
+#        # surface handling
+#        self.surface_df = s_df = pd.DataFrame(surface_list)
+#        s_df.rename(copy=False, inplace=True,
+#                    columns={0 : 'type',
+#                             1 : 'name',
+#                             2 : 'val',
+#                             3 : 'property'})
+#
+#        node_s_df = s_df[s_df['type'] == 'NODE'].copy()
+#        nodal_values = nodes_dict[pd.to_numeric(node_s_df['val'])].values
+#        node_s_df['node'] = pd.Series(nodal_values, index=node_s_df.index,
+#                                      dtype=int)
+#
+#        self.node_s_df = node_s_df
+#        self.nodes_dict = nodes_dict
+
 #        ele_s_df = s_df[s_df['type'] == 'ELEMENT']
 #        ele_s_df = el_df[idx_abaqus]ele_s_df['val']
 
@@ -947,14 +965,45 @@ class Mesh:
     def tie_mesh(self, master_key, slave_key, master_prop='phys_group',
                  slave_prop='phys_group', tying_type='fixed'):
         '''
-        Tie the mesh.
+        Tie nonconforming meshes for a given master and slave side.
+
 
         Parameters
         ----------
+        master_key : int or string
+            mesh key of the master face mesh. The master face mesh has to be at
+            least the size of the slave mesh. It is better, when the master
+            mesh is larger than the slave mesh.
+        slave_key : int or string
+            mesh key of the slave face mesh or point cloud
+        master_prop : string, optional
+            mesh property for which master_key is specified.
+            Default value: 'phys_group'
+        slave_prop : string, optional
+            mesh property for which slave_key is specified.
+            Default value: 'phys_group'
+        tying_type : string {'fixed', 'slide'}
+            Mesh tying type. 'fixed' glues the meshes together while 'slide'
+            allows for a sliding motion between the meshes.
 
         Returns
         -------
+        slave_dofs : ndarray, type: int
+            slave dofs of the tied mesh
+        row : ndarray, type: int
+            row indices of the triplet description of the master slave
+            conversion
+        col : ndarray, type: int
+            col indices of the triplet description of the master slave
+            conversion
+        val : ndarray, type: float
+            values of the triplet description of the master slave conversion
 
+        Notes
+        -----
+        The master mesh has to embrace the full slave mesh. If this is not the
+        case, the routine will fail, a slave point outside the master mesh
+        cannot be addressed to a specific element.
 
         '''
         df = self.el_df
