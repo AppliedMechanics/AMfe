@@ -155,7 +155,7 @@ def proj_point_to_element(X, p, ele_type='Quad4', niter_max=20, eps=1E-10,
     return valid_element, N, rot_basis, xi
 
 
-def add_master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
+def master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
                                 tying_type = 'fixed'):
     '''
     Add a master-slave relationship to the given mesh.
@@ -175,7 +175,7 @@ def add_master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
     distances = sp.spatial.distance.cdist(nodes[slave_nodes], ele_center_points)
     element_ranking = np.argsort(distances, axis=1)
 
-    dof_delete_set = []
+    slave_dofs = []
     # B = np.eye(no_of_dofs)
 
     row = []
@@ -214,7 +214,7 @@ def add_master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
                 col.extend(master_nodes_dofs)
                 val.extend(N)
 
-                dof_delete_set.append(slave_node_dof)
+                slave_dofs.append(slave_node_dof)
 
         elif tying_type == 'slide':
             normal = local_basis[:,0]
@@ -232,7 +232,7 @@ def add_master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
             val.extend(np.ravel(local_basis[:,1:]))
 
             # delete the first element of the slave_node_dofs
-            dof_delete_set.append(slave_node_dofs[0])
+            slave_dofs.append(slave_node_dofs[0])
 
             # Handling for the normal force constraing
             for dim in range(ndim):
@@ -244,4 +244,4 @@ def add_master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
                 val.extend(N * normal[dim])
         else:
             print("I don't know the mesh tying type", tying_type)
-    return dof_delete_set, row, col, val
+    return slave_dofs, row, col, val
