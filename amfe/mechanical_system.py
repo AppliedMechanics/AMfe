@@ -191,6 +191,22 @@ class MechanicalSystem():
         self.no_of_dofs_per_node = no_of_dofs_per_node
         self.assembly_class.preallocate_csr()
 
+    def tie_mesh(self, master_key, slave_key, master_prop='phys_group',
+                 slave_prop='phys_group', tying_type='fixed'):
+        '''
+        Tie the nonconforming mesh.
+        '''
+
+        vals = self.mesh_class.tie_mesh(master_key=master_key,
+                                        slave_key=slave_key,
+                                        master_prop=master_prop,
+                                        slave_prop=slave_prop,
+                                        tying_type=tying_type)
+
+        self.dirichlet_class.add_constraints(*vals)
+        self.dirichlet_class.update()
+
+
 
     def apply_dirichlet_boundaries(self, key, coord, mesh_prop='phys_group'):
         '''

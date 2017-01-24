@@ -24,6 +24,8 @@ from .element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
 from .element import LineLinearBoundary, LineQuadraticBoundary, \
     Tri3Boundary, Tri6Boundary, Hexa8, Hexa20, Quad4Boundary, Quad8Boundary
 
+from .mesh_tying import master_slave_constraint
+
 # Element mapping is described here. If a new element is implemented, the
 # features for import and export should work when the followig list will be updated.
 element_mapping_list = [
@@ -940,6 +942,35 @@ class Mesh:
               'elements successfully added.')
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
+
+
+    def tie_mesh(self, master_key, slave_key, master_prop='phys_group',
+                 slave_prop='phys_group', tying_type='fixed'):
+        '''
+        Tie the mesh.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+
+        '''
+        df = self.el_df
+        master_elements = df[df[master_prop]  == master_key]
+        slave_elements = df[df[slave_prop]  == slave_key]
+
+        master_nodes = master_elements.iloc[:, self.node_idx:].values
+        master_obj =  master_elements.el_type.values
+        slave_nodes = np.unique(slave_elements.iloc[:,self.node_idx:].values)
+        slave_nodes = np.array(slave_nodes[np.isfinite(slave_nodes)], dtype=int)
+
+        slave_dofs, row, col, val = master_slave_constraint(master_nodes,
+            master_obj, slave_nodes, nodes=self.nodes, tying_type=tying_type)
+
+        return (slave_dofs, row, col, val)
+
 
     def mesh_information(self, mesh_prop='phys_group'):
         '''
