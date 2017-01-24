@@ -83,6 +83,7 @@ abaq2amfe = {'C3D10M' : 'Tet10',
              'CONN3D2' : None,
              }
 
+# Abaqus faces for identifying surfaces
 abaq_faces = {
 'Hexa8': {'S1' : np.array([0, 1, 2, 3]),
           'S2' : np.array([4, 7, 6, 5]),
@@ -1113,9 +1114,7 @@ class Mesh:
         if output is 'internal':
             dofs_dirichlet = np.append(dofs_dirichlet, self.dofs_dirichlet)
             self.dofs_dirichlet = np.unique(dofs_dirichlet)
-            self.dofs_dirichlet.sort()
             self.nodes_dirichlet = np.unique(nodes_dirichlet)
-            self.nodes_dirichlet.sort()
 
         # print some output stuff
         print('\n', mesh_prop, key, 'with', len(unique_nodes),
