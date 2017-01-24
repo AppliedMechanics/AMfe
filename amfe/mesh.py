@@ -1008,11 +1008,9 @@ class Mesh:
             master_obj, slave_nodes, nodes=self.nodes, tying_type=tying_type)
 
         print('*'*80)
-        print('Tied mesh part ' + str(master_key) + ' as master mesh to part '
-              + str(slave_key) + 'as slave mesh. \nIn total '
-              + str(len(slave_nodes))
-              + ' slave nodes were tied using the tying type '
-              + tying_type + '.'
+        print(('Tied mesh part {0} as master mesh to part {1} as slave mesh. \n'
+              + 'In total {2} slave nodes were tied using the tying type {3}.'
+              + '').format(master_key, slave_key, len(slave_nodes), tying_type)
              )
         print('*'*80)
         return (slave_dofs, row, col, val)
