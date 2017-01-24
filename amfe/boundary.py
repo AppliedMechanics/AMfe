@@ -118,14 +118,9 @@ class DirichletBoundary():
         slave_dofs_tmp = np.append(self.slave_dofs, slave_dofs)
         self.slave_dofs = np.array(np.unique(slave_dofs_tmp), dtype=int)
 
-        row_tmp = np.append(self.row, row)
-        self.row = np.array(row_tmp, dtype=int)
-
-        col_tmp = np.append(self.col, col)
-        self.col = np.array(col_tmp, dtype=int)
-
-        val_tmp = np.append(self.val, val)
-        self.val = np.array(val_tmp, dtype=int)
+        self.row = np.array(np.append(self.row, row), dtype=int)
+        self.col = np.array(np.append(self.col, col), dtype=int)
+        self.val = np.append(self.val, val)
 
         self.update()
         return
