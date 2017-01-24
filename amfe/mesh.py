@@ -1007,6 +1007,14 @@ class Mesh:
         slave_dofs, row, col, val = master_slave_constraint(master_nodes,
             master_obj, slave_nodes, nodes=self.nodes, tying_type=tying_type)
 
+        print('*'*80)
+        print('Tied mesh part ' + str(master_key) + ' as master mesh to part '
+              + str(slave_key) + 'as slave mesh. \nIn total '
+              + str(len(slave_nodes))
+              + ' slave nodes were tied using the tying type '
+              + tying_type + '.'
+             )
+        print('*'*80)
         return (slave_dofs, row, col, val)
 
 
@@ -1044,6 +1052,7 @@ class Mesh:
             print('Number of Elements:', len(df[df[mesh_prop] == i]))
             print('Element types appearing in this group:',
                   pd.unique(df[df[mesh_prop] == i].el_type))
+
         return
 
 
