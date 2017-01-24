@@ -85,7 +85,7 @@ shape_function_dict = {'Quad4' : quad4_shape_functions,
                        }
 
 
-def proj_point_to_element(X, p, ele_type='Quad4', niter_max=20, eps=1E-10,
+def proj_point_to_element(X, p, ele_type, niter_max=20, eps=1E-10,
                       verbose=False):
     '''
     Compute local element coordinates and weights for for point p projected on
