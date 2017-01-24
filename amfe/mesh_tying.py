@@ -19,7 +19,7 @@ def quad4_shape_functions(xi_vec):
                        [-eta/4 + 1/4, -xi/4 - 1/4],
                        [ eta/4 + 1/4,  xi/4 + 1/4],
                        [-eta/4 - 1/4, -xi/4 + 1/4]])
-    valid = xi[0] >= -1 and xi[0] <= 1 and xi[1] >= -1 and xi[1] <= 1
+    valid = xi >= -1 and xi <= 1 and eta >= -1 and eta <= 1
     return N, dN_dxi, valid
 
 
@@ -44,7 +44,7 @@ def quad8_shape_functions(xi_vec):
         [            -xi*(eta + 1),           -xi**2/2 + 1/2],
         [           eta**2/2 - 1/2,             eta*(xi - 1)]])
 
-    valid = xi[0] >= -1 and xi[0] <= 1 and xi[1] >= -1 and xi[1] <= 1
+    valid = xi >= -1 and xi <= 1 and eta >= -1 and eta <= 1
     return N, dN_dxi, valid
 
 def tri3_shape_functions(xi_vec):
@@ -190,8 +190,9 @@ def add_master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
             master_nodes_idx = master_ele_nodes[ele_index]
             X = nodes[master_nodes_idx]
             slave_node = nodes[slave_node_idx]
+            ele_type = master_obj[ele_index]
             valid, N, local_basis, xi = proj_point_to_element(X, slave_node,
-                                                              ele_type=master_obj[i])
+                                                              ele_type=ele_type)
             if valid:
                 break
             else:
