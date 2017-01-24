@@ -19,7 +19,8 @@ def quad4_shape_functions(xi_vec):
                        [-eta/4 + 1/4, -xi/4 - 1/4],
                        [ eta/4 + 1/4,  xi/4 + 1/4],
                        [-eta/4 - 1/4, -xi/4 + 1/4]])
-    return N, dN_dxi
+    valid = xi[0] >= -1 and xi[0] <= 1 and xi[1] >= -1 and xi[1] <= 1
+    return N, dN_dxi, valid
 
 
 def quad8_shape_functions(xi_vec):
@@ -43,18 +44,54 @@ def quad8_shape_functions(xi_vec):
         [            -xi*(eta + 1),           -xi**2/2 + 1/2],
         [           eta**2/2 - 1/2,             eta*(xi - 1)]])
 
-    return N, dN_dxi
+    valid = xi[0] >= -1 and xi[0] <= 1 and xi[1] >= -1 and xi[1] <= 1
+    return N, dN_dxi, valid
 
+def tri3_shape_functions(xi_vec):
+    L1, L2 = xi_vec
+    L3 = 1 - L1 - L2
+    N = np.array([L1, L2, L3])
+    dN_dxi = np.array([[ 1,  0],
+                       [ 0,  1],
+                       [-1, -1]])
+    valid = L1 >= 0 and L1 <= 1 and L2 >= 0 and L2 <= 1 and L3 >= 0 and L3 <= 1
+    return N, dN_dxi, valid
+
+def tri6_shape_functions(xi_vec):
+    L1, L2 = xi_vec
+    L3 = 1 - L1 - L2
+    N = np.array([L1*(2*L1 - 1),
+                  L2*(2*L2 - 1),
+                  L3*(2*L3 - 1),
+                        4*L1*L2,
+                        4*L2*L3,
+                        4*L1*L3])
+
+    dN_dxi = np.array([[    4.0*L1 - 1.0,                0],
+                       [               0,     4.0*L2 - 1.0],
+                       [   -4.0*L3 + 1.0,    -4.0*L3 + 1.0],
+                       [          4.0*L2,           4.0*L1],
+                       [         -4.0*L2, -4.0*L2 + 4.0*L3],
+                       [-4.0*L1 + 4.0*L3,          -4.0*L1]])
+
+    valid = L1 >= 0 and L1 <= 1 and L2 >= 0 and L2 <= 1 and L3 >= 0 and L3 <= 1
+
+    return N, dN_dxi, valid
 
 shape_function_dict = {'Quad4' : quad4_shape_functions,
                        'Quad8' : quad8_shape_functions,
+                       'Tri3' : tri3_shape_functions,
+                       'Tri6' : tri6_shape_functions,
                        }
 
 
 def proj_point_to_element(X, p, ele_type='Quad4', niter_max=20, eps=1E-10,
                       verbose=False):
     '''
-    Commpute properties for point p projected on quad4 master element.
+    Compute local element coordinates and weights for for point p projected on
+    an element.
+
+    This function is heavily used to project the slave nodes on master elements.
 
     Parameters
     ----------
@@ -62,6 +99,8 @@ def proj_point_to_element(X, p, ele_type='Quad4', niter_max=20, eps=1E-10,
         points of the quad4 element in reference configuratoin
     p : np.ndarray, shape = (3,)
         point which should be tied onto the master element
+    ele_type : str {'Quad4', 'Quad8', 'Tri3', 'Tri6'}
+        element type on which is projected
     niter_max : int, optional
         number of maximum iterations of the Newton-Raphson iteration.
         Default value: 20
@@ -86,7 +125,7 @@ def proj_point_to_element(X, p, ele_type='Quad4', niter_max=20, eps=1E-10,
     X_mat = X.reshape((-1,3))
     xi = np.array([0.,0.]) # starting point 0
     shape_function = shape_function_dict[ele_type]
-    N, dN_dxi = shape_function(xi)
+    N, dN_dxi, valid_element = shape_function(xi)
     res = X_mat.T @ N - p
     jac = X_mat.T @ dN_dxi
 
@@ -94,17 +133,16 @@ def proj_point_to_element(X, p, ele_type='Quad4', niter_max=20, eps=1E-10,
     while res.T @ jac @ jac.T @ res > eps and niter_max > n_iter:
         delta_xi = sp.linalg.solve(jac.T @ jac, - jac.T @ res)
         xi += delta_xi
-        N, dN_dxi = shape_function(xi)
+        N, dN_dxi, valid_element = shape_function(xi)
         jac = X_mat.T @ dN_dxi
         res = X_mat.T @ N - p
         n_iter += 1
-    if xi[0] >= -1 and xi[0] <= 1 and xi[1] >= -1 and xi[1] <= 1:
-        valid_element = True
-    else:
-        valid_element = False
+
     if verbose:
         print('Projection of point to', ele_type,
-              'in {0:1d} iterations'.format(n_iter))
+              'in {0:1d} iterations.'.format(n_iter),
+              'The element is a valid element: ', valid_element)
+
     normal = np.cross(jac[:,0], jac[:,1])
     normal /= np.sqrt(normal @ normal)
     e1 = jac[:,0]
@@ -120,7 +158,8 @@ def proj_point_to_element(X, p, ele_type='Quad4', niter_max=20, eps=1E-10,
 def add_master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
                                 tying_type = 'fixed'):
     '''
-    Add a master-slave relationship to the given mesh
+    Add a master-slave relationship to the given mesh.
+
     '''
     no_of_nodes, ndim = nodes.shape
     ele_center_points = np.zeros((len(master_nodes), ndim))
@@ -205,4 +244,3 @@ def add_master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
         else:
             print("I don't know the mesh tying type", tying_type)
     return dof_delete_set, row, col, val
-
