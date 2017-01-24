@@ -4,9 +4,6 @@ Mesh tying module allowing for master-slave nodal interaction
 import numpy as np
 import scipy as sp
 from scipy import spatial
-from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
 
 
 def quad4_shape_functions(xi_vec):
@@ -25,14 +22,14 @@ def quad4_shape_functions(xi_vec):
 
 def quad8_shape_functions(xi_vec):
     xi, eta = xi_vec
-    N = np.array([  (-eta + 1)*(-xi + 1)*(-eta - xi - 1)/4,
-                     (-eta + 1)*(xi + 1)*(-eta + xi - 1)/4,
-                       (eta + 1)*(xi + 1)*(eta + xi - 1)/4,
-                      (eta + 1)*(-xi + 1)*(eta - xi - 1)/4,
-                                 (-eta + 1)*(-xi**2 + 1)/2,
-                                  (-eta**2 + 1)*(xi + 1)/2,
-                                  (eta + 1)*(-xi**2 + 1)/2,
-                                 (-eta**2 + 1)*(-xi + 1)/2])
+    N = np.array([(-eta + 1)*(-xi + 1)*(-eta - xi - 1)/4,
+                  (-eta + 1)*(xi + 1)*(-eta + xi - 1)/4,
+                  (eta + 1)*(xi + 1)*(eta + xi - 1)/4,
+                  (eta + 1)*(-xi + 1)*(eta - xi - 1)/4,
+                  (-eta + 1)*(-xi**2 + 1)/2,
+                  (-eta**2 + 1)*(xi + 1)/2,
+                  (eta + 1)*(-xi**2 + 1)/2,
+                  (-eta**2 + 1)*(-xi + 1)/2])
 
     dN_dxi = np.array([
         [-(eta - 1)*(eta + 2*xi)/4, -(2*eta + xi)*(xi - 1)/4],
@@ -63,9 +60,9 @@ def tri6_shape_functions(xi_vec):
     N = np.array([L1*(2*L1 - 1),
                   L2*(2*L2 - 1),
                   L3*(2*L3 - 1),
-                        4*L1*L2,
-                        4*L2*L3,
-                        4*L1*L3])
+                  4*L1*L2,
+                  4*L2*L3,
+                  4*L1*L3])
 
     dN_dxi = np.array([[    4.0*L1 - 1.0,                0],
                        [               0,     4.0*L2 - 1.0],
@@ -82,11 +79,11 @@ shape_function_dict = {'Quad4' : quad4_shape_functions,
                        'Quad8' : quad8_shape_functions,
                        'Tri3' : tri3_shape_functions,
                        'Tri6' : tri6_shape_functions,
-                       }
+                      }
 
 
 def proj_point_to_element(X, p, ele_type, niter_max=20, eps=1E-10,
-                      verbose=False):
+                          verbose=False):
     '''
     Compute local element coordinates and weights for for point p projected on
     an element.
@@ -120,6 +117,7 @@ def proj_point_to_element(X, p, ele_type, niter_max=20, eps=1E-10,
         local_basis[:,1:] the vectors along xi and eta
     xi : ndarray, shape(2,)
         position of p in the local element coordinate system
+
     '''
     # Newton solver to find the element coordinates xi, eta of point p
     X_mat = X.reshape((-1,3))
@@ -156,7 +154,7 @@ def proj_point_to_element(X, p, ele_type, niter_max=20, eps=1E-10,
 
 
 def master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
-                                tying_type = 'fixed'):
+                            tying_type = 'fixed'):
     '''
     Add a master-slave relationship to the given mesh.
 

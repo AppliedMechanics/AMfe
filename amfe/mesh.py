@@ -5,7 +5,7 @@ boundary conditions and the export.
 
 __all__ = ['Mesh',
            'create_xdmf_from_hdf5',
-           ]
+          ]
 
 import os
 import copy
@@ -83,29 +83,29 @@ abaq2amfe = {'C3D10M' : 'Tet10',
              'C3D8I' : 'Hexa8', # acutally the better version
              'B31' : None,
              'CONN3D2' : None,
-             }
+            }
 
 # Abaqus faces for identifying surfaces
 abaq_faces = {
-'Hexa8': {'S1' : np.array([0, 1, 2, 3]),
-          'S2' : np.array([4, 7, 6, 5]),
-          'S3' : np.array([0, 4, 5, 1]),
-          'S4' : np.array([1, 5, 6, 2]),
-          'S5' : np.array([2, 6, 7, 3]),
-          'S6' : np.array([3, 7, 4, 0]),
-          'name' : 'Quad4',},
+    'Hexa8': {'S1' : np.array([0, 1, 2, 3]),
+              'S2' : np.array([4, 7, 6, 5]),
+              'S3' : np.array([0, 4, 5, 1]),
+              'S4' : np.array([1, 5, 6, 2]),
+              'S5' : np.array([2, 6, 7, 3]),
+              'S6' : np.array([3, 7, 4, 0]),
+              'name' : 'Quad4',},
 
-'Tet4': {'S1' : np.array([0, 1, 2]),
-         'S2' : np.array([0, 3, 1]),
-         'S3' : np.array([1, 3, 2]),
-         'S4' : np.array([2, 3, 0]),
-         'name' : 'Tri3',},
+    'Tet4': {'S1' : np.array([0, 1, 2]),
+             'S2' : np.array([0, 3, 1]),
+             'S3' : np.array([1, 3, 2]),
+             'S4' : np.array([2, 3, 0]),
+             'name' : 'Tri3',},
 
-'Tet10': {'S1' : np.array([0, 1, 2, 4, 5, 6]),
-          'S2' : np.array([0, 3, 1, 7, 8, 4]),
-          'S3' : np.array([1, 3, 2, 8, 9, 5]),
-          'S4' : np.array([2, 3, 0, 9, 7, 6]),
-          'name' : 'Tri6',},
+    'Tet10': {'S1' : np.array([0, 1, 2, 4, 5, 6]),
+              'S2' : np.array([0, 3, 1, 7, 8, 4]),
+              'S3' : np.array([1, 3, 2, 8, 9, 5]),
+              'S4' : np.array([2, 3, 0, 9, 7, 6]),
+              'name' : 'Tri6',},
 
 }
 
@@ -222,8 +222,8 @@ def create_xdmf_from_hdf5(filename):
             for key in h5_topology.keys():
                 grid = SubElement(spatial_grid, 'Grid', {'Type':'Uniform'})
                 topology = SubElement(grid, 'Topology',
-                                  {'TopologyType':h5_topology[key].attrs['TopologyType'],
-                                   'NumberOfElements':str(h5_topology[key].shape[0])})
+                                      {'TopologyType':h5_topology[key].attrs['TopologyType'],
+                                       'NumberOfElements':str(h5_topology[key].shape[0])})
                 topology_data = SubElement(topology, 'DataItem',
                                        {'NumberType':'Int',
                                         'Format':'HDF',
@@ -254,7 +254,8 @@ def create_xdmf_from_hdf5(filename):
                                                     field.attrs['AttributeType'],
                                                  'Center':field.attrs['Center']})
                         no_of_components = field.attrs['NoOfComponents']
-                        field_dim = (field.shape[0] // no_of_components, no_of_components)
+                        field_dim = (field.shape[0] // no_of_components,
+                                     no_of_components)
                         field_data = SubElement(field_attr, 'DataItem',
                                                 {'ItemType':'HyperSlab',
                                                  'Dimensions':shape2str(field_dim)})
@@ -338,18 +339,18 @@ class Mesh:
         -------
         None
         '''
-        self.nodes         = np.array([])
-        self.connectivity  = []
-        self.ele_obj       = []
+        self.nodes = np.array([])
+        self.connectivity = []
+        self.ele_obj = []
         self.neumann_connectivity = []
-        self.neumann_obj   = []
-        self.nodes_dirichlet     = np.array([], dtype=int)
-        self.dofs_dirichlet      = np.array([], dtype=int)
+        self.neumann_obj = []
+        self.nodes_dirichlet = np.array([], dtype=int)
+        self.dofs_dirichlet = np.array([], dtype=int)
         self.constraint_list = [] # experimental; Introduced for nastran meshes
         # the displacements; They are stored as a list of numpy-arrays with
         # shape (ndof, no_of_dofs_per_node):
-        self.u                   = []
-        self.timesteps           = []
+        self.u = []
+        self.timesteps = []
         self.no_of_dofs_per_node = 0
         self.no_of_dofs = 0
         self.no_of_nodes = 0
@@ -433,9 +434,7 @@ class Mesh:
         try:
             self.nodes = np.genfromtxt(filename_nodes, delimiter = ',', skip_header = 1)
         except:
-            ImportError('Error while reading file ' + filename_nodes, '\n'
-                  '\nVermutlich stimmt die erwartete Dimension der Knotenfreiheitsgrade',
-                  self.no_of_dofs_per_node, 'nicht mit der Dimension in der Datei zusammen.')
+            ImportError('Error while reading file ' + filename_nodes)
         # when line numbers are erased if they are content of the csv
         if explicit_node_numbering:
             self.nodes = self.nodes[:,1:]
@@ -450,10 +449,13 @@ class Mesh:
                           2: "Bar2D"} # Bislang nur 2D-Element aus csv auslesbar
 
         print('Reading elements from csv...  ', end="")
-        self.connectivity = np.genfromtxt(filename_elements, delimiter = ',', dtype = int, skip_header = 1)
+        self.connectivity = np.genfromtxt(filename_elements,
+                                          delimiter = ',',
+                                          dtype = int,
+                                          skip_header = 1)
         if self.connectivity.ndim == 1: # Wenn nur genau ein Element vorliegt
             self.connectivity = np.array([self.connectivity])
-        # Falls erste Spalte die Elementnummer angibt, wird diese hier
+            # Falls erste Spalte die Elementnummer angibt, wird diese hier
         # abgeschnitten, um nur die Knoten des Elements zu erhalten
         if explicit_node_numbering:
             self.connectivity = self.connectivity[:,1:]
@@ -485,6 +487,10 @@ class Mesh:
         ----------
         filename : string
             filename of the .msh-file
+        scale_factor : float, optional
+            scale factor for the mesh to adjust the units. The default value is
+            1, i.e. no scaling is done.
+
 
         Returns
         -------
@@ -599,6 +605,8 @@ class Mesh:
         ele_dict = pd.Series(index=df['idx_abaqus'].values,
                              data=np.arange(df['idx_abaqus'].values.shape[0]))
 
+        # This is a little dirty but works: Add the surfaces to the
+        # element dataframe self.el_df
         for row in surface_list:
             if row[0] == 'ELEMENT':
                 ele_idx = ele_dict[int(row[2])]
@@ -606,7 +614,8 @@ class Mesh:
                 face_dict = abaq_faces[element[0]]
                 node_indices = face_dict[row[3].strip()]
                 nodes = element[self.node_idx:][node_indices]
-                elements_list.append([face_dict['name'], row[1], None] + nodes.tolist())
+                elements_list.append([face_dict['name'], row[1], None]
+                                     + nodes.tolist())
             if row[0] == 'NODE':
                 nodes = nodes_dict[int(row[2])]
                 elements_list.append(['point', row[1], None, nodes])
@@ -617,27 +626,6 @@ class Mesh:
                            1 : 'phys_group',
                            2 : 'idx_abaqus',
                           })
-
-##        for row in surface_list:
-#        self.surface_list = surface_list
-#        # surface handling
-#        self.surface_df = s_df = pd.DataFrame(surface_list)
-#        s_df.rename(copy=False, inplace=True,
-#                    columns={0 : 'type',
-#                             1 : 'name',
-#                             2 : 'val',
-#                             3 : 'property'})
-#
-#        node_s_df = s_df[s_df['type'] == 'NODE'].copy()
-#        nodal_values = nodes_dict[pd.to_numeric(node_s_df['val'])].values
-#        node_s_df['node'] = pd.Series(nodal_values, index=node_s_df.index,
-#                                      dtype=int)
-#
-#        self.node_s_df = node_s_df
-#        self.nodes_dict = nodes_dict
-
-#        ele_s_df = s_df[s_df['type'] == 'ELEMENT']
-#        ele_s_df = el_df[idx_abaqus]ele_s_df['val']
 
         self._update_mesh_props()
         # printing some information regarding the physical groups
@@ -655,6 +643,9 @@ class Mesh:
         ----------
         filename : string
             filename of the .msh-file
+        scale_factor : float, optional
+            scale factor for the mesh to adjust the units. The default value is
+            1, i.e. no scaling is done.
 
         Returns
         -------
@@ -671,8 +662,6 @@ class Mesh:
         Dataframe object.
 
         '''
-        tag_start = 'BEGIN BULK'
-        tag_end = 'ENDDATA'
         comment_tag = '$'
         long_format_tag = '*'
         print('*************************************************************')
@@ -1106,9 +1095,9 @@ class Mesh:
         # add the nodes of the chosen group
         nm_connectivity = [np.nan for i in range(len(elements_df))]
         for i, ele in enumerate(elements_df.values):
-            nm_connectivity[i] = np.array(ele[self.node_idx :
-                                       self.node_idx + amfe2no_of_nodes[ele[1]]],
-                                   dtype=int)
+            nm_connectivity[i] = np.array(ele[self.node_idx : self.node_idx
+                                          + amfe2no_of_nodes[ele[1]]],
+                                          dtype=int)
         self.neumann_connectivity.extend(nm_connectivity)
 
         # make a deep copy of the element class dict and apply the material
