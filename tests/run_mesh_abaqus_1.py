@@ -25,7 +25,12 @@ my_mesh.load_group_to_mesh('Blatt_05', my_material, 'phys_group')
 my_mesh.save_mesh_xdmf(output_file + '_all')
 
 #%%
+my_mesh.load_group_to_mesh('et_10000', my_material, 'phys_group')
 
-#my_system = amfe.MechanicalSystem(stress_recovery=True)
+my_mesh.load_group_to_mesh('et_10030', my_material, 'phys_group')
+my_mesh.load_group_to_mesh('et_10031', my_material, 'phys_group')
+my_mesh.load_group_to_mesh('et_10032', my_material, 'phys_group')
+my_mesh.load_group_to_mesh('et_10033', my_material, 'phys_group')
+my_mesh.load_group_to_mesh('et_10002', my_material, 'phys_group')
 
 
