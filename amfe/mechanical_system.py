@@ -190,6 +190,52 @@ class MechanicalSystem():
                                    ele_type=ele_type)
         self.no_of_dofs_per_node = no_of_dofs_per_node
         self.assembly_class.preallocate_csr()
+        return
+
+    def tie_mesh(self, master_key, slave_key, master_prop='phys_group',
+                 slave_prop='phys_group', tying_type='fixed'):
+        '''
+        Tie nonconforming meshes for a given master and slave side.
+
+        Parameters
+        ----------
+        master_key : int or string
+            mesh key of the master face mesh. The master face mesh has to be at
+            least the size of the slave mesh. It is better, when the master
+            mesh is larger than the slave mesh.
+        slave_key : int or string
+            mesh key of the slave face mesh or point cloud
+        master_prop : string, optional
+            mesh property for which master_key is specified.
+            Default value: 'phys_group'
+        slave_prop : string, optional
+            mesh property for which slave_key is specified.
+            Default value: 'phys_group'
+        tying_type : string {'fixed', 'slide'}
+            Mesh tying type. 'fixed' glues the meshes together while 'slide'
+            allows for a sliding motion between the meshes.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        The master mesh has to embrace the full slave mesh. If this is not the
+        case, the routine will fail, a slave point outside the master mesh
+        cannot be addressed to a specific element.
+
+        '''
+
+        vals = self.mesh_class.tie_mesh(master_key=master_key,
+                                        slave_key=slave_key,
+                                        master_prop=master_prop,
+                                        slave_prop=slave_prop,
+                                        tying_type=tying_type)
+
+        self.dirichlet_class.add_constraints(*vals)
+        self.dirichlet_class.update()
+        return
 
 
     def apply_dirichlet_boundaries(self, key, coord, mesh_prop='phys_group'):
@@ -214,6 +260,7 @@ class MechanicalSystem():
         '''
         self.mesh_class.set_dirichlet_bc(key, coord, mesh_prop)
         self.dirichlet_class.constrain_dofs(self.mesh_class.dofs_dirichlet)
+        return
 
     def apply_neumann_boundaries(self, key, val, direct, time_func=None,
                                  shadow_area=False, mesh_prop='phys_group'):
@@ -250,6 +297,7 @@ class MechanicalSystem():
                                        shadow_area=shadow_area,
                                        mesh_prop=mesh_prop)
         self.assembly_class.compute_element_indices()
+        return
 
     def apply_neumann_boundaries_old(self, neumann_boundary_list):
         '''Apply neumann-boundaries to the system.
@@ -311,7 +359,7 @@ class MechanicalSystem():
         self.neumann_class = \
             NeumannBoundary(self.mesh_class.no_of_dofs, neumann_boundary_list)
         self._f_ext_unconstr = self.neumann_class.f_ext()
-
+        return
 
     def export_paraview(self, filename, field_list=None):
         '''
