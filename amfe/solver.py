@@ -3,7 +3,7 @@ Module for solving static and dynamic problems.
 '''
 
 __all__ = [
-           'integrate_nonlinear_system_genAlpha',
+           'integrate_nonlinear_gen_alpha',
            'integrate_linear_system_genAlpha',
            'solve_linear_displacement',
            'solve_nonlinear_displacement',
@@ -173,24 +173,67 @@ class SpSolve():
 
         return
 
-def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
-                                        time_range, delta_t, rho_inf,
-                                        rtol=1.0E-9, atol=1.0E-6, verbose=True,
-                                        n_iter_max=100, conv_abort=True,
-                                        write_iter=True, track_niter=True):
-                                        # RT -- Ch.L. -- 6. Oktober 2016
+def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
+                                  rho_inf=0.9,
+                                  rtol=1.0E-9,
+                                  atol=1.0E-6,
+                                  verbose=False,
+                                  n_iter_max=30,
+                                  conv_abort=True,
+                                  write_iter=False,
+                                  track_niter=True):
     '''
     Time integration of the non-linear second-order system using the
     gerneralized-alpha scheme.
 
     Parameters
     ----------
-    ...
-    rho_inf : float, >= 0, <= 1
-        high-frequency spectral radius
-    ...
+        mechanical_system : instance of MechanicalSystem
+        Instance of MechanicalSystem, which should be integrated.
+    q0 : ndarray
+        Start displacement.
+    dq0 : ndarray
+        Start velocity.
+    time_range : ndarray
+        Array of discrete timesteps, at which the solution is saved.
+    dt : float
+        Time step size of the integrator.
+    rho_inf : float, optional
+        high-frequency spectral radius, has to be 0 <= rho_inf <= 1. For 1 no
+        damping is apparent, for 0 maximum damping is there. Default value: 0.9
+    rtol : float, optional
+        Relative tolerance with respect to the maximum external force for the
+        Newton-Raphson iteration. Default value: 1E-8.
+    atol : float, optional
+        Absolute tolerance for the Newton_Raphson iteration.
+        Default value: 1E-6.
+    verbose : bool, optional
+        Flag setting verbose output. Default: False.
+    n_iter_max : int, optional
+        Number of maximum iterations per Newton-Raphson-procedure. Default
+        value is 30.
+    conv_abort : bool, optional
+        Flag setting, if time integration is aborted in the case when no
+        convergence is gained in the Newton-Raphson-Loop. Default value is
+        True.
+    write_iter : bool, optional
+        Flag setting, if every step of the Newton-Raphson iteration is written
+        to the MechanicalSystem object. Useful only for debugging, when no
+        convergence is gained. Default value: False.
+    track_niter : bool, optional
+        Flag for the iteration-count. If True, the number of iterations in the
+        Newton-Raphson-Loop is counted and saved to iteration_info in the
+        mechanical system.
 
-    TODO
+    References
+    ----------
+    .. [1]  J. Chung and G. Hulbert. A time integration algorithm for
+            structural dynamics with improved numerical dissipation: the
+            generalized-α method.
+            Journal of applied mechanics, 60(2):371–375, 1993.
+    .. [2]  O. A. Bauchau: Flexible Multibody Dynamics. Springer, 2011.
+            pp. 664.
+
 
     '''
     t_clock_1 = time.time()
@@ -199,18 +242,18 @@ def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
 
     eps = 1E-13
 
-    alpha_m = (2*rho_inf - 1.0)/(rho_inf + 1.0)
-    alpha_f = rho_inf / (rho_inf + 1.0)
-    beta = 0.25*(1.0 - alpha_m + alpha_f)**2
+    alpha_m = (2*rho_inf - 1)/(rho_inf + 1)
+    alpha_f = rho_inf / (rho_inf + 1)
+    beta = 0.25*(1 - alpha_m + alpha_f)**2
     gamma = 0.5 - alpha_m + alpha_f
 
     # initialize variables
     t = 0
-    q = q_init.copy()
-    dq = dq_init.copy()
-    ddq = np.zeros_like(q_init)
-    f_ext = np.zeros_like(q_init)
-    dt = delta_t
+    q = q0.copy()
+    dq = dq0.copy()
+    ddq = np.zeros_like(q0)
+    f_ext = np.zeros_like(q0)
+    h = dt
     abs_f_ext = atol
     no_newton_convergence_flag = False
     time_index = 0
@@ -227,14 +270,14 @@ def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
 
         # half step size if Newton-Raphson iteration did not converge
         if no_newton_convergence_flag:
-            dt /= 2.0
+            h /= 2.0
             no_newton_convergence_flag = False
         else:
             # fit time stepsize
-            if t + delta_t + eps >= time_range[time_index]:
-                dt = time_range[time_index] - t
+            if t + dt + eps >= time_range[time_index]:
+                h = time_range[time_index] - t
             else:
-                dt = delta_t
+                h = dt
 
         # save old variables
         t_old = t
@@ -244,18 +287,17 @@ def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
         f_ext_old = f_ext.copy()
 
         # predict new variables using old variables
-        t += dt
-        q += dt*dq + dt**2*(0.5 - beta)*ddq
-        dq += dt*(1.0 - gamma)*ddq
+        t += h
+        q += h*dq + h**2*(0.5 - beta)*ddq
+        dq += h*(1.0 - gamma)*ddq
         ddq *= 0
 
-        Jac, res, f_ext = mechanical_system.Jac_and_res_genAlpha(q, dq, ddq,
-                                                                 q_old, dq_old,
-                                                                 ddq_old,
-                                                                 f_ext_old, dt,
-                                                                 t, alpha_m,
-                                                                 alpha_f, beta,
-                                                                 gamma)
+        Jac, res, f_ext = mechanical_system.gen_alpha(q, dq, ddq,
+                                                      q_old, dq_old,
+                                                      ddq_old, f_ext_old, h,
+                                                      t, alpha_m, alpha_f,
+                                                      beta, gamma)
+
         abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
         res_abs = norm_of_vector(res)
 
@@ -270,17 +312,15 @@ def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
 
             # update variables
             q += delta_q
-            dq += gamma/(beta*dt)*delta_q
-            ddq += 1.0/(beta*dt**2)*delta_q
+            dq += gamma/(beta*h)*delta_q
+            ddq += 1.0/(beta*h**2)*delta_q
 
             # update system matrices and vectors
-            Jac, res, f_ext = mechanical_system.Jac_and_res_genAlpha(q, dq, ddq,
-                                                                     q_old, dq_old,
-                                                                     ddq_old,
-                                                                     f_ext_old, dt,
-                                                                     t, alpha_m,
-                                                                     alpha_f, beta,
-                                                                     gamma)
+            Jac, res, f_ext = mechanical_system.gen_alpha(q, dq, ddq,
+                                                          q_old, dq_old,
+                                                          ddq_old, f_ext_old,
+                                                          h, t, alpha_m,
+                                                          alpha_f, beta, gamma)
 
             res_abs = norm_of_vector(res)
             # abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
@@ -291,9 +331,9 @@ def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
                     cond_nr = 0.0
                 else:
                     cond_nr = np.linalg.cond(Jac)
-                print('Iteration = ', n_iter,
-                      ', residual = {0:6.3E}, cond. num. of Jac. = {1:6.3E}'.format(
-                      res_abs, cond_nr))
+                print(('Iteration = {0:2d}, residual = {1:6.3E}'
+                      + ', cond# of Jac: {2:6.3E}').format(n_iter, res_abs,
+                                                        cond_nr))
 
             # write state
             if write_iter:
@@ -305,8 +345,8 @@ def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
                 if conv_abort:
                     print(abort_statement)
                     t_clock_2 = time.time()
-                    print('Time for time marching integration = {0:6.3f} seconds.'.format(
-                        t_clock_2 - t_clock_1))
+                    print('Time for time marching integration: '
+                          + '{0:6.3f}s.'.format(t_clock_2 - t_clock_1))
                     return
                 t = t_old
                 q = q_old.copy()
@@ -317,9 +357,8 @@ def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
 
             # end of Newton-Raphson iteration loop
 
-        print('========== Time = ', t, ', time step = ', dt,
-              ', number of iterations = ', n_iter,
-              ', residual = {0:6.3E}'.format(res_abs), ' ==========\n')
+        print(('Time: {0:2.4f}, dt: {1:1.4f}, # iterations: {2:2d}, '
+              + 'res: {3:6.2E}').format(t, h, n_iter, res_abs))
         if track_niter:
             iteration_info.append((t, n_iter, res_abs))
 
@@ -331,9 +370,8 @@ def integrate_nonlinear_system_genAlpha(mechanical_system, q_init, dq_init,
     # measure integration end time
     t_clock_2 = time.time()
     print('Time for time marching integration {0:4.2f} seconds'.format(
-        t_clock_2 - t_clock_1))
+          t_clock_2 - t_clock_1))
     return
-
 
 
 def integrate_linear_system_genAlpha(mechanical_system, q_init, dq_init,
