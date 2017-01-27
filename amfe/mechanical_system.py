@@ -193,7 +193,7 @@ class MechanicalSystem():
         return
 
     def tie_mesh(self, master_key, slave_key, master_prop='phys_group',
-                 slave_prop='phys_group', tying_type='fixed'):
+                 slave_prop='phys_group', tying_type='fixed', verbose=False):
         '''
         Tie nonconforming meshes for a given master and slave side.
 
@@ -231,7 +231,8 @@ class MechanicalSystem():
                                         slave_key=slave_key,
                                         master_prop=master_prop,
                                         slave_prop=slave_prop,
-                                        tying_type=tying_type)
+                                        tying_type=tying_type,
+                                        verbose=verbose)
 
         self.dirichlet_class.add_constraints(*vals)
         self.dirichlet_class.update()

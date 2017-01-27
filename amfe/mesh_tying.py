@@ -154,10 +154,12 @@ def proj_point_to_element(X, p, ele_type, niter_max=20, eps=1E-10,
 
 
 def master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
-                            tying_type = 'fixed'):
+                            tying_type = 'fixed', robustness=4, verbose=True):
     '''
     Add a master-slave relationship to the given mesh.
 
+    robustness : int
+        factor indicating, how many elements are considered for contact search.
     '''
     no_of_nodes, ndim = nodes.shape
     ele_center_points = np.zeros((len(master_nodes), ndim))
@@ -184,7 +186,7 @@ def master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
     for i, ranking_table in enumerate(element_ranking):
         slave_node_idx = slave_nodes[i]
         # Go through the suggestions of the heuristics and compute weights
-        for ele_index in ranking_table:
+        for ele_index in ranking_table[:robustness]:
             master_nodes_idx = master_ele_nodes[ele_index]
             X = nodes[master_nodes_idx]
             slave_node = nodes[slave_node_idx]
@@ -193,10 +195,10 @@ def master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
                                                               ele_type=ele_type)
             if valid:
                 break
-            else:
+            if verbose:
                 print('A non valid master element was chosen.')
         # Now build the B-matrix or something like that...
-        if tying_type == 'fixed':
+        if tying_type == 'fixed' and valid:
 
             for dim in range(ndim):
                 master_nodes_dofs = master_nodes_idx * ndim + dim
@@ -214,7 +216,7 @@ def master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
 
                 slave_dofs.append(slave_node_dof)
 
-        elif tying_type == 'slide':
+        elif tying_type == 'slide' and valid:
             normal = local_basis[:,0]
             slave_node_dofs = np.arange(ndim) + slave_node_idx * ndim
             # B[slave_node_dofs, slave_node_dofs] -= 1
@@ -240,6 +242,9 @@ def master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
                 row.extend(np.ones_like(master_nodes_dofs) * slave_node_dof)
                 col.extend(master_nodes_dofs)
                 val.extend(N * normal[dim])
-        else:
+        elif not valid and verbose:
+            print('The slave node is not associated to a master element.')
+        elif verbose:
             print("I don't know the mesh tying type", tying_type)
+
     return slave_dofs, row, col, val

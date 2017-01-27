@@ -985,7 +985,8 @@ class Mesh:
 
 
     def tie_mesh(self, master_key, slave_key, master_prop='phys_group',
-                 slave_prop='phys_group', tying_type='fixed'):
+                 slave_prop='phys_group', tying_type='fixed', robustness=4,
+                 verbose=False):
         '''
         Tie nonconforming meshes for a given master and slave side.
 
@@ -1007,6 +1008,9 @@ class Mesh:
         tying_type : string {'fixed', 'slide'}
             Mesh tying type. 'fixed' glues the meshes together while 'slide'
             allows for a sliding motion between the meshes.
+        robustness : int, optional
+            Integer value indicating, how many master elements should be
+            considered for one slave node.
 
         Returns
         -------
@@ -1036,9 +1040,9 @@ class Mesh:
         master_obj =  master_elements.el_type.values
         slave_nodes = np.unique(slave_elements.iloc[:,self.node_idx:].values)
         slave_nodes = np.array(slave_nodes[np.isfinite(slave_nodes)], dtype=int)
-
         slave_dofs, row, col, val = master_slave_constraint(master_nodes,
-            master_obj, slave_nodes, nodes=self.nodes, tying_type=tying_type)
+            master_obj, slave_nodes, nodes=self.nodes, tying_type=tying_type,
+            robustness=robustness, verbose=verbose)
 
         print('*'*80)
         print(('Tied mesh part {0} as master mesh to part {1} as slave mesh. \n'
