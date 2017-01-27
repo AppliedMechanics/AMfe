@@ -12,15 +12,14 @@ import amfe
 
 
 gmsh_input_file = amfe.amfe_dir('meshes/gmsh/c_bow_coarse.msh')
-paraview_output_file = amfe.amfe_dir('results/c_bow_coarse' + \
-                        time.strftime("_%Y%m%d_%H%M%S") + '/bogen_grob')
+paraview_output_file = amfe.amfe_dir('results/c_bow_coarse/bogen_grob')
 
 
 my_material = amfe.KirchhoffMaterial()
 my_system = amfe.MechanicalSystem()
 
 my_system.load_mesh_from_gmsh(gmsh_input_file, 15, my_material)
-# Test the paraview basic output 
+# Test the paraview basic output
 # my_system.export_paraview(paraview_output_file)
 
 my_system.apply_dirichlet_boundaries(13, 'xy')

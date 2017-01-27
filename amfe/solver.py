@@ -313,7 +313,7 @@ def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
             # update variables
             q += delta_q
             dq += gamma/(beta*h)*delta_q
-            ddq += 1.0/(beta*h**2)*delta_q
+            ddq += 1/(beta*h**2)*delta_q
 
             # update system matrices and vectors
             Jac, res, f_ext = mechanical_system.gen_alpha(q, dq, ddq,
@@ -374,8 +374,8 @@ def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
     return
 
 
-def integrate_linear_system_genAlpha(mechanical_system, q_init, dq_init,
-                                     time_range, delta_t, rho_inf):
+def integrate_linear_gen_alpha(mechanical_system, q0, dq0,
+                               time_range, delta_t, rho_inf):
     '''
     Time integration of the linearized second-order system using the
     gerneralized-alpha scheme.
@@ -409,8 +409,8 @@ def integrate_linear_system_genAlpha(mechanical_system, q_init, dq_init,
 
     # initialize variables, matrices and vectors
     t = 0
-    q = q_init.copy()
-    dq = dq_init.copy()
+    q = q0.copy()
+    dq = dq0.copy()
     # evaluate initial acceleration
     K = mechanical_system.K()
     M = mechanical_system.M()
@@ -451,21 +451,22 @@ def integrate_linear_system_genAlpha(mechanical_system, q_init, dq_init,
         # solve system
         f_ext = mechanical_system.f_ext(q, dq, t)
         f_ext_f = (1.0 - alpha_f)*f_ext + alpha_f*f_ext_old
-        ddq = S_inv.solve(
-            f_ext_f - alpha_m * M @ ddq_old - (1.0 - alpha_f) * K @ q - alpha_f * K @ q_old)
+        ddq = S_inv.solve(  f_ext_f
+                          - alpha_m * M @ ddq_old
+                          - (1.0 - alpha_f) * K @ q
+                            - alpha_f * K @ q_old)
 
         # update variables
         q += dt**2*beta*ddq
         dq += dt*gamma*ddq
-
-        print('========== Time = ', t, ', time step = ', dt, ' ==========\n')
+        print('Time: {0:2.4f}, dt: {1:1.4f}'.format(t, dt))
 
         # end of time step loop
 
     # measure integration end time
     t_clock_2 = time.time()
     print('Time for time marching integration {0:4.2f} seconds'.format(
-        t_clock_2 - t_clock_1))
+       t_clock_2 - t_clock_1))
     return
 
 
