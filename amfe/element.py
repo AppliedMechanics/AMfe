@@ -1531,6 +1531,29 @@ class Hexa20(Element):
         return self.M
 
 
+class Prism6(Element):
+    '''
+    Three dimensional Prism element.
+    '''
+    name = 'Prism6'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.K = np.zeros((18,18))
+        self.f = np.zeros(18)
+        self.M = np.zeros((18,18))
+        self.S = np.zeros((6,6))
+        self.E = np.zeros((6,6))
+        return
+
+    def _compute_tensors(self, X, u, t):
+        print('Warning! the Prism6 element has no stiffness!')
+        return
+
+    def _m_int(self, X, u, t):
+        print('Warning! the Prism6 element has no mass!')
+        return
+
 class Bar2Dlumped(Element):
     '''
     Bar-Element with 2 nodes and lumped stiffness matrix

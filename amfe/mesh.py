@@ -20,9 +20,24 @@ import pandas as pd
 import h5py
 import numpy as np
 
-from .element import Tet4, Tet10, Tri3, Tri6, Quad4, Quad8, Bar2Dlumped
-from .element import LineLinearBoundary, LineQuadraticBoundary, \
-    Tri3Boundary, Tri6Boundary, Hexa8, Hexa20, Quad4Boundary, Quad8Boundary
+from .element import Tet4, \
+    Tet10, \
+    Tri3, \
+    Tri6, \
+    Quad4, \
+    Quad8, \
+    Bar2Dlumped, \
+    LineLinearBoundary, \
+    LineQuadraticBoundary, \
+    Tri3Boundary, \
+    Tri6Boundary, \
+    Hexa8, \
+    Hexa20, \
+    Quad4Boundary, \
+    Quad8Boundary, \
+    Prism6
+
+
 
 from .mesh_tying import master_slave_constraint
 
@@ -48,6 +63,8 @@ element_mapping_list = [
      'Bilinear rectangle / 4 node first order rectangle'],
     ['Quad8',         'Quadrilateral_8',  16, 23,  8,
      'Biquadratic rectangle / 8 node second order rectangle'],
+    ['Prism6',         'Wedge', 6, 23,  6,
+     'Trilinear 6 node prism'],
     ['straight_line', 'Edge',   1,  3,  2,
      'Straight line composed of 2 nodes'],
     ['quadratic_line', 'Edge_3',  8, 21,  3,
@@ -371,6 +388,7 @@ class Mesh:
                                    'Tet10' : Tet10(**kwargs),
                                    'Hexa8' : Hexa8(**kwargs),
                                    'Hexa20': Hexa20(**kwargs),
+                                   'Prism6' : Prism6(**kwargs),
                                    'Tri3'  : Tri3(**kwargs),
                                    'Tri6'  : Tri6(**kwargs),
                                    'Quad4' : Quad4(**kwargs),
@@ -390,7 +408,7 @@ class Mesh:
 
         # actual set of implemented elements
         self.element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
-        self.element_3d_set = {'Tet4', 'Tet10', 'Hexa8', 'Hexa20', }
+        self.element_3d_set = {'Tet4', 'Tet10', 'Hexa8', 'Hexa20', 'Prism6'}
 
         self.boundary_2d_set = {'straight_line', 'quadratic_line'}
         self.boundary_3d_set = {'straight_line', 'quadratic_line',
