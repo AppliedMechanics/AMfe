@@ -96,6 +96,7 @@ nas2amfe = {'CTETRA' : 'Tet10',
 # Same for Abaqus
 abaq2amfe = {'C3D10M' : 'Tet10',
              'C3D8' : 'Hexa8',
+             'C3D20' : 'Hexa20',
              'C3D4' : 'Tet4',
              'C3D6' : 'Prism6', # 6 node prism
              'C3D8I' : 'Hexa8', # acutally the better version
@@ -112,6 +113,13 @@ abaq_faces = {
               'S5' : ('Quad4', np.array([2, 6, 7, 3])),
               'S6' : ('Quad4', np.array([3, 7, 4, 0])),
              },
+
+    'Hexa20' : {'S1': ('Quad8', np.array([ 0,  1,  2,  3,  8,  9, 10, 11])),
+                'S2': ('Quad8', np.array([ 4,  7,  6,  5, 15, 14, 13, 12])),
+                'S3': ('Quad8', np.array([ 0,  4,  5,  1, 16, 12, 17,  8])),
+                'S4': ('Quad8', np.array([ 1,  5,  6,  2, 17, 13, 18,  9])),
+                'S5': ('Quad8', np.array([ 2,  6,  7,  3, 18, 14, 19, 10])),
+                'S6': ('Quad8', np.array([ 3,  7,  4,  0, 19, 15, 16, 11]))},
 
     'Tet4': {'S1' : ('Tri3', np.array([0, 1, 2])),
              'S2' : ('Tri3', np.array([0, 3, 1])),
