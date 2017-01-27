@@ -1552,7 +1552,7 @@ class Prism6(Element):
 
     def _m_int(self, X, u, t):
         print('Warning! the Prism6 element has no mass!')
-        return
+        return self.M
 
 class Bar2Dlumped(Element):
     '''
