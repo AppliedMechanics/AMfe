@@ -1254,7 +1254,9 @@ class Mesh:
 
         nodes_vec = np.concatenate(self.connectivity)
         elements_on_node = np.bincount(np.array(nodes_vec, dtype=int))
-        mask = elements_on_node != 0 # all nodes which show up at least once
+        mask = np.zeros(self.nodes.shape[0], dtype=bool)
+        # all nodes which show up at least once
+        mask[:len(elements_on_node)] = elements_on_node != 0
         idx_transform = np.zeros(len(self.nodes), dtype=int)
         idx_transform[mask] = np.arange(len(idx_transform[mask]))
         self.nodes = self.nodes[mask]
