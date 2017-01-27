@@ -581,7 +581,7 @@ class Mesh:
                 print('A surface tag has been found:')
                 print(s)
                 current_type = [a[5:] for a in s if a.startswith('TYPE=')][0]
-                current_name = [a[6:] for a in s if a.startswith('NAME=')][0]
+                current_name = [a[5:] for a in s if a.startswith('NAME=')][0]
                 continue
 
             elif s[0].startswith('*'):
