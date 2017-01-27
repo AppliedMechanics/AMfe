@@ -78,6 +78,7 @@ nas2amfe = {'CTETRA' : 'Tet10',
 
 # Same for Abaqus
 abaq2amfe = {'C3D10M' : 'Tet10',
+             'C3D8' : 'Hexa8',
              'C3D4' : 'Tet4',
              'C3D6' : 'Prism6', # 6 node prism
              'C3D8I' : 'Hexa8', # acutally the better version
@@ -87,26 +88,32 @@ abaq2amfe = {'C3D10M' : 'Tet10',
 
 # Abaqus faces for identifying surfaces
 abaq_faces = {
-    'Hexa8': {'S1' : np.array([0, 1, 2, 3]),
-              'S2' : np.array([4, 7, 6, 5]),
-              'S3' : np.array([0, 4, 5, 1]),
-              'S4' : np.array([1, 5, 6, 2]),
-              'S5' : np.array([2, 6, 7, 3]),
-              'S6' : np.array([3, 7, 4, 0]),
-              'name' : 'Quad4',},
+    'Hexa8': {'S1' : ('Quad4', np.array([0, 1, 2, 3])),
+              'S2' : ('Quad4', np.array([4, 7, 6, 5])),
+              'S3' : ('Quad4', np.array([0, 4, 5, 1])),
+              'S4' : ('Quad4', np.array([1, 5, 6, 2])),
+              'S5' : ('Quad4', np.array([2, 6, 7, 3])),
+              'S6' : ('Quad4', np.array([3, 7, 4, 0])),
+             },
 
-    'Tet4': {'S1' : np.array([0, 1, 2]),
-             'S2' : np.array([0, 3, 1]),
-             'S3' : np.array([1, 3, 2]),
-             'S4' : np.array([2, 3, 0]),
-             'name' : 'Tri3',},
+    'Tet4': {'S1' : ('Tri3', np.array([0, 1, 2])),
+             'S2' : ('Tri3', np.array([0, 3, 1])),
+             'S3' : ('Tri3', np.array([1, 3, 2])),
+             'S4' : ('Tri3', np.array([2, 3, 0])),
+            },
 
-    'Tet10': {'S1' : np.array([0, 1, 2, 4, 5, 6]),
-              'S2' : np.array([0, 3, 1, 7, 8, 4]),
-              'S3' : np.array([1, 3, 2, 8, 9, 5]),
-              'S4' : np.array([2, 3, 0, 9, 7, 6]),
-              'name' : 'Tri6',},
+    'Tet10': {'S1' : ('Tri6', np.array([0, 1, 2, 4, 5, 6])),
+              'S2' : ('Tri6', np.array([0, 3, 1, 7, 8, 4])),
+              'S3' : ('Tri6', np.array([1, 3, 2, 8, 9, 5])),
+              'S4' : ('Tri6', np.array([2, 3, 0, 9, 7, 6])),
+             },
 
+    'Prism6' : {'S1': ('Tri3', np.array([0, 1, 2])),
+                'S2': ('Tri3', np.array([3, 5, 4])),
+                'S3': ('Quad4', np.array([0, 3, 4, 1])),
+                'S4': ('Quad4', np.array([1, 4, 5, 2])),
+                'S5': ('Quad4', np.array([2, 5, 3, 0])),
+                },
 }
 
 def check_dir(*filenames):
@@ -612,9 +619,9 @@ class Mesh:
                 ele_idx = ele_dict[int(row[2])]
                 element = df.iloc[ele_idx, :].values
                 face_dict = abaq_faces[element[0]]
-                node_indices = face_dict[row[3].strip()]
+                ele_name, node_indices = face_dict[row[3].strip()]
                 nodes = element[self.node_idx:][node_indices]
-                elements_list.append([face_dict['name'], row[1], None]
+                elements_list.append([ele_name, row[1], None]
                                      + nodes.tolist())
             if row[0] == 'NODE':
                 nodes = nodes_dict[int(row[2])]
