@@ -4,7 +4,7 @@ Module for solving static and dynamic problems.
 
 __all__ = [
            'integrate_nonlinear_gen_alpha',
-           'integrate_linear_system_genAlpha',
+           'integrate_linear_gen_alpha',
            'solve_linear_displacement',
            'solve_nonlinear_displacement',
            'give_mass_and_stiffness',
@@ -270,7 +270,7 @@ def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
 
         # half step size if Newton-Raphson iteration did not converge
         if no_newton_convergence_flag:
-            h /= 2.0
+            h /= 2
             no_newton_convergence_flag = False
         else:
             # fit time stepsize
@@ -288,8 +288,8 @@ def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
 
         # predict new variables using old variables
         t += h
-        q += h*dq + h**2*(0.5 - beta)*ddq
-        dq += h*(1.0 - gamma)*ddq
+        q += h*dq + h**2 * (1/2-beta)*ddq
+        dq += h * (1-gamma) * ddq
         ddq *= 0
 
         Jac, res, f_ext = mechanical_system.gen_alpha(q, dq, ddq,
@@ -374,11 +374,31 @@ def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
     return
 
 
-def integrate_linear_gen_alpha(mechanical_system, q0, dq0,
-                               time_range, delta_t, rho_inf):
+def integrate_linear_gen_alpha(mechanical_system, q0, dq0, time_range, delta_t,
+                               rho_inf=0.9):
     '''
     Time integration of the linearized second-order system using the
     gerneralized-alpha scheme.
+
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Mechanical System which is linearized about the zero displacement.
+    q0 : ndarray
+        initial displacement
+    dq0 : ndarray
+        initial velocity
+    time_range : ndarray
+        array containing the time steps to be exported
+    dt : float
+        time step size.
+    rho_inf : float, optional
+        high-frequency spectral radius, has to be 0 <= rho_inf <= 1. For 1 no
+        damping is apparent, for 0 maximum damping is there. Default value: 0.9
+
+    Returns
+    -------
+    None
 
     Parameters
     ----------
@@ -398,9 +418,9 @@ def integrate_linear_gen_alpha(mechanical_system, q0, dq0,
     time_steps = time_range - np.roll(time_range, 1)
     remainder = (time_steps + eps) % delta_t
     if np.any(remainder > eps*10.0):
-        raise ValueError('The time step size and the time range vector do not',
-                         ' fit. Make the time increments in the time_range ',
-                         'vector integer multiples of delta_t.')
+        raise ValueError('The time step size and the time range vector do not'
+                         + ' fit. The time increments in the time_range '
+                         + 'must be integer multiples of delta_t.')
 
     alpha_m = (2*rho_inf - 1.0)/(rho_inf + 1.0)
     alpha_f = rho_inf / (rho_inf + 1.0)
@@ -414,11 +434,12 @@ def integrate_linear_gen_alpha(mechanical_system, q0, dq0,
     # evaluate initial acceleration
     K = mechanical_system.K()
     M = mechanical_system.M()
+    D = mechanical_system.D()
     f_ext = mechanical_system.f_ext(q, dq, t)
     ddq = solve_sparse(M, f_ext - K @ q)
     time_index = 0
     dt = delta_t
-    S = (1.0 - alpha_m)*M + dt**2*beta*(1.0 - alpha_f)*K
+    S = (1-alpha_m)*M + dt*gamma*(1-alpha_f)*D + dt**2*beta*(1-alpha_f)*K
     S_inv = SpSolve(S, matrix_type='symm')
 
     # time step loop
@@ -439,22 +460,23 @@ def integrate_linear_gen_alpha(mechanical_system, q0, dq0,
 
         # save old variables
         q_old = q.copy()
-        #dq_old = dq.copy()
+        dq_old = dq.copy()
         ddq_old = ddq.copy()
         f_ext_old = f_ext.copy()
 
         # predict new variables using old variables
         t += dt
-        q += dt*dq + dt**2*(0.5 - beta)*ddq
-        dq += dt*(1.0 - gamma)*ddq
+        q += dt*dq + dt**2*(1/2-beta)*ddq
+        dq += dt*(1-gamma)*ddq
 
         # solve system
         f_ext = mechanical_system.f_ext(q, dq, t)
-        f_ext_f = (1.0 - alpha_f)*f_ext + alpha_f*f_ext_old
-        ddq = S_inv.solve(  f_ext_f
+
+        ddq = S_inv.solve(+ (1-alpha_f)*f_ext + alpha_f*f_ext_old
                           - alpha_m * M @ ddq_old
-                          - (1.0 - alpha_f) * K @ q
-                            - alpha_f * K @ q_old)
+                          - K @ ((1-alpha_f)*q + alpha_f*q_old)
+                          - D @ ((1-alpha_f)*dq + alpha_f*dq_old)
+                         )
 
         # update variables
         q += dt**2*beta*ddq
@@ -465,7 +487,7 @@ def integrate_linear_gen_alpha(mechanical_system, q0, dq0,
 
     # measure integration end time
     t_clock_2 = time.time()
-    print('Time for time marching integration {0:4.2f} seconds'.format(
+    print('Time for linear time marching integration {0:4.2f} seconds'.format(
        t_clock_2 - t_clock_1))
     return
 
@@ -683,13 +705,13 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
 
     Returns
     -------
-    q : ndarray
-        Displacement of the linear system
+    None
 
     Notes
     -----
     Due to round-off-errors, the internal time step width is h and is very
     close to dt, but adjusted to fit the steps exactly.
+
     '''
     t_clock_1 = time.time()
     print('Starting linear time integration')

@@ -628,10 +628,10 @@ class MechanicalSystem():
 
         K_f, f_f = self.K_and_f(q_f, t)
         f_ext = self.f_ext(q, dq, t)
-        f_ext_f = (1 - alpha_f)*f_ext + alpha_f*f_ext_old
+        f_ext_f = (1-alpha_f)*f_ext + alpha_f*f_ext_old
 
         if self.D_constr is None:
-            Jac = (1 - alpha_f)*K_f + (1 - alpha_m)/(beta*dt**2)*self.M_constr
+            Jac = (1-alpha_f) * K_f + (1-alpha_m)/(beta*dt**2) * self.M_constr
             res = f_f - f_ext_f + self.M_constr @ ddq_m
         else: # damping
             Jac =   (1-alpha_f) * K_f \
