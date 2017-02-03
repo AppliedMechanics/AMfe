@@ -449,6 +449,13 @@ class Test_fortran_vs_python(ElementTest):
         self.initialize_element(Hexa20, X_hexa20)
         self.check_python_vs_fortran()
 
+    def test_mass_hexa20(self):
+        self.initialize_element(Hexa20, X_hexa20)
+        self.my_element._m_int_python(self.X, self.u, t=0)
+        M_py = self.my_element.M.copy()
+        M_f = self.my_element._m_int(self.X, self.u, t=0)
+        assert_almost_equal(M_f, M_py)
+
 
 if __name__ == '__main__':
     unittest.main()

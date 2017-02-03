@@ -904,3 +904,152 @@ subroutine hexa20_k_f_s_e(X, u, K, f_int, S_exp, E_exp, S_Sv_and_C)
 
         end do
 end subroutine
+
+subroutine hexa20_m(X, rho, M)
+    implicit none
+
+    real(8), intent(in) :: X(60), rho
+    real(8), intent(out) :: M(60, 60)
+    real(8) :: gauss_points(27,3), weights(27), xi, eta, zeta
+    real(8) :: dX_dxi(3,3), dN_dxi(20,3), X_mat(20,3), det
+    real(8) :: N(20,1), M_small(20,20)
+    real(8) :: a, w, wa, w0
+    integer :: i
+
+    external :: scatter_matrix
+
+    X_mat = transpose(reshape(X, (/ 3, 20/)))
+
+    a = sqrt(3.0D0/5.0D0)
+    wa = 5/9.0D0
+    w0 = 8/9.0D0
+    gauss_points(1,:) = (/ -a, -a, -a /)
+    gauss_points(2,:) = (/ 0.0D0 , -a, -a /)
+    gauss_points(3,:) = (/  a, -a, -a /)
+    gauss_points(4,:) = (/ -a, 0.0D0 , -a /)
+    gauss_points(5,:) = (/ 0.0D0 , 0.0D0 , -a /)
+    gauss_points(6,:) = (/  a, 0.0D0 , -a /)
+    gauss_points(7,:) = (/ -a,  a, -a /)
+    gauss_points(8,:) = (/ 0.0D0 ,  a, -a /)
+    gauss_points(9,:) = (/  a,  a, -a /)
+    gauss_points(10,:) = (/ -a, -a, 0.0D0  /)
+    gauss_points(11,:) = (/ 0.0D0 , -a, 0.0D0  /)
+    gauss_points(12,:) = (/  a, -a, 0.0D0  /)
+    gauss_points(13,:) = (/ -a, 0.0D0 , 0.0D0  /)
+    gauss_points(14,:) = (/ 0.0D0 , 0.0D0 , 0.0D0  /)
+    gauss_points(15,:) = (/  a, 0.0D0 , 0.0D0  /)
+    gauss_points(16,:) = (/ -a,  a, 0.0D0  /)
+    gauss_points(17,:) = (/ 0.0D0 ,  a, 0.0D0  /)
+    gauss_points(18,:) = (/  a,  a, 0.0D0  /)
+    gauss_points(19,:) = (/ -a, -a,  a /)
+    gauss_points(20,:) = (/ 0.0D0 , -a,  a /)
+    gauss_points(21,:) = (/  a, -a,  a /)
+    gauss_points(22,:) = (/ -a, 0.0D0 ,  a /)
+    gauss_points(23,:) = (/ 0.0D0 , 0.0D0 ,  a /)
+    gauss_points(24,:) = (/  a, 0.0D0 ,  a /)
+    gauss_points(25,:) = (/ -a,  a,  a /)
+    gauss_points(26,:) = (/ 0.0D0 ,  a,  a /)
+    gauss_points(27,:) = (/  a,  a,  a /)
+    weights = (/ wa*wa*wa, w0*wa*wa, wa*wa*wa, wa*w0*wa, w0*w0*wa, &
+                 wa*w0*wa, wa*wa*wa, w0*wa*wa, wa*wa*wa, wa*wa*w0, &
+                 w0*wa*w0, wa*wa*w0, wa*w0*w0, w0*w0*w0, wa*w0*w0, &
+                 wa*wa*w0, w0*wa*w0, wa*wa*w0, wa*wa*wa, w0*wa*wa, &
+                 wa*wa*wa, wa*w0*wa, w0*w0*wa, wa*w0*wa, wa*wa*wa, &
+                 w0*wa*wa, wa*wa*wa /)
+
+    M = 0
+    M_small = 0
+
+    ! Loop over the gauss points
+    do i = 1, 27
+        xi = gauss_points(i, 1)
+        eta = gauss_points(i, 2)
+        zeta = gauss_points(i, 3)
+        w  = weights(i)
+
+        dN_dxi(1,:) = (/ (eta-1)*(zeta-1)*(eta+2*xi+zeta+1), &
+                         (xi-1)*(zeta-1)*(2*eta+xi+zeta+1), &
+                         (eta-1)*(xi-1)*(eta+xi+2*zeta+1) /)
+        dN_dxi(2,:) = (/ (eta-1)*(zeta-1)*(-eta+2*xi-zeta-1), &
+                         (xi+1)*(zeta-1)*(-2*eta+xi-zeta-1), &
+                         (eta-1)*(xi+1)*(-eta+xi-2*zeta-1) /)
+        dN_dxi(3,:) = (/ (eta+1)*(zeta-1)*(-eta-2*xi+zeta+1), &
+                         (xi+1)*(zeta-1)*(-2*eta-xi+zeta+1), &
+                         (eta+1)*(xi+1)*(-eta-xi+2*zeta+1) /)
+        dN_dxi(4,:) = (/ (eta+1)*(zeta-1)*(eta-2*xi-zeta-1), &
+                         (xi-1)*(zeta-1)*(2*eta-xi-zeta-1), &
+                         (eta+1)*(xi-1)*(eta-xi-2*zeta-1) /)
+        dN_dxi(5,:) = (/(eta-1)*(zeta+1)*(-eta-2*xi+zeta-1), &
+                        (xi-1)*(zeta+1)*(-2*eta-xi+zeta-1), &
+                        (eta-1)*(xi-1)*(-eta-xi+2*zeta-1) /)
+        dN_dxi(6,:) = (/ (eta-1)*(zeta+1)*(eta-2*xi-zeta+1), &
+                         (xi+1)*(zeta+1)*(2*eta-xi-zeta+1), &
+                         (eta-1)*(xi+1)*(eta-xi-2*zeta+1) /)
+        dN_dxi(7,:) = (/ (eta+1)*(zeta+1)*(eta+2*xi+zeta-1), &
+                         (xi+1)*(zeta+1)*(2*eta+xi+zeta-1), &
+                         (eta+1)*(xi+1)*(eta+xi+2*zeta-1) /)
+        dN_dxi(8,:) = (/(eta+1)*(zeta+1)*(-eta+2*xi-zeta+1), &
+                        (xi-1)*(zeta+1)*(-2*eta+xi-zeta+1), &
+                        (eta+1)*(xi-1)*(-eta+xi-2*zeta+1) /)
+        dN_dxi(9,:) = (/-4*xi*(eta-1)*(zeta-1), -2*(xi**2-1)*(zeta-1), &
+                        -2*(eta-1)*(xi**2-1) /)
+        dN_dxi(10,:) = (/ 2*(eta**2-1)*(zeta-1), 4*eta*(xi+1)*(zeta-1), &
+                          2*(eta**2-1)*(xi+1) /)
+        dN_dxi(11,:) = (/ 4*xi*(eta+1)*(zeta-1),  2*(xi**2-1)*(zeta-1), &
+                          2*(eta+1)*(xi**2-1) /)
+        dN_dxi(12,:) = (/-2*(eta**2-1)*(zeta-1),-4*eta*(xi-1)*(zeta-1), &
+                         -2*(eta**2-1)*(xi-1) /)
+        dN_dxi(13,:) = (/ 4*xi*(eta-1)*(zeta+1),  2*(xi**2-1)*(zeta+1), &
+                          2*(eta-1)*(xi**2-1) /)
+        dN_dxi(14,:) = (/-2*(eta**2-1)*(zeta+1),-4*eta*(xi+1)*(zeta+1), &
+                         -2*(eta**2-1)*(xi+1) /)
+        dN_dxi(15,:) = (/-4*xi*(eta+1)*(zeta+1), -2*(xi**2-1)*(zeta+1), &
+                         -2*(eta+1)*(xi**2-1) /)
+        dN_dxi(16,:) = (/ 2*(eta**2-1)*(zeta+1), 4*eta*(xi-1)*(zeta+1), &
+                          2*(eta**2-1)*(xi-1) /)
+        dN_dxi(17,:) = (/-2*(eta-1)*(zeta**2-1), -2*(xi-1)*(zeta**2-1), &
+                         -4*zeta*(eta-1)*(xi-1) /)
+        dN_dxi(18,:) = (/ 2*(eta-1)*(zeta**2-1),  2*(xi+1)*(zeta**2-1), &
+                          4*zeta*(eta-1)*(xi+1) /)
+        dN_dxi(19,:) = (/-2*(eta+1)*(zeta**2-1), -2*(xi+1)*(zeta**2-1), &
+                         -4*zeta*(eta+1)*(xi+1) /)
+        dN_dxi(20,:) = (/ 2*(eta+1)*(zeta**2-1),  2*(xi-1)*(zeta**2-1), &
+                          4*zeta*(eta+1)*(xi-1) /)
+
+        dN_dxi = dN_dxi / 8.0D0
+
+        dX_dxi = matmul(transpose(X_mat), dN_dxi)
+        det =   dX_dxi(1,1)*dX_dxi(2,2)*dX_dxi(3,3) &
+              - dX_dxi(1,1)*dX_dxi(2,3)*dX_dxi(3,2) &
+              - dX_dxi(1,2)*dX_dxi(2,1)*dX_dxi(3,3) &
+              + dX_dxi(1,2)*dX_dxi(2,3)*dX_dxi(3,1) &
+              + dX_dxi(1,3)*dX_dxi(2,1)*dX_dxi(3,2) &
+              - dX_dxi(1,3)*dX_dxi(2,2)*dX_dxi(3,1)
+
+       N(:,1) = (/ (eta-1)*(xi-1)*(zeta-1)*(eta+xi+zeta+2), &
+                  -(eta-1)*(xi+1)*(zeta-1)*(eta-xi+zeta+2), &
+                  -(eta+1)*(xi+1)*(zeta-1)*(eta+xi-zeta-2), &
+                 -(eta+1)*(xi-1)*(zeta-1)*(-eta+xi+zeta+2), &
+                  -(eta-1)*(xi-1)*(zeta+1)*(eta+xi-zeta+2), &
+                   (eta-1)*(xi+1)*(zeta+1)*(eta-xi-zeta+2), &
+                   (eta+1)*(xi+1)*(zeta+1)*(eta+xi+zeta-2), &
+                  -(eta+1)*(xi-1)*(zeta+1)*(eta-xi+zeta-2), &
+                             -2*(eta-1)*(xi**2-1)*(zeta-1), &
+                              2*(eta**2-1)*(xi+1)*(zeta-1), &
+                              2*(eta+1)*(xi**2-1)*(zeta-1), &
+                             -2*(eta**2-1)*(xi-1)*(zeta-1), &
+                              2*(eta-1)*(xi**2-1)*(zeta+1), &
+                             -2*(eta**2-1)*(xi+1)*(zeta+1), &
+                             -2*(eta+1)*(xi**2-1)*(zeta+1), &
+                              2*(eta**2-1)*(xi-1)*(zeta+1), &
+                             -2*(eta-1)*(xi-1)*(zeta**2-1), &
+                              2*(eta-1)*(xi+1)*(zeta**2-1), &
+                             -2*(eta+1)*(xi+1)*(zeta**2-1), &
+                              2*(eta+1)*(xi-1)*(zeta**2-1) /)
+
+        N = N / 8.0D0
+        M_small = M_small + matmul(N, transpose(N)) * det * rho * w
+    end do
+
+    call scatter_matrix(M_small, M, 3, 20, 20)
+end subroutine

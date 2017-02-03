@@ -170,6 +170,12 @@ python module f90_element ! in
             external s_sv_and_c
         end subroutine hexa20_k_f_s_e
 
+        subroutine hexa20_m(x,rho,m) ! in :f90_element:element.f90
+            real(kind=8) dimension(60),intent(in) :: x
+            real(kind=8) intent(in) :: rho
+            real(kind=8) dimension(60,60), intent(out) :: m
+        end subroutine hexa20_m
+
     end interface
 end python module f90_element
 
