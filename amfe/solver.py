@@ -484,7 +484,7 @@ def integrate_linear_gen_alpha(mechanical_system, q0, dq0, time_range, delta_t,
         print('Time: {0:2.4f}, dt: {1:1.4f}'.format(t, dt))
 
         # end of time step loop
-
+    S_inv.clear()
     # measure integration end time
     t_clock_2 = time.time()
     print('Time for linear time marching integration {0:4.2f} seconds'.format(
@@ -774,6 +774,7 @@ def integrate_linear_system(mechanical_system, q0, dq0, time_range, dt, alpha=0)
         # correction of state
         q, dq = (q + beta*h**2*ddq), dq + gamma*h*ddq
 
+    S_inv.clear()
     t_clock_2 = time.time()
     print('Time for linar time marching integration: {0:4.2f} seconds'.format(
         t_clock_2 - t_clock_1))
