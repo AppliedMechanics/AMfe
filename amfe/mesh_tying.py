@@ -145,6 +145,10 @@ def proj_point_to_element(X, p, ele_type, niter_max=20, eps=1E-10,
 
     # check for the maximum distance
     if np.sqrt(res.T @ res) > max_dist:
+#        if valid_element:
+#            print('A valid element was rejected. The distance was',
+#                  np.sqrt(res.T @ res), 'and too large compared to ',
+#                  max_dist)
         valid_element = False
     normal = np.cross(jac[:,0], jac[:,1])
     normal /= np.sqrt(normal @ normal)

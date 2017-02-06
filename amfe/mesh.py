@@ -1047,8 +1047,8 @@ class Mesh:
 
         print('*'*80)
         print(('Tied mesh part {0} as master mesh to part {1} as slave mesh. \n'
-              + 'In total {2} slave nodes were tied using the tying type {3}.'
-              + '').format(master_key, slave_key, len(slave_nodes), tying_type)
+              + 'In total {2} slave dofs were tied using the tying type {3}.'
+              + '').format(master_key, slave_key, len(slave_dofs), tying_type)
              )
         print('*'*80)
         return (slave_dofs, row, col, val)
