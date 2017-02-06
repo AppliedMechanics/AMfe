@@ -808,7 +808,7 @@ def solve_linear_displacement(mechanical_system, t=1, verbose=True):
     mechanical_system.write_timestep(0, f_ext*0) # write zeros
     if verbose:
         print('Start solving linear static problem')
-    u = linalg.spsolve(K, f_ext - f_int)
+    u = solve_sparse(K, f_ext - f_int)
     mechanical_system.write_timestep(t, u)
     if verbose:
         print('Static problem solved')
