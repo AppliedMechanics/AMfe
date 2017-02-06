@@ -234,14 +234,22 @@ def master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
             # delete the first element of the slave_node_dofs
             slave_dofs.append(slave_node_dofs[0])
 
-            # Handling for the normal force constraing
+            # Handling for the normal force constraint
+            N_e = np.zeros((ndim, len(N)*ndim))
+            for i in range(ndim):
+                N_e[i,i::ndim] = N
+
+            proj = np.outer(normal, normal) @ N_e
+            master_nodes_dofs = np.ravel(
+                    [idx*ndim + np.arange(ndim) for idx in master_nodes_idx])
+
+            # B[slave_node_dofs, master_node_dofs] += proj
             for dim in range(ndim):
-                master_nodes_dofs = master_nodes_idx * ndim + dim
                 slave_node_dof = slave_node_idx * ndim + dim
                 # B[slave_node_dof, master_nodes_dofs] += N * normal[dim]
                 row.extend(np.ones_like(master_nodes_dofs) * slave_node_dof)
                 col.extend(master_nodes_dofs)
-                val.extend(N * normal[dim])
+                val.extend(proj[dim,:])
         elif not valid and verbose:
             print('The slave node is not associated to a master element.')
         elif verbose:
