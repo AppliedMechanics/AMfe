@@ -83,7 +83,7 @@ shape_function_dict = {'Quad4' : quad4_shape_functions,
 
 
 def proj_point_to_element(X, p, ele_type, niter_max=20, eps=1E-10,
-                          verbose=False):
+                          verbose=False, max_dist=1E-4):
     '''
     Compute local element coordinates and weights for for point p projected on
     an element.
@@ -105,6 +105,8 @@ def proj_point_to_element(X, p, ele_type, niter_max=20, eps=1E-10,
         tolerance for the Newton-Raphson iteration. Default value: 1E-10
     verbose : bool, optional
         flag for verbose behavior. Default value: False
+    max_dist : float, optional
+        maximum normal distance of point to element. If distance of point to element is smaller than max_dist, the element will be regarded as a non-valid element.
 
     Returns
     -------
@@ -141,6 +143,9 @@ def proj_point_to_element(X, p, ele_type, niter_max=20, eps=1E-10,
               'in {0:1d} iterations.'.format(n_iter),
               'The element is a valid element: ', valid_element)
 
+    # check for the maximum distance
+    if np.sqrt(res.T @ res) > max_dist:
+        valid_element = False
     normal = np.cross(jac[:,0], jac[:,1])
     normal /= np.sqrt(normal @ normal)
     e1 = jac[:,0]
@@ -154,12 +159,19 @@ def proj_point_to_element(X, p, ele_type, niter_max=20, eps=1E-10,
 
 
 def master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
-                            tying_type = 'fixed', robustness=4, verbose=True):
+                            tying_type = 'fixed', robustness=4, verbose=True,
+                            conform_slave_mesh=True, fix_mesh_dist=1E-3):
     '''
     Add a master-slave relationship to the given mesh.
 
+    Parameters
+    ----------
     robustness : int
         factor indicating, how many elements are considered for contact search.
+
+    Returns
+    -------
+
     '''
     no_of_nodes, ndim = nodes.shape
     ele_center_points = np.zeros((len(master_nodes), ndim))
@@ -191,12 +203,18 @@ def master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
             X = nodes[master_nodes_idx]
             slave_node = nodes[slave_node_idx]
             ele_type = master_obj[ele_index]
-            valid, N, local_basis, xi = proj_point_to_element(X, slave_node,
-                                                              ele_type=ele_type)
+            valid, N, local_basis, xi = \
+                proj_point_to_element(X, slave_node, ele_type=ele_type,
+                                      max_dist=fix_mesh_dist)
             if valid:
                 break
             if verbose:
                 print('A non valid master element was chosen.')
+
+        # fix the position of the slave dof
+        if valid and conform_slave_mesh:
+            nodes[slave_node_idx] = X.T @ N
+
         # Now build the B-matrix or something like that...
         if tying_type == 'fixed' and valid:
 
@@ -250,6 +268,7 @@ def master_slave_constraint(master_nodes, master_obj, slave_nodes, nodes,
                 row.extend(np.ones_like(master_nodes_dofs) * slave_node_dof)
                 col.extend(master_nodes_dofs)
                 val.extend(proj[dim,:])
+
         elif not valid and verbose:
             print('The slave node is not associated to a master element.')
         elif verbose:

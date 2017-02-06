@@ -986,7 +986,7 @@ class Mesh:
 
     def tie_mesh(self, master_key, slave_key, master_prop='phys_group',
                  slave_prop='phys_group', tying_type='fixed', robustness=4,
-                 verbose=False):
+                 verbose=False, conform_slave_mesh=True, fix_mesh_dist=1E-3):
         '''
         Tie nonconforming meshes for a given master and slave side.
 
@@ -1042,7 +1042,8 @@ class Mesh:
         slave_nodes = np.array(slave_nodes[np.isfinite(slave_nodes)], dtype=int)
         slave_dofs, row, col, val = master_slave_constraint(master_nodes,
             master_obj, slave_nodes, nodes=self.nodes, tying_type=tying_type,
-            robustness=robustness, verbose=verbose)
+            robustness=robustness, verbose=verbose,
+            conform_slave_mesh=conform_slave_mesh, fix_mesh_dist=fix_mesh_dist)
 
         print('*'*80)
         print(('Tied mesh part {0} as master mesh to part {1} as slave mesh. \n'
@@ -1135,13 +1136,15 @@ class Mesh:
 
         # make a pandas dataframe just for the desired elements
         elements_df = df[df[mesh_prop] == key]
-
+        ele_type = elements_df['el_type'].values
         # add the nodes of the chosen group
         nm_connectivity = [np.nan for i in range(len(elements_df))]
+
         for i, ele in enumerate(elements_df.values):
             nm_connectivity[i] = np.array(ele[self.node_idx : self.node_idx
-                                          + amfe2no_of_nodes[ele[1]]],
+                                          + amfe2no_of_nodes[ele_type[i]]],
                                           dtype=int)
+
         self.neumann_connectivity.extend(nm_connectivity)
 
         # make a deep copy of the element class dict and apply the material
