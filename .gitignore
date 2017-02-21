@@ -19,6 +19,7 @@
 docs/
 results/
 build/
+dist/
 amfe.egg-info/
 experiments/paper_icoev
 .idea/
