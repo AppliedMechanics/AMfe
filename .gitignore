@@ -28,3 +28,4 @@ experiments/paper_icoev
 # specific files to ignore
 amfe/fortran/f90_elementmodule.c
 .project
+MANIFEST

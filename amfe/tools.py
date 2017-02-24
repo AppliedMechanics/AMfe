@@ -422,3 +422,42 @@ def test(*args, **kwargs):
     '''
     import nose
     nose.main(*args, **kwargs)
+
+
+def query_yes_no(question, default="yes"):
+    '''
+    Ask a yes/no question and return their answer.
+
+    Parameters
+    ----------
+    question: String
+        The question to be asked
+
+    default: String "yes" or "no"
+        The default answer
+
+    Returns:
+    --------
+    answer: Boolean
+        Answer: True if yes, False if no.
+    '''
+
+    valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
+    if default is None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        sys.stdout.write(question + prompt)
+        choice = input().lower()
+        if default is not None and choice == '':
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no'.\n")
