@@ -101,7 +101,7 @@ if __name__ == '__main__':
     if 'no_fortran' in sys.argv:
         sys.argv.remove('no_fortran')
         print(no_fortran_str)
-        from distutils.core import setup
+        from setuptools import setup
         setup(**config)
     else:
         try:

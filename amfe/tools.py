@@ -16,6 +16,7 @@ __all__ = ['node2total',
            'reorder_sparse_matrix',
            'eggtimer',
            'rayleigh_coefficients',
+           'query_yes_no',
            ]
 
 import os
