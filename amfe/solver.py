@@ -503,7 +503,7 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
                                write_iter=False,
                                track_niter=False):
     '''
-    Time integrate the nonlinear system using a generalized-alpha HHT-scheme.
+    Time integrate the nonlinear system using a Newmark-scheme.
 
     Parameters
     ----------
