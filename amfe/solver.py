@@ -374,7 +374,7 @@ def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
     return
 
 
-def integrate_linear_gen_alpha(mechanical_system, q0, dq0, time_range, delta_t,
+def integrate_linear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
                                rho_inf=0.9):
     '''
     Time integration of the linearized second-order system using the
@@ -416,11 +416,11 @@ def integrate_linear_gen_alpha(mechanical_system, q0, dq0, time_range, delta_t,
 
     # check fitting of time step size and spacing in time range
     time_steps = time_range - np.roll(time_range, 1)
-    remainder = (time_steps + eps) % delta_t
+    remainder = (time_steps + eps) % dt
     if np.any(remainder > eps*10.0):
         raise ValueError('The time step size and the time range vector do not'
                          + ' fit. The time increments in the time_range '
-                         + 'must be integer multiples of delta_t.')
+                         + 'must be integer multiples of dt.')
 
     alpha_m = (2*rho_inf - 1.0)/(rho_inf + 1.0)
     alpha_f = rho_inf / (rho_inf + 1.0)
@@ -438,8 +438,8 @@ def integrate_linear_gen_alpha(mechanical_system, q0, dq0, time_range, delta_t,
     f_ext = mechanical_system.f_ext(q, dq, t)
     ddq = solve_sparse(M, f_ext - K @ q)
     time_index = 0
-    dt = delta_t
-    S = (1-alpha_m)*M + dt*gamma*(1-alpha_f)*D + dt**2*beta*(1-alpha_f)*K
+    h = dt
+    S = (1-alpha_m)*M + h*gamma*(1-alpha_f)*D + h**2*beta*(1-alpha_f)*K
     S_inv = SpSolve(S, matrix_type='symm')
 
     # time step loop
@@ -453,10 +453,10 @@ def integrate_linear_gen_alpha(mechanical_system, q0, dq0, time_range, delta_t,
                 break
 
         # fit time stepsize
-        if t + eps + delta_t >= time_range[time_index]:
-            dt = time_range[time_index] - t
+        if t + eps + dt >= time_range[time_index]:
+            h = time_range[time_index] - t
         else:
-            dt = delta_t
+            h = dt
 
         # save old variables
         q_old = q.copy()
@@ -465,9 +465,9 @@ def integrate_linear_gen_alpha(mechanical_system, q0, dq0, time_range, delta_t,
         f_ext_old = f_ext.copy()
 
         # predict new variables using old variables
-        t += dt
-        q += dt*dq + dt**2*(1/2-beta)*ddq
-        dq += dt*(1-gamma)*ddq
+        t += h
+        q += h*dq + h**2*(1/2-beta)*ddq
+        dq += h*(1-gamma)*ddq
 
         # solve system
         f_ext = mechanical_system.f_ext(q, dq, t)
@@ -479,9 +479,9 @@ def integrate_linear_gen_alpha(mechanical_system, q0, dq0, time_range, delta_t,
                          )
 
         # update variables
-        q += dt**2*beta*ddq
-        dq += dt*gamma*ddq
-        print('Time: {0:2.4f}, dt: {1:1.4f}'.format(t, dt))
+        q += h**2*beta*ddq
+        dq += h*gamma*ddq
+        print('Time: {0:2.4f}, dt: {1:1.4f}'.format(t, h))
 
         # end of time step loop
     S_inv.clear()
