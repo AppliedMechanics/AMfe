@@ -5,6 +5,9 @@ Run: 'python setup.py sdist' for Source Distribution
 Run: 'python setup.py install' for Installation
 Run: 'python setup.py bdist_wheel' for Building Binary-Wheel
     (recommended for windows-distributions)
+    Attention: For every python-minor-version an extra wheel has to be built
+    Use environments and install different python versions by using
+    conda create -n python34 python=3.4 anaconda
 Run: 'pip install wheelfile.whl' for Installing Binary-Wheel
 Run: 'python setup.py bdist --format=<format> für Binary-Distribution:
     <format>=gztar|ztar|tar|zip|rpm|pgktool|sdux|wininst|msi
@@ -17,6 +20,7 @@ Run: 'python setup.py bdist --help-formats' to find out which distribution
 # DISTUTILS_DEBUG='DEBUG'
 
 import sys
+
 
 def query_yes_no(question, default="yes"):
     '''
