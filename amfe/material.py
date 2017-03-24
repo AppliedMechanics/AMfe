@@ -136,6 +136,14 @@ class KirchhoffMaterial(HyperelasticMaterial):
         self.plane_stress = plane_stress
         self.thickness = thickness
         self._update_variables()
+        
+    def __repr__(self):
+        '''
+        repr(obj) function for smart representing for debugging
+        '''
+        return 'amfe.material.KirchhoffMaterial(%f,%f,%f,%s,%f)'\
+            % (self.E_modulus, self.nu, self.rho,
+               str(self.plane_stress), self.thickness)
 
     def _update_variables(self):
         '''
@@ -221,8 +229,15 @@ class NeoHookean(HyperelasticMaterial):
         self.plane_stress = plane_stress
         if plane_stress:
             raise ValueError('Attention! plane stress is not supported yet \
-within the MooneyRivlin material!')
+within the NeoHookean material!')
 
+    def __repr__(self):
+        '''
+        repr(obj) function for smart representing for debugging
+        '''
+        return 'amfe.material.NeoHookeanMaterial(%f,%f,%f,%s,%f)'\
+            % (self.mu, self.kappa, self.rho,
+               str(self.plane_stress), self.thickness)
 
     def S_Sv_and_C(self, E):
         ''' '''
@@ -388,6 +403,13 @@ class MooneyRivlin(HyperelasticMaterial):
             raise ValueError('Attention! plane stress is not supported yet \
             within the MooneyRivlin material!')
 
+    def __repr__(self):
+        '''
+        repr(obj) function for smart representing for debugging
+        '''
+        return 'amfe.material.MooneyRivlin(%f,%f,%f,%f,%s,%f)'\
+            % (self.A10, self.A01, self.kappa, self.rho,
+               str(self.plane_stress), self.thickness)
 
     def S_Sv_and_C(self, E):
         '''
