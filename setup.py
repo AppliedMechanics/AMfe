@@ -77,7 +77,7 @@ config = {
     'maintainer_email': 'christian.meyer@tum.de',
     'install_requires': ['numpy>=1.10', 'scipy>=0.17', 'pandas',
                          'h5py', 'matplotlib'],
-    'tests_require': ['nose', 'sphinx==1.3.1'],
+    'tests_require': ['nose', 'sphinx==1.3.1', 'sphinx_rtd_theme'],
     'packages': ['amfe'],
     'scripts': [],
     'entry_points': {},
