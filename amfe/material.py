@@ -2,11 +2,14 @@
 Module for material handling withing the FE context.
 
 Up to now, only Hyperelastic materials are implemented. Hyperelastic Materials
-are Materials, where the constitutive law can be expressed such, that the second
-Piola-Kirchhoff stress tensor S is a function of the Green-Lagrange strain
-tensor E. This computation is carried out in this module.
+are Materials, where the constitutive law can be expressed such, that the
+second Piola-Kirchhoff stress tensor S is a function of the Green-Lagrange
+strain tensor E. This computation is carried out in this module.
 
 """
+
+import numpy as np
+
 
 __all__ = ['HyperelasticMaterial',
            'KirchhoffMaterial',
@@ -15,7 +18,6 @@ __all__ = ['HyperelasticMaterial',
            'MooneyRivlin',
            ]
 
-import numpy as np
 
 use_fortran = False
 
@@ -27,7 +29,7 @@ except Exception:
 Python was not able to load the fast fortran material routines.
 ''')
 
-#use_fortran = False
+# use_fortran = False
 
 
 class HyperelasticMaterial():
@@ -89,6 +91,7 @@ class HyperelasticMaterial():
         '''
         pass
 
+
 class KirchhoffMaterial(HyperelasticMaterial):
     r'''
     Kirchhoff-Material that mimicks the linear elastic behavior.
@@ -96,7 +99,8 @@ class KirchhoffMaterial(HyperelasticMaterial):
     The strain energy potential is
 
     .. math::
-        W(E) = \frac{\lambda}{2}trace(\mathbf{E})^2 + \mu*trace(\mathbf{E}^2)
+        W(E) = \frac{\lambda}{2} \mathrm{tr}\,(\mathbf{E})^2 + \
+        \mu \cdot \mathrm{tr}\,(\mathbf{E}^2)
 
     with:
         :math:`W` = strain energy potential
@@ -136,7 +140,7 @@ class KirchhoffMaterial(HyperelasticMaterial):
         self.plane_stress = plane_stress
         self.thickness = thickness
         self._update_variables()
-        
+
     def __repr__(self):
         '''
         repr(obj) function for smart representing for debugging
@@ -153,7 +157,7 @@ class KirchhoffMaterial(HyperelasticMaterial):
         nu = self.nu
         # The two lame constants:
         lam = nu*E / ((1 + nu) * (1 - 2*nu))
-        mu  = E / (2*(1 + nu))
+        mu = E / (2*(1 + nu))
         self.C_SE = np.array([[lam + 2*mu, lam, lam, 0, 0, 0],
                               [lam, lam + 2*mu, lam, 0, 0, 0],
                               [lam, lam, lam + 2*mu, 0, 0, 0],
@@ -169,7 +173,6 @@ class KirchhoffMaterial(HyperelasticMaterial):
             self.C_SE_2d = np.array([[lam + 2*mu, lam, 0],
                                      [lam, lam + 2*mu, 0],
                                      [0, 0, mu]])
-
 
     def S_Sv_and_C(self, E):
         '''
@@ -193,7 +196,8 @@ class KirchhoffMaterial(HyperelasticMaterial):
 # For simplicity: rename KirchhoffMaterial
 LinearMaterial = KirchhoffMaterial
 
-#%%
+
+# %%
 # @inherit_docs(HyperelasticMaterial)
 class NeoHookean(HyperelasticMaterial):
     r'''
