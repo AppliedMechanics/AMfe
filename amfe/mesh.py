@@ -874,6 +874,7 @@ class Mesh:
         elif len(df[df['no_of_tags'] != 4]) == 0:
             df.rename(copy=False, inplace=True,
                  columns={5 : 'no_of_mesh_partitions', 6 : 'mesh_partition'})
+            self.node_idx = node_idx = 7
         else:
             raise('''The type of mesh is not supported yet.
         Either you have a corrupted .msh-file or you have a too
