@@ -235,10 +235,19 @@ class Assembly():
         nm_connectivity = self.mesh.neumann_connectivity
         no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
 
+        # Explanation of following expression:
+        # for each element in connectivity
+        # and for each node-id of each element
+        # take [0,1] (2D-problem) or [0,1,2] (3D-problem)
+        # and add 2*node_id (2D-problem) or 3*node_id (3D-problem)
+        # and reshape the result...
+        # Result (self.element_indices:)
+        # the rows are the elements, the columns are the local element dofs
+        # the values are the global dofs
         self.element_indices = \
-        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i)
-                   for i in nodes], dtype=int).reshape(-1)
-         for nodes in connectivity]
+        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*node_id)
+                   for node_id in elements], dtype=int).reshape(-1)
+         for elements in connectivity]
 
         self.neumann_indices = \
         [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i)
