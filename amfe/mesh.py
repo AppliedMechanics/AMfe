@@ -141,6 +141,7 @@ abaq_faces = {
                 },
 }
 
+
 def check_dir(*filenames):
     '''
     Check if paths exists; if not, the given paths will be created.
@@ -161,6 +162,7 @@ def check_dir(*filenames):
             os.makedirs(os.path.dirname(filename))          # then create directory
             print("Created directory: " + os.path.dirname(filename))
 
+
 def prettify_xml(elem):
     '''
     Return a pretty string from an XML Element-Tree
@@ -179,6 +181,7 @@ def prettify_xml(elem):
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml()
 
+
 def shape2str(tupel):
     '''
     Convert a tupel to a string containing the numbers of the tupel for xml
@@ -195,6 +198,7 @@ def shape2str(tupel):
         string containing the numbers of the tupel
     '''
     return ' '.join([str(i) for i in tupel])
+
 
 def h5_set_attributes(h5_object, attribute_dict):
     '''
@@ -214,6 +218,7 @@ def h5_set_attributes(h5_object, attribute_dict):
     for key in attribute_dict:
         h5_object.attrs[key] = attribute_dict[key]
     return
+
 
 def create_xdmf_from_hdf5(filename):
     '''
@@ -316,6 +321,7 @@ def create_xdmf_from_hdf5(filename):
     with open(filename_no_ext + '.xdmf', 'w') as f:
         f.write(xdmf_str)
 
+
 class Mesh:
     '''
     Class for handling the mesh operations.
@@ -325,11 +331,21 @@ class Mesh:
     nodes : ndarray
         Array of x-y-z coordinates of the nodes. Dimension is
         (no_of_nodes, no_of_dofs_per_node).
+        If no_of_dofs_per_node: z-direction is dropped!
     connectivity : list
         List of nodes indices belonging to one element.
+    constraint_list: ndarray
+        Experimental: contains constraints imported from nastran-files via
+        import_bdf()
+    el_df : pandas.DataFrame
+        Pandas Dataframe containing Element-Definitions of the Original file
+        (e.g. *.msh or *.bdf-File)
     ele_obj : list
         List of element objects. The list contains actually only the pointers
-        pointing to the element object
+        pointing to the element object. For each combination of element-type
+        and material only one Element object is instanciated.
+        ele_obj contains for each element a pointer to one of these Element
+        objects.
     neumann_connectivity : list
         list of nodes indices belonging to one element for neumann BCs.
     neumann_obj : list
@@ -378,7 +394,7 @@ class Mesh:
         self.neumann_obj = []
         self.nodes_dirichlet = np.array([], dtype=int)
         self.dofs_dirichlet = np.array([], dtype=int)
-        self.constraint_list = [] # experimental; Introduced for nastran meshes
+        self.constraint_list = []  # experimental; Introduced for nastran meshes
         # the displacements; They are stored as a list of numpy-arrays with
         # shape (ndof, no_of_dofs_per_node):
         self.u = []
@@ -391,6 +407,7 @@ class Mesh:
         self.node_idx = 0
 
         # Element Class dictionary with all available elements
+        # This dictionary is only needed for load_group_to_mesh()-method
         kwargs = { }
         self.element_class_dict = {'Tet4'  : Tet4(**kwargs),
                                    'Tet10' : Tet10(**kwargs),
@@ -429,7 +446,6 @@ class Mesh:
         self.no_of_nodes = len(self.nodes)
         self.no_of_dofs = self.no_of_nodes*self.no_of_dofs_per_node
         self.no_of_elements = len(self.connectivity)
-
 
     def import_csv(self, filename_nodes, filename_elements,
                    explicit_node_numbering=False, ele_type=False):
@@ -493,14 +509,13 @@ class Mesh:
         if explicit_node_numbering:
             self.connectivity = self.connectivity[:,1:]
 
-
-        if ele_type: # If element type is spezified, use this spezified type
+        if ele_type:  # If element type is spezified, use this spezified type
             mesh_type = ele_type
         # If element type is not spzezified, try to determine element type
         # depending on the number of nodes per element (see default values for
         # different number of nodes per element in 'mesh_type_dict')
         else:
-            try: # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
+            try:  # Versuche Elementtyp an Hand von Anzahl der Knoten pro Element auszulesen
                 (no_of_ele, no_of_nodes_per_ele) = self.connectivity.shape
                 mesh_type = mesh_type_dict[no_of_nodes_per_ele] # Weise Elementtyp zu
             except:
@@ -544,7 +559,7 @@ class Mesh:
         nodes_list = []
         elements_list = []
         surface_list = []
-        buf = [] # buffer for handling line continuations
+        buf = []  # buffer for handling line continuations
 
         current_scope = None
         current_type = None
@@ -562,7 +577,7 @@ class Mesh:
             if '**' in s[0]:
                 continue
 
-            elif s[0] == '*NODE': # Nodes are coming
+            elif s[0] == '*NODE':  # Nodes are coming
                 current_scope = 'node'
                 print('A node tag has been found:')
                 print(s)
@@ -589,7 +604,7 @@ class Mesh:
                 continue
 
             elif current_scope == 'node':
-                if s[-1].strip() == '': # line has comma at its end
+                if s[-1].strip() == '':  # line has comma at its end
                     buf.extend(s[:-1])
                     continue
                 else:
@@ -598,7 +613,7 @@ class Mesh:
 
             elif current_scope == 'element':
                 s = line.split(',')
-                if s[-1].strip() == '': # line has comma at its end
+                if s[-1].strip() == '':  # line has comma at its end
                     buf.extend(s[:-1])
                     continue
                 else:
@@ -607,7 +622,7 @@ class Mesh:
 
             elif current_scope == 'surface':
                 s = line.split(',')
-                if s[-1].strip() == '': # line has comma at its end
+                if s[-1].strip() == '':  # line has comma at its end
                     buf.extend(s[:-1])
                     continue
                 else:
@@ -667,7 +682,6 @@ class Mesh:
         print('*************************************************************')
         return
 
-
     def import_bdf(self, filename, scale_factor=1.):
         '''
         Import a NASTRAN mesh.
@@ -675,7 +689,7 @@ class Mesh:
         Parameters
         ----------
         filename : string
-            filename of the .msh-file
+            filename of the .bdf-file
         scale_factor : float, optional
             scale factor for the mesh to adjust the units. The default value is
             1, i.e. no scaling is done.
@@ -716,17 +730,17 @@ class Mesh:
                 element_active = False
                 continue
 
-            if long_format_tag in line: # Long format
+            if long_format_tag in line:  # Long format
                 s = [line[:8], ]
                 s.extend([line[i*16:(i+1)*16] for i in range(len(line)//16)])
                 # Note: here some more logics is necessary to handle line
                 # continuation
-            elif ',' in line: # Free field format
+            elif ',' in line:  # Free field format
                 s = line.split(',')
-            else: # The regular short format
+            else:  # The regular short format
                 s = [line[i*8:(i+1)*8] for i in range(len(line)//8)]
 
-            if len(s) < 1: # Empty line
+            if len(s) < 1:  # Empty line
                 element_active = False
                 continue
 
@@ -741,7 +755,7 @@ class Mesh:
             elif 'RBE' in s[0]:
                 constraint_list.append(s)
                 element_active = 'Constraint'
-            elif s[0] != '        ': # There is an unknown element
+            elif s[0] != '        ':  # There is an unknown element
                 element_active = False
 
             # Catch the free lines where elements are continued
@@ -1057,7 +1071,10 @@ class Mesh:
 
     def mesh_information(self, mesh_prop='phys_group'):
         '''
-        Print some information about the current mesh
+        Print some information about the mesh that is being imported
+        Attention: This information is not about the mesh that is already
+        loaded for further calculation. Instead it is about the mesh that is
+        found in an import-file!
 
         Parameters
         ----------
