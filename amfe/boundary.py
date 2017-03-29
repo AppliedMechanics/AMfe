@@ -33,7 +33,7 @@ class DirichletBoundary():
         number of constrained dofs
 
     '''
-    def __init__(self, no_of_unconstrained_dofs):
+    def __init__(self, no_of_unconstrained_dofs=np.nan):
         '''
         Parameters
         ----------
@@ -53,7 +53,9 @@ class DirichletBoundary():
 
     def update(self):
         '''
-        update internal variables according to internally saved boundary list.
+        update internal variables according to internally saved boundary list:
+            - calls self.b_matrix()
+            - update self.no_of_constrained_dofs, self.no_of_unconstrained_dofs
 
         Parameters
         ----------
