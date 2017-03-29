@@ -141,7 +141,7 @@ def compute_B_matrix(B_tilde, F):
                      F21*b[i,1] + F22*b[i,0], F31*b[i,1] + F32*b[i,0]]]
     return B
 
-# Overloading the python fuctions with Fortran functions, if possible
+# Overloading the python functions with Fortran functions, if possible
 if use_fortran:
     compute_B_matrix = amfe.f90_element.compute_b_matrix
     scatter_matrix = amfe.f90_element.scatter_matrix
@@ -600,6 +600,20 @@ class Tri6(Element):
 class Quad4(Element):
     '''
     Quadrilateral 2D element with bilinear shape functions.
+
+    .. code::
+
+                ^ eta
+        4       |       3
+          o_____|_____o
+          |     |     |
+          |     |     |
+        --------+---------->
+          |     |     |   xi
+          |     |     |
+          o_____|_____o
+        1       |       2
+
     '''
     name = 'Quad4'
 
