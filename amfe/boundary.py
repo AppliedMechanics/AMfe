@@ -319,6 +319,7 @@ class DirichletBoundary():
     def unconstrain_vec(self, vec):
         '''
         Remove the constraints of a vector.
+        Returns B @ u
 
         Parameters
         ----------
@@ -328,12 +329,12 @@ class DirichletBoundary():
         Returns
         -------
         vec_unconstr : ndarray
-            Vector of hte finite element system where no constraints are imposed
+            Vector of the finite element system where no constraints are imposed
             on. All dofs correspond to the dofs of the mesh.
 
         Notes
         -----
-        The dimension of vec become larger, as the constrained dofs are added
+        The dimension of vec becomes larger, as the constrained dofs are added
         to the vector `vec`.
         '''
         if not sp.sparse.issparse(self.B):

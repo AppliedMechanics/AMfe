@@ -292,6 +292,7 @@ class Assembly():
         if u is None:
             u = np.zeros_like(self.nodes_voigt)
 
+        # Allocate K and f
         K_csr = self.C_csr.copy()
         f_glob = np.zeros(self.mesh.no_of_dofs)
 
