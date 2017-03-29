@@ -191,24 +191,34 @@ class Assembly():
         self.compute_element_indices()
         max_dofs_per_element = np.max([len(i) for i in self.element_indices])
 
-
-        # Auxiliary Help-Matrix H which is the blueprint of the stiffness
-        # matrix
+        # Auxiliary Help-Matrix H which is the blueprint of the local
+        # element stiffness matrix
         H = np.zeros((max_dofs_per_element, max_dofs_per_element))
 
         # preallocate the CSR-matrix
+        
+        # preallocate row_global with maximal possible size for prealloc. C_csr
         row_global = np.zeros(no_of_elements*max_dofs_per_element**2, dtype=int)
+        # preallocate col_global with maximal possible size for prealloc. C_csr
         col_global = row_global.copy()
+        # set 'dummy' values
         vals_global = np.zeros_like(col_global, dtype=bool)
 
+        # calculate row_global and col_global
         for i, indices_of_one_element in enumerate(self.element_indices):
             l = len(indices_of_one_element)
+            # insert global-dof-ids in l rows (l rows have equal entries)
             H[:l,:l] = indices_of_one_element
+            # calculate row_global and col_global such that every possible
+            # combination of indices_of_one_element can be returned by
+            # (row_global[k], col_global[k]) for all k
             row_global[i*max_dofs_per_element**2:(i+1)*max_dofs_per_element**2] = \
                 H.reshape(-1)
             col_global[i*max_dofs_per_element**2:(i+1)*max_dofs_per_element**2] = \
                 H.T.reshape(-1)
 
+        # fill C_csr matrix with dummy entries in those places where matrix
+        # will be filled in assembly
         self.C_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
                                           shape=(no_of_dofs, no_of_dofs), dtype=float)
         t2 = time.clock()
