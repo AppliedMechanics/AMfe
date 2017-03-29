@@ -1175,7 +1175,7 @@ class Mesh:
 
         object_series = elements_df['el_type'].map(ele_class_dict)
         self.neumann_obj.extend(object_series.values.tolist())
-        self._update_mesh_props()
+        # self._update_mesh_props() <- old implementation: not necessary!
 
         # print some output stuff
         print('\n', mesh_prop, key, 'with', len(nm_connectivity),
