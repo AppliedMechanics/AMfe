@@ -126,6 +126,8 @@ class Assembly():
         Ragged list containing the global indices for the local variables
         of an element. The entry [i,j] gives the index in the global vector
         of element i with dof j
+    mesh : amfe.Mesh
+        Mesh-Class the Assembly is associated with
     neumann_indices : list
         Ragged list equivalently to element_indices for the neumann
         boundary skin elements.
