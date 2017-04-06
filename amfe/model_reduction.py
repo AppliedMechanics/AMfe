@@ -585,7 +585,7 @@ def principal_angles(V1, V2, cosine=True, principal_vectors=False):
 
     if principal_vectors is True:
         F1 = Q1.dot(U)
-        F2 = Q2.dot(V)
+        F2 = Q2.dot(V.T)
         return sigma, F1, F2
     else:
         return sigma
