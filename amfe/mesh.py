@@ -442,6 +442,13 @@ class Mesh:
     def _update_mesh_props(self):
         '''
         Update the number properties of nodes and elements when the mesh has
+        been updated
+        
+        It updates the following properties of the mesh-class-object:
+            - no_of_nodes
+            - no_of_dofs
+            - no_of_elements
+            
         '''
         self.no_of_nodes = len(self.nodes)
         self.no_of_dofs = self.no_of_nodes*self.no_of_dofs_per_node
@@ -802,6 +809,16 @@ class Mesh:
     def import_msh(self, filename, scale_factor=1.):
         '''
         Import a gmsh-mesh.
+        
+        This method sets the following properties:
+            - el_df: Element Definitions as pandas Dataframe
+                    (Attention! This property is not the property that defines
+                    the elements for later calculation. This is located in
+                    the connectivity property)
+            - node_idx: First Column in el_df pandas dataframe where the first
+                    node-id of each element is stored
+            - no_of_dofs_per_node: important to recognize 2D vs. 3D problem
+            - nodes: Node Definitions (Locations)
 
         Parameters
         ----------
@@ -818,7 +835,7 @@ class Mesh:
         Notes
         -----
         The internal representation of the elements is done via a Pandas Dataframe
-        object. This gives the possibility to dynamically choose an part of the mesh
+        object. This gives the possibility to dynamically choose a part of the mesh
         for boundary conditons etc.
 
         '''
@@ -938,6 +955,12 @@ class Mesh:
     def load_group_to_mesh(self, key, material, mesh_prop='phys_group'):
         '''
         Add a physical group to the main mesh with given material.
+        
+        It generates the connectivity list (mesh-class-property connectivity)
+        which contains the element configuration as array
+        and provides a map with pointers to Element-Objects (Tet, Hex etc.)
+        which already contain information about material that is passed.
+        Each element gets a pointer to such an element object.
 
         Parameters
         ----------

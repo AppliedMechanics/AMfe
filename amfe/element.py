@@ -632,6 +632,7 @@ class Quad4(Element):
         # Gauss-Point-Handling:
         g1 = 1/np.sqrt(3)
 
+        # Tupel for enumerator (xi, eta, weight)
         self.gauss_points = ((-g1, -g1, 1.),
                              ( g1, -g1, 1.),
                              ( g1,  g1, 1.),
@@ -652,6 +653,8 @@ class Quad4(Element):
         u_e = u.reshape(-1, 2)
         t = self.material.thickness
 
+        # Empty former values because they are properties and a new calculation
+        # for another element or displacement than before is called
         self.K *= 0
         self.f *= 0
         self.S *= 0
