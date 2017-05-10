@@ -1,3 +1,8 @@
+! Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
+! Universitaet Muenchen.
+!
+! Distributed under BSD-3-Clause License. See LICENSE-File for more information
+!
 subroutine mooney_rivlin_S_Sv_and_C(E, S, Sv, C_SE, A10, A01, kappa)
       implicit none
       real(8), intent(in) :: E(3,3), A10, A01, kappa

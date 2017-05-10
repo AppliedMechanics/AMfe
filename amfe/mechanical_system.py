@@ -1,3 +1,8 @@
+# Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
+# Universitaet Muenchen.
+#
+# Distributed under BSD-3-Clause License. See LICENSE-File for more information
+#
 """
 Module handling the whole mechanical system, no matter if it's a finite element
 system, defined by certain parameters or a multibody system.

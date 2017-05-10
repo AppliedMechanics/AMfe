@@ -1,3 +1,8 @@
+! Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
+! Universitaet Muenchen.
+!
+! Distributed under BSD-3-Clause License. See LICENSE-File for more information
+!
 
 
 subroutine get_index_of_csr_data(i, j, indptr, indices, k, n, m)

@@ -1,3 +1,8 @@
+# Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
+# Universitaet Muenchen.
+#
+# Distributed under BSD-3-Clause License. See LICENSE-File for more information
+#
 """
 Mesh module of amfe. It handles the mesh from import, defining the dofs for the
 boundary conditions and the export.

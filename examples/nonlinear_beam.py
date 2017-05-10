@@ -1,3 +1,8 @@
+# Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
+# Universitaet Muenchen.
+#
+# Distributed under BSD-3-Clause License. See LICENSE-File for more information
+#
 """
 Example showing a cantilever beam which is loaded on the tip with a force
 showing nonlinear displacements.

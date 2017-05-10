@@ -1,5 +1,11 @@
 !    -*- f90 -*-
 ! Note: the context of this file is case sensitive.
+!
+! Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
+! Universitaet Muenchen.
+!
+! Distributed under BSD-3-Clause License. See LICENSE-File for more information
+!
 
 ! arrange the handling of the material callback
 
