@@ -473,8 +473,8 @@ class MechanicalSystem():
         if u is None:
             u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
 
-        K_unconstr, _ = \
-            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)
+        K_unconstr = \
+            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)[0]
 
         return self.constrain_matrix(K_unconstr)
 
@@ -501,8 +501,8 @@ class MechanicalSystem():
 
     def f_int(self, u, t=0):
         '''Return the elastic restoring force of the system '''
-        _, f_unconstr = \
-            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)
+        f_unconstr = \
+            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)[1]
         return self.constrain_vec(f_unconstr)
 
     def _f_ext_unconstr(self, u, t):
@@ -512,8 +512,8 @@ class MechanicalSystem():
         This function may be monkeypatched if necessary, for instance, when a
         global external force, e.g. gravity, should be applied.
         '''
-        __, f_unconstr = \
-            self.assembly_class.assemble_k_and_f_neumann(self.unconstrain_vec(u), t)
+        f_unconstr = \
+            self.assembly_class.assemble_k_and_f_neumann(self.unconstrain_vec(u), t)[1]
         return f_unconstr
 
     def f_ext(self, u, du, t):
