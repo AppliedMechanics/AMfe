@@ -1265,6 +1265,7 @@ class Mesh:
         if 'y' in coord:
             dofs_dirichlet.extend(unique_nodes * self.no_of_dofs_per_node + 1)
         if 'z' in coord and self.no_of_dofs_per_node > 2:
+            # TODO: Separate second if and throw error or warning
             dofs_dirichlet.extend(unique_nodes * self.no_of_dofs_per_node + 2)
 
         dofs_dirichlet = np.array(dofs_dirichlet, dtype=int)
