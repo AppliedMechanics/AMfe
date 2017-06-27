@@ -252,7 +252,7 @@ class Element():
 
     def f_int(self, X, u, t=0):
         '''
-        Tangential stiffness matrix of the Element.
+        Returns the internal element restoring force f_int
 
         Parameters
         ----------
@@ -275,7 +275,7 @@ class Element():
 
     def m_and_vec_int(self, X, u, t=0):
         '''
-        Tangential stiffness matrix of the Element and zero vector.
+        Returns mass matrix of the Element and zero vector of size X.
 
 
         Parameters
@@ -324,8 +324,8 @@ class Element():
 
     def k_f_S_E_int(self, X, u, t=0):
         '''
-        Returns the tangential stiffness matrix and the internal nodal force
-        of the Element.
+        Returns the tangential stiffness matrix, the internal nodal force,
+        the strain and the stress tensor (voigt-notation) of the Element.
 
         Parameters
         ----------
@@ -346,7 +346,7 @@ class Element():
         S : ndarray
             The stress tensor (ndarray of dimension (no_of_nodes, 6))
         E : ndarray
-            The stress tensor (ndarray of dimension (no_of_nodes, 6))
+            The strain tensor (ndarray of dimension (no_of_nodes, 6))
 
         Examples
         --------
