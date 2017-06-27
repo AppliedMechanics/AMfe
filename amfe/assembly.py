@@ -39,13 +39,13 @@ def get_index_of_csr_data(i,j, indptr, indices):
     Parameters
     ----------
     i : int
-        row index of the CSR-matrix
+        row index which is asked to get the CSR-index for
     j : int
-        column index of the CSR-Matrix
+        column index which is asked to get the CSR-index for
     indptr : ndarray
         index-ptr-Array of the CSR-Matrix.
     indices : ndarray
-        indices of the row entries to the given value matrix.
+        indices array of CSR-matrix (represents the nonzero column indices)
 
     Returns
     -------
@@ -60,9 +60,18 @@ def get_index_of_csr_data(i,j, indptr, indices):
     be provided.
     '''
 
+    # indices for row i are stored in indices[indptr[k]:indptr[k+1]]
+    # Thus the indptr marks the start and end of the part of the indices
+    # and val vector where all entries of a row are stored
+    # --
+    # Set k to the start of data of row k:
     k = indptr[i]
+    # Search for appearance of j in the nonzero column indices which are
+    # stored in indices[k] till indices[k+indptr[i+1]]
     while j != indices[k]:
+        # while column j not found search for j in next entry
         k += 1
+        # Check if next search would be in next (wrong) row
         if k > indptr[i+1]:
             print('ERROR! The index in the csr matrix is not preallocated!')
             k = 0
@@ -83,8 +92,8 @@ def fill_csr_matrix(indptr, indices, vals, K, k_indices):
     vals : ndarray
         vals-array of a preallocated CSR-Marix
     K : ndarray
-        'small' sqare array which values will be distributed into the CSR-Matrix
-        Shape is (n,n)
+        'small' square array whose values will be distributed into the
+        CSR-Matrix, Shape is (n,n)
     k_indices : ndarray
         mapping array of the global indices for the 'small' K array.
         The (i,j) entry of K has the global indices (k_indices[i], k_indices[j])
