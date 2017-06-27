@@ -656,7 +656,10 @@ class MechanicalSystem():
 
         The damping matrix D is defined as
 
-        D = alpha*M + beta*K
+        D = alpha*M + beta*K(0)
+
+        Thus, it is Rayleigh Damping applied to the linearized system
+        around zero deformation.
 
         Parameters
         ----------
