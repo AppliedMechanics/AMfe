@@ -433,7 +433,7 @@ class Assembly():
             node_indices = self.mesh.connectivity[i]
             X_local = self.nodes_voigt[indices]
             u_local = u[indices]
-            K, f, E, S = self.mesh.ele_obj[i].k_f_S_E_int(X_local, u_local, t)
+            K, f, S, E = self.mesh.ele_obj[i].k_f_S_E_int(X_local, u_local, t)
 
             # Assembly of force, stiffness, strain and stress
             f_glob[indices] += f
@@ -445,4 +445,4 @@ class Assembly():
         E_global = (E_global.T/self.elements_on_node).T
         S_global = (S_global.T/self.elements_on_node).T
 
-        return K_csr, f_glob, E_global, S_global
+        return K_csr, f_glob, S_global, E_global
