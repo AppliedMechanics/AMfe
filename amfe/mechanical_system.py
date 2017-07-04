@@ -28,7 +28,7 @@ from numpy.linalg import inv
 
 from .mesh import Mesh
 from .assembly import Assembly
-from .boundary import DirichletBoundary, NeumannBoundary
+from .boundary import DirichletBoundary
 
 
 
@@ -45,8 +45,6 @@ class MechanicalSystem():
         Class handling the assembly.
     dirichlet_class : instance of DirichletBoundary
         Class handling the Dirichlet boundary conditions.
-    neumann_class : instance of NeumannBoundary
-        This boundary type is deprecated.
     T_output : list of floats
         List of timesteps saved.
     u_output : list of ndarrays
@@ -92,7 +90,6 @@ class MechanicalSystem():
         self.mesh_class = Mesh()
         self.assembly_class = Assembly(self.mesh_class)
         self.dirichlet_class = DirichletBoundary(np.nan)
-        self.neumann_class = NeumannBoundary(self.mesh_class.no_of_dofs, [])
 
         # make syntax a little bit leaner
         self.unconstrain_vec = self.dirichlet_class.unconstrain_vec
@@ -307,67 +304,6 @@ class MechanicalSystem():
         self.assembly_class.compute_element_indices()
         return
 
-    def apply_neumann_boundaries_old(self, neumann_boundary_list):
-        '''Apply neumann-boundaries to the system.
-
-        Parameters
-        ----------
-        neumann_boundary_list : list
-            list containing the neumann boundary NB lists:
-
-            >>> NB = [dofs_list, type, properties, B_matrix=None]
-
-        Notes
-        -----
-        the neumann_boundary_list is a list containing the neumann_boundaries:
-
-        >>> [dofs_list, load_type, properties, B_matrix=None]
-
-        dofs_list : list
-            list containig the dofs which are loaded
-        load_type : str out of {'stepload', 'dirac', 'harmonic', 'ramp', 'static'}
-            string specifying the load type
-        properties : tupel
-            tupel with the properties for the given load_type (see table below)
-        B_matrix : ndarray / None
-            Vector giving the load weights for the given dofs in dofs_list.
-            If None is chosen, the weight will be 1 for every dof by default.
-
-        the load_type-Keywords and the corresponding properties are:
-
-
-        ===========  =====================
-        load_type    properties
-        ===========  =====================
-        'stepload'   (amplitude, time)
-        'dirac'      (amplitude, time)
-        'harmonic'   (amplitude, frequency)
-        'ramp'       (slope, time)
-        'static'      (amplitude)
-        ===========  =====================
-
-        Examples
-        --------
-
-        Stepload on dof 1, 2 and 3 starting at 0.1 s with amplitude 1KN:
-
-        >>> mysystem = MechanicalSystem()
-        >>> NB = [[1, 2, 3], 'stepload', (1E3, 0.1), None]
-        >>> mysystem.apply_neumann_boundaries([NB, ])
-
-        Harmonic loading on dof 4, 6 and 8 with frequency 8 Hz = 2*2*pi rad and
-        amplitude 100N:
-
-        >>> mysystem = MechanicalSystem()
-        >>> NB = [[1, 2, 3], 'harmonic', (100, 8), None]
-        >>> mysystem.apply_neumann_boundaries([NB, ])
-
-
-        '''
-        self.neumann_class = \
-            NeumannBoundary(self.mesh_class.no_of_dofs, neumann_boundary_list)
-        self._f_ext_unconstr = self.neumann_class.f_ext()
-        return
 
     def export_paraview(self, filename, field_list=None):
         '''
