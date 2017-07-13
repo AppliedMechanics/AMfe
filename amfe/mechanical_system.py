@@ -336,6 +336,9 @@ class MechanicalSystem():
         if len(self.T_output) is 0:
             self.T_output.append(0)
             self.u_output.append(np.zeros(self.mesh_class.no_of_dofs))
+            if self.stress_recovery:
+                self.S_output.append(np.zeros((self.mesh_class.no_of_nodes, 6)))
+                self.E_output.append(np.zeros((self.mesh_class.no_of_nodes, 6)))
         print('Start exporting mesh for paraview to:\n    ', filename)
 
         if self.stress_recovery and len(self.S_output) > 0 \

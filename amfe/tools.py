@@ -21,7 +21,10 @@ __all__ = ['node2total',
            'reorder_sparse_matrix',
            'eggtimer',
            'rayleigh_coefficients',
+           'compute_relative_error',
            'query_yes_no',
+           'resulting_force',
+           'ExternalForce'
            ]
 
 import os
@@ -355,6 +358,48 @@ def h5_read_u(h5filename):
         u_full = u_full[mask, :]
     return bmat.T @ u_full, u_full, T
 
+def compute_relative_error(red_file, ref_file, M=None):
+    r'''
+    Compute the farhat error of two given hdf5 files displacement sets.
+
+    Parameters
+    ----------
+    red_file : str
+        Filename of the reduced or to be investigated file.
+    ref_file : str
+        Filename of the reference file.
+    M : array-like, optional
+        mass matrix of the given system. If None, no mass matrix is used.
+        Default: None.
+
+    Returns
+    -------
+    err : float
+        Error.
+
+    Note
+    ----
+
+    .. math::
+        ER = \frac{\sqrt{\sum\limits_{t\in T} \Delta u(t)^T M \Delta u(t)}}{
+                   \sqrt{\sum\limits_{t\in T} u_{ref}(t)^T M u_{ref}(t)}}
+
+    '''
+    u_red, _, T_red = h5_read_u(red_file)
+    u_ref, _, T_ref = h5_read_u(ref_file)
+    if len(T_red) < len(T_ref): # The time integration has aborted
+        return np.nan
+    delta_u = u_red - u_ref
+    # take the inner product of the columns; Use the mass matrix, if necesary
+    if M is None:
+        err_sq = np.einsum('ij,ij->j', delta_u, delta_u)
+        ref_sq = np.einsum('ij,ij->j', u_ref, u_ref)
+    else:
+        err_sq = np.einsum('ij,ij->j', delta_u, M @ delta_u)
+        ref_sq = np.einsum('ij,ij->j', u_ref, M @ u_ref)
+
+    err = np.sqrt(np.sum(err_sq)) / np.sqrt(np.sum(ref_sq))
+    return err
 
 def eggtimer(fkt):
     '''
@@ -467,3 +512,102 @@ def query_yes_no(question, default="yes"):
             return valid[choice]
         else:
             sys.stdout.write("Please respond with 'yes' or 'no'.\n")
+
+
+def resulting_force(mechanical_system, force_vec, ref_point=None):
+    '''
+    Compute the resulting force and moment of a given force vector.
+
+    Parameters
+    ----------
+    mechanical_system
+        mechanical system ẃith FE mesh
+    force_vec : array
+        constrained force vector
+    ref_point : array-like, shape: (ndim), optional
+        reference point to which the resulting moment is computed. Default value
+        is None, meaning that the reference point is at the origin
+
+    Returns
+    -------
+    resulting_force_and_moment : array, shape(6)
+        resulting force and moment vector with (F_x, F_y, F_z, M_x, M_y, M_z)
+
+    '''
+    nodes = mechanical_system.mesh_class.nodes
+    no_of_nodes, ndim = nodes.shape
+    f_ext = mechanical_system.unconstrain_vec(force_vec)
+
+    # convert everything to 3D for making cross product easier available
+    f_ext_mat = np.zeros((no_of_nodes, 3))
+    nodes_mat = np.zeros((no_of_nodes, 3))
+    f_ext_mat[:,:ndim] = f_ext.reshape((no_of_nodes, ndim))
+    nodes_mat[:,:ndim] = nodes
+    if ref_point is not None:
+        assert(np.array(ref_point).shape[0] == ndim)
+        nodes_mat[:,:ndim] -= np.array(ref_point)
+
+    # three dimensional array for making cross product possible in vectorized
+    # manner. cross_operator[]
+    cross_operator = np.zeros((no_of_nodes, 3, 3))
+    cross_operator[:,0,1] = - nodes_mat[:,2]
+    cross_operator[:,1,0] = nodes_mat[:,2]
+    cross_operator[:,0,2] = nodes_mat[:,1]
+    cross_operator[:,2,0] = - nodes_mat[:,1]
+    cross_operator[:,1,2] = - nodes_mat[:,0]
+    cross_operator[:,2,1] = nodes_mat[:,0]
+
+    f_res = np.zeros((6))
+    moments = np.einsum('ijk, ik -> ij', cross_operator, f_ext_mat)
+    f_res[3:] = moments.sum(axis=0)
+    f_res[:3] = f_ext_mat.sum(axis=0)
+
+    return f_res
+
+
+class ExternalForce:
+    '''
+    Class for mimicking the external forces based on a force basis and time
+    values. The force values are linearly interpolated
+
+    '''
+    def __init__(self, force_basis, force_series, t_series):
+        '''
+        Parameters
+        ----------
+        force_basis : ndarray, shape(ndim, n_dofs)
+            force basis for the force series
+        force_seris : ndarray, shape(n_timesteps, n_dofs)
+            array containing the force dofs corresponding to the time values
+            given in t_series
+        t_series : ndarray, shape(n_timesteps)
+            array containing the time values
+
+        '''
+        self.force_basis = force_basis
+        self.force_series= force_series
+        self.T = t_series
+        return
+
+    def f_ext(self, u, du, t):
+        '''
+        Mimicked external force for the given force time series
+        '''
+        # Catch the case that t is larger than the data set
+        if t >= self.T[-1]:
+            return self.force_basis @ self.force_series[-1]
+
+        t2_idx = np.where(self.T > t)[0][0]
+
+        # if t is smaller than lowest value of T, pick the first value in the
+        # force series
+        if t2_idx == 0:
+            force_amplitudes = self.force_series[0]
+        else:
+            t1_idx = t2_idx - 1
+            t2 = self.T[t2_idx]
+            t1 = self.T[t1_idx]
+
+            force_amplitudes = ( (t2-t)*self.force_series[t1_idx]
+                               + (t-t1)*self.force_series[t2_idx]) / (t2-t1)
+        return self.force_basis @ force_amplitudes

@@ -186,7 +186,8 @@ def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
                                   n_iter_max=30,
                                   conv_abort=True,
                                   write_iter=False,
-                                  track_niter=True):
+                                  track_niter=True,
+                                  matrix_type='symm'):
     '''
     Time integration of the non-linear second-order system using the
     gerneralized-alpha scheme.
@@ -242,8 +243,9 @@ def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
 
     '''
     t_clock_1 = time.time()
-    iteration_info = []
+
     mechanical_system.clear_timesteps()
+    mechanical_system.iteration_info = []
 
     eps = 1E-13
 
@@ -311,7 +313,7 @@ def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
         while res_abs > rtol*abs_f_ext + atol:
 
             if sp.sparse.issparse(Jac):
-                delta_q = - solve_sparse(Jac, res)
+                delta_q = - solve_sparse(Jac, res, matrix_type=matrix_type)
             else:
                 delta_q = - sp.linalg.solve(Jac, res)
 
@@ -349,10 +351,13 @@ def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
             if n_iter > n_iter_max:
                 if conv_abort:
                     print(abort_statement)
+                    mechanical_system.iteration_info = np.array(
+                            mechanical_system.iteration_info)
                     t_clock_2 = time.time()
                     print('Time for time marching integration: '
                           + '{0:6.3f}s.'.format(t_clock_2 - t_clock_1))
                     return
+
                 t = t_old
                 q = q_old.copy()
                 dq = dq_old.copy()
@@ -365,12 +370,12 @@ def integrate_nonlinear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
         print(('Time: {0:2.4f}, dt: {1:1.4f}, # iterations: {2:2d}, '
               + 'res: {3:6.2E}').format(t, h, n_iter, res_abs))
         if track_niter:
-            iteration_info.append((t, n_iter, res_abs))
+            mechanical_system.iteration_info.append((t, n_iter, res_abs))
 
         # end of time step loop
 
     # write iteration info to mechanical system
-    mechanical_system.iteration_info = np.array(iteration_info)
+    mechanical_system.iteration_info = np.array(mechanical_system.iteration_info)
 
     # measure integration end time
     t_clock_2 = time.time()
@@ -802,7 +807,8 @@ def solve_linear_displacement(mechanical_system, t=1, verbose=True):
 
     Returns
     -------
-    None
+    u : ndaray
+        Static solution displacement field
 
     '''
     if verbose:
@@ -824,10 +830,11 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
                                  t=0, rtol=1E-8, atol=1E-14, newton_damping=1,
                                  n_max_iter=1000,
                                  smplfd_nwtn_itr=1,
-                                 wrt_iter=False,
                                  verbose=True,
                                  track_niter=False,
+                                 write_iter=False,
                                  conv_abort=True,
+                                 save=True,
                                  ):
     '''
     Solver for the nonlinear system applied directly on the mechanical system.
@@ -857,23 +864,29 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
           Number at which the jacobian is updated; if 1, then a full newton
           scheme is applied; if very large, it's a fixpoint iteration with
           constant jacobian
-    wrt_iter : bool, optional
-        export every iteration step to ParaView.
     verbose : bool, optional
         print messages if necessary
     track_niter : bool, optional
         Flag for the iteration-count. If True, the number of iterations in the
         Newton-Raphson-Loop is counted and saved to iteration_info in the
         mechanical system.
+    write_iter : bool, optional
+        Flag setting, if every step of the Newton-Raphson iteration is written
+        to the MechanicalSystem object. Useful only for debugging, when no
+        convergence is gained. Default value: False.
     conv_abort : bool, optional
         Flag setting, if time integration is aborted in the case when no
         convergence is gained in the Newton-Raphson-Loop. Default value is
         True.
+    save : bool, optional
+        Write the resulting load steps to the MechanicalSystem to export
+        it afterwards. Default value: True
 
 
     Returns
     -------
-    None
+    u : ndarray, shape(ndim, no_of_load_steps)
+        Solution displacements; u[:,-1] is the last displacement
 
     Examples
     ---------
@@ -884,6 +897,7 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
     iteration_info = [] # List tracking the number of iterations
     mechanical_system.clear_timesteps()
 
+    u_output = []
     stepwidth = 1/no_of_load_steps
     K, f_int= mechanical_system.K_and_f()
     ndof = K.shape[0]
@@ -914,29 +928,37 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
             abs_f_ext = np.sqrt(f_ext @ f_ext)
             abs_res = norm_of_vector(res)
             n_iter += 1
+
             if verbose:
                 print('Step', t, 'Iteration #', n_iter,
                       'Residal: {0:4.2E}'.format(abs_res))
-            if wrt_iter:
-                mechanical_system.write_timestep(n_iter, u)
+
+            if write_iter:
+                mechanical_system.write_timestep(t + n_iter*0.0001, u)
+
+            # Exit, if niter too large
             if (n_iter >= n_max_iter) and conv_abort:
+                u_output = np.array(u_output).T
                 print(abort_statement)
                 t_clock_2 = time.time()
                 print('Time for static solution: ' +
                       '{0:4.2f} seconds'.format(t_clock_2 - t_clock_1))
-                return
-        mechanical_system.write_timestep(t, u)
+                return u_output
+
+        if save:
+            mechanical_system.write_timestep(t, u)
+        u_output.append(u.copy())
         # export iteration infos if wanted
         if track_niter:
             iteration_info.append((t, n_iter, abs_res))
 
     # glue the array of the iterations on the mechanical system
     mechanical_system.iteration_info = np.array(iteration_info)
-
+    u_output = np.array(u_output).T
     t_clock_2 = time.time()
     print('Time for solving nonlinear displacements: {0:4.2f} seconds'.format(
         t_clock_2 - t_clock_1))
-    return
+    return u_output
 
 def give_mass_and_stiffness(mechanical_system):
     '''
