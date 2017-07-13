@@ -287,8 +287,8 @@ def create_xdmf_from_hdf5(filename):
                 geometry_data_item.text = filename_no_dir + ':/mesh/nodes'
 
                 # Attribute loop for export of displacements, stresses etc.
-                for key in h5_time_vals.keys():
-                    field = h5_time_vals[key]
+                for key_t in h5_time_vals.keys():
+                    field = h5_time_vals[key_t]
                     if field.attrs['ParaView'] == np.True_:
                         field_attr = SubElement(grid, 'Attribute',
                                                 {'Name':field.attrs['Name'],
@@ -318,7 +318,44 @@ def create_xdmf_from_hdf5(filename):
                                                {'Format':'HDF',
                                                 'NumberType':'Float',
                                                 'Dimensions':shape2str(field.shape)})
-                        field_hdf.text = filename_no_dir + ':/time_vals/' + key
+                        field_hdf.text = filename_no_dir + ':/time_vals/' + key_t
+
+                # Attribute loop for cell values like weights
+                if 'time_vals_cell' in f.keys():
+                    h5_time_vals_cell = f['time_vals_cell']
+                    for key_2 in h5_time_vals_cell.keys():
+                        field = h5_time_vals_cell[key_2][key]
+                        if field.attrs['ParaView'] == np.True_:
+                            field_attr = SubElement(grid, 'Attribute',
+                                                    {'Name':field.attrs['Name'],
+                                                     'AttributeType':
+                                                        field.attrs['AttributeType'],
+                                                     'Center':field.attrs['Center']})
+                            no_of_components = field.attrs['NoOfComponents']
+                            field_dim = (field.shape[0] // no_of_components,
+                                         no_of_components)
+                            field_data = SubElement(field_attr, 'DataItem',
+                                                    {'ItemType':'HyperSlab',
+                                                     'Dimensions':shape2str(field_dim)})
+
+                            field_hyperslab = SubElement(field_data, 'DataItem',
+                                                         {'Dimensions':'3 2',
+                                                          'Format':'XML'})
+
+                            # pick the i-th column via hyperslab; If no temporal values
+                            # are pumped out, use the first column
+                            if i <= field.shape[-1]: # field has time instance
+                                col = str(i)
+                            else: # field has no time instance, use first col
+                                col = '0'
+                            field_hyperslab.text = '0 ' + col + ' 1 1 ' + \
+                                                    str(field.shape[0]) + ' 1'
+                            field_hdf = SubElement(field_data, 'DataItem',
+                                                   {'Format':'HDF',
+                                                    'NumberType':'Float',
+                                                    'Dimensions':shape2str(field.shape)})
+                            field_hdf.text = filename_no_dir + ':/time_vals_cell/' \
+                                             + key_2 + '/' + key
 
     # write xdmf-file
     xdmf_str = prettify_xml(xml_root)
@@ -1493,9 +1530,27 @@ class Mesh:
 
             # export fields in new_field_list
             for data_array, data_dict in new_field_list:
-                h5_dataset = f.create_dataset('time_vals/' + data_dict['Name'],
-                                              data=data_array)
-                h5_set_attributes(h5_dataset, data_dict)
+
+                # consider heterogeneous meshes:
+                # export Cell variables differently than other time variables
+                export_cell = False
+                if 'Center' in data_dict:
+                    if data_dict['Center'] == 'Cell':
+                        export_cell = True
+
+                if export_cell:
+                    for el_type in connectivties_dict:
+                        # Boolean matrix giving the indices for the elements to export
+                        el_type_ix = (ele_types == el_type)
+                        location = 'time_vals_cell/{}/{}'.format(
+                                data_dict['Name'], el_type)
+                        h5_dataset = f.create_dataset(location,
+                                                      data=data_array[el_type_ix])
+                        h5_set_attributes(h5_dataset, data_dict)
+                else:
+                    h5_dataset = f.create_dataset('time_vals/' + data_dict['Name'],
+                                                  data=data_array)
+                    h5_set_attributes(h5_dataset, data_dict)
 
         # Create the xdmf from the hdf5 file
         create_xdmf_from_hdf5(filename + '.hdf5')

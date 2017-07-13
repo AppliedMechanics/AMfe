@@ -18,23 +18,32 @@ __all__ = ['reduce_mechanical_system',
            'mass_orth',
            'craig_bampton',
            'vibration_modes',
-           'modal_analysis',
            'pod',
            'theta_orth_v',
            'linear_qm_basis',
+           'krylov_force_subspace',
+           'force_norm',
+           'compute_nskts',
+           'modal_analysis',
+           'modal_analysis_pardiso',
            'modal_assurance',
+           'ranking_of_weighting_matrix',
+           'linear_qm_basis_ranked',
            ]
 
 import copy
 import numpy as np
 import scipy as sp
 from scipy import linalg
+import time
+import multiprocessing as mp
 
 from .mechanical_system import ReducedSystem, QMSystem
-from .solver import solve_sparse, SpSolve
+from .solver import solve_sparse, SpSolve, solve_nonlinear_displacement
+from .num_exp_toolbox import apply_async
 
-
-def reduce_mechanical_system(mechanical_system, V, overwrite=False):
+def reduce_mechanical_system(mechanical_system, V, overwrite=False,
+                             assembly='indirect'):
     '''
     Reduce the given mechanical system with the linear basis V.
 
@@ -47,6 +56,9 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     overwrite : bool, optional
         switch, if mechanical system should be overwritten (is less memory
         intensive for large systems) or not.
+    assembly : str {'direct', 'indirect'}
+            flag setting, if direct or indirect assembly is done. For larger
+            reduction bases, the indirect method is much faster.
 
     Returns
     -------
@@ -71,7 +83,7 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False):
     # reduce Rayleigh damping matrix
     if reduced_sys.D_constr is not None:
         reduced_sys.D_constr = V.T @ reduced_sys.D_constr @ V
-
+    reduced_sys.assembly_type = assembly
     return reduced_sys
 
 
@@ -180,7 +192,7 @@ def modal_derivative(x_i, x_j, K_func, M, omega_i, h=1.0, verbose=True,
     todo
 
     References
-    ---------
+    ----------
     .. [1]  S. R. Idelsohn and A. Cardona. A reduction method for nonlinear
             structural dynamic analysis. Computer Methods in Applied Mechanics
             and Engineering, 49(3):253–279, 1985.
@@ -405,11 +417,11 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=1.0,
         epsilon
     verbose : bool, optional
         flag for verbosity. Default value: True
-    finite_diff : str {'central', 'upwind'}
-        Method for finite difference scheme. 'central' computes the finite difference
-        based on a central difference scheme, 'upwind' based on an upwind scheme. Note
-        that the upwind scheme can cause severe distortions of the static correction
-        derivative.
+    finite_diff : str {'central', 'forward', backward}
+        Method for finite difference scheme. 'central' computes the finite
+        difference based on a central difference scheme, 'forward' based on an
+        forward scheme etc. Note that the upwind scheme can cause severe
+        distortions of the static correction derivative.
 
     Returns
     -------
@@ -438,8 +450,10 @@ def static_correction_theta(V, K_func, M=None, omega=0, h=1.0,
             print('Computing finite difference K-matrix')
         if finite_diff == 'central':
             dK_dx_i = (K_func(h*V[:,i]) - K_func(-h*V[:,i]))/(2*h)
-        elif finite_diff == 'upwind':
+        elif finite_diff == 'forward':
             dK_dx_i = (K_func(h*V[:,i]) - K)/h
+        elif finite_diff == 'backward':
+            dK_dx_i = (-K_func(-h*V[:,i]) + K)/h
         else:
             raise ValueError('Finite difference scheme is not valid.')
         b = - dK_dx_i @ V
@@ -498,9 +512,10 @@ def theta_orth_v(Theta, V, M, overwrite=False):
     return Theta_ret
 
 
-def linear_qm_basis(V, theta, M=None, tol=1E-6):
+def linear_qm_basis(V, theta, M=None, tol=1E-8, symm=True):
     '''
-    Make a linear basis containing the subspace spanned by V and theta by deflation.
+    Make a linear basis containing the subspace spanned by V and theta by
+    deflation.
 
     Parameters
     ----------
@@ -511,7 +526,7 @@ def linear_qm_basis(V, theta, M=None, tol=1E-6):
     tol : float, optional
         Tolerance for the deflation via SVD. The omitted singular values are
         at least smaller than the largest one multiplied with tol.
-        Default value: 1E-6.
+        Default value: 1E-8.
 
     Returns
     -------
@@ -520,16 +535,28 @@ def linear_qm_basis(V, theta, M=None, tol=1E-6):
 
     '''
     ndof, n = V.shape
-    V_raw = np.zeros((ndof, n*(n+3)//2))
-    V_raw[:,:n] = V[:,:]
-    for i in range(n):
-        for j in range(i+1):
-            idx = n + i*(i+1)//2 + j
-            if M is None:
-                theta_norm = np.sqrt(theta[:,i,j].T @ theta[:,i,j])
-            else:
-                theta_norm = np.sqrt(theta[:,i,j].T @ M @ theta[:,i,j])
-            V_raw[:,idx] = theta[:,i,j] / theta_norm
+    if symm:
+        V_raw = np.zeros((ndof, n*(n+3)//2))
+        V_raw[:,:n] = V[:,:]
+        for i in range(n):
+            for j in range(i+1):
+                idx = n + i*(i+1)//2 + j
+                if M is None:
+                    theta_norm = np.sqrt(theta[:,i,j].T @ theta[:,i,j])
+                else:
+                    theta_norm = np.sqrt(theta[:,i,j].T @ M @ theta[:,i,j])
+                V_raw[:,idx] = theta[:,i,j] / theta_norm
+    else:
+        V_raw = np.zeros((ndof, n*(n+1)))
+        V_raw[:,:n] = V[:,:]
+        for i in range(n):
+            for j in range(n):
+                idx = n*(i+1) + j
+                if M is None:
+                    theta_norm = np.sqrt(theta[:,i,j].T @ theta[:,i,j])
+                else:
+                    theta_norm = np.sqrt(theta[:,i,j].T @ M @ theta[:,i,j])
+                V_raw[:,idx] = theta[:,i,j] / theta_norm
 
     # Deflation algorithm
     U, s, V_svd = sp.linalg.svd(V_raw, full_matrices=False)
@@ -660,6 +687,172 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
 
     print('Krylov Basis constructed. The singular values of the basis are', sigmas)
     return V
+
+
+def krylov_force_subspace(M, K, b, omega=0, no_of_moments=3,
+                          orth='euclidean'):
+    '''
+    Compute a krylov force subspace for the computation of snapshots needed in
+    hyper reduction.
+
+    The Krylov force basis is given as
+
+    ..code::
+
+        [b, M @ inv(K - omega**2) @ b, ...,
+         (M @ inv(K - omega**2))**(no_of_moments-1) @ b]
+
+    Parameters
+    ----------
+    M : ndarray
+        Mass matrix of the system.
+    K : ndarray
+        Stiffness matrix of the system.
+    b : ndarray
+        input vector of external forcing.
+    omega : float, optional
+        frequency for the frequency shift of the stiffness. Default value 0.
+    no_of_moments : int, optional
+        number of moments matched. Default value 3.
+    orth : str, {'euclidean', 'impedance', 'kinetic'} optional
+        flag for setting orthogonality of returnd Krylov basis vectors.
+
+        * 'euclidean' : ``V.T @ V = eye``
+        * 'impedance' : ``V.T @ inv(K) @ V = eye``
+        * 'kinetic' : ``V.T @ inv(K).T @ M @ inv(K) @ V = eye``
+
+    Returns
+    -------
+    V : ndarray
+        Krylov force basis where vectors V[:,i] give the basis vectors.
+
+    '''
+    ndim = M.shape[0]
+    no_of_inputs = b.size//ndim
+    f = b.copy()
+    V = np.zeros((ndim, no_of_moments*no_of_inputs))
+    LU_object = SpSolve(K - omega**2 * M)
+    b_new = f
+    for i in np.arange(no_of_moments):
+        V[:,i*no_of_inputs:(i+1)*no_of_inputs] = b_new.reshape((-1, no_of_inputs))
+        V[:,:(i+1)*no_of_inputs], R = sp.linalg.qr(V[:,:(i+1)*no_of_inputs],
+                                                   mode='economic')
+        f = V[:,i*no_of_inputs:(i+1)*no_of_inputs]
+        u = LU_object.solve(f)
+        b_new = M.dot(u)
+
+    sigmas = sp.linalg.svdvals(V)
+
+    # mass-orthogonalization of V:
+    if orth == 'impedance':
+        # Gram-Schmid-process
+        for i in range(no_of_moments*no_of_inputs):
+            v = V[:,i]
+            u = LU_object.solve(v)
+            v /= np.sqrt(u @ v)
+            V[:,i] = v
+            weights = u.T @ V[:,i+1:]
+            V[:,i+1:] -= v.reshape((-1,1)) * weights
+    if orth == 'kinetic':
+        for i in range(no_of_moments*no_of_inputs):
+            v = V[:,i]
+            u = LU_object.solve(v)
+            v /= np.sqrt(u.T @ M @ u)
+            V[:,i] = v
+            if i+1 < no_of_moments*no_of_inputs:
+                weights = u.T @ M @ LU_object.solve(V[:,i+1:])
+                V[:,i+1:] -= v.reshape((-1,1)) * weights
+
+
+    LU_object.clear()
+    print('Krylov force basis constructed.',
+          'The singular values of the basis are', sigmas)
+    return V
+
+
+def modal_force_subspace(M, K, no_of_modes=3, orth='euclidean'):
+    '''
+    Force subspace spanned by the forces producing the vibration modes.
+    '''
+    lambda_, Phi = sp.sparse.linalg.eigsh(K, M=M, k=no_of_modes, sigma=0,
+                                          which='LM',
+                                          maxiter=100)
+    V = K @ Phi
+
+    LU_object = SpSolve(K)
+
+    if orth == 'euclidean':
+        V, _ = sp.linalg.qr(V, mode='economic')
+
+    elif orth == 'impedance':
+        omega = np.sqrt(lambda_)
+        V /= omega
+        # Gram-Schmid-process
+#        for i in range(no_of_modes):
+#            v = V[:,i]
+#            u = LU_object.solve(v)
+#            v /= np.sqrt(u @ v)
+#            V[:,i] = v
+#            weights = u.T @ V[:,i+1:]
+#            V[:,i+1:] -= v.reshape((-1,1)) * weights
+
+    elif orth == 'kinetic':
+        for i in range(no_of_modes):
+            v = V[:,i]
+            u = LU_object.solve(v)
+            v /= np.sqrt(u.T @ M @ u)
+            V[:,i] = v
+            if i+1 < no_of_modes:
+                weights = u.T @ M @ LU_object.solve(V[:,i+1:])
+                V[:,i+1:] -= v.reshape((-1,1)) * weights
+
+    LU_object.clear()
+    print('Modal force basis constructed with orth type {}.'.format(orth))
+    return V
+
+def force_norm(F, K, M, norm='euclidean'):
+    '''
+    Compute the norm of the given force vector or array
+
+    Parameters
+    ----------
+    F : ndarray, shape (n,) or shape (n, m)
+        Array representing the external force in constrained coordinates
+    K : sparse array, shape (n, n)
+        Stiffness matrix
+    M : sparse array, shape (n, n)
+        Mass matrix
+    norm : str, {'euclidean', 'impedance', 'kinetic'}
+        norm flag indicating the norm type:
+
+        * 'euclidean' : ``sqrt(F.T @ F)``
+        * 'impedance' : ``sqrt(F.T @ inv(K) @ F)``
+        * 'kinetic' : ``sqrt(F.T @ inv(K).T @ M @ inv(K) @ F)``
+
+    Returns
+    -------
+    norm : float or array of shape(m)
+        norm of the given force vector or array. When F is an array with m
+        columns, norm is a vector with the norm given for every column
+    '''
+    # define diag operator which also works for floats
+    if len(F.shape) == 1:
+        diag = lambda x : x
+    elif len(F.shape) == 2:
+        diag = np.diag
+    else:
+        raise ValueError('Dimension mismatch')
+
+    if norm == 'euclidean':
+        output =  np.sqrt(diag(F.T @ F))
+    elif norm == 'impedance':
+        u = solve_sparse(K, F)
+        output =  np.sqrt(diag(F.T @ u))
+    elif norm == 'kinetic':
+        u = solve_sparse(K, F)
+        output = np.sqrt(diag(u.T @ M @ u))
+
+    return output
 
 
 def mass_orth(V, M, overwrite=False, niter=2):
@@ -851,6 +1044,100 @@ def vibration_modes(mechanical_system, n=10, save=False):
 
 modal_analysis = vibration_modes
 
+
+def modal_analysis_pardiso(mechanical_system, n=10, u_eq=None,
+                           save=False, niter_max=40,
+                           rtol=1E-14):
+    '''
+    Make a modal analysis using a naive Lanczos iteration.
+
+    Parameters
+    ----------
+    mechanical_system : instance of amfe.MechanicalSystem
+        Mechanical system
+    n : int
+        number of modes to be computed
+    u_eq : ndarray, optional
+        equilibrium position, around which the vibration modes should be
+        computed
+    save : bool, optional
+        flat setting, if the modes should be saved in mechanical system.
+        Default value: False
+    niter_max : int, optional
+        Maximum number of Lanzcos iterations
+
+    Returns
+    -------
+    om : ndarray, shape(n)
+        eigenfrequencies of the system
+    Phi : ndarray, shape(ndim, n)
+        Vibration modes of the system
+
+    Note
+    ----
+    In comparison to the modal_analysis method, this method uses the Pardiso
+    solver if available and a naive Lanczos iteration. The modal_analysis method
+    uses the arpack solver which is more accurate but takes also much longer for
+    large systems, since the factorization is very inefficient by using superLU.
+    '''
+    K = mechanical_system.K(u=u_eq)
+    M = mechanical_system.M(u=u_eq)
+    k_diag = K.diagonal().sum()
+
+    # factorizing
+    K_mat = SpSolve(K)
+
+    # build up Krylov sequence
+    n_rand = n
+    n_dim = K.shape[0]
+
+    residual = np.zeros(n)
+    b = np.random.rand(n_dim, n_rand)
+    b, _ = sp.linalg.qr(b, mode='economic')
+    krylov_subspace = b
+    for n_iter in range(niter_max):
+        print('Lanczos iteration # {}. '.format(n_iter), end='')
+        new_directions = K_mat.solve(M @ b)
+        krylov_subspace = np.concatenate((krylov_subspace, new_directions), axis=1)
+        krylov_subspace, _ = sp.linalg.qr(krylov_subspace, mode='economic')
+        b = krylov_subspace[:,-n_rand:]
+
+        # check the modes
+        K_red = krylov_subspace.T @ K @ krylov_subspace
+        M_red = krylov_subspace.T @ M @ krylov_subspace
+        lambda_r, Phi_r = sp.linalg.eigh(K_red, M_red, overwrite_a=True,
+                                         overwrite_b=True)
+        Phi = krylov_subspace @ Phi_r[:,:n]
+
+        # check the tolerance to be below machine epsilon with some buffer...
+        for i in range(n):
+            residual[i] = np.sum(abs((-lambda_r[i] * M + K) @ Phi[:,i])) / k_diag
+
+        print('Res max: {:.2e}'.format(np.max(residual)))
+        if np.max(residual) < rtol:
+            break
+
+    if n_iter-1 == niter_max:
+        print('No convergence gained in the given iteration steps.')
+
+    print('The Lanczos solver took ' +
+          '{} iterations to solve for {} eigenvectors.'.format(n_iter+1, n))
+    omega = np.sqrt(abs(lambda_r[:n]))
+    V = Phi[:,:n]
+    K_mat.clear()
+    # Little bit of sick hack: The negative sign is transferred to the
+    # eigenfrequencies
+    omega[lambda_r[:n] < 0] *= -1
+
+    if save:
+        mechanical_system.clear_timesteps()
+        if u_eq is None:
+            u_eq = np.zeros_like(V[:,0])
+        for i, om in enumerate(omega):
+            mechanical_system.write_timestep(om, V[:, i] + u_eq)
+
+    return omega, V
+
 def pod(mechanical_system, n=None):
     '''
     Compute the POD basis of a mechanical system.
@@ -919,3 +1206,203 @@ def modal_assurance(U, V):
     diag_v_squared = np.einsum('ij, ij->j', V, V)
     denominator = np.outer(diag_u_squared, diag_v_squared)
     return nominator / denominator
+
+
+def compute_nskts(mechanical_system,
+                  F_ext_max=None,
+                  no_of_moments=4,
+                  no_of_static_cases=8,
+                  load_factor=2,
+                  no_of_force_increments=20,
+                  no_of_procs=None,
+                  norm='impedance',
+                  verbose=True,
+                  force_basis='krylov'):
+    '''
+    Compute the Nonlinear Stochastic Krylov Training Sets (NSKTS).
+
+    NSKTS can be used as training sets for Hyper Reduction of nonlinear systems.
+
+
+    Parameters
+    ----------
+    mechanical_system : instance of amfe.MechanicalSystem
+        Mechanical System to which the NSKTS should be computed
+    F_ext_max : ndarray, optional
+        Maximum external force. If None is given, 10 random samples of the
+        external force in the time range t = [0,1] are computed and the maximum
+        value is taken. Default value is None.
+    no_of_moments : int, optional
+        Number of moments consiedered in the Krylov force subspace. Default
+        value is 4.
+    no_of_static_cases : int, optional
+        Number of stochastic static cases which are solved. Default value is 8.
+    load_factor : int, optional
+        Load amplification factor with which the maximum external force is
+        multiplied. Default value is 2.
+    no_of_force_increments : int, optional
+        Number of force increments for nonlinear solver. Default value is 20.
+    no_of_procs : {int, None}, optional
+        Number of processes which are started parallel. For None
+        no_of_static_cases processes are run.
+    norm : str {'impedance', 'eucledian', 'kinetic'}, optional
+        Norm which will be used to scale the higher order moments for the Krylov
+        force subspace. Default value is 'impedance'.
+    verbose : bool, optional
+        Flag for setting verbose output. Default value is True.
+    force_basis : str {'krylov', 'modal'}, optional
+        Type of force basis used. Either krylov meaning the classical NSKTS or
+        modal meaning the forces producing vibration modes.
+
+    Returns
+    -------
+    nskts_arr : ndarray
+        Nonlinear Stochastic Krylov Training Sets. Every column in nskts_arr
+        represents one NSKTS displacement field.
+
+    Reference
+    ---------
+    Todo
+
+    '''
+    def compute_stochastic_displacements(mechanical_system, F_rand):
+        '''
+        Solve a static problem for the given Force F_rand
+
+        '''
+        def f_ext_monkeypatched(u, du, t):
+            return F_rand * t
+        f_ext_tmp = mechanical_system.f_ext
+        mechanical_system.f_ext = f_ext_monkeypatched
+
+        u_arr = solve_nonlinear_displacement(mechanical_system,
+                                             no_of_load_steps=no_of_force_increments,
+                                             n_max_iter=no_of_force_increments,
+                                             verbose=verbose,
+                                             conv_abort=True,
+                                             save=False)
+
+        mechanical_system.f_ext = f_ext_tmp
+        return u_arr
+
+    print('*'*80)
+    print('Start computing nonlinear stochastic ' +
+          '{} training sets.'.format(force_basis))
+    print('*'*80)
+    time_1 = time.time()
+    K = mechanical_system.K()
+    M = mechanical_system.M()
+    ndim = K.shape[0]
+    u = du = np.zeros(ndim)
+    if F_ext_max is None:
+        F_ext_max = 0
+        # compute the maximum external force
+        for i in range(10):
+            F_tmp = mechanical_system.f_ext(u, du, np.random.rand())
+            if np.linalg.norm(F_tmp) > np.linalg.norm(F_ext_max):
+                F_ext_max = F_tmp
+
+    if force_basis == 'krylov':
+        F_basis = krylov_force_subspace(M, K, F_ext_max,
+                                        no_of_moments=no_of_moments,
+                                        orth=norm)
+    elif force_basis == 'modal':
+        F_basis = modal_force_subspace(M, K, no_of_modes=no_of_moments,
+                                       orth=norm)
+    else:
+        raise ValueError('Force basis type ' + force_basis + 'not valid.')
+
+    norm_of_forces = force_norm(F_ext_max, K, M, norm=norm)
+    standard_deviation = np.ravel(np.array(
+            [norm_of_forces for i in range(no_of_moments)]))
+    standard_deviation *= load_factor
+
+    # Do the parallel run
+    with mp.Pool(processes=no_of_procs) as pool:
+        results = []
+        for i in range(no_of_static_cases):
+            F_rand = F_basis @ np.random.normal(0, standard_deviation)
+            vals = [copy.deepcopy(mechanical_system), F_rand.copy()]
+            res = apply_async(pool, compute_stochastic_displacements, vals)
+            results.append(res)
+        u_list = []
+        for res in results:
+            u = res.get()
+            u_list.append(u)
+
+    snapshot_arr = np.concatenate(u_list, axis=1)
+    time_2 = time.time()
+    print('Finished computing nonlinear stochastic krylov training sets.')
+    print('It took {0:2.2f} seconds to build the nskts.'.format(time_2 - time_1))
+    return snapshot_arr
+
+
+def ranking_of_weighting_matrix(W, symm=True):
+    '''
+    Return the indices of a weighting matrix W in decreasing order
+
+    Parameters
+    ----------
+    W : ndarray, shape: (n, m)
+        weighting matrix
+    symm : bool, optional
+        flag indicating symmetry
+
+    Returns
+    -------
+    idxs : ndarray, shape (n*m, 2)
+        array of indices, where i, j = idxs[k] are the indices of the k-largest
+        value in W
+
+    '''
+    n, m = W.shape
+    ranking_list = np.argsort(W, axis=None)[::-1]
+    if symm:
+        assert n == m
+        ranking = np.zeros((n*(n+1)//2, 2), dtype=int)
+        i = 0
+        for val in ranking_list:
+            j, k = val // m, val % m
+            if k >= j: # check, if indiced are in upper half
+                ranking[i,:] = j, k
+                i += 1
+
+    else: # not symmetric
+        ranking = np.zeros((n*m, 2), dtype=int)
+        for i, val in enumerate(ranking_list):
+            ranking[i,:] = val // m, val % m
+    return ranking
+
+def linear_qm_basis_ranked(V, Theta, W, n, tol=1E-8, symm=True):
+    '''
+    Build a linear basis from a linear basis V and a QM Tensor Theta with
+    a given weighting matrix W.
+
+    Parameters
+    ----------
+    V : ndarray, shape: (ndim, m)
+        Linear basis
+    Theta : narray, shape: (ndim, m, m)
+        Third order tensor containing the derivatives
+    W : ndarray, shape (m, m)
+        Weighting matrix containing the weights
+    n : int
+        number of derivative vectors
+    tol : float, optional
+        tolerance for the SVD selection. Default value: 1E-8
+    symm : bool, optional
+        flag if weighting matrix and Theta is symmetric. If true, only the
+        upper half of Theta and W is evaluated
+
+    Returns
+    -------
+    V_red : ndarray, shape: (ndim, n + m)
+
+    '''
+    ranking = ranking_of_weighting_matrix(W, symm=symm)
+    Theta_ranked = Theta[:,ranking[:,0], ranking[:,1]]
+    V_raw = np.concatenate((V, Theta_ranked[:,:n]), axis=1)
+    U, s, V_svd = sp.linalg.svd(V_raw, full_matrices=False)
+    idx_defl = s > s[0]*tol
+    V_red = U[:,idx_defl]
+    return V_red

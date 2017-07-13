@@ -587,8 +587,12 @@ if use_fortran:
     def neo_hookean_S_Sv_and_C(self, E):
         return f90_material.neo_hookean_s_sv_and_c(E, self.mu, self.kappa)
 
+    def neo_hookean_S_Sv_and_C_2d(self, E):
+        return f90_material.neo_hookean_s_sv_and_c_2d(E, self.mu, self.kappa)
+
     # overloading the functions
     KirchhoffMaterial.S_Sv_and_C = kirchhoff_S_Sv_and_C
     KirchhoffMaterial.S_Sv_and_C_2d = kirchhoff_S_Sv_and_C_2d
     MooneyRivlin.S_Sv_and_C = mooney_rivlin_S_Sv_and_C
     NeoHookean.S_Sv_and_C = neo_hookean_S_Sv_and_C
+    NeoHookean.S_Sv_and_C_2d = neo_hookean_S_Sv_and_C_2d
