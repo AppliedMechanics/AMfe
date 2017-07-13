@@ -10,7 +10,7 @@ system, defined by certain parameters or a multibody system.
 
 __all__ = ['MechanicalSystem',
            'ReducedSystem',
-           'QMSystem',
+           'ExternalForce',
            ]
 
 import time
@@ -18,12 +18,6 @@ import os
 
 import h5py
 import numpy as np
-import scipy as sp
-
-from scipy.optimize import nnls
-from scipy.linalg import norm as norm2
-from numpy.linalg import inv
-
 
 from .mesh import Mesh
 from .assembly import Assembly
@@ -823,115 +817,95 @@ class ReducedSystem(MechanicalSystem):
         self.u_red_output = []
 
 
-class QMSystem(MechanicalSystem):
+
+def reduce_mechanical_system(mechanical_system, V, overwrite=False,
+                             assembly='indirect'):
     '''
-    Quadratic Manifold Finite Element system.
+    Reduce the given mechanical system with the linear basis V.
+
+    Parameters
+    ----------
+    mechanical_system : instance of MechanicalSystem
+        Mechanical system which will be transformed to a ReducedSystem.
+    V : ndarray
+        Reduction Basis for the reduced system
+    overwrite : bool, optional
+        switch, if mechanical system should be overwritten (is less memory
+        intensive for large systems) or not.
+    assembly : str {'direct', 'indirect'}
+            flag setting, if direct or indirect assembly is done. For larger
+            reduction bases, the indirect method is much faster.
+
+    Returns
+    -------
+    reduced_system : instance of ReducedSystem
+        Reduced system with same properties of the mechanical system and
+        reduction basis V
+
+    Example
+    -------
 
     '''
 
-    def __init__(self, **kwargs):
-        MechanicalSystem.__init__(self, **kwargs)
-        self.V = None
-        self.Theta = None
-        self.no_of_red_dofs = None
-        self.u_red_output = []
+    if overwrite:
+        reduced_sys = mechanical_system
+    else:
+        reduced_sys = copy.deepcopy(mechanical_system)
+    reduced_sys.__class__ = ReducedSystem
+    reduced_sys.V = V.copy()
+    reduced_sys.V_unconstr = reduced_sys.dirichlet_class.unconstrain_vec(V)
+    reduced_sys.u_red_output = []
+    reduced_sys.M_constr = None
+    # reduce Rayleigh damping matrix
+    if reduced_sys.D_constr is not None:
+        reduced_sys.D_constr = V.T @ reduced_sys.D_constr @ V
+    reduced_sys.assembly_type = assembly
+    return reduced_sys
 
-    def M(self, u=None, t=0):
-        # checks, if u is there and M is already computed
-        if u is None:
-            u = np.zeros(self.no_of_red_dofs)
-        if self.M_constr is None:
-            MechanicalSystem.M(self)
 
-        P = self.V + self.Theta @ u
-        M_red = P.T @ self.M_constr @ P
-        return M_red
+class ExternalForce:
+    '''
+    Class for mimicking the external forces based on a force basis and time
+    values. The force values are linearly interpolated.
 
-    def K_and_f(self, u=None, t=0):
+    '''
+    def __init__(self, force_basis, force_series, t_series):
         '''
-        Take care here! It is not clear yet how to compute the tangential
-        stiffness matrix!
-
-        It seems to be like the contribution of geometric and material
-        stiffness.
-        '''
-        if u is None:
-            u = np.zeros(self.no_of_red_dofs)
-        theta_u = self.Theta @ u
-        u_full = (self.V + 1/2*theta_u) @ u
-        P = self.V + theta_u
-        K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
-        K1 = P.T @ K_unreduced @ P
-        K2 = self.Theta.T @ f_unreduced
-        K = K1 + K2
-        f = P.T @ f_unreduced
-        return K, f
-
-    def S_and_res(self, u, du, ddu, dt, t, beta, gamma):
-        '''
-        TODO: checking the contributions of the different parts of the
-        iteration matrix etc.
+        Parameters
+        ----------
+        force_basis : ndarray, shape(ndim, n_dofs)
+            force basis for the force series
+        force_seris : ndarray, shape(n_timesteps, n_dofs)
+            array containing the force dofs corresponding to the time values
+            given in t_series
+        t_series : ndarray, shape(n_timesteps)
+            array containing the time values
 
         '''
-        # checking out that constant unreduced M is built
-        if self.M_constr is None:
-            MechanicalSystem.M(self)
-        M_unreduced = self.M_constr
-
-        theta = self.Theta
-        theta_u = theta @ u
-        u_full = (self.V + 1/2*theta_u) @ u
-
-        K_unreduced, f_unreduced = MechanicalSystem.K_and_f(self, u_full, t)
-        f_ext_unred = MechanicalSystem.f_ext(self, u_full, None, t)
-        # nonlinear projector P
-        P = self.V + theta_u
-
-        # computing the residual
-        res_accel = M_unreduced @ (P @ ddu)
-        res_gyro = M_unreduced @ (theta @ du) @ du
-        res_full = res_accel + res_gyro + f_unreduced - f_ext_unred
-        # the different contributions to stiffness
-        K1 = theta.T @ res_full
-        K2 = P.T @ M_unreduced @ (theta @ ddu)
-        K3 = P.T @ K_unreduced @ P
-        K = K1 + K2 + K3
-        # gyroscopic matrix and reduced mass matrix
-        G = P.T @ M_unreduced @ (2*theta @ du)
-        M = P.T @ M_unreduced @ P
-
-        res = P.T @ res_full
-        f_ext = P.T @ f_ext_unred
-        S = 1/(dt**2 * beta) * M + gamma/(dt*beta) * G + K
-        return S, res, f_ext
+        self.force_basis = force_basis
+        self.force_series= force_series
+        self.T = t_series
+        return
 
     def f_ext(self, u, du, t):
         '''
-        Return the reduced external force. The velocity du is by now ignored.
+        Mimicked external force for the given force time series
         '''
-        theta_u = self.Theta @ u
-        u_full = (self.V + 1/2*theta_u) @ u
-        P = self.V + theta_u
-        f_ext_unred = MechanicalSystem.f_ext(self, u_full, None, t)
-        f_ext = P.T @ f_ext_unred
-        return f_ext
+        # Catch the case that t is larger than the data set
+        if t >= self.T[-1]:
+            return self.force_basis @ self.force_series[-1]
 
-    def write_timestep(self, t, u):
-        u_full = self.V @ u + (self.Theta @ u) @ u * 1/2
-        MechanicalSystem.write_timestep(self, t, u_full)
-        # own reduced output
-        self.u_red_output.append(u.copy())
-        return
+        t2_idx = np.where(self.T > t)[0][0]
 
-    def export_paraview(self, filename, field_list=None):
-        '''
-        Export the produced results to ParaView via XDMF format.
-        '''
-        ReducedSystem.export_paraview(self, filename, field_list)
-        filename_no_ext, _ = os.path.splitext(filename)
+        # if t is smaller than lowest value of T, pick the first value in the
+        # force series
+        if t2_idx == 0:
+            force_amplitudes = self.force_series[0]
+        else:
+            t1_idx = t2_idx - 1
+            t2 = self.T[t2_idx]
+            t1 = self.T[t1_idx]
 
-        # add Theta to the hdf5 file
-        with h5py.File(filename_no_ext + '.hdf5', 'r+') as f:
-            f.create_dataset('reduction/Theta', data=self.Theta)
-
-        return
+            force_amplitudes = ( (t2-t)*self.force_series[t1_idx]
+                               + (t-t1)*self.force_series[t2_idx]) / (t2-t1)
+        return self.force_basis @ force_amplitudes

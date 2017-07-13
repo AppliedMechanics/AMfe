@@ -27,7 +27,11 @@ from .solver import *
 from .tools import *
 
 # Reduction stuff
-from .model_reduction import *
+from .reduced_basis import *
+
+# Structural dynamics
+from .structural_dynamics import *
+
 # Commented out as a dill dependency is required only here
 from .num_exp_toolbox import *
 

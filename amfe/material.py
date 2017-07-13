@@ -202,8 +202,8 @@ class KirchhoffMaterial(HyperelasticMaterial):
 LinearMaterial = KirchhoffMaterial
 
 
-# %%
-# @inherit_docs(HyperelasticMaterial)
+#%%
+
 class NeoHookean(HyperelasticMaterial):
     r'''
     Neo-Hookean hyperelastic material. It is the same material as the Mooney-

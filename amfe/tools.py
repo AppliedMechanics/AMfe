@@ -11,7 +11,6 @@ Some tools here might be experimental.
 
 __all__ = ['node2total',
            'total2node',
-           'inherit_docs',
            'read_hbmat',
            'append_interactively',
            'matshow_3d',
@@ -20,16 +19,16 @@ __all__ = ['node2total',
            'test',
            'reorder_sparse_matrix',
            'eggtimer',
-           'rayleigh_coefficients',
            'compute_relative_error',
+           'principal_angles',
            'query_yes_no',
            'resulting_force',
-           'ExternalForce'
            ]
 
 import os
 import numpy as np
 import scipy as sp
+from scipy import linalg
 import time
 import subprocess
 import sys
@@ -84,20 +83,6 @@ def total2node(total_index, ndof_node=2):
     '''
     return total_index // ndof_node, total_index % ndof_node
 
-
-def inherit_docs(cls):
-    '''
-    Decorator function for inheriting the docs of a class to the subclass.
-    '''
-    for name, func in vars(cls).items():
-        if not func.__doc__:
-            print(func, 'needs doc')
-            for parent in cls.__bases__:
-                parfunc = getattr(parent, name)
-                if parfunc and getattr(parfunc, '__doc__', None):
-                    func.__doc__ = parfunc.__doc__
-                    break
-    return cls
 
 def read_hbmat(filename):
     '''
@@ -241,34 +226,6 @@ def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
     # fig.colorbar(barplot)
     return barplot
 
-
-def rayleigh_coefficients(zeta, omega_1, omega_2):
-    '''
-    Compute the coefficients for rayleigh damping such, that the modal damping
-    for the given two eigenfrequencies is zeta
-
-    Parameters
-    ----------
-    zeta : float
-        modal damping for modes 1 and 2
-    omega_1 : float
-        first eigenfrequency in [rad/s]
-    omega_2 : float
-        second eigenfrequency in [rad/s]
-
-    Returns
-    -------
-    alpha : float
-        rayleigh damping coefficient for the mass matrix
-    beta : float
-        rayleigh damping for the stiffness matrix
-
-    '''
-    beta = 2*zeta/(omega_1 + omega_2)
-    alpha = omega_1*omega_2*beta
-    return alpha, beta
-
-
 def reorder_sparse_matrix(A):
     '''
     Reorder the sparse matrix A such that the bandwidth of the matrix is
@@ -294,6 +251,7 @@ def reorder_sparse_matrix(A):
     '''
     perm = sp.sparse.csgraph.reverse_cuthill_mckee(A, symmetric_mode=True)
     return A[perm,:][:,perm], perm
+
 
 def amfe_dir(filename=''):
     '''
@@ -400,6 +358,65 @@ def compute_relative_error(red_file, ref_file, M=None):
 
     err = np.sqrt(np.sum(err_sq)) / np.sqrt(np.sum(ref_sq))
     return err
+
+
+def principal_angles(V1, V2, cosine=True, principal_vectors=False):
+    '''
+    Return the cosine of the principal angles of the two bases V1 and V2.
+
+    Parameters
+    ----------
+    V1 : ndarray
+        array denoting n-dimensional subspace spanned by V1 (Mxn)
+    V2 : ndarray
+        array denoting subspace 2. Dimension is (MxO)
+    cosine : bool, optional
+        flag stating, if the cosine of the angles is to be used
+    principal_vectors : bool, optional
+        Option flag for returning principal vectors. Default is False.
+
+    Returns
+    -------
+    sigma : ndarray
+        cosine of subspace angles
+    F1 : ndarray
+        array of principal vectors of subspace spanned by V1. The columns give
+        the principal vectors, i.e. F1[:,0] is the first principal vector
+        associated with theta[0] and so on. Only returned, if
+        ``principal_vectors=True``.
+    F2 : ndarray
+        array of principal vectors of subspace spanned by V2. Only returned if
+        ``principal_vectors=True``.
+
+    Notes
+    -----
+    Both matrices V1 and V2 have live in the same vector space, i.e. they have
+    to have the same number of rows.
+
+    Examples
+    --------
+    TODO
+
+    References
+    ----------
+    ..  [1] G. H. Golub and C. F. Van Loan. Matrix computations, volume 3. JHU
+        Press, 2012.
+
+    '''
+    Q1, __ = linalg.qr(V1, mode='economic')
+    Q2, __ = linalg.qr(V2, mode='economic')
+    U, sigma, V = linalg.svd(Q1.T @ Q2)
+
+    if not cosine:
+        sigma = np.arccos(sigma)
+
+    if principal_vectors is True:
+        F1 = Q1.dot(U)
+        F2 = Q2.dot(V.T)
+        return sigma, F1, F2
+    else:
+        return sigma
+
 
 def eggtimer(fkt):
     '''
@@ -563,51 +580,3 @@ def resulting_force(mechanical_system, force_vec, ref_point=None):
     f_res[:3] = f_ext_mat.sum(axis=0)
 
     return f_res
-
-
-class ExternalForce:
-    '''
-    Class for mimicking the external forces based on a force basis and time
-    values. The force values are linearly interpolated
-
-    '''
-    def __init__(self, force_basis, force_series, t_series):
-        '''
-        Parameters
-        ----------
-        force_basis : ndarray, shape(ndim, n_dofs)
-            force basis for the force series
-        force_seris : ndarray, shape(n_timesteps, n_dofs)
-            array containing the force dofs corresponding to the time values
-            given in t_series
-        t_series : ndarray, shape(n_timesteps)
-            array containing the time values
-
-        '''
-        self.force_basis = force_basis
-        self.force_series= force_series
-        self.T = t_series
-        return
-
-    def f_ext(self, u, du, t):
-        '''
-        Mimicked external force for the given force time series
-        '''
-        # Catch the case that t is larger than the data set
-        if t >= self.T[-1]:
-            return self.force_basis @ self.force_series[-1]
-
-        t2_idx = np.where(self.T > t)[0][0]
-
-        # if t is smaller than lowest value of T, pick the first value in the
-        # force series
-        if t2_idx == 0:
-            force_amplitudes = self.force_series[0]
-        else:
-            t1_idx = t2_idx - 1
-            t2 = self.T[t2_idx]
-            t1 = self.T[t1_idx]
-
-            force_amplitudes = ( (t2-t)*self.force_series[t1_idx]
-                               + (t-t1)*self.force_series[t2_idx]) / (t2-t1)
-        return self.force_basis @ force_amplitudes
