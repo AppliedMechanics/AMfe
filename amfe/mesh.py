@@ -413,10 +413,6 @@ class Mesh:
     node_idx : int
         index describing, at which position in the Pandas Dataframe `el_df`
         the nodes of the element start.
-    u : list of ndarrays
-        List containing the displacements to be exported
-    timesteps : list of floats
-        List containt the timesteps to be exported
     '''
 
     def __init__(self):
@@ -439,8 +435,6 @@ class Mesh:
         self.constraint_list = []  # experimental; Introduced for nastran meshes
         # the displacements; They are stored as a list of numpy-arrays with
         # shape (ndof, no_of_dofs_per_node):
-        self.u = []
-        self.timesteps = []
         self.no_of_dofs_per_node = 0
         self.no_of_dofs = 0
         self.no_of_nodes = 0
@@ -1368,60 +1362,8 @@ class Mesh:
               '\nNumer of deflated nodes:', len(mask) - np.count_nonzero(mask))
         print('**************************************************************')
 
-    def set_displacement(self, u):
-        '''
-        Sets a displacement to the given mesh.
 
-        Parameters
-        -----------
-        u : ndarray
-            displacement of the unconstrained system in voigt notation
-
-        Returns
-        --------
-        None
-
-        Examples
-        ---------
-        TODO
-
-        '''
-        self.timesteps.append(1)
-        self.u.append(np.array(u))
-        return
-
-
-    def set_displacement_with_time(self, u, timesteps):
-        '''
-        Set the displacement of the mesh with the corresponding timesteps.
-
-        expects for the timesteps a list containing the displacement vector in
-        any shape.
-
-        Parameters
-        -----------
-        u : list of ndarrays
-            list containing the displacements as ndarrays in arbitrary shape
-        timesteps : ndarray
-            vector containing the time corresponding to the displacements in u
-
-        Returns
-        --------
-        None
-
-        Examples
-        ---------
-        TODO
-
-        '''
-        self.timesteps = timesteps.copy()
-        self.u = []
-        for i, timestep in enumerate(self.timesteps):
-            self.u.append(np.array(u[i]))
-        return
-
-
-    def save_mesh_xdmf(self, filename, field_list=None, bmat=None):
+    def save_mesh_xdmf(self, filename, field_list=None, bmat=None, u=None, timesteps=None):
         '''
         Save the mesh in hdf5 and xdmf file format.
 
@@ -1458,10 +1400,11 @@ class Mesh:
         discarded.
 
         '''
-        # generate a zero displacement if no displacements are saved.
-        if len(self.timesteps) == 0:
-            self.u = [np.zeros((self.no_of_nodes * self.no_of_dofs_per_node,)),]
-            self.timesteps.append(0)
+        # generate a zero displacement if no displacements are passed.
+        if not u or not timesteps:
+            u = [np.zeros((self.no_of_nodes * self.no_of_dofs_per_node,)),]
+            timesteps = np.array([0])
+
 
         # determine the part of the mesh which has most elements
         # only this part will be exported!
@@ -1480,7 +1423,7 @@ class Mesh:
             connectivties_dict[el_type] = connectivity_export
 
         # make displacement 3D vector, as paraview only accepts 3D vectors
-        q_array = np.array(self.u, dtype=float).T
+        q_array = np.array(u, dtype=float).T
         if self.no_of_dofs_per_node == 2:
             tmp_2d = q_array.reshape((self.no_of_nodes,2,-1))
             x, y, z = tmp_2d.shape
@@ -1517,7 +1460,7 @@ class Mesh:
                 h5_topology.attrs['ParaView'] = True
                 h5_topology.attrs['TopologyType'] = amfe2xmf[el_type]
 
-            h5_time = f.create_dataset('time', data=np.array(self.timesteps))
+            h5_time = f.create_dataset('time', data=np.array(timesteps))
             h5_set_attributes(h5_time, h5_time_dict)
 
             # export bmat if given
