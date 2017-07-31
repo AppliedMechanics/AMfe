@@ -1370,7 +1370,7 @@ class Mesh:
         Parameters
         ----------
         filename : str
-            String constisting the path and the filename
+            String consisting the path and the filename
         field_list : list
             list containing the fields to be exported. The list is a list of
             tupels containing the array with the values in the columns and a
@@ -1387,6 +1387,12 @@ class Mesh:
         bmat : csrMatrix
             CSR-Matrix describing the way, how the Dirichlet-BCs are applied:
             u_unconstr = bmat @ u_constr
+
+        u : nparray
+            matrix with displacement vectors as columns for different timesteps
+            
+        timesteps : nparray
+            vector with timesteps a displacement vector is stored in u
 
 
         Returns
@@ -1451,6 +1457,7 @@ class Mesh:
 
         # write the hdf5 file with the necessary attributes
         with h5py.File(filename + '.hdf5', 'w') as f:
+            # export mesh with nodes and topology
             h5_nodes = f.create_dataset('mesh/nodes', data=self.nodes)
             h5_nodes.attrs['ParaView'] = True
             for el_type in connectivties_dict:
@@ -1460,6 +1467,7 @@ class Mesh:
                 h5_topology.attrs['ParaView'] = True
                 h5_topology.attrs['TopologyType'] = amfe2xmf[el_type]
 
+            # export timesteps
             h5_time = f.create_dataset('time', data=np.array(timesteps))
             h5_set_attributes(h5_time, h5_time_dict)
 
