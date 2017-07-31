@@ -133,12 +133,6 @@ class Assembly():
     ----------
     C_csr : scipy.sparse.csr.csr_matrix
         Matrix containing the sparsity pattern of the problem
-    csr_assembly_indices : np.ndarray
-        Array containing the indices for the csr matrix assembly routine.
-        The entry [i,j,k] contains the index of the csr-value-matrix
-        for the i-th element and the j-th row and the k-th column
-        of the local stiffness matrix of the i-th element.
-        The dimension is (n_elements, ndof_element, ndof_element).
     element_indices : list
         Ragged list containing the global indices for the local variables
         of an element. The entry [i,j] gives the index in the global vector

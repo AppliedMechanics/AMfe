@@ -12,8 +12,8 @@ Module Info
     :show-inheritance:
 
 
-Modules of the AMfe-Package
-===========================
+Core-Modules of the AMfe-Package
+================================
 
 .. toctree::
 
@@ -23,6 +23,20 @@ Modules of the AMfe-Package
    amfe.material
    amfe.mechanical_system
    amfe.mesh
+   amfe.mesh_tying
+   amfe.num_exp_toolbox
    amfe.solver
+   amfe.structural_dynamics
    amfe.tools
-   amfe.model_reduction
+
+
+
+
+Model Reduction Modules
+=======================
+
+.. toctree::
+
+    amfe.reduced_basis
+    amfe.hyper_red
+    amfe.quadratic_manifold
