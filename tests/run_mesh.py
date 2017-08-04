@@ -56,9 +56,10 @@ f = B.T @ f_unconstr
 f_ext = B.T @ f_nm_unconstr
 u = sp.sparse.linalg.spsolve(K, f_ext)
 #%%
-my_mesh.set_displacement(B.dot(u))
+# THIS SECTION IS DEPRECATED
+#my_mesh.set_displacement(B.dot(u))
 # my_mesh.save_mesh_for_paraview(paraview_output_file)
-my_mesh.save_mesh_xdmf(paraview_output_file)
+# my_mesh.save_mesh_xdmf(paraview_output_file)
 #%%
 #
 ## test mesh generator and mesh functionality
