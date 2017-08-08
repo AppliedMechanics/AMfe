@@ -320,6 +320,12 @@ e.g. 'Tri6' if you want second order elements for a triangular mesh.
 
 
 
+PandasDataFrame
+---------------
+
+.. todo::
+    Explain el_df Property and how one can use it.
+
 
 Mesh Tying
 ----------

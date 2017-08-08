@@ -1247,7 +1247,8 @@ class Mesh:
     def set_dirichlet_bc(self, key, coord, mesh_prop='phys_group',
                          output='internal'):
         '''
-        Add a group of the mesh to the dirichlet nodes to be fixed.
+        Add a group of the mesh to the dirichlet nodes to be fixed. It sets the
+        mesh-properties 'nodes_dirichlet' and 'dofs_dirichlet'
 
         Parameters
         ----------
