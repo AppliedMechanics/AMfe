@@ -1302,13 +1302,17 @@ class Mesh:
 
         dofs_dirichlet = np.array(dofs_dirichlet, dtype=int)
 
-        nodes_dirichlet = self.nodes_dirichlet.tolist()
-        nodes_dirichlet.extend(unique_nodes)
-        nodes_dirichlet = np.array(nodes_dirichlet, dtype=int)
+        # TODO: Folgende Zeilen sind etwas umstaendlich, erst conversion to list, dann extend und dann zurueckconversion
+        nodes_dirichlet = unique_nodes
+        # nodes_dirichlet = self.nodes_dirichlet.tolist()
+        # nodes_dirichlet.extend(unique_nodes)
+        # nodes_dirichlet = np.array(nodes_dirichlet, dtype=int)
 
         if output is 'internal':
             dofs_dirichlet = np.append(dofs_dirichlet, self.dofs_dirichlet)
             self.dofs_dirichlet = np.unique(dofs_dirichlet)
+
+            nodes_dirichlet = np.append(nodes_dirichlet, self.nodes_dirichlet)
             self.nodes_dirichlet = np.unique(nodes_dirichlet)
 
         # print some output stuff
