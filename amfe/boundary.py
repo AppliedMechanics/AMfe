@@ -26,11 +26,11 @@ class DirichletBoundary():
         Array of unique slave dof indices which are eliminated in the
         constrained dofs
     row : ndarray, dtype: int
-        row indices of triplet sparse matrix description for B
+        row indices of triplet sparse matrix description for C (constraints)
     col : ndarray, dtype: int
-        col indices of triplet sparse matrix description for B
+        col indices of triplet sparse matrix description for C (constraints)
     val : ndarray, dtype: float
-        vals of triplet sparse matrix description for B
+        vals of triplet sparse matrix description for C (constraints)
     no_of_unconstrained_dofs : int
         number of unconstrained dofs
     no_of_constrained_dofs : int
@@ -155,6 +155,7 @@ class DirichletBoundary():
 
         >>> ndim = 100
         >>> K = sp.sparse.random(100,100, format='csr')
+        # TODO: CHECK: The next line can be deleted because deprecated, right?
         >>> my_dirichlet_boundary = DirichletBoundary(ndim, [[None, [0,1,2,3,4], None]])
         >>> B = my_dirichlet_boundary.b_matrix()
         >>> B.T.dot(K.dot(B)) # B.T @ K @ B
@@ -163,22 +164,6 @@ class DirichletBoundary():
 
         Notes
         -----
-
-        Die globalen Freiheitsgrade differieren daher von den Freiheitsgraden
-        des beschränkten Systems;
-        Eingabeparameter ist eine Liste mit Dirichlet-Randbedingungen:
-        [Master-DOF, [Liste_von_Sklaven-DOFs], Gewichtungsvektor]
-
-        Master-DOF: (typ: int) Der DOF, auf den die Sklaven-DOFs projiziert
-        werden. Der Master-DOF wird am ende eliminiert, d.h. er sollte
-        üblicherweise auch in den Sklaven-DOFs auftauchen
-
-        [Liste_von_Sklaven-DOFs]: (typ: liste mit ints) Die DOFs, die auf den
-        Master-DOF projiziert werden. Zur Gewichtung wird der Gewichtungsvektor
-        angewendet, der genauso viele Einträge haben muss wie die Sklaven-DOF-Liste
-
-        Gewichtungsvektor: (typ: np.array oder None) TODO Beschreibung
-
 
         Wichtig: Für die Dirichlet-Randbedingungen werden Freiheitsgrade des
         globalen Systems und nicht die Knotenfreiheitsgrade berücksichtigt.
@@ -218,22 +203,22 @@ class DirichletBoundary():
         -----
         each dirchilet_boundary_triple is itself a list containing
 
-        >>> DBT = [master_dof=None, [list_of_slave_dofs], B_matrix=None]
+        >>> DBT = [master_dof=None, [list_of_slave_dofs], weighting_matrix=None]
 
         master_dof : int / None
             the dof onto which the slave dofs are projected. The master_dof
             will be overwritten at the end, i.e. if the master dof should
-            participate at the end, it has to be a member in teh list of
+            participate at the end, it has to be a member in the list of
             slave_dofs. If the master_dof is set to None, the slave_dofs will
             be fixed
         list_of_slave_dofs : list containing ints
             The list of the dofs which will be projected onto the master dof;
             the weights of the projection are stored in the B_matrix
-        B_matrix : ndarras / None
-            The weighting-matrix which gives enables to apply complicated
+        weighting_matrix : ndarray / None
+            The weighting-matrix which enables to apply complicated
             boundary conditions showing up in symmetry-conditions or rotational
-            dofs. The default-value for B_matrix is None, which weighs all
-            members of the slave_dof_list equally with 1.
+            dofs. The default-value for weighting_matrix is None, which weighs all
+            members of the list_of_slave_dofs equally with 1.
 
         Examples
         --------
@@ -257,6 +242,12 @@ class DirichletBoundary():
         >>> my_boundary = DirichletBoundary([DBT_symm, ])
 
         '''
+
+        # Diese Funktion funktioniert, ist aber verbesserungswürdig.
+        # Beispielsweise wird hier immer nur von einem einzigen Master_dof in einem constraint ausgegangen.
+        # Das ist eigentlich der falsche Ansatz. Es sollten mehrere Master-Dofs erlaubt sein.
+        # Vergleich mit Nastran: Mit diesem Ansatz ist ein RBE2-Element möglich, aber kein RBE3-Element.
+
         for line in master_slave_list:
             master_dof = line[0]
             slave_dofs = line[1]
