@@ -26,6 +26,12 @@ This guide shows how boundary conditions and constraints can be imposed in AMfe.
 How Dirichlet Boundary Conditions and Constraints are organized
 ---------------------------------------------------------------
 
+The main class to handle Dirichlet Boundary Conditions is
+:py:class:`DirichletBoundary<amfe.boundary.DirichletBoundary>`.
+However, there are also two properties in the
+:py:class:`Mesh<amfe.mesh.Mesh>`-class that help to define Dirichlet Boundary Conditions.
+Table :numref:`tab_diric_properties` gives an overview over the properties that can be set to define
+Dirichlet Boundary conditions and linear, holonomic, skleronomic, homogene constraints.
 
 
 .. _tab_diric_properties:
@@ -217,10 +223,17 @@ The second step i.e. setting propeties of the DirichletBoundary class can be don
 
 
 
-External Option
-^^^^^^^^^^^^^^^
+Option 'External'
+^^^^^^^^^^^^^^^^^
+The method :py:meth:`set_dirichlet_bc<amfe.mesh.Mesh.set_dirichlet_bc>`
+has the option output='external'.
+If this option is set, the method returns the nodes and dofs that would be fixed if the Dirichlet boundary condition
+**would** be applied. In fact the boundary condition is not applied.
+The returned values can be used for further more complicated steps. This can be helpful e.g. for applying
+constraints (see section below).
 
-Example::
+
+In the following example we fix the dofs that belong to physical group 101 in two steps::
 
     >>> msh = amfe.Mesh()
     >>> ... # Several operations to define the mesh topology...
@@ -311,8 +324,138 @@ In the example above the option 'external' is used to get all global dofs which 
 to the physical group with id 101. Afterwards the first returned dof is taken as master_dof and the rest as slave-dofs.
 
 
+Neumann Boundary Conditions
+---------------------------
 
-DirichletBoundary-Class
------------------------
+Neumann Boundary conditions in structural dynamics represent external forces.
 
-The DirichletBoundary-Class helps to handle Dirichlet Boundary conditions.
+
+How Neumann Boundary Conditions are organized in AMfe
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Neumann boundary conditions are implemented by
+:py:class:`BoundaryElement<amfe.element.BoundaryElement>` s.
+These elements are very similar to simple elements of the continuum. They are assembled like the continuum elements.
+However typically their shape is one dimension lower than the dimension of the problem.
+
+In detail one have to do two steps to apply Neumann boundary conditions:
+
+1. Define the boundary elements that represent the forces one want to impose.
+2. Update the assembly information by calling
+   :py:meth:`Assembly.compute_element_indices<amfe.assembly.Assembly.compute_element_indices>`
+
+Both steps can be done easily by using the method
+:py:meth:`MechanicalSystem.apply_neumann_boundaries()<amfe.mechanical_system.MechanicalSystem.apply_neumann_boundaries>`
+This is explained in the section about the MechanicalSystem fundamentals.
+
+The following section goes more in detail in how AMfe processes Neumann Boundary conditions and how the first step
+i.e. defining boundary elements can be done.
+
+
+
+Boundary Elements
+^^^^^^^^^^^^^^^^^
+
+In AMfe so called boundary elements are used to apply Neumann boundary conditions. They are processed similar to
+continuum elements and are assembled like them. The assembly method for the boundary elements is
+:py:meth:`Assembly.assemble_k_and_f_neumann()<amfe.assembly.Assembly.assemble_k_and_f_neumann>`.
+This function assembles all elements that are defined in the associated mesh. Their definition is stored in the
+:py:attr:`Mesh.neumann_connectivity<amfe.mesh.Mesh.neumann_connectivity>` and
+:py:attr:`Mesh.neumann_obj<amfe.mesh.Mesh.neumann_obj>` property.
+
+Similar to the continuum elements, the :py:attr:`Mesh.neumann_obj<amfe.mesh.Mesh.neumann_obj>` property
+stores pointers to instances of NeumannBoundary classes.
+While for continuum elements one needs one instance for each type of element and material, one needs
+for Neumann elements one instance for each type of Neumann element and boundary condition definition e.g. for each
+different time dependence, scale values etc.
+
+:numref:`tab_boundary_element_properties` lists the properties of boundary elements.
+
+
+.. _tab_boundary_element_properties:
+
+.. table:: Important properties of Boundary Elements
+
+    +-----------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+    | Property                                                                                                        | Description                                                                                                            |
+    +=================================================================================================================+========================================================================================================================+
+    | :py:attr:`f_proj<amfe.element.BoundaryElement.f_proj>`                                                          | Contains a function that returns the local force vector for assembly when f_mat and direction is given                 |
+    +-----------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+    | :py:attr:`time_func<amfe.element.BoundaryElement.time_func>`                                                    | Contains a function that amplifies the applied force value over time                                                   |
+    +-----------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+    | :py:attr:`val<amfe.element.BoundaryElement.val>`                                                                | Scale factor for applied force                                                                                         |
+    +-----------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+    | :py:attr:`direct<amfe.element.BoundaryElement.direct>`                                                          | direction of applied force given as vector in global coordinate system or set as 'normal' for forces normal to surface |
+    +-----------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+    | :py:attr:`f<amfe.element.BoundaryElement.f>`                                                                    | local external force vector for assembly                                                                               |
+    +-----------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+    | :py:attr:`K<amfe.element.BoundaryElement.K>`                                                                    | local external tangent stiffness matrix (typically zero for boundary elements)                                         |
+    +-----------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+    | :py:attr:`M<amfe.element.BoundaryElement.M>`                                                                    | local external mass matrix (typically zero for boundary elements)                                                      |
+    +-----------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------+
+
+
+Convenient way - Using the set_neumann_bc-method
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If the Neumann boundary conditions should act on all elements that belong to a certain physical group, the definition
+of the boundary elements is quite easy. We can use the method
+:py:meth:`Mesh.set_neumann_bc()<amfe.mesh.Mesh.set_neumann_bc>`.
+
+This method expects the following parameters:
+
+
+.. _tab_parameters_set_neumann_bc:
+
+.. table:: Parameters for the method set_neumann_bc
+
+    +-----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+    | key                               | value                                                                                                                                     |
+    +===================================+===========================================================================================================================================+
+    | key                               | key of mesh property e.g. id of physical group where neumann boundary condition should be applied                                         |
+    +-----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+    | val                               | scale factor for applied force                                                                                                            |
+    +-----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+    | direct                            | direct = 'normal' (default) or numpy vector that shows in the direction where the force has to be applied                                 |
+    +-----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+    | time_func=None (optional)         | time_func = function dependent on a parameter t which amplifies applied force over time                                                   |
+    +-----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+    | shadow_area=False (optional)      | boolean value. False: force is proportional to full current area. True: force is proportional to on passed vector 'direct' projected area |
+    +-----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+    | mesh_prop='phys_group' (optional) | chooses mesh property the parameter 'key' belongs to                                                                                      |
+    +-----------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------+
+
+
+Example: Apply Neumann Boundary condition on physical group number 105 in x direction growing linearly in 2 seconds up to 150 per length unit::
+
+    >>> msh = Mesh()
+    >>> # mesh operations to define mesh ...
+    >>> def linear_func(t):
+    >>>     return t/2
+    >>>
+    >>> msh.set_neumann_bc(105,150,numpy.array([1,0]),time_func=linear_func)
+    >>> asm.compute_element_indices()
+
+
+
+
+Hard way - Defining boundary elements by hand
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Example: Define LineLinearBoundary-Element between nodes 2 and 5 with linear increasing value up to 10 per length unit
+and acting in x-direction::
+
+    >>> msh.neumann_connectivity=[np.array([2,5])]
+    >>> msh.neumann_obj = [amfe.LineLinearBoundary(val=10,direct=(1,0), time_func = lambda t: t)]
+    >>> asm.compute_element_indices()
+
+
+
+
+Mesh-Tying
+----------
+
+.. todo::
+
+    This is not documented yet. See documentation of the :py:mod:`mesh_tying<amfe.mesh_tying>` module and
+    :py:meth:`Mesh.tie_mesh<amfe.mesh.Mesh.tie_mesh>`.
