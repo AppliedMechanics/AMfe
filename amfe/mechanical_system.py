@@ -85,6 +85,8 @@ class MechanicalSystem():
         self.dirichlet_class = DirichletBoundary(np.nan)
 
         # make syntax a little bit leaner
+        # !Christian Meyer: ! careful: This prohibits to easily change dirichlet_class instance, because old instance
+        # still will be referenced!
         self.unconstrain_vec = self.dirichlet_class.unconstrain_vec
         self.constrain_vec = self.dirichlet_class.constrain_vec
         self.constrain_matrix = self.dirichlet_class.constrain_matrix
