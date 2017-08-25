@@ -16,7 +16,7 @@
 *.dat
 
 # Folders to ignore
-docs/
+docs/_build
 results/
 build/
 dist/

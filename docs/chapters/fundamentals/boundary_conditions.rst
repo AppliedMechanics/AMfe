@@ -442,6 +442,14 @@ Example: Apply Neumann Boundary condition on physical group number 105 in x dire
 Hard way - Defining boundary elements by hand
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. _simple_neumann_manually:
+.. figure:: ../../static/img/fundamentals/neumann_01.svg
+
+  Neumann
+
+:numref:`simple_neumann_manually` shows.
+
+
 Example: Define LineLinearBoundary-Element between nodes 2 and 5 with linear increasing value up to 10 per length unit
 and acting in x-direction::
 
