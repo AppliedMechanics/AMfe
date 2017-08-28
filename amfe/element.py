@@ -1639,6 +1639,8 @@ def f_proj_a(f_mat, direction):
     f_mat : ndarray
         normal force vector of one element in matrix notation. The shape of
         `f_mat`  is (no_of_nodes, dofs_per_node)
+        It weights the participations of the nodes to the defined force
+        e.g. for line element: a half for each node times length of the element
     direction : ndarray
         normalized vector describing the direction, in which the force should
         act.
@@ -1658,7 +1660,7 @@ def f_proj_a(f_mat, direction):
 def f_proj_a_shadow(f_mat, direction):
     '''
     Compute the force projection in any direction proportional to the projected
-    area, i.e. the shadow-area, the are throws in the given direction.
+    area, i.e. the shadow-area, the area throws in the given direction.
 
     Parameters
     ----------
@@ -1678,7 +1680,11 @@ def f_proj_a_shadow(f_mat, direction):
     n_nodes, dofs_per_node = f_mat.shape
     f_out = np.zeros(n_nodes * dofs_per_node)
     for i, f_vec in enumerate(f_mat):
-        f_out[i*dofs_per_node:(i+1)*dofs_per_node] = direction * (direction @ f_vec)
+        # by Johannes Rutzmoser:
+        # f_out[i*dofs_per_node:(i+1)*dofs_per_node] = direction * (direction @ f_vec)
+        # by Christian Meyer: I think this has to be divided by || direction || because of projection
+        f_out[i * dofs_per_node:(i + 1) * dofs_per_node] = direction * ((direction @ f_vec) / np.linalg.norm(direction))
+
     return f_out
 
 
@@ -1701,6 +1707,21 @@ class BoundaryElement(Element):
         function producing the nodal force vector from the given nodal force
         vector in normal direction.
 
+    val : float
+    
+    direct : {'normal', numpy.array}
+        'normal' means that force acts normal to the current surface
+        numpy.array is a vector in which the force should act (with global coordinate system as reference)
+    
+    f : numpy.array
+        local external force vector of the element
+    
+    K : numpy.array
+        tangent stiffness matrix of the element (for boundary elements typically zero)
+    
+    M : numpy.array
+        mass matrix of the element (for boundary elements typically zero)
+    
         '''
 
     def __init__(self, val, ndof, direct='normal', time_func=None,
@@ -1709,16 +1730,19 @@ class BoundaryElement(Element):
         Parameters
         ----------
         val : float
-            value for the pressure/traction onto the element
+            scale value for the pressure/traction onto the element
+        ndof : int
+            number of dofs of the boundary element
         direct : str 'normal' or ndarray, optional
             array giving the direction, in which the traction force should act.
-            alternatively, the keyword 'normal' may be given. Default value:
-            'normal'.
+            alternatively, the keyword 'normal' may be given.
+            Normal means that the force will follow the normal of the surface
+            Default value: 'normal'.
         time_func : function object
             Function object returning a value between -1 and 1 given the
             input t:
 
-            >>> val = time_func(t)
+            >>> f_applied = val * time_func(t)
 
         shadow_area : bool, optional
             Flat setting, if force should be proportional to the shadow area,
@@ -1934,7 +1958,11 @@ class LineLinearBoundary(BoundaryElement):
     '''
     Line Boundary element for 2D-Problems.
     '''
-    rot_mat = np.array([[0,-1], [1, 0]])
+    # Johannes Rutzmoser: rot_mat is a rotationmatrix, that turns +90deg
+    # rot_mat = np.array([[0,-1], [1, 0]])
+    # Christian Meyer: more intuitiv: boundary in math. positive direction equals outer vector => rotate -90deg:
+    rot_mat = np.array([[0, 1], [-1, 0]])
+    # weighting for the two nodes
     N = np.array([1/2, 1/2])
 
     def __init__(self, val, direct, time_func=None, shadow_area=False, ):
@@ -1943,8 +1971,15 @@ class LineLinearBoundary(BoundaryElement):
 
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 2)).T
+        # Connection line between two nodes of the element
         v = x_vec[:,1] - x_vec[:,0]
+        # Generate the orthogonal vector to connection line by rotation 90deg
         n = self.rot_mat @ v
+        # Remember: n must not be normalized because forces are defined as force-values per area of forces per line
+        # Thus the given forces have to be scaled with the area or line length respectively.
+        #
+        # f_mat: Generate the weights or in other words participations of each dof to generate force
+        # Dimension of f_mat: (number of nodes, number of dofs per node)
         f_mat = np.outer(self.N, n)
         self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
 
@@ -1954,8 +1989,10 @@ class LineQuadraticBoundary(BoundaryElement):
     Quadratic line boundary element for 2D problems.
     '''
 
-    rot_mat = np.array([[ 0, -1],
-                        [ 1,  0]])
+    #rot_mat = np.array([[ 0, -1],
+    #                    [ 1,  0]])
+    # same as above:
+    rot_mat = np.array([[0, 1],[-1, 0]])
 
     N = np.array([1, 1, 4])/6
 
