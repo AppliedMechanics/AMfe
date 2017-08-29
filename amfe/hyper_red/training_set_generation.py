@@ -4,6 +4,20 @@ Training set generation
 '''
 
 import numpy as np
+import time
+import scipy as sp
+import multiprocessing as mp
+import copy
+
+from ..solver import SpSolve, solve_nonlinear_displacement
+from ..structural_dynamics import force_norm
+from ..num_exp_toolbox import apply_async
+
+
+__all__ = ['compute_nskts',
+           'krylov_force_subspace',
+           'modal_force_subspace',
+          ]
 
 def compute_nskts(mechanical_system,
                   F_ext_max=None,

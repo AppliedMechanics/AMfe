@@ -28,6 +28,7 @@ from .tools import *
 
 # Reduction stuff
 from .reduced_basis import *
+from .hyper_red import *
 
 # Structural dynamics
 from .structural_dynamics import *
