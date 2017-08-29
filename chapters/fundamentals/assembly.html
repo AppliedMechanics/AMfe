@@ -1,0 +1,341 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Assembly &#8212; AMfe 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Boundary Conditions" href="boundary_conditions.html" />
+    <link rel="prev" title="Mesh" href="mesh.html" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="This is the documentation of AMfe">
+    <meta name="author" content="Johannes Rutzmoser and Christian Meyer">
+    <link rel="icon" href="../../favicon.ico">
+
+    
+    <!-- Bootstrap core CSS -->
+    <link href="../../_static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="../../_static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet"> -->
+
+    <!-- Custom styles for this template -->
+    <link href="../../_static/css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <!-- <script src="../../assets/js/ie-emulation-modes-warning.js"></script> -->
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      
+      
+    <![endif]-->
+
+  </head>
+  <body role="document">
+
+    <div class="document">
+
+
+       <!-- Static navbar -->
+    <nav class="navbar navbar-toggleable-md navbar-inverse bg-primary" id="main-nav">
+        <div class="container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#"><img src="../../_static/img/logo.png" alt="" width="30" height="30" class="d-inline-block align-top">
+                  AMfe Documentation
+              </a>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li class="nav-item active"><a href="../../index.html">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="../getting_started/index.html">Tutorials</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.html">Fundamentals</a></li>
+                <li class="nav-item"><a class="nav-link" href="../examples/index.html">Examples</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../contents.html">Table of Contents</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../genindex.html">Index</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../py-modindex.html">Modules</a></li>
+              </ul>
+            </div>
+        </div>
+    </nav>
+    
+    
+    <div class="container">
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="mesh.html" title="Mesh">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="Fundamentals" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="boundary_conditions.html" title="Boundary Conditions">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+        <div class="row">
+            
+  <div class="section" id="assembly">
+<h1>Assembly<a class="headerlink" href="#assembly" title="Permalink to this headline">¶</a></h1>
+<p>The assembly module has the following tasks:</p>
+<ul class="simple">
+<li>Generate Mapping tables from local dofs to global dofs</li>
+<li><dl class="first docutils">
+<dt>Assemble global matrices and vectors such as</dt>
+<dd><ul class="first last">
+<li>mass matrix</li>
+<li>tangent stiffness matrix</li>
+<li>internal force vector</li>
+<li>external force vector</li>
+<li>stresses and strains</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="section" id="instantiate-an-assembly-object">
+<h2>Instantiate an Assembly object<a class="headerlink" href="#instantiate-an-assembly-object" title="Permalink to this headline">¶</a></h2>
+<p>All this tasks can be done by using the Assembly-class.
+First instantiate an object of <a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly" title="amfe.assembly.Assembly"><code class="xref py py-class docutils literal"><span class="pre">Assembly-class</span></code></a>:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">amfe</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span> <span class="o">=</span> <span class="n">amfe</span><span class="o">.</span><span class="n">Mesh</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># some mesh operations till mesh is setup</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_assembly</span> <span class="o">=</span> <span class="n">amfe</span><span class="o">.</span><span class="n">Assembly</span><span class="p">(</span><span class="n">my_mesh</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It is neccessary to pass a <a class="reference internal" href="../package_doc/amfe.mesh.html#amfe.mesh.Mesh" title="amfe.mesh.Mesh"><code class="xref py py-class docutils literal"><span class="pre">amfe.Mesh</span></code></a> object to the constructor.
+The Pointer to that mesh is stored in the <a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.mesh" title="amfe.assembly.Assembly.mesh"><code class="xref py py-attr docutils literal"><span class="pre">mesh</span></code></a>-property.</p>
+<p>Then it is recommended to preallocate the tangential stiffness matrix for your problem.
+This is done via:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_assembly</span><span class="o">.</span><span class="n">preallocate_csr</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The method <a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.preallocate_csr" title="amfe.assembly.Assembly.preallocate_csr"><code class="xref py py-meth docutils literal"><span class="pre">preallocate_csr()</span></code></a>
+preallocates the stiffness matrix with the help of the mesh-information
+from your mesh object. This matrix is stored in the <a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.C_csr" title="amfe.assembly.Assembly.C_csr"><code class="xref py py-attr docutils literal"><span class="pre">C_csr</span></code></a>-property.
+This method also stores a pointer to a view of the node-coordinates of the <a class="reference internal" href="../package_doc/amfe.mesh.html#amfe.mesh.Mesh.nodes" title="amfe.mesh.Mesh.nodes"><code class="xref py py-attr docutils literal"><span class="pre">Mesh.nodes</span></code></a>-property
+of the assigned mesh-class. This view is a vector with all node-coordiantes concatenated.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This can take a while for large systems.</p>
+</div>
+</div>
+<div class="section" id="generate-mapping-from-local-dofs-to-global-dofs">
+<h2>Generate mapping from local dofs to global dofs<a class="headerlink" href="#generate-mapping-from-local-dofs-to-global-dofs" title="Permalink to this headline">¶</a></h2>
+<p>The assembly has two properties which define the mapping from local degrees of
+freedom of each element to the global degrees of freedom.
+There is one property for domain elements (<a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.element_indices" title="amfe.assembly.Assembly.element_indices"><code class="xref py py-attr docutils literal"><span class="pre">element_indices</span></code></a>)
+and one for boundary elements (<a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.neumann_indices" title="amfe.assembly.Assembly.neumann_indices"><code class="xref py py-attr docutils literal"><span class="pre">neumann_indices</span></code></a>)</p>
+<p>The attibutes contain arrays which map element ids (row) and local degree of freedom of the element (column)
+to global dof id (value).
+If you want to get the global dof associated with element 5 and local element dof 0, run:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">global_dof</span> <span class="o">=</span> <span class="n">my_assembly</span><span class="o">.</span><span class="n">element_indices</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The command</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_assembly</span><span class="o">.</span><span class="n">compute_element_indices</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>generates or updates these indices and stores them in the property <a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.element_indices" title="amfe.assembly.Assembly.element_indices"><code class="xref py py-attr docutils literal"><span class="pre">element_indices</span></code></a>.
+This method updates the <a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.neumann_indices" title="amfe.assembly.Assembly.neumann_indices"><code class="xref py py-attr docutils literal"><span class="pre">neumann_indices</span></code></a>, too.</p>
+<p>Furthermore this method updates another property, called <a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.elements_on_node" title="amfe.assembly.Assembly.elements_on_node"><code class="xref py py-attr docutils literal"><span class="pre">elements_on_node</span></code></a>.
+This property is a vector which contains the number of elements that are associated with a certain node.
+Example: If you want to know, how many elements are associated with node 143, run:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_assembly</span><span class="o">.</span><span class="n">elements_on_node</span><span class="p">[</span><span class="mi">143</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="assembling-methods">
+<h2>Assembling methods<a class="headerlink" href="#assembling-methods" title="Permalink to this headline">¶</a></h2>
+<p>For different tasks such as computation of eigenmodes, stress recovery or
+nonlinear time integration you need different global entities.
+The Assembly class provides assembly functions for many common combinations
+of needed entities:</p>
+<table border="1" class="docutils" id="id1">
+<caption><span class="caption-number">Table 4 </span><span class="caption-text">Assembly methods</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="54%" />
+<col width="46%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Method</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.assemble_k_and_f" title="amfe.assembly.Assembly.assemble_k_and_f"><code class="xref py py-meth docutils literal"><span class="pre">assemble_k_and_f(u,t)</span></code></a></td>
+<td>Return tangent stiffness and internal force vector</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.assemble_k_and_f_neumann" title="amfe.assembly.Assembly.assemble_k_and_f_neumann"><code class="xref py py-meth docutils literal"><span class="pre">assemble_k_and_f_neumann(u,t)</span></code></a></td>
+<td>Return tangent stiffness and force vector for all neumann boundary elements</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.assemble_k_f_S_E" title="amfe.assembly.Assembly.assemble_k_f_S_E"><code class="xref py py-meth docutils literal"><span class="pre">assemble_k_f_S_E(u,t)</span></code></a></td>
+<td>Return tangent stiffness, internal force vector and strains and stresses</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.assemble_m" title="amfe.assembly.Assembly.assemble_m"><code class="xref py py-meth docutils literal"><span class="pre">assemble_m(u,t)</span></code></a></td>
+<td>Return mass matrix</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In AMfe the strains and stresses returned by the assembly functions are nodal entities.
+The nodal strains and stresses are mean values of the neighbouring element strains and stresses.</p>
+</div>
+<p><strong>Example:</strong></p>
+<p>Return the tangent stiffness matrix and internal force vector for global displacement vector u_global:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">K</span><span class="p">,</span> <span class="n">f_int</span> <span class="o">=</span> <span class="n">my_assembly</span><span class="o">.</span><span class="n">assemble_k_and_f</span><span class="p">(</span><span class="n">u_global</span><span class="p">)</span> <span class="c1"># parameter time t can be dropped if time independent system</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="the-csr-format-and-helper-functions">
+<h2>The CSR-Format and helper functions<a class="headerlink" href="#the-csr-format-and-helper-functions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="csr-storage">
+<h3>CSR-storage<a class="headerlink" href="#csr-storage" title="Permalink to this headline">¶</a></h3>
+<p>For the mass and stiffness matrices the scipy csr-format is used for efficient
+storage of those matrices.
+The format is very powerful if you have to do operations such as addition
+or multiplacation of matrices.
+Changes in number and posisitions of nonzero entries are expensive. This is why
+it is highly recommended to preallocate a CSR matrix by using
+<a class="reference internal" href="../package_doc/amfe.assembly.html#amfe.assembly.Assembly.preallocate_csr" title="amfe.assembly.Assembly.preallocate_csr"><code class="xref py py-meth docutils literal"><span class="pre">preallocate_csr()</span></code></a>-method.</p>
+<p>The CSR-format consists of three vectors: data, indices and indptr.
+The data vector contains the values of the nonzero elements.
+The indices and indptr vectors map these data to the positions in the matrix pattern.</p>
+<p><strong>Example:</strong></p>
+<blockquote>
+<div><p>You want to store the matrix</p>
+<div class="line-block">
+<div class="line">[10 0 0 34</div>
+<div class="line-block">
+<div class="line">0 16 17 23</div>
+<div class="line">53 39 85 86</div>
+<div class="line">71 0 0 91]</div>
+</div>
+</div>
+<p>in CSR-format:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">scipy</span> <span class="k">as</span> <span class="nn">sp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">10</span><span class="p">,</span> <span class="mi">34</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">17</span><span class="p">,</span> <span class="mi">23</span><span class="p">,</span> <span class="mi">53</span><span class="p">,</span> <span class="mi">39</span><span class="p">,</span> <span class="mi">85</span><span class="p">,</span> <span class="mi">86</span><span class="p">,</span> <span class="mi">71</span><span class="p">,</span> <span class="mi">91</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">indptr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">11</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">A</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">csr_matrix</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">indptr</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Check</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">B</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">B</span><span class="p">)</span>
+<span class="go">[[10  0  0 34]</span>
+<span class="go"> [ 0 16 17 23]</span>
+<span class="go"> [53 39 85 86]</span>
+<span class="go"> [71  0  0 91]]</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="altering-csr-matrices">
+<h3>Altering CSR matrices<a class="headerlink" href="#altering-csr-matrices" title="Permalink to this headline">¶</a></h3>
+<p>Beside the preallocation method there are two helper functions in the assembly
+module that can help using the CSR storage format.</p>
+<p>The first helper function get_index_of_csr_data(i,j,indptr,indices)
+returns the index where a certain matrix entry of the (i-1)-th row and (j-1)-th column
+is stored in the data vector:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">get_index_of_csr_data</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">indptr</span><span class="p">,</span><span class="n">indices</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition important">
+<p class="first admonition-title">Important</p>
+<p class="last">The indexing starts at zero. Thus, if you want to access the 3rd row and 5th
+column for example, you have to pass i=2, j=4.</p>
+</div>
+<p>Example:</p>
+<p>Get the value of the third row, second column of the matrix A from example above:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">index</span> <span class="o">=</span> <span class="n">amfe</span><span class="o">.</span><span class="n">assembly</span><span class="o">.</span><span class="n">get_index_of_csr_data</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">indptr</span><span class="p">,</span><span class="n">indices</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+<span class="go">6</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">value</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+<span class="go">39</span>
+</pre></div>
+</div>
+<p>The second helper function is</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">fill_csr_matrix</span><span class="p">(</span><span class="n">indptr</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">vals</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">k_indices</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This function helps to assemble local element matrices into global matrices.
+The first parameters are the vectors of the csr-matrix which shall be altered.
+The parameter K is the local element matrix and the vector k_indices is the
+vector with the global indices (the global dofs) where the local matrix has to be assembled to.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Please note again that indexing starts at zero.</p>
+</div>
+</div>
+</div>
+</div>
+
+
+        </div>
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="mesh.html" title="Mesh">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="Fundamentals" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="boundary_conditions.html" title="Boundary Conditions">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+    </div>
+
+    
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+<script src="../../_static/js/bootstrap.min.js"></script>
+<script src="../../_static/js/theme.js"></script>
+<script>loader();</script>
+
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

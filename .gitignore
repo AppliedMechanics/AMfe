@@ -1,0 +1,46 @@
+# Files to ignore
+
+# Python specific files
+.spyderworkspace
+.spyderproject
+*.pyc
+*.so
+*.o
+*.vtu
+*.pvd
+*~
+
+# saved numpy-arrays
+*.npy
+*.pdf
+*.dat
+
+# Folders to ignore
+docs/_build
+results/
+build/
+dist/
+private/
+amfe/
+docs/
+AppVeyor/
+examples/
+meshes/
+notebooks/
+tests/
+amfe.egg-info/
+experiments/paper_icoev
+.idea/
+.spyproject/
+
+.appveyor.yml
+.gitlab-ci.yml
+.travis.yml
+pylintrc
+setup.py
+
+# specific files to ignore
+amfe/fortran/f90_elementmodule.c
+.project
+MANIFEST
+

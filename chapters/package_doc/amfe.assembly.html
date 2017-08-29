@@ -1,0 +1,538 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>amfe.assembly module &#8212; AMfe 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="amfe.boundary module" href="amfe.boundary.html" />
+    <link rel="prev" title="amfe Package Documentation" href="index.html" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="This is the documentation of AMfe">
+    <meta name="author" content="Johannes Rutzmoser and Christian Meyer">
+    <link rel="icon" href="../../favicon.ico">
+
+    
+    <!-- Bootstrap core CSS -->
+    <link href="../../_static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="../../_static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet"> -->
+
+    <!-- Custom styles for this template -->
+    <link href="../../_static/css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <!-- <script src="../../assets/js/ie-emulation-modes-warning.js"></script> -->
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      
+      
+    <![endif]-->
+
+  </head>
+  <body role="document">
+
+    <div class="document">
+
+
+       <!-- Static navbar -->
+    <nav class="navbar navbar-toggleable-md navbar-inverse bg-primary" id="main-nav">
+        <div class="container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#"><img src="../../_static/img/logo.png" alt="" width="30" height="30" class="d-inline-block align-top">
+                  AMfe Documentation
+              </a>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li class="nav-item active"><a href="../../index.html">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="../getting_started/index.html">Tutorials</a></li>
+                <li class="nav-item"><a class="nav-link" href="../fundamentals/index.html">Fundamentals</a></li>
+                <li class="nav-item"><a class="nav-link" href="../examples/index.html">Examples</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../contents.html">Table of Contents</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../genindex.html">Index</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../py-modindex.html">Modules</a></li>
+              </ul>
+            </div>
+        </div>
+    </nav>
+    
+    
+    <div class="container">
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.boundary.html" title="amfe.boundary module">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+        <div class="row">
+            
+  <div class="section" id="module-amfe.assembly">
+<span id="amfe-assembly-module"></span><h1>amfe.assembly module<a class="headerlink" href="#module-amfe.assembly" title="Permalink to this headline">¶</a></h1>
+<p>Basic assembly module for the finite element code. Assumes to have all elements
+in the inertial frame.</p>
+<p>Provides an Assembly class which knows the mesh. It can assemble the vector of
+nonlinear forces, the mass matrix and the tangential stiffness matrix. Some
+parts of the code &#8211; mostly the indexing of the sparse matrices &#8211; are
+substituted by fortran routines, as they allow for a huge speedup.</p>
+<dl class="class">
+<dt id="amfe.assembly.Assembly">
+<em class="property">class </em><code class="descclassname">amfe.assembly.</code><code class="descname">Assembly</code><span class="sig-paren">(</span><em>mesh</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Class for the more fancy assembly of meshes with non-heterogeneous
+elements.</p>
+<dl class="attribute">
+<dt id="amfe.assembly.Assembly.C_csr">
+<code class="descname">C_csr</code><a class="headerlink" href="#amfe.assembly.Assembly.C_csr" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>scipy.sparse.csr.csr_matrix</em> &#8211; Matrix containing the sparsity pattern of the problem</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.assembly.Assembly.element_indices">
+<code class="descname">element_indices</code><a class="headerlink" href="#amfe.assembly.Assembly.element_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list</em> &#8211; Ragged list containing the global indices for the local variables
+of an element. The entry [i,j] gives the index in the global vector
+of element i with dof j</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.assembly.Assembly.mesh">
+<code class="descname">mesh</code><a class="headerlink" href="#amfe.assembly.Assembly.mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>amfe.Mesh</em> &#8211; Mesh-Class the Assembly is associated with</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.assembly.Assembly.neumann_indices">
+<code class="descname">neumann_indices</code><a class="headerlink" href="#amfe.assembly.Assembly.neumann_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list</em> &#8211; Ragged list equivalently to element_indices for the neumann
+boundary skin elements.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.assembly.Assembly.nodes_voigt">
+<code class="descname">nodes_voigt</code><a class="headerlink" href="#amfe.assembly.Assembly.nodes_voigt" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>np.ndarray</em> &#8211; vector of all nodal coordinates in voigt-notation.
+Dimension is (ndofs_total, )</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.assembly.Assembly.elements_on_node">
+<code class="descname">elements_on_node</code><a class="headerlink" href="#amfe.assembly.Assembly.elements_on_node" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>np.ndarray</em> &#8211; array containing the number of adjacent elements per node. Is necessary
+for stress recovery.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.assemble_g_and_b">
+<code class="descname">assemble_g_and_b</code><span class="sig-paren">(</span><em>V</em>, <em>S</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.assemble_g_and_b"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.assemble_g_and_b" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assembles the element contributin matrix G for the given basis V and
+the snapshots S.</p>
+<p>This function is needed for cubature bases Hyper reduction methods
+like the ECSW.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>V</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>N_unconstr</em><em>, </em><em>n</em><em>)</em><em></em>) &#8211; Reduction basis</li>
+<li><strong>S</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>N_unconstr</em><em>, </em><em>m</em><em>)</em><em></em>) &#8211; Snapshots gathered as column vectors.</li>
+<li><strong>verbose</strong> (<em>print dots for the</em>) &#8211; </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>G</strong> (<em>ndarray, shape (n*m, no_of_elements)</em>) &#8211; Contribution matrix of internal forces. The columns form the
+internal force contributions on the basis V for the m snapshots
+gathered in S.</li>
+<li><strong>b</strong> (<em>ndarray, shape (n*m, )</em>) &#8211; summed force contribution</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This assembly works on the unconstrained variables, so both, V and S
+have to contain the unassembled nodal displacements.</p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.assemble_k_and_f">
+<code class="descname">assemble_k_and_f</code><span class="sig-paren">(</span><em>u</em>, <em>t</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.assemble_k_and_f"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.assemble_k_and_f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assembles the stiffness matrix of the given mesh and element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>u</strong> (<em>ndarray</em>) &#8211; nodal displacement of the nodes in Voigt-notation</li>
+<li><strong>t</strong> (<em>float</em>) &#8211; time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>K</strong> (<em>sparse.csr_matrix</em>) &#8211; unconstrained assembled stiffness matrix in sparse matrix csr format.</li>
+<li><strong>f</strong> (<em>ndarray</em>) &#8211; unconstrained assembled force vector</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.assemble_k_and_f_DEIM">
+<code class="descname">assemble_k_and_f_DEIM</code><span class="sig-paren">(</span><em>E_tilde</em>, <em>proj_list</em>, <em>V</em>, <em>u_red=None</em>, <em>t=0</em>, <em>symmetric=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.assemble_k_and_f_DEIM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.assemble_k_and_f_DEIM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assemble the DEIM matrix and vector. This function is suited for large
+systems, as only hte proj list is used.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.assemble_k_and_f_hyper">
+<code class="descname">assemble_k_and_f_hyper</code><span class="sig-paren">(</span><em>V</em>, <em>idxs</em>, <em>xi</em>, <em>u</em>, <em>t</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.assemble_k_and_f_hyper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.assemble_k_and_f_hyper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assembly routine for a hyper reduced ECSW system.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>V</strong> (<em>ndarray</em><em>, </em><em>shape:</em><em> (</em><em>N_unconstr</em><em>, </em><em>n_red</em><em>)</em><em></em>) &#8211; unconstrained reduction basis</li>
+<li><strong>idxs</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>n_ele_hyper</em><em>, </em><em></em><em>)</em><em></em>) &#8211; indices of the elements in the active element set.</li>
+<li><strong>xi</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>n_ele_hyper</em><em>, </em><em></em><em>)</em><em></em>) &#8211; array of weights for the hyper reduced system</li>
+<li><strong>u</strong> (<em>ndarray</em><em>, </em><em>shape:</em><em> (</em><em>n_red</em><em>,</em><em></em><em>)</em><em></em>) &#8211; unconstrained displacement field</li>
+<li><strong>t</strong> (<em>ndarray</em>) &#8211; current time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>K</strong> (<em>ndarray, shape: (n_red, n_red)</em>) &#8211; reduced stiffness matrix</li>
+<li><strong>f_int</strong> (<em>ndarray, shape (n_red,)</em>) &#8211; reduced internal force vector</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#amfe.assembly.Assembly.assemble_k_and_f_hyper_no_inplace" title="amfe.assembly.Assembly.assemble_k_and_f_hyper_no_inplace"><code class="xref py py-meth docutils literal"><span class="pre">assemble_k_and_f_hyper_no_inplace()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.assemble_k_and_f_hyper_no_inplace">
+<code class="descname">assemble_k_and_f_hyper_no_inplace</code><span class="sig-paren">(</span><em>V</em>, <em>idxs</em>, <em>xi</em>, <em>u</em>, <em>t</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.assemble_k_and_f_hyper_no_inplace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.assemble_k_and_f_hyper_no_inplace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assembly routine for a hyper reduced ECSW system.</p>
+<p>The difference to the function <cite>assemble_k_and_f_hyper</cite> is, that here
+the sparse matrix is assembled first and then the reduction is
+performed.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>V</strong> (<em>ndarray</em><em>, </em><em>shape:</em><em> (</em><em>N_unconstr</em><em>, </em><em>n_red</em><em>)</em><em></em>) &#8211; unconstrained reduction basis</li>
+<li><strong>idxs</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>n_ele_hyper</em><em>, </em><em></em><em>)</em><em></em>) &#8211; indices of the elements in the active element set.</li>
+<li><strong>xi</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>n_ele_hyper</em><em>, </em><em></em><em>)</em><em></em>) &#8211; array of weights for the hyper reduced system</li>
+<li><strong>u</strong> (<em>ndarray</em><em>, </em><em>shape:</em><em> (</em><em>n_red</em><em>,</em><em></em><em>)</em><em></em>) &#8211; unconstrained displacement field</li>
+<li><strong>t</strong> (<em>ndarray</em>) &#8211; current time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>K</strong> (<em>ndarray, shape: (n_red, n_red)</em>) &#8211; reduced stiffness matrix</li>
+<li><strong>f_int</strong> (<em>ndarray, shape (n_red,)</em>) &#8211; reduced internal force vector</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#amfe.assembly.Assembly.assemble_k_and_f_hyper" title="amfe.assembly.Assembly.assemble_k_and_f_hyper"><code class="xref py py-meth docutils literal"><span class="pre">assemble_k_and_f_hyper()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.assemble_k_and_f_neumann">
+<code class="descname">assemble_k_and_f_neumann</code><span class="sig-paren">(</span><em>u=None</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.assemble_k_and_f_neumann"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.assemble_k_and_f_neumann" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assembles the stiffness matrix and the force of the Neumann skin
+elements.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>u</strong> (<em>ndarray</em>) &#8211; nodal displacement of the nodes in Voigt-notation</li>
+<li><strong>t</strong> (<em>float</em>) &#8211; time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>K</strong> (<em>sparse.csr_matrix</em>) &#8211; unconstrained assembled stiffness matrix in sparse matrix csr format.</li>
+<li><strong>f</strong> (<em>ndarray</em>) &#8211; unconstrained assembled force vector</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.assemble_k_and_f_red">
+<code class="descname">assemble_k_and_f_red</code><span class="sig-paren">(</span><em>V</em>, <em>u</em>, <em>t</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.assemble_k_and_f_red"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.assemble_k_and_f_red" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assembly routine for reduces systems. Note, that V has to be
+unconstrained and u is the reduced displacement field.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>V</strong> (<em>ndarray</em><em>, </em><em>shape:</em><em> (</em><em>N_unconstr</em><em>, </em><em>n_red</em><em>)</em><em></em>) &#8211; unconstrained reduction basis</li>
+<li><strong>u</strong> (<em>ndarray</em><em>, </em><em>shape:</em><em> (</em><em>n_red</em><em>,</em><em></em><em>)</em><em></em>) &#8211; unconstrained displacement field</li>
+<li><strong>t</strong> (<em>ndarray</em>) &#8211; current time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>K</strong> (<em>ndarray, shape: (n_red, n_red)</em>) &#8211; reduced stiffness matrix</li>
+<li><strong>f_int</strong> (<em>ndarray, shape (n_red,)</em>) &#8211; reduced internal force vector</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.assemble_k_f_S_E">
+<code class="descname">assemble_k_f_S_E</code><span class="sig-paren">(</span><em>u</em>, <em>t</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.assemble_k_f_S_E"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.assemble_k_f_S_E" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assemble the stiffness matrix with stress recovery of the given mesh
+and element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>u</strong> (<em>ndarray</em>) &#8211; nodal displacement of the nodes in Voigt-notation</li>
+<li><strong>t</strong> (<em>float</em>) &#8211; time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>K</strong> (<em>sparse.csr_matrix</em>) &#8211; unconstrained assembled stiffness matrix in sparse matrix csr format.</li>
+<li><strong>f</strong> (<em>ndarray</em>) &#8211; unconstrained assembled force vector</li>
+<li><strong>S</strong> (<em>ndarray</em>) &#8211; unconstrained assembled stress tensor</li>
+<li><strong>E</strong> (<em>ndarray</em>) &#8211; unconstrained assembled strain tensor</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.assemble_m">
+<code class="descname">assemble_m</code><span class="sig-paren">(</span><em>u=None</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.assemble_m"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.assemble_m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assembles the mass matrix of the given mesh and element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>u</strong> (<em>ndarray</em><em> or </em><em>None</em><em>, </em><em>optional</em>) &#8211; nodal displacement of the nodes in Voigt-notation. Default: None.</li>
+<li><strong>t</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; time. Default: 0.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>M</strong> &#8211; unconstrained assembled mass matrix in sparse matrix csr-format.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">sparse.csr_matrix</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>TODO</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.compute_c_deim">
+<code class="descname">compute_c_deim</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.compute_c_deim"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.compute_c_deim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assembles the matrix C_deim which assembles the unassembled system
+C_matrix: f_a = C_deim &#64; f_u</p>
+<p>None</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.compute_element_indices">
+<code class="descname">compute_element_indices</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.compute_element_indices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.compute_element_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the element indices which are the global dofs of every element.</p>
+<p>The element_indices are a list, where every element of the list denotes
+the dofs of the element in the correct order.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>None</strong> &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.f_nl_unassembled">
+<code class="descname">f_nl_unassembled</code><span class="sig-paren">(</span><em>u=None</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.f_nl_unassembled"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.f_nl_unassembled" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the unassemebled nonlinear force for DEIM.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>u</strong> (<em>ndarray</em>) &#8211; Initial solution or solution from previous iteration</li>
+<li><strong>t</strong> (<em>float</em>) &#8211; Time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>f</strong> &#8211; Unassembled nonlinear internal force</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.preallocate_csr">
+<code class="descname">preallocate_csr</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.preallocate_csr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.preallocate_csr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the sparsity pattern of the assembled matrices and store an
+empty matrix in self.C_csr.</p>
+<p>The matrix self.C_csr serves as a &#8216;blueprint&#8217; matrix which is filled in
+the assembly process.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>None</strong> &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>This preallocation routine can take some while for large matrices. Furthermore it is not implemented memory-efficient, so for large systems and low RAM this might be an issue...</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.assembly.Assembly.preallocate_hyper_csr">
+<code class="descname">preallocate_hyper_csr</code><span class="sig-paren">(</span><em>idxs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/assembly.html#Assembly.preallocate_hyper_csr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.assembly.Assembly.preallocate_hyper_csr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Preallocate a sparse matrix for a reduced mesh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>idxs</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>n_ele_hyper</em><em>, </em><em></em><em>)</em><em></em>) &#8211; indices of the elements in the active element set.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+        </div>
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.boundary.html" title="amfe.boundary module">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+    </div>
+
+    
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+<script src="../../_static/js/bootstrap.min.js"></script>
+<script src="../../_static/js/theme.js"></script>
+<script>loader();</script>
+
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

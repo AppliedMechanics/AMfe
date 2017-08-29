@@ -1,0 +1,58 @@
+
+
+.navbar-brand img {
+    display: inline;
+    margin-right: 10px;
+    border-radius: 15px;
+}
+
+.section {
+    margin-top: 50px;
+}
+
+div.figure a {
+    margin: 0 auto;
+}
+
+#amfe-container {
+    background-image: url(../img/welcome-logo.png);
+    background-repeat: no-repeat;
+    background-position: 0% 0%;
+    position: relative;
+
+}
+
+#amfe-container-row {
+    position: absolute;
+    margin-top: auto;
+    margin-bottom: auto;
+    top: 0;
+    bottom: 0;
+
+
+}
+
+#amfe-container-row-citation {
+    font-size: 3ex;
+    position: absolute;
+    left: 75%;
+    top: 50%;
+    transform: translate(0%,-50%);
+    }
+
+#main-nav {
+    margin-bottom: 0px;
+    }
+
+#welcome-continue {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+div.admonition-todo {
+  border: 2px solid;
+  border-color: red;
+}

@@ -1,0 +1,205 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>amfe.mesh_tying module &#8212; AMfe 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="This is the documentation of AMfe">
+    <meta name="author" content="Johannes Rutzmoser and Christian Meyer">
+    <link rel="icon" href="../../favicon.ico">
+
+    
+    <!-- Bootstrap core CSS -->
+    <link href="../../_static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="../../_static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet"> -->
+
+    <!-- Custom styles for this template -->
+    <link href="../../_static/css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <!-- <script src="../../assets/js/ie-emulation-modes-warning.js"></script> -->
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      
+      
+    <![endif]-->
+
+  </head>
+  <body role="document">
+
+    <div class="document">
+
+
+       <!-- Static navbar -->
+    <nav class="navbar navbar-toggleable-md navbar-inverse bg-primary" id="main-nav">
+        <div class="container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#"><img src="../../_static/img/logo.png" alt="" width="30" height="30" class="d-inline-block align-top">
+                  AMfe Documentation
+              </a>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li class="nav-item active"><a href="../../index.html">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="../getting_started/index.html">Tutorials</a></li>
+                <li class="nav-item"><a class="nav-link" href="../fundamentals/index.html">Fundamentals</a></li>
+                <li class="nav-item"><a class="nav-link" href="../examples/index.html">Examples</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../contents.html">Table of Contents</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../genindex.html">Index</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../py-modindex.html">Modules</a></li>
+              </ul>
+            </div>
+        </div>
+    </nav>
+    
+    
+    <div class="container">
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a title="AMfe 0.2 documentation" href="../../index.html" accesskey="U">up</a>
+      </li>
+      </ul>
+        </div>
+        <div class="row">
+            
+  <div class="section" id="amfe-mesh-tying-module">
+<h1>amfe.mesh_tying module<a class="headerlink" href="#amfe-mesh-tying-module" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-amfe.mesh_tying"></span><p>Mesh tying module allowing for master-slave nodal interaction</p>
+<dl class="function">
+<dt id="amfe.mesh_tying.master_slave_constraint">
+<code class="descclassname">amfe.mesh_tying.</code><code class="descname">master_slave_constraint</code><span class="sig-paren">(</span><em>master_nodes</em>, <em>master_obj</em>, <em>slave_nodes</em>, <em>nodes</em>, <em>tying_type='fixed'</em>, <em>robustness=4</em>, <em>verbose=True</em>, <em>conform_slave_mesh=True</em>, <em>fix_mesh_dist=0.001</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh_tying.html#master_slave_constraint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh_tying.master_slave_constraint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a master-slave relationship to the given mesh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>robustness</strong> (<em>int</em>) &#8211; factor indicating, how many elements are considered for contact search.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="amfe.mesh_tying.proj_point_to_element">
+<code class="descclassname">amfe.mesh_tying.</code><code class="descname">proj_point_to_element</code><span class="sig-paren">(</span><em>X</em>, <em>p</em>, <em>ele_type</em>, <em>niter_max=20</em>, <em>eps=1e-10</em>, <em>verbose=False</em>, <em>max_dist=0.0001</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh_tying.html#proj_point_to_element"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh_tying.proj_point_to_element" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute local element coordinates and weights for for point p projected on
+an element.</p>
+<p>This function is heavily used to project the slave nodes on master elements.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>X</strong> (<em>np.ndarray</em><em>, </em><em>shape =</em><em> (</em><em>12</em><em>,</em><em></em><em>)</em><em></em>) &#8211; points of the quad4 element in reference configuratoin</li>
+<li><strong>p</strong> (<em>np.ndarray</em><em>, </em><em>shape =</em><em> (</em><em>3</em><em>,</em><em></em><em>)</em><em></em>) &#8211; point which should be tied onto the master element</li>
+<li><strong>ele_type</strong> (<em>str {'Quad4'</em><em>, </em><em>'Quad8'</em><em>, </em><em>'Tri3'</em><em>, </em><em>'Tri6'}</em>) &#8211; element type on which is projected</li>
+<li><strong>niter_max</strong> (<em>int</em><em>, </em><em>optional</em>) &#8211; number of maximum iterations of the Newton-Raphson iteration.
+Default value: 20</li>
+<li><strong>eps</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; tolerance for the Newton-Raphson iteration. Default value: 1E-10</li>
+<li><strong>verbose</strong> (<em>bool</em><em>, </em><em>optional</em>) &#8211; flag for verbose behavior. Default value: False</li>
+<li><strong>max_dist</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; maximum normal distance of point to element. If distance of point to element is smaller than max_dist, the element will be regarded as a non-valid element.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>valid_element</strong> (<em>bool</em>) &#8211; boolean flag setting, if point lies withinn the master element</li>
+<li><strong>N</strong> (<em>ndarray, shape (4,)</em>) &#8211; weights of the nodal coordinates</li>
+<li><strong>local_basis</strong> (<em>ndarray, shape (3,3)</em>) &#8211; local tangential basis. local_basis[:,0] forms the normal vector,
+local_basis[:,1:] the vectors along xi and eta</li>
+<li><strong>xi</strong> (<em>ndarray, shape(2,)</em>) &#8211; position of p in the local element coordinate system</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="amfe.mesh_tying.quad4_shape_functions">
+<code class="descclassname">amfe.mesh_tying.</code><code class="descname">quad4_shape_functions</code><span class="sig-paren">(</span><em>xi_vec</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh_tying.html#quad4_shape_functions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh_tying.quad4_shape_functions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="amfe.mesh_tying.quad8_shape_functions">
+<code class="descclassname">amfe.mesh_tying.</code><code class="descname">quad8_shape_functions</code><span class="sig-paren">(</span><em>xi_vec</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh_tying.html#quad8_shape_functions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh_tying.quad8_shape_functions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="amfe.mesh_tying.tri3_shape_functions">
+<code class="descclassname">amfe.mesh_tying.</code><code class="descname">tri3_shape_functions</code><span class="sig-paren">(</span><em>xi_vec</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh_tying.html#tri3_shape_functions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh_tying.tri3_shape_functions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="amfe.mesh_tying.tri6_shape_functions">
+<code class="descclassname">amfe.mesh_tying.</code><code class="descname">tri6_shape_functions</code><span class="sig-paren">(</span><em>xi_vec</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh_tying.html#tri6_shape_functions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh_tying.tri6_shape_functions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+        </div>
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a title="AMfe 0.2 documentation" href="../../index.html" accesskey="U">up</a>
+      </li>
+      </ul>
+        </div>
+    </div>
+
+    
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+<script src="../../_static/js/bootstrap.min.js"></script>
+<script src="../../_static/js/theme.js"></script>
+<script>loader();</script>
+
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

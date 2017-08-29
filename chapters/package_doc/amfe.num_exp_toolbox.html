@@ -1,0 +1,193 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>amfe.num_exp_toolbox module &#8212; AMfe 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="amfe.solver module" href="amfe.solver.html" />
+    <link rel="prev" title="amfe.mesh module" href="amfe.mesh.html" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="This is the documentation of AMfe">
+    <meta name="author" content="Johannes Rutzmoser and Christian Meyer">
+    <link rel="icon" href="../../favicon.ico">
+
+    
+    <!-- Bootstrap core CSS -->
+    <link href="../../_static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="../../_static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet"> -->
+
+    <!-- Custom styles for this template -->
+    <link href="../../_static/css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <!-- <script src="../../assets/js/ie-emulation-modes-warning.js"></script> -->
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      
+      
+    <![endif]-->
+
+  </head>
+  <body role="document">
+
+    <div class="document">
+
+
+       <!-- Static navbar -->
+    <nav class="navbar navbar-toggleable-md navbar-inverse bg-primary" id="main-nav">
+        <div class="container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#"><img src="../../_static/img/logo.png" alt="" width="30" height="30" class="d-inline-block align-top">
+                  AMfe Documentation
+              </a>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li class="nav-item active"><a href="../../index.html">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="../getting_started/index.html">Tutorials</a></li>
+                <li class="nav-item"><a class="nav-link" href="../fundamentals/index.html">Fundamentals</a></li>
+                <li class="nav-item"><a class="nav-link" href="../examples/index.html">Examples</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../contents.html">Table of Contents</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../genindex.html">Index</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../py-modindex.html">Modules</a></li>
+              </ul>
+            </div>
+        </div>
+    </nav>
+    
+    
+    <div class="container">
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="amfe.mesh.html" title="amfe.mesh module">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.solver.html" title="amfe.solver module">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+        <div class="row">
+            
+  <div class="section" id="module-amfe.num_exp_toolbox">
+<span id="amfe-num-exp-toolbox-module"></span><h1>amfe.num_exp_toolbox module<a class="headerlink" href="#module-amfe.num_exp_toolbox" title="Permalink to this headline">¶</a></h1>
+<p>Numerical Experiments Toolbox.</p>
+<p class="rubric">Example</p>
+<dl class="function">
+<dt id="amfe.num_exp_toolbox.apply_async">
+<code class="descclassname">amfe.num_exp_toolbox.</code><code class="descname">apply_async</code><span class="sig-paren">(</span><em>pool</em>, <em>fun</em>, <em>args</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/num_exp_toolbox.html#apply_async"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.num_exp_toolbox.apply_async" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run a function asynchrounously.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>pool</strong> (<em>instance of multiprocessing.Pool</em>) &#8211; A pool for running stuff in parallel</li>
+<li><strong>fun</strong> (<em>function</em>) &#8211; function</li>
+<li><strong>args</strong> (<em>list</em>) &#8211; arguments of function gathered in a list without keywords.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>job_result</strong> &#8211; Return value of the apply_async method of the Pool-class</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">multiprocessing.Pool.apply instance</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pool</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Pool</span><span class="p">()</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">job_result</span> <span class="o">=</span> <span class="n">amfe</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">job_result</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+<span class="go">3</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The apply async stuff needs to pickle an object. As some nested functions
+used in amfe cannot be pickled, the dill module has to be used. This is
+done by the given method.</p>
+</div>
+</dd></dl>
+
+</div>
+
+
+        </div>
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="amfe.mesh.html" title="amfe.mesh module">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.solver.html" title="amfe.solver module">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+    </div>
+
+    
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+<script src="../../_static/js/bootstrap.min.js"></script>
+<script src="../../_static/js/theme.js"></script>
+<script>loader();</script>
+
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

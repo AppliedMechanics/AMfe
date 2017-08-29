@@ -1,0 +1,687 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>amfe.element module &#8212; AMfe 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="amfe.material module" href="amfe.material.html" />
+    <link rel="prev" title="amfe.boundary module" href="amfe.boundary.html" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="This is the documentation of AMfe">
+    <meta name="author" content="Johannes Rutzmoser and Christian Meyer">
+    <link rel="icon" href="../../favicon.ico">
+
+    
+    <!-- Bootstrap core CSS -->
+    <link href="../../_static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="../../_static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet"> -->
+
+    <!-- Custom styles for this template -->
+    <link href="../../_static/css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <!-- <script src="../../assets/js/ie-emulation-modes-warning.js"></script> -->
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      
+      
+    <![endif]-->
+
+  </head>
+  <body role="document">
+
+    <div class="document">
+
+
+       <!-- Static navbar -->
+    <nav class="navbar navbar-toggleable-md navbar-inverse bg-primary" id="main-nav">
+        <div class="container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#"><img src="../../_static/img/logo.png" alt="" width="30" height="30" class="d-inline-block align-top">
+                  AMfe Documentation
+              </a>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li class="nav-item active"><a href="../../index.html">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="../getting_started/index.html">Tutorials</a></li>
+                <li class="nav-item"><a class="nav-link" href="../fundamentals/index.html">Fundamentals</a></li>
+                <li class="nav-item"><a class="nav-link" href="../examples/index.html">Examples</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../contents.html">Table of Contents</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../genindex.html">Index</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../py-modindex.html">Modules</a></li>
+              </ul>
+            </div>
+        </div>
+    </nav>
+    
+    
+    <div class="container">
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="amfe.boundary.html" title="amfe.boundary module">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.material.html" title="amfe.material module">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+        <div class="row">
+            
+  <div class="section" id="module-amfe.element">
+<span id="amfe-element-module"></span><h1>amfe.element module<a class="headerlink" href="#module-amfe.element" title="Permalink to this headline">¶</a></h1>
+<p>Element Module in which the Finite Elements are described on Element level.</p>
+<p>This Module is arbitrarily extensible. The idea is to use the basis class
+Element which provides the functionality for an efficient solution of a time
+integration by only once calling the internal tensor computation and then
+extracting the tangential stiffness matrix and the internal force vector in one
+run.</p>
+<p>Some remarks resulting in the observations of the profiler:
+Most of the time is spent with python-functions, when they are used. For
+instance the kron-function in order to build the scattered geometric stiffness
+matrix or the trace function are very inefficient. They can be done better when
+using direct functions.</p>
+<p>If some element things are really time critical, it is recommended to port the
+heavy computation to FORTRAN. This can be achieved by using the provided f2py
+routines and reprogram the stuff for the own use.</p>
+<dl class="class">
+<dt id="amfe.element.Element">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Element</code><span class="sig-paren">(</span><em>material=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Element"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Element" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Anonymous baseclass for all elements. It contains the methods needed
+for the computation of the element stuff.</p>
+<dl class="attribute">
+<dt id="amfe.element.Element.material">
+<code class="descname">material</code><a class="headerlink" href="#amfe.element.Element.material" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>instance of amfe.HyperelasticMaterial</em> &#8211; Class containing the material behavior.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.Element.name">
+<code class="descname">name</code><a class="headerlink" href="#amfe.element.Element.name" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> &#8211; Name for the postprocessing tool to identify the characteristics of the
+element</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.element.Element.f_int">
+<code class="descname">f_int</code><span class="sig-paren">(</span><em>X</em>, <em>u</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Element.f_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Element.f_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the internal element restoring force f_int</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>X</strong> (<em>ndarray</em>) &#8211; nodal coordinates given in Voigt notation (i.e. a 1-D-Array of
+type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])</li>
+<li><strong>u</strong> (<em>ndarray</em>) &#8211; nodal displacements given in Voigt notation</li>
+<li><strong>t</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; time, default value: 0.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>f_int</strong> &#8211; The nodal force vector (numpy.ndarray of dimension (ndim,))</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.element.Element.k_and_f_int">
+<code class="descname">k_and_f_int</code><span class="sig-paren">(</span><em>X</em>, <em>u</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Element.k_and_f_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Element.k_and_f_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the tangential stiffness matrix and the internal nodal force
+of the Element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>X</strong> (<em>ndarray</em>) &#8211; nodal coordinates given in Voigt notation (i.e. a 1-D-Array
+of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])</li>
+<li><strong>u</strong> (<em>ndarray</em>) &#8211; nodal displacements given in Voigt notation</li>
+<li><strong>t</strong> (<em>float</em>) &#8211; time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>k_int</strong> (<em>ndarray</em>) &#8211; The tangential stiffness matrix (ndarray of dimension (ndim, ndim))</li>
+<li><strong>f_int</strong> (<em>ndarray</em>) &#8211; The nodal force vector (ndarray of dimension (ndim,))</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>TODO</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.element.Element.k_f_S_E_int">
+<code class="descname">k_f_S_E_int</code><span class="sig-paren">(</span><em>X</em>, <em>u</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Element.k_f_S_E_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Element.k_f_S_E_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the tangential stiffness matrix, the internal nodal force,
+the strain and the stress tensor (voigt-notation) of the Element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>X</strong> (<em>ndarray</em>) &#8211; nodal coordinates given in Voigt notation (i.e. a 1-D-Array
+of type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])</li>
+<li><strong>u</strong> (<em>ndarray</em>) &#8211; nodal displacements given in Voigt notation</li>
+<li><strong>t</strong> (<em>float</em>) &#8211; time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>K</strong> (<em>ndarray</em>) &#8211; The tangential stiffness matrix (ndarray of dimension (ndim, ndim))</li>
+<li><strong>f</strong> (<em>ndarray</em>) &#8211; The nodal force vector (ndarray of dimension (ndim,))</li>
+<li><strong>S</strong> (<em>ndarray</em>) &#8211; The stress tensor (ndarray of dimension (no_of_nodes, 6))</li>
+<li><strong>E</strong> (<em>ndarray</em>) &#8211; The strain tensor (ndarray of dimension (no_of_nodes, 6))</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>TODO</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.element.Element.k_int">
+<code class="descname">k_int</code><span class="sig-paren">(</span><em>X</em>, <em>u</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Element.k_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Element.k_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the tangential stiffness matrix of the Element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>X</strong> (<em>ndarray</em>) &#8211; nodal coordinates given in Voigt notation (i.e. a 1-D-Array of
+type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])</li>
+<li><strong>u</strong> (<em>ndarray</em>) &#8211; nodal displacements given in Voigt notation</li>
+<li><strong>t</strong> (<em>float</em>) &#8211; time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>k_int</strong> &#8211; The tangential stiffness matrix (numpy.ndarray of type ndim x ndim)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.element.Element.m_and_vec_int">
+<code class="descname">m_and_vec_int</code><span class="sig-paren">(</span><em>X</em>, <em>u</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Element.m_and_vec_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Element.m_and_vec_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns mass matrix of the Element and zero vector of size X.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>X</strong> (<em>ndarray</em>) &#8211; nodal coordinates given in Voigt notation (i.e. a 1-D-Array of
+type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])</li>
+<li><strong>u</strong> (<em>ndarray</em>) &#8211; nodal displacements given in Voigt notation</li>
+<li><strong>t</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; time, default value: 0.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>m_int</strong> (<em>ndarray</em>) &#8211; The consistent mass matrix of the element (numpy.ndarray of
+dimension (ndim,ndim))</li>
+<li><strong>vec</strong> (<em>ndarray</em>) &#8211; vector (containing zeros) of dimension (ndim,)</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.element.Element.m_int">
+<code class="descname">m_int</code><span class="sig-paren">(</span><em>X</em>, <em>u</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Element.m_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Element.m_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the mass matrix of the element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>X</strong> (<em>ndarray</em>) &#8211; nodal coordinates given in Voigt notation (i.e. a 1-D-Array of
+type [x_1, y_1, z_1, x_2, y_2, z_2 etc.])</li>
+<li><strong>u</strong> (<em>ndarray</em>) &#8211; nodal displacements given in Voigt notation</li>
+<li><strong>t</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; time, default value: 0.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>m_int</strong> &#8211; The consistent mass matrix of the element (numpy.ndarray of
+dimension (ndim,ndim))</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">name</code><em class="property"> = None</em></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Tri3">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Tri3</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Tri3"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Tri3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.Element" title="amfe.element.Element"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.Element</span></code></a></p>
+<p>Element class for a plane triangle element in Total Lagrangian formulation.
+The displacements are given in x- and y-coordinates;</p>
+<p class="rubric">Notes</p>
+<p>The Element assumes constant strain and stress over the whole element.
+Thus the approximation quality is very moderate.</p>
+<p class="rubric">References</p>
+<p>Basis for this implementation is the Monograph of Ted Belytschko:
+Nonlinear Finite Elements for Continua and Structures.
+pp. 201 and 207.</p>
+<dl class="attribute">
+<dt id="amfe.element.Tri3.name">
+<code class="descname">name</code><em class="property"> = 'Tri3'</em><a class="headerlink" href="#amfe.element.Tri3.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.Tri3.plane_stress">
+<code class="descname">plane_stress</code><em class="property"> = True</em><a class="headerlink" href="#amfe.element.Tri3.plane_stress" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Tri6">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Tri6</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Tri6"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Tri6" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.Element" title="amfe.element.Element"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.Element</span></code></a></p>
+<p>6 node second order triangle
+Triangle Element with 6 dofs; 3 dofs at the corner, 3 dofs in the
+intermediate point of every face.</p>
+<dl class="attribute">
+<dt id="amfe.element.Tri6.name">
+<code class="descname">name</code><em class="property"> = 'Tri6'</em><a class="headerlink" href="#amfe.element.Tri6.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.Tri6.plane_stress">
+<code class="descname">plane_stress</code><em class="property"> = True</em><a class="headerlink" href="#amfe.element.Tri6.plane_stress" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Quad4">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Quad4</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Quad4"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Quad4" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.Element" title="amfe.element.Element"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.Element</span></code></a></p>
+<p>Quadrilateral 2D element with bilinear shape functions.</p>
+<div class="code highlight-python3"><div class="highlight"><pre><span></span>        <span class="o">^</span> <span class="n">eta</span>
+<span class="mi">4</span>       <span class="o">|</span>       <span class="mi">3</span>
+  <span class="n">o_____</span><span class="o">|</span><span class="n">_____o</span>
+  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+<span class="o">--------+----------&gt;</span>
+  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>   <span class="n">xi</span>
+  <span class="o">|</span>     <span class="o">|</span>     <span class="o">|</span>
+  <span class="n">o_____</span><span class="o">|</span><span class="n">_____o</span>
+<span class="mi">1</span>       <span class="o">|</span>       <span class="mi">2</span>
+</pre></div>
+</div>
+<dl class="attribute">
+<dt id="amfe.element.Quad4.name">
+<code class="descname">name</code><em class="property"> = 'Quad4'</em><a class="headerlink" href="#amfe.element.Quad4.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Quad8">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Quad8</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Quad8"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Quad8" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.Element" title="amfe.element.Element"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.Element</span></code></a></p>
+<p>Plane Quadrangle with quadratic shape functions and 8 nodes. 4 nodes are
+at every corner, 4 nodes on every face.</p>
+<dl class="attribute">
+<dt id="amfe.element.Quad8.name">
+<code class="descname">name</code><em class="property"> = 'Quad8'</em><a class="headerlink" href="#amfe.element.Quad8.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Tet4">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Tet4</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Tet4"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Tet4" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.Element" title="amfe.element.Element"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.Element</span></code></a></p>
+<p>Tetraeder-Element with 4 nodes</p>
+<dl class="attribute">
+<dt id="amfe.element.Tet4.name">
+<code class="descname">name</code><em class="property"> = 'Tet4'</em><a class="headerlink" href="#amfe.element.Tet4.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Tet10">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Tet10</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Tet10"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Tet10" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.Element" title="amfe.element.Element"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.Element</span></code></a></p>
+<p>Tet10 solid element; Node numbering is done like in ParaView and in <a class="reference internal" href="#r1" id="id1">[R1]</a></p>
+<p>The node numbering is as follows:</p>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="r1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[R1]</a></td><td>Felippa, Carlos: Advanced Finite Element Methods (ASEN 6367),
+Spring 2013. <a class="reference external" href="http://www.colorado.edu/engineering/CAS/courses.d/AFEM.d/AFEM.Ch10.d/AFEM.Ch10.index.html">Online Source</a></td></tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="amfe.element.Tet10.name">
+<code class="descname">name</code><em class="property"> = 'Tet10'</em><a class="headerlink" href="#amfe.element.Tet10.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Hexa8">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Hexa8</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Hexa8"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Hexa8" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.Element" title="amfe.element.Element"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.Element</span></code></a></p>
+<p>Eight point Hexahedron element.</p>
+<div class="code highlight-python3"><div class="highlight"><pre><span></span>         <span class="n">eta</span>
+<span class="mi">3</span><span class="o">----------</span><span class="mi">2</span>
+<span class="o">|</span>\     <span class="o">^</span>   <span class="o">|</span>        <span class="o">|</span> \    <span class="o">|</span>   <span class="o">|</span>         <span class="o">|</span>  \   <span class="o">|</span>   <span class="o">|</span>          <span class="o">|</span>   <span class="mi">7</span><span class="o">------+---</span><span class="mi">6</span>
+<span class="o">|</span>   <span class="o">|</span>  <span class="o">+--</span> <span class="o">|--</span> <span class="o">|</span> <span class="o">-&gt;</span> <span class="n">xi</span>
+<span class="mi">0</span><span class="o">---+---</span>\<span class="o">--</span><span class="mi">1</span>   <span class="o">|</span>
+ \  <span class="o">|</span>    \  \  <span class="o">|</span>
+  \ <span class="o">|</span>     \  \ <span class="o">|</span>
+   \<span class="o">|</span>   <span class="n">zeta</span>  \<span class="o">|</span>
+    <span class="mi">4</span><span class="o">----------</span><span class="mi">5</span>
+</pre></div>
+</div>
+<dl class="attribute">
+<dt id="amfe.element.Hexa8.name">
+<code class="descname">name</code><em class="property"> = 'Hexa8'</em><a class="headerlink" href="#amfe.element.Hexa8.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Hexa20">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Hexa20</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Hexa20"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Hexa20" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.Element" title="amfe.element.Element"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.Element</span></code></a></p>
+<blockquote>
+<div>20-node brick element.</div></blockquote>
+<p>#
+#       v
+#3&#8212;&#8212;&#8212;-2            3&#8212;-10&#8212;-2           3&#8212;-13&#8212;-2
+#|    ^   <a href="#id3"><span class="problematic" id="id4">|\           |\         |\          |\         |#|</span></a>    |   |          | 19       | 18        <a href="#id5"><span class="problematic" id="id6">|15    24  | 14
+#|</span></a>    |   |         11        9         9  20    11 #|   7&#8212;&#8212;+&#8212;6        |   7&#8212;-14+&#8212;6       |   7&#8212;-19+&#8212;6
+#|   |  +&#8211; <a href="#id7"><span class="problematic" id="id8">|&#8211; | -&gt; u   |   |      |   |       |22 |  26  | 23|</span></a>
+#0&#8212;+&#8212;&#8211;1   |        0&#8212;+-8&#8212;-1   |       0&#8212;+-8&#8212;-1   |
+#  |      |          15       13       17    25  18
+#  |      |         16 |        17|        10 |  21    12|
+#   |      w  |           |         |          |         |
+#    4&#8212;&#8212;&#8212;-5            4&#8212;-12&#8212;-5           4&#8212;-16&#8212;-5</p>
+<dl class="attribute">
+<dt id="amfe.element.Hexa20.name">
+<code class="descname">name</code><em class="property"> = 'Hexa20'</em><a class="headerlink" href="#amfe.element.Hexa20.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Bar2Dlumped">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Bar2Dlumped</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Bar2Dlumped"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Bar2Dlumped" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.Element" title="amfe.element.Element"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.Element</span></code></a></p>
+<p>Bar-Element with 2 nodes and lumped stiffness matrix</p>
+<dl class="method">
+<dt id="amfe.element.Bar2Dlumped.foo">
+<code class="descname">foo</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Bar2Dlumped.foo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Bar2Dlumped.foo" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.BoundaryElement">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">BoundaryElement</code><span class="sig-paren">(</span><em>val</em>, <em>ndof</em>, <em>direct='normal'</em>, <em>time_func=None</em>, <em>shadow_area=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#BoundaryElement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.BoundaryElement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.Element" title="amfe.element.Element"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.Element</span></code></a></p>
+<p>Class for the application of Neumann Boundary Conditions.</p>
+<dl class="attribute">
+<dt id="amfe.element.BoundaryElement.time_func">
+<code class="descname">time_func</code><a class="headerlink" href="#amfe.element.BoundaryElement.time_func" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>func</em> &#8211; function returning a value between {-1, 1} which is time dependent
+storing the time dependency of the Neumann Boundary condition.
+Example for constant function:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="k">return</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.BoundaryElement.f_proj">
+<code class="descname">f_proj</code><a class="headerlink" href="#amfe.element.BoundaryElement.f_proj" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>func</em> &#8211; function producing the nodal force vector from the given nodal force
+vector in normal direction.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.BoundaryElement.val">
+<code class="descname">val</code><a class="headerlink" href="#amfe.element.BoundaryElement.val" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em></p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.BoundaryElement.direct">
+<code class="descname">direct</code><a class="headerlink" href="#amfe.element.BoundaryElement.direct" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>{&#8216;normal&#8217;, numpy.array}</em> &#8211; &#8216;normal&#8217; means that force acts normal to the current surface
+numpy.array is a vector in which the force should act (with global coordinate system as reference)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.BoundaryElement.f">
+<code class="descname">f</code><a class="headerlink" href="#amfe.element.BoundaryElement.f" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>numpy.array</em> &#8211; local external force vector of the element</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.BoundaryElement.K">
+<code class="descname">K</code><a class="headerlink" href="#amfe.element.BoundaryElement.K" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>numpy.array</em> &#8211; tangent stiffness matrix of the element (for boundary elements typically zero)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.BoundaryElement.M">
+<code class="descname">M</code><a class="headerlink" href="#amfe.element.BoundaryElement.M" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>numpy.array</em> &#8211; mass matrix of the element (for boundary elements typically zero)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Tri3Boundary">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Tri3Boundary</code><span class="sig-paren">(</span><em>val</em>, <em>direct</em>, <em>time_func=None</em>, <em>shadow_area=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Tri3Boundary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Tri3Boundary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.BoundaryElement" title="amfe.element.BoundaryElement"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.BoundaryElement</span></code></a></p>
+<p>Class for application of Neumann Boundary Conditions.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Tri6Boundary">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Tri6Boundary</code><span class="sig-paren">(</span><em>val</em>, <em>direct</em>, <em>time_func=None</em>, <em>shadow_area=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Tri6Boundary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Tri6Boundary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.BoundaryElement" title="amfe.element.BoundaryElement"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.BoundaryElement</span></code></a></p>
+<p>Boundary element with variatonally consistent boundary forces.</p>
+<p class="rubric">Notes</p>
+<p>This function has been updated to give a variationally consistent
+integrated skin element.</p>
+<dl class="attribute">
+<dt id="amfe.element.Tri6Boundary.gauss_points">
+<code class="descname">gauss_points</code><em class="property"> = ((0.16666666666666666, 0.16666666666666666, 0.6666666666666666, 0.3333333333333333), (0.16666666666666666, 0.6666666666666666, 0.16666666666666666, 0.3333333333333333), (0.6666666666666666, 0.16666666666666666, 0.16666666666666666, 0.3333333333333333))</em><a class="headerlink" href="#amfe.element.Tri6Boundary.gauss_points" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Quad4Boundary">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Quad4Boundary</code><span class="sig-paren">(</span><em>val</em>, <em>direct</em>, <em>time_func=None</em>, <em>shadow_area=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Quad4Boundary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Quad4Boundary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.BoundaryElement" title="amfe.element.BoundaryElement"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.BoundaryElement</span></code></a></p>
+<p>Quad4 boundary element for 3D-Problems.</p>
+<dl class="attribute">
+<dt id="amfe.element.Quad4Boundary.g1">
+<code class="descname">g1</code><em class="property"> = 0.57735026918962584</em><a class="headerlink" href="#amfe.element.Quad4Boundary.g1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.Quad4Boundary.gauss_points">
+<code class="descname">gauss_points</code><em class="property"> = ((-0.57735026918962584, -0.57735026918962584, 1.0), (0.57735026918962584, -0.57735026918962584, 1.0), (0.57735026918962584, 0.57735026918962584, 1.0), (-0.57735026918962584, 0.57735026918962584, 1.0))</em><a class="headerlink" href="#amfe.element.Quad4Boundary.gauss_points" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.Quad8Boundary">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">Quad8Boundary</code><span class="sig-paren">(</span><em>val</em>, <em>direct</em>, <em>time_func=None</em>, <em>shadow_area=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#Quad8Boundary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.Quad8Boundary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.BoundaryElement" title="amfe.element.BoundaryElement"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.BoundaryElement</span></code></a></p>
+<p>Quad8 boundary element for 3D-Problems.</p>
+<dl class="attribute">
+<dt id="amfe.element.Quad8Boundary.g">
+<code class="descname">g</code><em class="property"> = 0.7745966692414834</em><a class="headerlink" href="#amfe.element.Quad8Boundary.g" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.Quad8Boundary.gauss_points">
+<code class="descname">gauss_points</code><em class="property"> = ((-0.7745966692414834, -0.7745966692414834, 0.308641975308642), (0.7745966692414834, -0.7745966692414834, 0.308641975308642), (0.7745966692414834, 0.7745966692414834, 0.308641975308642), (-0.7745966692414834, 0.7745966692414834, 0.308641975308642), (0, -0.7745966692414834, 0.49382716049382713), (0.7745966692414834, 0, 0.49382716049382713), (0, 0.7745966692414834, 0.49382716049382713), (-0.7745966692414834, 0, 0.49382716049382713), (0, 0, 0.7901234567901234))</em><a class="headerlink" href="#amfe.element.Quad8Boundary.gauss_points" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.Quad8Boundary.w">
+<code class="descname">w</code><em class="property"> = 0.5555555555555556</em><a class="headerlink" href="#amfe.element.Quad8Boundary.w" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.Quad8Boundary.w0">
+<code class="descname">w0</code><em class="property"> = 0.8888888888888888</em><a class="headerlink" href="#amfe.element.Quad8Boundary.w0" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.LineLinearBoundary">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">LineLinearBoundary</code><span class="sig-paren">(</span><em>val</em>, <em>direct</em>, <em>time_func=None</em>, <em>shadow_area=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#LineLinearBoundary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.LineLinearBoundary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.BoundaryElement" title="amfe.element.BoundaryElement"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.BoundaryElement</span></code></a></p>
+<p>Line Boundary element for 2D-Problems.</p>
+<dl class="attribute">
+<dt id="amfe.element.LineLinearBoundary.N">
+<code class="descname">N</code><em class="property"> = array([ 0.5,  0.5])</em><a class="headerlink" href="#amfe.element.LineLinearBoundary.N" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.LineLinearBoundary.rot_mat">
+<code class="descname">rot_mat</code><em class="property"> = array([[ 0,  1],        [-1,  0]])</em><a class="headerlink" href="#amfe.element.LineLinearBoundary.rot_mat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="amfe.element.LineQuadraticBoundary">
+<em class="property">class </em><code class="descclassname">amfe.element.</code><code class="descname">LineQuadraticBoundary</code><span class="sig-paren">(</span><em>val</em>, <em>direct</em>, <em>time_func=None</em>, <em>shadow_area=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/element.html#LineQuadraticBoundary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.element.LineQuadraticBoundary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#amfe.element.BoundaryElement" title="amfe.element.BoundaryElement"><code class="xref py py-class docutils literal"><span class="pre">amfe.element.BoundaryElement</span></code></a></p>
+<p>Quadratic line boundary element for 2D problems.</p>
+<dl class="attribute">
+<dt id="amfe.element.LineQuadraticBoundary.N">
+<code class="descname">N</code><em class="property"> = array([ 0.16666667,  0.16666667,  0.66666667])</em><a class="headerlink" href="#amfe.element.LineQuadraticBoundary.N" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.element.LineQuadraticBoundary.rot_mat">
+<code class="descname">rot_mat</code><em class="property"> = array([[ 0,  1],        [-1,  0]])</em><a class="headerlink" href="#amfe.element.LineQuadraticBoundary.rot_mat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+        </div>
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="amfe.boundary.html" title="amfe.boundary module">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.material.html" title="amfe.material module">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+    </div>
+
+    
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+<script src="../../_static/js/bootstrap.min.js"></script>
+<script src="../../_static/js/theme.js"></script>
+<script>loader();</script>
+
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

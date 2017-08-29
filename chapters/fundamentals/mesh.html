@@ -1,0 +1,484 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Mesh &#8212; AMfe 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Assembly" href="assembly.html" />
+    <link rel="prev" title="Elements" href="element.html" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="This is the documentation of AMfe">
+    <meta name="author" content="Johannes Rutzmoser and Christian Meyer">
+    <link rel="icon" href="../../favicon.ico">
+
+    
+    <!-- Bootstrap core CSS -->
+    <link href="../../_static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="../../_static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet"> -->
+
+    <!-- Custom styles for this template -->
+    <link href="../../_static/css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <!-- <script src="../../assets/js/ie-emulation-modes-warning.js"></script> -->
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      
+      
+    <![endif]-->
+
+  </head>
+  <body role="document">
+
+    <div class="document">
+
+
+       <!-- Static navbar -->
+    <nav class="navbar navbar-toggleable-md navbar-inverse bg-primary" id="main-nav">
+        <div class="container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#"><img src="../../_static/img/logo.png" alt="" width="30" height="30" class="d-inline-block align-top">
+                  AMfe Documentation
+              </a>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li class="nav-item active"><a href="../../index.html">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="../getting_started/index.html">Tutorials</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.html">Fundamentals</a></li>
+                <li class="nav-item"><a class="nav-link" href="../examples/index.html">Examples</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../contents.html">Table of Contents</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../genindex.html">Index</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../py-modindex.html">Modules</a></li>
+              </ul>
+            </div>
+        </div>
+    </nav>
+    
+    
+    <div class="container">
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="element.html" title="Elements">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="Fundamentals" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="assembly.html" title="Assembly">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+        <div class="row">
+            
+  <div class="section" id="mesh">
+<h1>Mesh<a class="headerlink" href="#mesh" title="Permalink to this headline">¶</a></h1>
+<p>The mesh-module has the following task:</p>
+<ul class="simple">
+<li>Provide data structures to describe all mesh properties e.g. nodes and elements</li>
+<li>Provide functions for import and export meshes</li>
+<li>Some Helper functions for Boundary Conditions and other</li>
+</ul>
+<div class="section" id="fundamentals-of-the-mesh-class">
+<h2>Fundamentals of the Mesh class<a class="headerlink" href="#fundamentals-of-the-mesh-class" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="defining-a-mesh">
+<h3>Defining a Mesh<a class="headerlink" href="#defining-a-mesh" title="Permalink to this headline">¶</a></h3>
+<p>The <a class="reference internal" href="../package_doc/amfe.mesh.html#amfe.mesh.Mesh" title="amfe.mesh.Mesh"><code class="xref py py-class docutils literal"><span class="pre">Mesh-Class</span></code></a> handles many things concerning the mesh.</p>
+<p>One can instanciate a mesh object via:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">amfe</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span> <span class="o">=</span> <span class="n">amfe</span><span class="o">.</span><span class="n">Mesh</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The mesh class has some basic important properties which describe the mesh-topology.
+These properties are:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>nodes</td>
+<td>numpy.ndarray which contains the coordinates of all nodes in reference configuration</td>
+</tr>
+<tr class="row-even"><td>connectivity</td>
+<td>array that maps the nodes to elements</td>
+</tr>
+<tr class="row-odd"><td>ele_obj</td>
+<td>list that maps element-objects to all elements</td>
+</tr>
+<tr class="row-even"><td>neumann_connectivity</td>
+<td>array that maps the nodes to Neumann-elements (needed for Neumann boundary conditions)</td>
+</tr>
+<tr class="row-odd"><td>neumann_obj</td>
+<td>list that maps Neumann-element-objects to all elements</td>
+</tr>
+</tbody>
+</table>
+<p>Consider the following example:</p>
+<div class="figure" id="id1">
+<span id="simple-geo"></span><img alt="../../_images/simple_geo.svg" src="../../_images/simple_geo.svg" /><p class="caption"><span class="caption-number">Fig. 5 </span><span class="caption-text">Simple mesh-geometry</span></p>
+</div>
+<p><a class="reference internal" href="#simple-geo"><span class="std std-numref">Fig. 5</span></a> shows a simple mesh-geometry with two elements and 6 nodes.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The indices for the node-ids start with zero</p>
+</div>
+<p>To configure this mesh we first need to save the node-coordinates.
+As it is a 2d-Problem the z-coordinate can be dropped:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span><span class="o">.</span><span class="n">nodes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+<span class="go">                              [2., 0.],</span>
+<span class="go">                              [4., 0.],</span>
+<span class="go">                              [0., 1.5],</span>
+<span class="go">                              [2., 1.5],</span>
+<span class="go">                              [2., 1.5]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span><span class="o">.</span><span class="n">no_of_dofs_per_node</span> <span class="o">=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<p>Then we have to tell AMfe how the elements are configured. There are two Quad4
+elements that are numbered in circular in mathematical positive direction:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span><span class="o">.</span><span class="n">connectivity</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int&#39;</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int&#39;</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>Now element-topology is set. Next we need to apply element-data with material information to each element.
+This is done by asserting pointers to objects of the <a class="reference internal" href="../package_doc/amfe.element.html#amfe.element.Element" title="amfe.element.Element"><code class="xref py py-class docutils literal"><span class="pre">Element</span></code></a> class.
+The easiest way for this assertion is:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">copy</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_material</span> <span class="o">=</span> <span class="n">amfe</span><span class="o">.</span><span class="n">KirchhoffMaterial</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">quad_class</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">my_mesh</span><span class="o">.</span><span class="n">element_class_dict</span><span class="p">[</span><span class="s1">&#39;Quad4&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">quad_class</span><span class="o">.</span><span class="n">material</span> <span class="o">=</span> <span class="n">my_material</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">object_series</span> <span class="o">=</span> <span class="p">[</span><span class="n">quad_class</span><span class="p">,</span> <span class="n">quad_class</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span><span class="o">.</span><span class="n">ele_obj</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">object_series</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>At last we need to update some Mesh-properties, such as no_of_dofs-property via running</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span><span class="o">.</span><span class="n">_update_mesh_props</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Now all necessary properties of the Mesh class are set. Assembly classes can now
+handle the assembly of that mesh.</p>
+</div>
+<div class="section" id="other-properties-and-limits-of-the-mesh-class">
+<h3>Other properties and limits of the mesh class<a class="headerlink" href="#other-properties-and-limits-of-the-mesh-class" title="Permalink to this headline">¶</a></h3>
+<p>Beside the main properties nodes, connectivity, ele_obj, neumann_connectivity and neumann_obj
+the mesh has some other properties:</p>
+<p>The first type of properties are <strong>numbers</strong> of different properties of the mesh which are listed in table <a class="reference internal" href="#tab-mesh-no-properties"><span class="std std-numref">Table 1</span></a>.
+A very important property of this type is <a class="reference internal" href="../package_doc/amfe.mesh.html#amfe.mesh.Mesh.no_of_dofs_per_node" title="amfe.mesh.Mesh.no_of_dofs_per_node"><code class="xref py py-attr docutils literal"><span class="pre">no_of_dofs_per_node</span></code></a>.
+This property has to be set manually if the mesh has not been imported by import-functions such as <a class="reference internal" href="../package_doc/amfe.mesh.html#amfe.mesh.Mesh.import_msh" title="amfe.mesh.Mesh.import_msh"><code class="xref py py-meth docutils literal"><span class="pre">import_msh</span></code></a>.
+Currently there are two possible values for this method. You can set it as 2 for 2d problems or as 3 for 3d problems.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This property is a very central variable in AMfe and has large effects e.g. to the global numbering of dofs.
+Do not change this property unless you know what you are doing.
+<strong>Currently the mesh class is limited to describe meshes with elements that have no rotational degrees of freedom.</strong></p>
+</div>
+<table border="1" class="docutils" id="id2">
+<span id="tab-mesh-no-properties"></span><caption><span class="caption-number">Table 1 </span><span class="caption-text">Additional &#8220;number of&#8221;-properties</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="24%" />
+<col width="76%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Property</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>no_of_dofs_per_node: int</td>
+<td>2 for 2D problems, 3 for 3D problems</td>
+</tr>
+<tr class="row-odd"><td>no_of_elements: int</td>
+<td>Number of elements in the mesh associated with an alement object</td>
+</tr>
+<tr class="row-even"><td>no_of_nodes: int</td>
+<td>Number of nodes of the whole system</td>
+</tr>
+<tr class="row-odd"><td>no_of_dofs: int</td>
+<td>Number of dofs in the system including constrained dofs</td>
+</tr>
+</tbody>
+</table>
+<p>Another type of additional properties of the Mesh-class is dictionaries of available element types (s. <a class="reference internal" href="#tab-mesh-dict-properties"><span class="std std-numref">Table 2</span></a>).
+There is one dictionary for simple elements such as Hex or Quad elements and another dictionary
+for boundary elements which are used to apply neumann boundary conditions.
+The element_class_dict should not be changed by users.
+The property is only used in method <a class="reference internal" href="../package_doc/amfe.mesh.html#amfe.mesh.Mesh.load_group_to_mesh" title="amfe.mesh.Mesh.load_group_to_mesh"><code class="xref py py-meth docutils literal"><span class="pre">load_group_to_mesh</span></code></a>
+to generate pointers to element objects with assigned materials.</p>
+<table border="1" class="docutils" id="id3">
+<span id="tab-mesh-dict-properties"></span><caption><span class="caption-number">Table 2 </span><span class="caption-text">Additional properties with dictionaries for elements</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="24%" />
+<col width="76%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Property</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>element_class_dict: dict</td>
+<td>Dictionary containing objects of elements which can be copied to instantiate Element objects with material information</td>
+</tr>
+<tr class="row-odd"><td>element_boundary_class_dict: dict</td>
+<td>Same as above but for Boundary-elements</td>
+</tr>
+</tbody>
+</table>
+<p>The last type of properties is properties concerning Dirichlet boundary conditions (s. <a class="reference internal" href="#tab-mesh-dirichlet-properties"><span class="std std-numref">Table 3</span></a>).
+These properties are set by the method <a class="reference internal" href="../package_doc/amfe.mesh.html#amfe.mesh.Mesh.set_dirichlet_bc" title="amfe.mesh.Mesh.set_dirichlet_bc"><code class="xref py py-meth docutils literal"><span class="pre">set_dirichlet_bc</span></code></a> which is explained in
+section <a class="reference internal" href="boundary_conditions.html"><span class="doc">Boundary Conditions</span></a>.</p>
+<table border="1" class="docutils" id="id4">
+<span id="tab-mesh-dirichlet-properties"></span><caption><span class="caption-number">Table 3 </span><span class="caption-text">Additional properties concerning Dirichlet boundary conditions</span><a class="headerlink" href="#id4" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="24%" />
+<col width="76%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Property</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>nodes_dirichlet (ndarray)</td>
+<td>node ids of nodes with Dirichlet boundary condition</td>
+</tr>
+<tr class="row-odd"><td>dofs dirichlet</td>
+<td>contains the dofs constrained by a Dirichlet boundary condition</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="importing-meshes">
+<h2>Importing Meshes<a class="headerlink" href="#importing-meshes" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="basic-proceeding">
+<h3>Basic proceeding<a class="headerlink" href="#basic-proceeding" title="Permalink to this headline">¶</a></h3>
+<p>If your mesh data is available as datafiles in gmsh, Nastran, Ansys or Abaqus-format
+you can use one of the very convenient import-functions.</p>
+<p>There are two ways to import mesh-data. The first way is to do the import in
+two steps:</p>
+<ol class="arabic simple">
+<li>Import the node and element data via an import function described below.</li>
+<li>Create instances of materials and assign them
+to a so called &#8216;mesh_property&#8217; by using the method
+<a class="reference internal" href="../package_doc/amfe.mesh.html#amfe.mesh.Mesh.load_group_to_mesh" title="amfe.mesh.Mesh.load_group_to_mesh"><code class="xref py py-meth docutils literal"><span class="pre">load_group_to_mesh</span></code></a>.</li>
+</ol>
+<p>The first step creates a pandas-Dataframe which contents mesh data of the
+imported file. This can also contain so called physical groups which represent
+domains of the mesh that have the same properties (e.g. same material).
+The Dataframe is stored in the Mesh-class-property <em>el_df</em>.</p>
+<p>You can print some information about physical_groups by using the
+<a class="reference internal" href="../package_doc/amfe.mesh.html#amfe.mesh.Mesh.mesh_information" title="amfe.mesh.Mesh.mesh_information"><code class="xref py py-meth docutils literal"><span class="pre">mesh_information()</span></code></a> method.
+This can help you assigning materials to the right phyiscal groups in second
+step.</p>
+<p>In the second step you have to assign materials to the mesh. This can be done
+by using the <a class="reference internal" href="../package_doc/amfe.mesh.html#amfe.mesh.Mesh.load_group_to_mesh" title="amfe.mesh.Mesh.load_group_to_mesh"><code class="xref py py-meth docutils literal"><span class="pre">load_group_to_mesh</span></code></a>
+method. It expects two arguments: <em>key</em> and <em>material</em>.
+The first argument is an ID for the mesh-property you want to assign the
+material to. The second is an <code class="xref py py-class docutils literal"><span class="pre">Material</span></code>
+object.</p>
+<p>During call of this function the connectivity list of the elements is generated
+and stored in the properties <cite>connectivity</cite> and <cite>neumann_connectivity</cite> (for
+Neumann elements). Furthermore the method
+creates one Element object for each element type the material has been
+assigned to.</p>
+<p>Another way - the second way - is to directly import both node/element data and
+property/material data in one step. Currently this can be done via a
+MechanicalSystem method.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The second method is only implemented for meshes with only one material
+in the whole domain.</p>
+</div>
+</div>
+<div class="section" id="mesh-deflation">
+<h3>Mesh Deflation<a class="headerlink" href="#mesh-deflation" title="Permalink to this headline">¶</a></h3>
+<p>If the mesh is imported by an import function, it can happen that there
+are imported nodes that are not connected to any element.
+If you want to clean the mesh i.e. remove those nodes, run:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span><span class="o">.</span><span class="n">deflate_mesh</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This method removes the nodes from the connectivity_lists and from the
+el_df Property.</p>
+</div>
+<div class="section" id="import-functions-for-certain-data-formats">
+<h3>Import-Functions for certain data-formats<a class="headerlink" href="#import-functions-for-certain-data-formats" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="gmsh">
+<h4>Gmsh<a class="headerlink" href="#gmsh" title="Permalink to this headline">¶</a></h4>
+<p>For example the mesh
+above is available as gmsh-file:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span>$MeshFormat
+2.2 0 8
+$EndMeshFormat
+$Nodes
+6
+1 0 0 0
+2 2 0 0
+3 4 0 0
+4 0 1.5 0
+5 2 1.5 0
+6 4 1.5 0
+$EndNodes
+$Elements
+2
+1 3 2 1 1 1 2 5 4
+2 3 2 1 1 2 3 6 5
+$EndElements
+</pre></div>
+</div>
+<p>Then you can easily import the data via:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">filename</span> <span class="o">=</span> <span class="s1">&#39;/home/user/path/to/file.msh&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span><span class="o">.</span><span class="n">import_msh</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Then you can assign materials to physical_groups that are defined in the gmsh file
+(see gmsh-documentation for more information about physical_groups).
+In this example the physical_group with id=1 is assigned by my_material:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_material</span> <span class="o">=</span> <span class="n">amfe</span><span class="o">.</span><span class="n">KirchhoffMaterial</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span><span class="o">.</span><span class="n">load_group_to_mesh</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">my_material</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="nastran">
+<h4>Nastran<a class="headerlink" href="#nastran" title="Permalink to this headline">¶</a></h4>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">The Nastran import is in development and does only work for a small
+subset of possible Nastran-meshes.</p>
+</div>
+<p>The same procedure can be done for Nastran-Meshes:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span><span class="o">.</span><span class="n">import_bdf</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>But as stated above, this only works for a small subset of possible nastran
+meshes.</p>
+</div>
+<div class="section" id="abaqus">
+<h4>Abaqus<a class="headerlink" href="#abaqus" title="Permalink to this headline">¶</a></h4>
+<p>Ansys meshes can be imported by:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span><span class="o">.</span><span class="n">import_inp</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="csv">
+<h4>CSV<a class="headerlink" href="#csv" title="Permalink to this headline">¶</a></h4>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">The CSV import is deprecated/experimental and does not work properly.</p>
+</div>
+<p>There is also the possibility to import mesh data from a csv-Datafile:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">my_mesh</span><span class="o">.</span><span class="n">import_csv</span><span class="p">(</span><span class="n">filename_nodes</span><span class="p">,</span> <span class="n">filename_elements</span><span class="p">,</span> <span class="n">explicit_node_numbering</span><span class="p">,</span> <span class="n">ele_type</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Here two filenames must be passed to the function. The first csv-file contains
+the nodes, the second contains the elements. The flag <em>explicit_node_numbering</em>
+can be set to true if the first column of the nodes-file contains IDs for
+the nodes (default is false). The <em>ele_type</em> parameter can be used to specifiy the order of
+elements. The parameter must be the name of the element passed as a string,
+e.g. &#8216;Tri6&#8217; if you want second order elements for a triangular mesh.</p>
+</div>
+</div>
+</div>
+<div class="section" id="pandasdataframe">
+<h2>PandasDataFrame<a class="headerlink" href="#pandasdataframe" title="Permalink to this headline">¶</a></h2>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">Explain el_df Property and how one can use it.</p>
+</div>
+</div>
+<div class="section" id="mesh-tying">
+<h2>Mesh Tying<a class="headerlink" href="#mesh-tying" title="Permalink to this headline">¶</a></h2>
+<div class="admonition-todo admonition" id="index-1">
+<p class="first admonition-title">Todo</p>
+<p class="last">Explain Mesh Tying</p>
+</div>
+</div>
+<div class="section" id="helper-functions">
+<h2>Helper-Functions<a class="headerlink" href="#helper-functions" title="Permalink to this headline">¶</a></h2>
+<div class="admonition-todo admonition" id="index-2">
+<p class="first admonition-title">Todo</p>
+<p>Helper Functions:</p>
+<ul class="last simple">
+<li>create_xdmf_form_hdf5 (besser in Postprocessing/Paraview stecken)</li>
+<li>check_dir</li>
+<li>prettify_xml</li>
+<li>shape2str</li>
+<li>h5_set_attributes</li>
+<li>variable: element_mapping_list, conversion_dict</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+        </div>
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="element.html" title="Elements">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="Fundamentals" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="assembly.html" title="Assembly">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+    </div>
+
+    
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+<script src="../../_static/js/bootstrap.min.js"></script>
+<script src="../../_static/js/theme.js"></script>
+<script>loader();</script>
+
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

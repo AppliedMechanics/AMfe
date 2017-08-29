@@ -1,0 +1,640 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>amfe.hyper_red subpackage &#8212; AMfe 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="amfe.quadratic_manifold subpackage" href="amfe.quadratic_manifold.html" />
+    <link rel="prev" title="amfe.reduced_basis module" href="amfe.reduced_basis.html" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="This is the documentation of AMfe">
+    <meta name="author" content="Johannes Rutzmoser and Christian Meyer">
+    <link rel="icon" href="../../favicon.ico">
+
+    
+    <!-- Bootstrap core CSS -->
+    <link href="../../_static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="../../_static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet"> -->
+
+    <!-- Custom styles for this template -->
+    <link href="../../_static/css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <!-- <script src="../../assets/js/ie-emulation-modes-warning.js"></script> -->
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      
+      
+    <![endif]-->
+
+  </head>
+  <body role="document">
+
+    <div class="document">
+
+
+       <!-- Static navbar -->
+    <nav class="navbar navbar-toggleable-md navbar-inverse bg-primary" id="main-nav">
+        <div class="container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#"><img src="../../_static/img/logo.png" alt="" width="30" height="30" class="d-inline-block align-top">
+                  AMfe Documentation
+              </a>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li class="nav-item active"><a href="../../index.html">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="../getting_started/index.html">Tutorials</a></li>
+                <li class="nav-item"><a class="nav-link" href="../fundamentals/index.html">Fundamentals</a></li>
+                <li class="nav-item"><a class="nav-link" href="../examples/index.html">Examples</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../contents.html">Table of Contents</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../genindex.html">Index</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../py-modindex.html">Modules</a></li>
+              </ul>
+            </div>
+        </div>
+    </nav>
+    
+    
+    <div class="container">
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="amfe.reduced_basis.html" title="amfe.reduced_basis module">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.quadratic_manifold.html" title="amfe.quadratic_manifold subpackage">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+        <div class="row">
+            
+  <div class="section" id="amfe-hyper-red-subpackage">
+<h1>amfe.hyper_red subpackage<a class="headerlink" href="#amfe-hyper-red-subpackage" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-amfe.hyper_red.training_set_generation">
+<span id="training-set-generation"></span><h2>training_set_generation<a class="headerlink" href="#module-amfe.hyper_red.training_set_generation" title="Permalink to this headline">¶</a></h2>
+<p>Training set generation</p>
+<dl class="function">
+<dt id="amfe.hyper_red.training_set_generation.compute_nskts">
+<code class="descclassname">amfe.hyper_red.training_set_generation.</code><code class="descname">compute_nskts</code><span class="sig-paren">(</span><em>mechanical_system</em>, <em>F_ext_max=None</em>, <em>no_of_moments=4</em>, <em>no_of_static_cases=8</em>, <em>load_factor=2</em>, <em>no_of_force_increments=20</em>, <em>no_of_procs=None</em>, <em>norm='impedance'</em>, <em>verbose=True</em>, <em>force_basis='krylov'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/training_set_generation.html#compute_nskts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.training_set_generation.compute_nskts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the Nonlinear Stochastic Krylov Training Sets (NSKTS).</p>
+<p>NSKTS can be used as training sets for Hyper Reduction of nonlinear systems.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mechanical_system</strong> (<em>instance of amfe.MechanicalSystem</em>) &#8211; Mechanical System to which the NSKTS should be computed</li>
+<li><strong>F_ext_max</strong> (<em>ndarray</em><em>, </em><em>optional</em>) &#8211; Maximum external force. If None is given, 10 random samples of the
+external force in the time range t = [0,1] are computed and the maximum
+value is taken. Default value is None.</li>
+<li><strong>no_of_moments</strong> (<em>int</em><em>, </em><em>optional</em>) &#8211; Number of moments consiedered in the Krylov force subspace. Default
+value is 4.</li>
+<li><strong>no_of_static_cases</strong> (<em>int</em><em>, </em><em>optional</em>) &#8211; Number of stochastic static cases which are solved. Default value is 8.</li>
+<li><strong>load_factor</strong> (<em>int</em><em>, </em><em>optional</em>) &#8211; Load amplification factor with which the maximum external force is
+multiplied. Default value is 2.</li>
+<li><strong>no_of_force_increments</strong> (<em>int</em><em>, </em><em>optional</em>) &#8211; Number of force increments for nonlinear solver. Default value is 20.</li>
+<li><strong>no_of_procs</strong> (<em>{int</em><em>, </em><em>None}</em><em>, </em><em>optional</em>) &#8211; Number of processes which are started parallel. For None
+no_of_static_cases processes are run.</li>
+<li><strong>norm</strong> (<em>str {'impedance'</em><em>, </em><em>'eucledian'</em><em>, </em><em>'kinetic'}</em><em>, </em><em>optional</em>) &#8211; Norm which will be used to scale the higher order moments for the Krylov
+force subspace. Default value is &#8216;impedance&#8217;.</li>
+<li><strong>verbose</strong> (<em>bool</em><em>, </em><em>optional</em>) &#8211; Flag for setting verbose output. Default value is True.</li>
+<li><strong>force_basis</strong> (<em>str {'krylov'</em><em>, </em><em>'modal'}</em><em>, </em><em>optional</em>) &#8211; Type of force basis used. Either krylov meaning the classical NSKTS or
+modal meaning the forces producing vibration modes.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>nskts_arr</strong> (<em>ndarray</em>) &#8211; Nonlinear Stochastic Krylov Training Sets. Every column in nskts_arr
+represents one NSKTS displacement field.</li>
+<li><em>Reference</em></li>
+<li><em>&#8212;&#8212;&#8212;</em></li>
+<li><em>Todo</em></li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="amfe.hyper_red.training_set_generation.krylov_force_subspace">
+<code class="descclassname">amfe.hyper_red.training_set_generation.</code><code class="descname">krylov_force_subspace</code><span class="sig-paren">(</span><em>M</em>, <em>K</em>, <em>b</em>, <em>omega=0</em>, <em>no_of_moments=3</em>, <em>orth='euclidean'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/training_set_generation.html#krylov_force_subspace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.training_set_generation.krylov_force_subspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute a krylov force subspace for the computation of snapshots needed in
+hyper reduction.</p>
+<p>The Krylov force basis is given as</p>
+<p>..code:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">b</span><span class="p">,</span> <span class="n">M</span> <span class="o">@</span> <span class="n">inv</span><span class="p">(</span><span class="n">K</span> <span class="o">-</span> <span class="n">omega</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">@</span> <span class="n">b</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span>
+ <span class="p">(</span><span class="n">M</span> <span class="o">@</span> <span class="n">inv</span><span class="p">(</span><span class="n">K</span> <span class="o">-</span> <span class="n">omega</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span><span class="o">**</span><span class="p">(</span><span class="n">no_of_moments</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">@</span> <span class="n">b</span><span class="p">]</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>M</strong> (<em>ndarray</em>) &#8211; Mass matrix of the system.</li>
+<li><strong>K</strong> (<em>ndarray</em>) &#8211; Stiffness matrix of the system.</li>
+<li><strong>b</strong> (<em>ndarray</em>) &#8211; input vector of external forcing.</li>
+<li><strong>omega</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; frequency for the frequency shift of the stiffness. Default value 0.</li>
+<li><strong>no_of_moments</strong> (<em>int</em><em>, </em><em>optional</em>) &#8211; number of moments matched. Default value 3.</li>
+<li><strong>orth</strong> (<em>str</em><em>, </em><em>{'euclidean'</em><em>, </em><em>'impedance'</em><em>, </em><em>'kinetic'} optional</em>) &#8211; <p>flag for setting orthogonality of returnd Krylov basis vectors.</p>
+<ul>
+<li>&#8216;euclidean&#8217; : <code class="docutils literal"><span class="pre">V.T</span> <span class="pre">&#64;</span> <span class="pre">V</span> <span class="pre">=</span> <span class="pre">eye</span></code></li>
+<li>&#8216;impedance&#8217; : <code class="docutils literal"><span class="pre">V.T</span> <span class="pre">&#64;</span> <span class="pre">inv(K)</span> <span class="pre">&#64;</span> <span class="pre">V</span> <span class="pre">=</span> <span class="pre">eye</span></code></li>
+<li>&#8216;kinetic&#8217; : <code class="docutils literal"><span class="pre">V.T</span> <span class="pre">&#64;</span> <span class="pre">inv(K).T</span> <span class="pre">&#64;</span> <span class="pre">M</span> <span class="pre">&#64;</span> <span class="pre">inv(K)</span> <span class="pre">&#64;</span> <span class="pre">V</span> <span class="pre">=</span> <span class="pre">eye</span></code></li>
+</ul>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>V</strong> &#8211; Krylov force basis where vectors V[:,i] give the basis vectors.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="amfe.hyper_red.training_set_generation.modal_force_subspace">
+<code class="descclassname">amfe.hyper_red.training_set_generation.</code><code class="descname">modal_force_subspace</code><span class="sig-paren">(</span><em>M</em>, <em>K</em>, <em>no_of_modes=3</em>, <em>orth='euclidean'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/training_set_generation.html#modal_force_subspace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.training_set_generation.modal_force_subspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Force subspace spanned by the forces producing the vibration modes.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-amfe.hyper_red.deim">
+<span id="deim"></span><h2>DEIM<a class="headerlink" href="#module-amfe.hyper_red.deim" title="Permalink to this headline">¶</a></h2>
+<p>Discrete Empirical Interpolation Method (DEIM) hyper-reduction</p>
+<dl class="class">
+<dt id="amfe.hyper_red.deim.DEIMSystem">
+<em class="property">class </em><code class="descclassname">amfe.hyper_red.deim.</code><code class="descname">DEIMSystem</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/deim.html#DEIMSystem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="amfe.mechanical_system.html#amfe.mechanical_system.ReducedSystem" title="amfe.mechanical_system.ReducedSystem"><code class="xref py py-class docutils literal"><span class="pre">amfe.mechanical_system.ReducedSystem</span></code></a></p>
+<p>Hyper-reduction technique inherited from ReducedSystem class.
+Currently only DEIM based on POD is implemented.</p>
+<p>This class can handle UDEIM, SUDEIM and their symmetric variants
+and also the other variants of the above based on choosing one dof or nodal
+dofs or the entire elements dofs (refered to as collocaiton variants).</p>
+<dl class="attribute">
+<dt id="amfe.hyper_red.deim.DEIMSystem.DEIM_type">
+<code class="descname">DEIM_type</code><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.DEIM_type" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str,</em> &#8211; String indicating the DEIM type.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.hyper_red.deim.DEIMSystem.E_tilde">
+<code class="descname">E_tilde</code><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.E_tilde" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>ndarray, ndim (no_of_active_elements)</em> &#8211; Indices of all active elements</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.hyper_red.deim.DEIMSystem.oblique_proj">
+<code class="descname">oblique_proj</code><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.oblique_proj" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>ndarray, ndim (no_of_dofs, no_of_force_modes)</em> &#8211; oblique projection matrix formed by V.T &#64; U &#64; inv(P.T &#64; U)
+This matrix is compact and carries the oblique projection of the
+nonlinear force after the collocation.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.hyper_red.deim.DEIMSystem.K0_deim">
+<code class="descname">K0_deim</code><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.K0_deim" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>ndarray, ndim (nred, nred)</em> &#8211; Reduced linear stiffness matrix which corrects the DEIM nonlinear
+force and tangential stiffness matrix. It is computed as the difference
+of the linear stiffness matrix minus the linear effects coming from the
+DEIM procedure. Hence, this matrix has to be added to the nakedly
+assembled DEIM tangential stiffness matrix to obtain the tangential
+stiffness matrix of DEIM sytem.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.hyper_red.deim.DEIMSystem.proj_list">
+<code class="descname">proj_list</code><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.proj_list" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>ndarray, ndim (no_of_active_elements, no_of_dofs,</em> &#8211;                        no_of_dofs_per_element)
+This tensor is used as a list. It contains all oblique projectors of
+the active elements onto the kinematic subspace. The i-th element has
+the projector proj_list[i] as oblique projector to give the
+contribution of the nonlinear force.</p>
+</dd></dl>
+
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>The key approximation in DEIM is the approximation of the full nonlinear
+force vector f_int through the unassembled force vector f_u:</p>
+<div class="math">
+\[\begin{split}f  \approx U (P^T U)^{-1} P^T f_u \\
+f_{red} \approx \underbrace{V^T U (P^T U)^{-1}P^T}_{X} f_u\end{split}\]</div>
+<p class="last">It is important to note, that the nonlinear force given here is a split-off
+part of the nonlinear restoring force. Here the nolinear force is the force
+without the linear part.</p>
+</div>
+<dl class="method">
+<dt id="amfe.hyper_red.deim.DEIMSystem.K_and_f">
+<code class="descname">K_and_f</code><span class="sig-paren">(</span><em>u=None</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/deim.html#DEIMSystem.K_and_f"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.K_and_f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute tangential stiffness matrix and nonlinear force vector
+with the help of the computed interpolation and selective evaluation
+based on the selected DEIM elements</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>u</strong> (<em>ndarray</em>) &#8211; Initial solution or solution from previous iteration</li>
+<li><strong>t</strong> (<em>float</em>) &#8211; Time</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>K</strong> (<em>ndarray</em>) &#8211; Hyper-reduced stiffness matrix of reduced system</li>
+<li><strong>f_int</strong> (<em>ndarray</em>) &#8211; Hyper-reduced internal force of reduced system</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.hyper_red.deim.DEIMSystem.collocate_DEIM">
+<code class="descname">collocate_DEIM</code><span class="sig-paren">(</span><em>U_f</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/deim.html#DEIMSystem.collocate_DEIM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.collocate_DEIM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build the collocation matrix P for the DEIM algorithm</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.hyper_red.deim.DEIMSystem.collocate_UDEIM">
+<code class="descname">collocate_UDEIM</code><span class="sig-paren">(</span><em>U_f_u</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/deim.html#DEIMSystem.collocate_UDEIM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.collocate_UDEIM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run collocation with UDEIM algorithms</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.hyper_red.deim.DEIMSystem.export_paraview">
+<code class="descname">export_paraview</code><span class="sig-paren">(</span><em>filename</em>, <em>field_list=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/deim.html#DEIMSystem.export_paraview"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.export_paraview" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export the produced results to ParaView via XDMF format.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.hyper_red.deim.DEIMSystem.force_basis">
+<code class="descname">force_basis</code><span class="sig-paren">(</span><em>U_snapshots_unconstr</em>, <em>no_of_force_modes</em>, <em>unassembled=True</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/deim.html#DEIMSystem.force_basis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.force_basis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the unassembled or assembled force modes based on an SVD of
+the force snapshots generated by the displacement vectors.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>U_snapshots</strong> (<em>ndarray</em>) &#8211; Training snapshots of the system (Unconstrained full solution)</li>
+<li><strong>no_of_force_modes</strong> (<em>int</em><em>, </em><em>optional</em>) &#8211; First &#8216;m&#8217; number of force modes to be chosen</li>
+<li><strong>unassembled</strong> (<em>bool</em><em>, </em><em>optional</em>) &#8211; Flag setting, if unassembled (True) or assembled (False) force basis
+is computed</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>U_f</strong> &#8211; Force mode either unassembled or assembled depending on the option</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.hyper_red.deim.DEIMSystem.preprocess_DEIM">
+<code class="descname">preprocess_DEIM</code><span class="sig-paren">(</span><em>DEIM_type='unassem-deim-dof'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/deim.html#DEIMSystem.preprocess_DEIM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.preprocess_DEIM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setting the flags necessary for the force basis and collocation
+procedure.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>DEIM_type</strong> (<em>str</em><em>, </em><em>optional</em>) &#8211; string indicating the technique used for DEIM reduction</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.hyper_red.deim.DEIMSystem.reduce_mesh">
+<code class="descname">reduce_mesh</code><span class="sig-paren">(</span><em>U_snapshots</em>, <em>no_of_force_modes=10</em>, <em>DEIM_type='unassem-deim-dof'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/deim.html#DEIMSystem.reduce_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.deim.DEIMSystem.reduce_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reduce the mesh using an interpolation gathered from the snapshots.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>U_snapshots</strong> (<em>ndarray</em>) &#8211; Constrained training snapshots of the system</li>
+<li><strong>no_of_force_modes</strong> (<em>int</em><em>, </em><em>optional</em>) &#8211; First &#8216;m&#8217; number of force modes to be chosen</li>
+<li><strong>DEIM_type</strong> (<em>str</em><em>, </em><em>optional</em>) &#8211; <p>String indicating the technique used for DEIM reduction.
+The string can be composed of different keywords indicating the
+DEIM technique:</p>
+<ul>
+<li><dl class="first docutils">
+<dt>collocation_type: {&#8216;dof&#8217;, &#8216;ele&#8217;, &#8216;node&#8217;, &#8216;x&#8217;, &#8216;y&#8217;, &#8216;z&#8217;}</dt>
+<dd>The element is collocated only in the selected direction
+(&#8216;dof&#8217;), all dofs of the whole element are collocated
+(&#8216;ele&#8217;), all dofs of the node are chosen (&#8216;node&#8217;) or a direction
+is additionally chosen (&#8216;x&#8217;, &#8216;y&#8217;, &#8216;z&#8217;)</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>symmetric: {&#8216;symm&#8217;}</dt>
+<dd>If this keyword is in the DEIM_type, the symmetric DEIM
+technique is applied.</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>surrogate: {&#8216;surr&#8217;}</dt>
+<dd>If this keyword is there, a surrogate technique for avoiding a
+large SVD is used. This is the so-called surrogate DEIM.</dd>
+</dl>
+</li>
+</ul>
+<p>The string can then be composed in arbitrary order, ie.
+&#8216;dof-symm-surr&#8217; to make a surrogate symemtric DEIM with dof
+collocation.</p>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">References</p>
+<p>DEIM:
+Chaturantabut, S. and Sorensen, D.C., 2010. Nonlinear model reduction
+via discrete empirical interpolation. SIAM Journal on Scientific
+Computing, 32(5), pp.2737-2764.</p>
+<p>UDEIM, SUDEIM:
+Tiso, P. and Rixen, D.J., 2013. Discrete empirical interpolation method
+for finite element structural dynamics. In Topics in Nonlinear Dynamics,
+Volume 1 (pp. 203-212). Springer New York.</p>
+<p>symmetric DEIM:
+Chaturantabut, S., Beattie, C. and Gugercin, S., 2016. Structure-Preserving
+Model Reduction for Nonlinear Port-Hamiltonian Systems. arXiv preprint
+arXiv:1601.00527.</p>
+<p>symmetric UDEIM:
+Ravichandran, T.K., Investigation of accuracy, speed and stability of
+hyper-reduction techniques for nonlinear FE. Masters Thesis. TU Delft,
+Delft University of Technology, 2016.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="amfe.hyper_red.deim.reduce_mechanical_system_deim">
+<code class="descclassname">amfe.hyper_red.deim.</code><code class="descname">reduce_mechanical_system_deim</code><span class="sig-paren">(</span><em>mechanical_system</em>, <em>V</em>, <em>overwrite=False</em>, <em>assembly='indirect'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/deim.html#reduce_mechanical_system_deim"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.deim.reduce_mechanical_system_deim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reduce the given mechanical system with the linear basis V and the given
+weights.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mechanical_system</strong> (<em>instance of MechanicalSystem</em>) &#8211; Mechanical system which will be transformed to a ReducedSystem.</li>
+<li><strong>V</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>N_constrained</em><em>, </em><em>n_red</em><em>)</em><em></em>) &#8211; Reduction Basis for the reduced system</li>
+<li><strong>overwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) &#8211; switch, if mechanical system should be overwritten (is less memory
+intensive for large systems) or not.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>reduced_system</strong> &#8211; Reduced system with same properties of the mechanical system and
+reduction basis V</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">instance of ReducedSystem</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-amfe.hyper_red.ecsw">
+<span id="ecsw"></span><h2>ECSW<a class="headerlink" href="#module-amfe.hyper_red.ecsw" title="Permalink to this headline">¶</a></h2>
+<p>TODO: Write introduction to ECSW</p>
+<dl class="class">
+<dt id="amfe.hyper_red.ecsw.ECSWSystem">
+<em class="property">class </em><code class="descclassname">amfe.hyper_red.ecsw.</code><code class="descname">ECSWSystem</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/ecsw.html#ECSWSystem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.ecsw.ECSWSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="amfe.mechanical_system.html#amfe.mechanical_system.ReducedSystem" title="amfe.mechanical_system.ReducedSystem"><code class="xref py py-class docutils literal"><span class="pre">amfe.mechanical_system.ReducedSystem</span></code></a></p>
+<p>Hyper Reduced system using ECSW for the redcution.</p>
+<dl class="method">
+<dt id="amfe.hyper_red.ecsw.ECSWSystem.K">
+<code class="descname">K</code><span class="sig-paren">(</span><em>u=None</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/ecsw.html#ECSWSystem.K"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.ecsw.ECSWSystem.K" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="amfe.hyper_red.ecsw.ECSWSystem.K_and_f">
+<code class="descname">K_and_f</code><span class="sig-paren">(</span><em>u=None</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/ecsw.html#ECSWSystem.K_and_f"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.ecsw.ECSWSystem.K_and_f" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="amfe.hyper_red.ecsw.ECSWSystem.export_paraview">
+<code class="descname">export_paraview</code><span class="sig-paren">(</span><em>filename</em>, <em>field_list=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/ecsw.html#ECSWSystem.export_paraview"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.ecsw.ECSWSystem.export_paraview" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="amfe.hyper_red.ecsw.ECSWSystem.f_int">
+<code class="descname">f_int</code><span class="sig-paren">(</span><em>u</em>, <em>t=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/ecsw.html#ECSWSystem.f_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.ecsw.ECSWSystem.f_int" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="amfe.hyper_red.ecsw.ECSWSystem.reduce_mesh">
+<code class="descname">reduce_mesh</code><span class="sig-paren">(</span><em>W_red</em>, <em>tau=0.001</em>, <em>verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/ecsw.html#ECSWSystem.reduce_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.ecsw.ECSWSystem.reduce_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute a reduced mesh using a sparse NNLS solver for gaining the
+weights.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>W_red</strong> (<em>ndarray</em><em>, </em><em>shape</em><em>(</em><em>n_red</em><em>, </em><em>no_of_snapshots</em><em>)</em><em></em>) &#8211; Snapshot training matrix for which the energy equality is ensured.</li>
+<li><strong>tau</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; tolerance for fitting the best solution</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>weight_indices</strong> (<em>ndarray</em>) &#8211; indices of members in the reduced mesh</li>
+<li><strong>weights</strong> (<em>ndarray</em>) &#8211; weights for reduced mesh</li>
+<li><strong>stats</strong> (<em>ndarray</em>) &#8211; statistics about the convergence of the sparse NNLS solver. The
+first column shows the size of the active set, the secont column
+the residual. If <cite>verbose=False</cite>, an empty array is returned.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The indices and weights of the reduced mesh are also internally saved.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="amfe.hyper_red.ecsw.reduce_mechanical_system_ecsw">
+<code class="descclassname">amfe.hyper_red.ecsw.</code><code class="descname">reduce_mechanical_system_ecsw</code><span class="sig-paren">(</span><em>mechanical_system</em>, <em>V</em>, <em>overwrite=False</em>, <em>assembly='indirect'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/ecsw.html#reduce_mechanical_system_ecsw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.ecsw.reduce_mechanical_system_ecsw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reduce the given mechanical system with the linear basis V and the given
+weights.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mechanical_system</strong> (<em>instance of MechanicalSystem</em>) &#8211; Mechanical system which will be transformed to a ReducedSystem.</li>
+<li><strong>V</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>N_constrained</em><em>, </em><em>n_red</em><em>)</em><em></em>) &#8211; Reduction Basis for the reduced system</li>
+<li><strong>overwrite</strong> (<em>bool</em><em>, </em><em>optional</em>) &#8211; switch, if mechanical system should be overwritten (is less memory
+intensive for large systems) or not.</li>
+<li><strong>assembly</strong> (<em>str {'direct'</em><em>, </em><em>'indirect'}</em>) &#8211; flag setting, if direct or indirect assembly is done. For larger
+reduction bases, the indirect method is much faster.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>reduced_system</strong> &#8211; Reduced system with same properties of the mechanical system and
+reduction basis V</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">instance of ReducedSystem</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Example</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="amfe.hyper_red.ecsw.sparse_nnls">
+<code class="descclassname">amfe.hyper_red.ecsw.</code><code class="descname">sparse_nnls</code><span class="sig-paren">(</span><em>G</em>, <em>b</em>, <em>tau</em>, <em>conv_stats=False</em>, <em>verbose=True</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/hyper_red/ecsw.html#sparse_nnls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.hyper_red.ecsw.sparse_nnls" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the sparse NNLS-solver in order to find a sparse vector xi satisfying</p>
+<div class="math">
+\[|| G \xi - b ||_2 \leq \tau ||b||_2 \quad\text{with}\quad \min||\xi||_0\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>G</strong> (<em>ndarray</em><em>, </em><em>shape:</em><em> (</em><em>n*m</em><em>, </em><a class="reference internal" href="amfe.mesh.html#amfe.mesh.Mesh.no_of_elements" title="amfe.mesh.Mesh.no_of_elements"><em>no_of_elements</em></a><em>)</em><em></em>) &#8211; force contribution matrix</li>
+<li><strong>b</strong> (<em>ndarray</em><em>, </em><em>shape:</em><em> (</em><em>n*m</em><em>)</em><em></em>) &#8211; force contribution vector</li>
+<li><strong>tau</strong> (<em>float</em>) &#8211; tolerance</li>
+<li><strong>conv_info</strong> (<em>bool</em>) &#8211; Flag for setting, that more detailed output is produced with
+convergence information.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>indices</strong> (<em>ndarray, shape: (k,)</em>) &#8211; The indices of the non-zero elements.</li>
+<li><strong>xi_red</strong> (<em>ndarray, shape: (k,)</em>) &#8211; The values of the non-zero elements.</li>
+<li><strong>stats</strong> (<em>ndarray</em>) &#8211; Infos about the convergence of the system. The first column shows the
+size of the active set, the second column the residual. If conv_info is
+set to False, an empty array is returned.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="r1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[R1]</td><td>C. L. Lawson and R. J. Hanson. Solving least squares problems,
+volume 15. SIAM, 1995.</td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="r2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[R2]</td><td>T. Chapman, P. Avery, P. Collins, and C. Farhat. Accelerated mesh
+sampling for the hyper reduction of nonlinear computational models.
+International Journal for Numerical Methods in Engineering, 2016.</td></tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+        </div>
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="amfe.reduced_basis.html" title="amfe.reduced_basis module">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.quadratic_manifold.html" title="amfe.quadratic_manifold subpackage">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+    </div>
+
+    
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+<script src="../../_static/js/bootstrap.min.js"></script>
+<script src="../../_static/js/theme.js"></script>
+<script>loader();</script>
+
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

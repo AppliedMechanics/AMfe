@@ -1,0 +1,265 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Tutorial 1: Static Problem &#8212; AMfe 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Tutorial 2: Modal Analysis" href="tutorial_02.html" />
+    <link rel="prev" title="Already built code" href="installation_wheel.html" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="This is the documentation of AMfe">
+    <meta name="author" content="Johannes Rutzmoser and Christian Meyer">
+    <link rel="icon" href="../../favicon.ico">
+
+    
+    <!-- Bootstrap core CSS -->
+    <link href="../../_static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="../../_static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet"> -->
+
+    <!-- Custom styles for this template -->
+    <link href="../../_static/css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <!-- <script src="../../assets/js/ie-emulation-modes-warning.js"></script> -->
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      
+      
+    <![endif]-->
+
+  </head>
+  <body role="document">
+
+    <div class="document">
+
+
+       <!-- Static navbar -->
+    <nav class="navbar navbar-toggleable-md navbar-inverse bg-primary" id="main-nav">
+        <div class="container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#"><img src="../../_static/img/logo.png" alt="" width="30" height="30" class="d-inline-block align-top">
+                  AMfe Documentation
+              </a>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li class="nav-item active"><a href="../../index.html">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="index.html">Tutorials</a></li>
+                <li class="nav-item"><a class="nav-link" href="../fundamentals/index.html">Fundamentals</a></li>
+                <li class="nav-item"><a class="nav-link" href="../examples/index.html">Examples</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../contents.html">Table of Contents</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../genindex.html">Index</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../py-modindex.html">Modules</a></li>
+              </ul>
+            </div>
+        </div>
+    </nav>
+    
+    
+    <div class="container">
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="installation_wheel.html" title="Already built code">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="Getting Started" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="tutorial_02.html" title="Tutorial 2: Modal Analysis">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+        <div class="row">
+            
+  <div class="section" id="tutorial-1-static-problem">
+<h1>Tutorial 1: Static Problem<a class="headerlink" href="#tutorial-1-static-problem" title="Permalink to this headline">¶</a></h1>
+<p>In this tutorial we want to walk through a full simulation process.
+You will learn how to use the <cite>MechanicalSystem()</cite>-class which wraps all information about your problem and
+provides methods for solving it.</p>
+<div class="section" id="problem">
+<h2>Problem<a class="headerlink" href="#problem" title="Permalink to this headline">¶</a></h2>
+<div class="figure" id="id1">
+<span id="pcmesh"></span><a class="reference internal image-reference" href="../../_images/pressure_corner.svg"><img alt="../../_images/pressure_corner.svg" height="750ex" src="../../_images/pressure_corner.svg" /></a>
+<p class="caption"><span class="caption-number">Fig. 1 </span><span class="caption-text">Mesh of pressure corner.</span></p>
+</div>
+<p><a class="reference internal" href="#pcmesh"><span class="std std-numref">Fig. 1</span></a> shows a meshed 2D corner. It is meshed by the open-source
+software <a class="reference external" href="http://gmsh.info/">Gmsh</a>.
+You can find the Mesh-File in AMfe&#8217;s <em>examples</em> folder.
+Every edge and every surface is associated with a physical-group-number.
+The surface of the corner has the physical-group-number 11.
+The small edges belong to physical group 9 and 10, and the outer and inner edges
+belong to physical group 13 and 12, respectively.</p>
+</div>
+<div class="section" id="solving-problem-with-amfe">
+<h2>Solving problem with AMfe<a class="headerlink" href="#solving-problem-with-amfe" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="setting-up-new-simulation">
+<h3>Setting up new simulation<a class="headerlink" href="#setting-up-new-simulation" title="Permalink to this headline">¶</a></h3>
+<p>For setting up a new simulation first import the amfe-package to your namespace
+and initialize an instance of the <a class="reference internal" href="../package_doc/amfe.mechanical_system.html#amfe.mechanical_system.MechanicalSystem" title="amfe.mechanical_system.MechanicalSystem"><code class="xref py py-class docutils literal"><span class="pre">MechanicalSystem</span></code></a> class:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">amfe</span>
+<span class="n">my_system</span> <span class="o">=</span> <span class="n">amfe</span><span class="o">.</span><span class="n">MechanicalSystem</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The MechanicalSystem object will later contain all information about your simulation.
+This includes the mesh information, materials, boundary conditions etc.</p>
+<p>We save absolute paths for the mesh-file, which will be used as geometry input, and the output-file, which will be used for writing the results,
+in variables:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="n">input_file</span> <span class="o">=</span> <span class="n">amfe</span><span class="o">.</span><span class="n">amfe_dir</span><span class="p">(</span><span class="s1">&#39;meshes/gmsh/pressure_corner.msh&#39;</span><span class="p">)</span>
+<span class="n">output_file</span> <span class="o">=</span> <span class="n">amfe</span><span class="o">.</span><span class="n">amfe_dir</span><span class="p">(</span><span class="s1">&#39;results/pressure_corner/pressure_corner_linear&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The function <a class="reference internal" href="../package_doc/amfe.tools.html#amfe.tools.amfe_dir" title="amfe.tools.amfe_dir"><code class="xref py py-func docutils literal"><span class="pre">amfe_dir(path)</span></code></a> converts a relative path to the directory your amfe-package is installed to an absolute path.
+The output file must be entered without file-extension.</p>
+</div>
+<div class="section" id="define-materials">
+<h3>Define materials<a class="headerlink" href="#define-materials" title="Permalink to this headline">¶</a></h3>
+<p>Materials are defined by creating instances of
+<a class="reference internal" href="../package_doc/amfe.material.html#amfe.material.HyperelasticMaterial" title="amfe.material.HyperelasticMaterial"><code class="xref py py-class docutils literal"><span class="pre">HyperelasticMaterial</span></code></a> class or
+of its derived classes.
+In this example we only use one material for the full domain:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="n">my_material</span> <span class="o">=</span> <span class="n">amfe</span><span class="o">.</span><span class="n">KirchhoffMaterial</span><span class="p">(</span><span class="n">E</span><span class="o">=</span><span class="mf">210E9</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mf">7.86E3</span><span class="p">,</span> <span class="n">plane_stress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">thickness</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The statement above defines a St.-Venant-Kirchhoff-Material with parameters for steel and a thickness of 1 mm.
+The plane_stress flag means that there are no forces in the third space dimension (out of plane) assumed.</p>
+</div>
+<div class="section" id="load-mesh">
+<h3>Load Mesh<a class="headerlink" href="#load-mesh" title="Permalink to this headline">¶</a></h3>
+<p>Next we have to load the mesh-information in the MechanicalSystem instance.
+This can be done by the
+<a class="reference internal" href="../package_doc/amfe.mechanical_system.html#amfe.mechanical_system.MechanicalSystem.load_mesh_from_gmsh" title="amfe.mechanical_system.MechanicalSystem.load_mesh_from_gmsh"><code class="xref py py-func docutils literal"><span class="pre">MechanicalSystem.load_mesh_from_gmsh(mshfile,</span> <span class="pre">phygroup,</span> <span class="pre">material)</span></code></a> method.
+It needs three parameters:
+1. Path to Mesh-File
+2. Physical-group-number which will be associated with material of the third parameter
+3. Material</p>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">Check if parameter 2 is correctly described?</p>
+</div>
+<p>We want to associate the whole surface with the previously defined Material <cite>my_material</cite>.
+Therefore we run:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="n">my_system</span><span class="o">.</span><span class="n">load_mesh_from_gmsh</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="n">my_material</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="apply-boundary-conditions">
+<h3>Apply boundary conditions<a class="headerlink" href="#apply-boundary-conditions" title="Permalink to this headline">¶</a></h3>
+<p>In general there are two different types of boundary conditions:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Dirichlet boundary conditions (given displacements)</li>
+<li>Neumann boundary conditions (given stresses)</li>
+</ul>
+</div></blockquote>
+<p>As stated in problem-section the edges with physical group numbers 9 and 10
+are enforced to only move in y and x direction, respectively.
+Therefore we want to define two dirichlet boundary conditions which can be
+applied by
+<a class="reference internal" href="../package_doc/amfe.mechanical_system.html#amfe.mechanical_system.MechanicalSystem.apply_dirichlet_boundaries" title="amfe.mechanical_system.MechanicalSystem.apply_dirichlet_boundaries"><code class="xref py py-func docutils literal"><span class="pre">apply_dirichlet_boundaries(physical_group,</span> <span class="pre">directions)</span></code></a></p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="n">my_system</span><span class="o">.</span><span class="n">apply_dirichlet_boundaries</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">my_system</span><span class="o">.</span><span class="n">apply_dirichlet_boundaries</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A Neumann boundary condition is needed to apply the normal forces on the
+inner edges of the corner. This can be done by
+<a class="reference internal" href="../package_doc/amfe.mechanical_system.html#amfe.mechanical_system.MechanicalSystem.apply_neumann_boundaries" title="amfe.mechanical_system.MechanicalSystem.apply_neumann_boundaries"><code class="xref py py-func docutils literal"><span class="pre">apply_dirichlet_boundaries(physical_group,</span> <span class="pre">magnitude,</span> <span class="pre">directions,</span> <span class="pre">time_function)</span></code></a></p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="n">my_system</span><span class="o">.</span><span class="n">apply_neumann_boundaries</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mf">1E9</span><span class="p">,</span> <span class="s1">&#39;normal&#39;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For details about how to use the methods for applying boundary conditions different to these,
+see documentation for <a class="reference internal" href="../package_doc/amfe.mechanical_system.html#amfe.mechanical_system.MechanicalSystem" title="amfe.mechanical_system.MechanicalSystem"><code class="xref py py-class docutils literal"><span class="pre">MechanicalSystem</span></code></a> class.</p>
+</div>
+<div class="section" id="solve">
+<h3>Solve<a class="headerlink" href="#solve" title="Permalink to this headline">¶</a></h3>
+<p>At this point the problem is entirely defined.
+The function <code class="xref py py-func docutils literal"><span class="pre">solve_nonlinear_displacement</span></code>
+solves the static problem:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="n">amfe</span><span class="o">.</span><span class="n">solve_nonlinear_displacement</span><span class="p">(</span><span class="n">my_system</span><span class="p">,</span> <span class="n">no_of_load_steps</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">track_niter</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The first parameter is the MechanicalSystem instance.
+The second parameter defines the number of load steps used for the solution.
+Track_niter is a flag states that the number of iterations will be saved to
+attribute <em>iteration_info</em> of the MechanicalSystem instance.</p>
+<p>For viewing the results one can use the MechanicalSystem data structure.
+There is an exporter for the open-source postprocessing tool <a class="reference external" href="http://www.paraview.org/">Paraview</a> implemented.
+The exporter is called by:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="n">my_system</span><span class="o">.</span><span class="n">export_paraview</span><span class="p">(</span><span class="n">output_file</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>that needs an absolute path as argument for writing the output.</p>
+</div>
+</div>
+</div>
+
+
+        </div>
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="installation_wheel.html" title="Already built code">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="Getting Started" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="tutorial_02.html" title="Tutorial 2: Modal Analysis">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+    </div>
+
+    
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+<script src="../../_static/js/bootstrap.min.js"></script>
+<script src="../../_static/js/theme.js"></script>
+<script>loader();</script>
+
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

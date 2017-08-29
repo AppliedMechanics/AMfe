@@ -1,0 +1,278 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>amfe.structural_dynamics module &#8212; AMfe 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="amfe.tools module" href="amfe.tools.html" />
+    <link rel="prev" title="amfe.solver module" href="amfe.solver.html" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="This is the documentation of AMfe">
+    <meta name="author" content="Johannes Rutzmoser and Christian Meyer">
+    <link rel="icon" href="../../favicon.ico">
+
+    
+    <!-- Bootstrap core CSS -->
+    <link href="../../_static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="../../_static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet"> -->
+
+    <!-- Custom styles for this template -->
+    <link href="../../_static/css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <!-- <script src="../../assets/js/ie-emulation-modes-warning.js"></script> -->
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      
+      
+    <![endif]-->
+
+  </head>
+  <body role="document">
+
+    <div class="document">
+
+
+       <!-- Static navbar -->
+    <nav class="navbar navbar-toggleable-md navbar-inverse bg-primary" id="main-nav">
+        <div class="container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#"><img src="../../_static/img/logo.png" alt="" width="30" height="30" class="d-inline-block align-top">
+                  AMfe Documentation
+              </a>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li class="nav-item active"><a href="../../index.html">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="../getting_started/index.html">Tutorials</a></li>
+                <li class="nav-item"><a class="nav-link" href="../fundamentals/index.html">Fundamentals</a></li>
+                <li class="nav-item"><a class="nav-link" href="../examples/index.html">Examples</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../contents.html">Table of Contents</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../genindex.html">Index</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../py-modindex.html">Modules</a></li>
+              </ul>
+            </div>
+        </div>
+    </nav>
+    
+    
+    <div class="container">
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="amfe.solver.html" title="amfe.solver module">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.tools.html" title="amfe.tools module">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+        <div class="row">
+            
+  <div class="section" id="module-amfe.structural_dynamics">
+<span id="amfe-structural-dynamics-module"></span><h1>amfe.structural_dynamics module<a class="headerlink" href="#module-amfe.structural_dynamics" title="Permalink to this headline">¶</a></h1>
+<p>Structural Dynamics tools</p>
+<dl class="function">
+<dt id="amfe.structural_dynamics.modal_assurance">
+<code class="descclassname">amfe.structural_dynamics.</code><code class="descname">modal_assurance</code><span class="sig-paren">(</span><em>U</em>, <em>V</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/structural_dynamics.html#modal_assurance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.structural_dynamics.modal_assurance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the Modal Assurance Criterion (MAC) of the vectors stacked
+in U and V:</p>
+<div class="math">
+\[\begin{split}U = [u_1, \dots, u_n], V = [v_1, \dots, v_n] \\
+MAC_{i,j} = \frac{(u_i^Tv_j)^2}{u_i^T u_i \cdot v_j^T v_j}\end{split}\]</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>U</strong> (<em>ndarray</em><em>, </em><em>shape</em><em>(</em><a class="reference internal" href="amfe.element.html#amfe.element.LineLinearBoundary.N" title="amfe.element.LineLinearBoundary.N"><em>N</em></a><em>, </em><em>no_of_modes</em><em>)</em><em></em>) &#8211; Array with one set of vectors</li>
+<li><strong>V</strong> (<em>ndarray</em><em>, </em><em>shape</em><em>(</em><a class="reference internal" href="amfe.element.html#amfe.element.LineLinearBoundary.N" title="amfe.element.LineLinearBoundary.N"><em>N</em></a><em>, </em><em>no_of_modes</em><em>)</em><em></em>) &#8211; Array with another set of vectors</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mac</strong> &#8211; mac criterion array showing, how the modes coincide. The rows are
+associated with the vectors in U, the columns with the vectors in V.
+mac[i,j] gives the squared correlation coefficient of the vecotor
+U[:,i] and V[:,j].</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray, shape(no_of_modes, no_of_modes)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">References</p>
+<table class="docutils citation" frame="void" id="r1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[R1]</td><td>Géradin, Michel and Rixen, Daniel: Mechanical Vibrations.
+John Wiley &amp; Sons, 2014. p.499.</td></tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="amfe.structural_dynamics.mass_orth">
+<code class="descclassname">amfe.structural_dynamics.</code><code class="descname">mass_orth</code><span class="sig-paren">(</span><em>V</em>, <em>M</em>, <em>overwrite=False</em>, <em>niter=2</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/structural_dynamics.html#mass_orth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.structural_dynamics.mass_orth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mass-orthogonalize the matrix V with respect to the mass matrix M with a
+Gram-Schmid-procedure.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>V</strong> (<em>ndarray</em>) &#8211; Matrix (e.g. projection basis) containing displacement vectors in the
+column. Shape is (ndim, no_of_basis_vectors)</li>
+<li><strong>M</strong> (<em>ndarray / sparse matrix.</em>) &#8211; Mass matrix. Shape is (ndim, ndim).</li>
+<li><strong>overwrite</strong> (<em>bool</em>) &#8211; Flag setting, if matrix V should be overwritten.</li>
+<li><strong>niter</strong> (<em>int</em>) &#8211; Number of Gram-Schmid runs for the orthogonalization. As the
+Gram-Schmid-procedure is not stable, more then one iteration are
+recommended.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>V_orth</strong> &#8211; Mass-orthogonalized basis V</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="amfe.structural_dynamics.force_norm">
+<code class="descclassname">amfe.structural_dynamics.</code><code class="descname">force_norm</code><span class="sig-paren">(</span><em>F</em>, <em>K</em>, <em>M</em>, <em>norm='euclidean'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/structural_dynamics.html#force_norm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.structural_dynamics.force_norm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the norm of the given force vector or array</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>F</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>n</em><em>,</em><em></em><em>) or </em><em>shape</em><em> (</em><em>n</em><em>, </em><em>m</em><em>)</em><em></em>) &#8211; Array representing the external force in constrained coordinates</li>
+<li><strong>K</strong> (<em>sparse array</em><em>, </em><em>shape</em><em> (</em><em>n</em><em>, </em><em>n</em><em>)</em><em></em>) &#8211; Stiffness matrix</li>
+<li><strong>M</strong> (<em>sparse array</em><em>, </em><em>shape</em><em> (</em><em>n</em><em>, </em><em>n</em><em>)</em><em></em>) &#8211; Mass matrix</li>
+<li><strong>norm</strong> (<em>str</em><em>, </em><em>{'euclidean'</em><em>, </em><em>'impedance'</em><em>, </em><em>'kinetic'}</em>) &#8211; <p>norm flag indicating the norm type:</p>
+<ul>
+<li>&#8216;euclidean&#8217; : <code class="docutils literal"><span class="pre">sqrt(F.T</span> <span class="pre">&#64;</span> <span class="pre">F)</span></code></li>
+<li>&#8216;impedance&#8217; : <code class="docutils literal"><span class="pre">sqrt(F.T</span> <span class="pre">&#64;</span> <span class="pre">inv(K)</span> <span class="pre">&#64;</span> <span class="pre">F)</span></code></li>
+<li>&#8216;kinetic&#8217; : <code class="docutils literal"><span class="pre">sqrt(F.T</span> <span class="pre">&#64;</span> <span class="pre">inv(K).T</span> <span class="pre">&#64;</span> <span class="pre">M</span> <span class="pre">&#64;</span> <span class="pre">inv(K)</span> <span class="pre">&#64;</span> <span class="pre">F)</span></code></li>
+</ul>
+</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>norm</strong> &#8211; norm of the given force vector or array. When F is an array with m
+columns, norm is a vector with the norm given for every column</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float or array of shape(m)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="amfe.structural_dynamics.rayleigh_coefficients">
+<code class="descclassname">amfe.structural_dynamics.</code><code class="descname">rayleigh_coefficients</code><span class="sig-paren">(</span><em>zeta</em>, <em>omega_1</em>, <em>omega_2</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/structural_dynamics.html#rayleigh_coefficients"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.structural_dynamics.rayleigh_coefficients" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the coefficients for rayleigh damping such, that the modal damping
+for the given two eigenfrequencies is zeta.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>zeta</strong> (<em>float</em>) &#8211; modal damping for modes 1 and 2</li>
+<li><strong>omega_1</strong> (<em>float</em>) &#8211; first eigenfrequency in [rad/s]</li>
+<li><strong>omega_2</strong> (<em>float</em>) &#8211; second eigenfrequency in [rad/s]</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>alpha</strong> (<em>float</em>) &#8211; rayleigh damping coefficient for the mass matrix</li>
+<li><strong>beta</strong> (<em>float</em>) &#8211; rayleigh damping for the stiffness matrix</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+        </div>
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="amfe.solver.html" title="amfe.solver module">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.tools.html" title="amfe.tools module">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+    </div>
+
+    
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+<script src="../../_static/js/bootstrap.min.js"></script>
+<script src="../../_static/js/theme.js"></script>
+<script>loader();</script>
+
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

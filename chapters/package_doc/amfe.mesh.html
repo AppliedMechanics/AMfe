@@ -1,0 +1,660 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>amfe.mesh module &#8212; AMfe 0.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="amfe.num_exp_toolbox module" href="amfe.num_exp_toolbox.html" />
+    <link rel="prev" title="amfe.mechanical_system module" href="amfe.mechanical_system.html" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="This is the documentation of AMfe">
+    <meta name="author" content="Johannes Rutzmoser and Christian Meyer">
+    <link rel="icon" href="../../favicon.ico">
+
+    
+    <!-- Bootstrap core CSS -->
+    <link href="../../_static/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="../../_static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <link href="../../assets/css/ie10-viewport-bug-workaround.css" rel="stylesheet"> -->
+
+    <!-- Custom styles for this template -->
+    <link href="../../_static/css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+    <!-- <script src="../../assets/js/ie-emulation-modes-warning.js"></script> -->
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+      
+      
+    <![endif]-->
+
+  </head>
+  <body role="document">
+
+    <div class="document">
+
+
+       <!-- Static navbar -->
+    <nav class="navbar navbar-toggleable-md navbar-inverse bg-primary" id="main-nav">
+        <div class="container-fluid">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#"><img src="../../_static/img/logo.png" alt="" width="30" height="30" class="d-inline-block align-top">
+                  AMfe Documentation
+              </a>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+              <ul class="nav navbar-nav">
+                <li class="nav-item active"><a href="../../index.html">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="../getting_started/index.html">Tutorials</a></li>
+                <li class="nav-item"><a class="nav-link" href="../fundamentals/index.html">Fundamentals</a></li>
+                <li class="nav-item"><a class="nav-link" href="../examples/index.html">Examples</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../contents.html">Table of Contents</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../genindex.html">Index</a></li>
+                <li class="nav-item"><a class="nav-link" href="../../py-modindex.html">Modules</a></li>
+              </ul>
+            </div>
+        </div>
+    </nav>
+    
+    
+    <div class="container">
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="amfe.mechanical_system.html" title="amfe.mechanical_system module">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.num_exp_toolbox.html" title="amfe.num_exp_toolbox module">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+        <div class="row">
+            
+  <div class="section" id="module-amfe.mesh">
+<span id="amfe-mesh-module"></span><h1>amfe.mesh module<a class="headerlink" href="#module-amfe.mesh" title="Permalink to this headline">¶</a></h1>
+<p>Mesh module of amfe. It handles the mesh from import, defining the dofs for the
+boundary conditions and the export.</p>
+<dl class="class">
+<dt id="amfe.mesh.Mesh">
+<em class="property">class </em><code class="descclassname">amfe.mesh.</code><code class="descname">Mesh</code><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Class for handling the mesh operations.</p>
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.nodes">
+<code class="descname">nodes</code><a class="headerlink" href="#amfe.mesh.Mesh.nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>ndarray</em> &#8211; Array of x-y-z coordinates of the nodes. Dimension is
+(no_of_nodes, no_of_dofs_per_node).
+If no_of_dofs_per_node: z-direction is dropped!</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.connectivity">
+<code class="descname">connectivity</code><a class="headerlink" href="#amfe.mesh.Mesh.connectivity" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list</em> &#8211; List of nodes indices belonging to one element.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.constraint_list">
+<code class="descname">constraint_list</code><a class="headerlink" href="#amfe.mesh.Mesh.constraint_list" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>ndarray</em> &#8211; Experimental: contains constraints imported from nastran-files via
+import_bdf()</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.el_df">
+<code class="descname">el_df</code><a class="headerlink" href="#amfe.mesh.Mesh.el_df" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>pandas.DataFrame</em> &#8211; Pandas Dataframe containing Element-Definitions of the Original file
+(e.g. <a href="#id1"><span class="problematic" id="id2">*</span></a>.msh or <a href="#id3"><span class="problematic" id="id4">*</span></a>.bdf-File)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.ele_obj">
+<code class="descname">ele_obj</code><a class="headerlink" href="#amfe.mesh.Mesh.ele_obj" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list</em> &#8211; List of element objects. The list contains actually only the pointers
+pointing to the element object. For each combination of element-type
+and material only one Element object is instanciated.
+ele_obj contains for each element a pointer to one of these Element
+objects.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.neumann_connectivity">
+<code class="descname">neumann_connectivity</code><a class="headerlink" href="#amfe.mesh.Mesh.neumann_connectivity" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list</em> &#8211; list of nodes indices belonging to one element for neumann BCs.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.neumann_obj">
+<code class="descname">neumann_obj</code><a class="headerlink" href="#amfe.mesh.Mesh.neumann_obj" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list</em> &#8211; List of element objects for the neumann boundary conditions.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.nodes_dirichlet">
+<code class="descname">nodes_dirichlet</code><a class="headerlink" href="#amfe.mesh.Mesh.nodes_dirichlet" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>ndarray</em> &#8211; Array containing the nodes involved in Dirichlet Boundary Conditions.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.dofs_dirichlet">
+<code class="descname">dofs_dirichlet</code><a class="headerlink" href="#amfe.mesh.Mesh.dofs_dirichlet" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>ndarray</em> &#8211; Array containing the dofs which are to be blocked by Dirichlet Boundary
+Conditions.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.no_of_dofs_per_node">
+<code class="descname">no_of_dofs_per_node</code><a class="headerlink" href="#amfe.mesh.Mesh.no_of_dofs_per_node" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> &#8211; Number of dofs per node. Is 3 for 3D-problems, 2 for 2D-problems. If
+rotations are considered, this nubmer can be &gt;3.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.no_of_elements">
+<code class="descname">no_of_elements</code><a class="headerlink" href="#amfe.mesh.Mesh.no_of_elements" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> &#8211; Number of elements in the whole mesh associated with an element object.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.no_of_nodes">
+<code class="descname">no_of_nodes</code><a class="headerlink" href="#amfe.mesh.Mesh.no_of_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> &#8211; Number of nodes of the whole system.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.no_of_dofs">
+<code class="descname">no_of_dofs</code><a class="headerlink" href="#amfe.mesh.Mesh.no_of_dofs" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> &#8211; Number of dofs of the whole system (including constrained dofs).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.element_class_dict">
+<code class="descname">element_class_dict</code><a class="headerlink" href="#amfe.mesh.Mesh.element_class_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>dict</em> &#8211; Dictionary containing objects of elements.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.element_boundary_class_dict">
+<code class="descname">element_boundary_class_dict</code><a class="headerlink" href="#amfe.mesh.Mesh.element_boundary_class_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>dict</em> &#8211; Dictionary containing objects of skin elements.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="amfe.mesh.Mesh.node_idx">
+<code class="descname">node_idx</code><a class="headerlink" href="#amfe.mesh.Mesh.node_idx" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> &#8211; index describing, at which position in the Pandas Dataframe <cite>el_df</cite>
+the nodes of the element start.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.mesh.Mesh.deflate_mesh">
+<code class="descname">deflate_mesh</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh.deflate_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh.deflate_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deflate the mesh, i.e. delete nodes which are not connected to an
+element.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>None</strong> &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.mesh.Mesh.import_bdf">
+<code class="descname">import_bdf</code><span class="sig-paren">(</span><em>filename</em>, <em>scale_factor=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh.import_bdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh.import_bdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import a NASTRAN mesh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filename</strong> (<em>string</em>) &#8211; filename of the .bdf-file</li>
+<li><strong>scale_factor</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; scale factor for the mesh to adjust the units. The default value is
+1, i.e. no scaling is done.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>This function is heavily experimental. It is just working for a subset
+of NASTRAN input files and the goal is to capture the mesh and the
+constraints of the model. The constraints are captured in the
+constraint_list-object of the class.</p>
+<p>The internal representation of the elements is done via a Pandas
+Dataframe object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.mesh.Mesh.import_csv">
+<code class="descname">import_csv</code><span class="sig-paren">(</span><em>filename_nodes</em>, <em>filename_elements</em>, <em>explicit_node_numbering=False</em>, <em>ele_type=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh.import_csv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh.import_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Imports the nodes list and elements list from 2 different csv files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filename_nodes</strong> (<em>str</em>) &#8211; name of the file containing the nodes in csv-format</li>
+<li><strong>filename_elements</strong> (<em>str</em>) &#8211; name of the file containing the elements in csv-format</li>
+<li><strong>explicit_node_numbering</strong> (<em>bool</em><em>, </em><em>optional</em>) &#8211; Flag stating, if the nodes are explicitly numbered in the csv-file.
+When set to true, the first column is assumed to have the node numbers
+and is thus ignored.</li>
+<li><strong>ele_type</strong> (<em>str</em>) &#8211; Spezifiy elements type of the mesh (e.g. for a Tri-Mesh different
+elements types as Tri3, Tri4, Tri6 can be used)
+If not spezified value is set to &#8216;False&#8217;</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<p>TODO</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.mesh.Mesh.import_inp">
+<code class="descname">import_inp</code><span class="sig-paren">(</span><em>filename</em>, <em>scale_factor=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh.import_inp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh.import_inp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import Abaqus input file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filename</strong> (<em>string</em>) &#8211; filename of the .msh-file</li>
+<li><strong>scale_factor</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; scale factor for the mesh to adjust the units. The default value is
+1, i.e. no scaling is done.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>This function is heavily experimental. It is just working for a subset
+of Abaqus input files and the goal is to capture the mesh of the model.</p>
+<p>The internal representation of the elements is done via a Pandas
+Dataframe object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.mesh.Mesh.import_msh">
+<code class="descname">import_msh</code><span class="sig-paren">(</span><em>filename</em>, <em>scale_factor=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh.import_msh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh.import_msh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import a gmsh-mesh.</p>
+<dl class="docutils">
+<dt>This method sets the following properties:</dt>
+<dd><ul class="first last simple">
+<li><dl class="first docutils">
+<dt>el_df: Element Definitions as pandas Dataframe</dt>
+<dd>(Attention! This property is not the property that defines
+the elements for later calculation. This is located in
+the connectivity property)</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>node_idx: First Column in el_df pandas dataframe where the first</dt>
+<dd>node-id of each element is stored</dd>
+</dl>
+</li>
+<li>no_of_dofs_per_node: important to recognize 2D vs. 3D problem</li>
+<li>nodes: Node Definitions (Locations)</li>
+</ul>
+</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filename</strong> (<em>string</em>) &#8211; filename of the .msh-file</li>
+<li><strong>scale_factor</strong> (<em>float</em><em>, </em><em>optional</em>) &#8211; scale factor for the mesh to adjust the units. The default value is
+1, i.e. no scaling is done.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The internal representation of the elements is done via a Pandas Dataframe
+object. This gives the possibility to dynamically choose a part of the mesh
+for boundary conditons etc.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.mesh.Mesh.load_group_to_mesh">
+<code class="descname">load_group_to_mesh</code><span class="sig-paren">(</span><em>key</em>, <em>material</em>, <em>mesh_prop='phys_group'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh.load_group_to_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh.load_group_to_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a physical group to the main mesh with given material.</p>
+<p>It generates the connectivity list (mesh-class-property connectivity)
+which contains the element configuration as array
+and provides a map with pointers to Element-Objects (Tet, Hex etc.)
+which already contain information about material that is passed.
+Each element gets a pointer to such an element object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<em>int</em>) &#8211; Key for mesh property which is to be chosen. Matches the group given
+in the gmsh file. For help, the function mesh_information or
+boundary_information gives the groups</li>
+<li><strong>material</strong> (<em>Material class</em>) &#8211; Material class which will be assigned to the elements</li>
+<li><strong>mesh_prop</strong> (<em>{'phys_group'</em><em>, </em><em>'geom_entity'</em><em>, </em><em>'el_type'}</em><em>, </em><em>optional</em>) &#8211; label of which the element should be chosen from. Standard is
+physical group.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.mesh.Mesh.mesh_information">
+<code class="descname">mesh_information</code><span class="sig-paren">(</span><em>mesh_prop='phys_group'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh.mesh_information"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh.mesh_information" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print some information about the mesh that is being imported
+Attention: This information is not about the mesh that is already
+loaded for further calculation. Instead it is about the mesh that is
+found in an import-file!</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>mesh_prop</strong> (<em>str</em><em>, </em><em>optional</em>) &#8211; mesh property of the loaded mesh. This mesh property is the basis
+for selection of parts of the mesh for materials and boundary
+conditions. The default value is &#8216;phys_group&#8217; which is the physical
+group, if the mesh comes from gmsh.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.mesh.Mesh.save_mesh_xdmf">
+<code class="descname">save_mesh_xdmf</code><span class="sig-paren">(</span><em>filename</em>, <em>field_list=None</em>, <em>bmat=None</em>, <em>u=None</em>, <em>timesteps=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh.save_mesh_xdmf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh.save_mesh_xdmf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the mesh in hdf5 and xdmf file format.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filename</strong> (<em>str</em>) &#8211; String consisting the path and the filename</li>
+<li><strong>field_list</strong> (<em>list</em>) &#8211; <p>list containing the fields to be exported. The list is a list of
+tupels containing the array with the values in the columns and a
+dictionary with the attribute information:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># example field list with reduced displacement not to export</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># ParaView and strain epsilon to be exported to ParaView</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">field_list</span> <span class="o">=</span> <span class="p">[(</span><span class="n">q_red</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;ParaView&#39;</span><span class="p">:</span><span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;Name&#39;</span><span class="p">:</span><span class="s1">&#39;q_red&#39;</span><span class="p">}),</span>
+<span class="go">                  (eps, {&#39;ParaView&#39;:True,</span>
+<span class="go">                         &#39;Name&#39;:&#39;epsilon&#39;,</span>
+<span class="go">                         &#39;AttributeType&#39;:&#39;Tensor6&#39;,</span>
+<span class="go">                         &#39;Center&#39;:&#39;Node&#39;,</span>
+<span class="go">                         &#39;NoOfComponents&#39;:6})]</span>
+</pre></div>
+</div>
+</li>
+<li><strong>bmat</strong> (<em>csrMatrix</em>) &#8211; CSR-Matrix describing the way, how the Dirichlet-BCs are applied:
+u_unconstr = bmat &#64; u_constr</li>
+<li><strong>u</strong> (<em>nparray</em>) &#8211; matrix with displacement vectors as columns for different timesteps</li>
+<li><strong>timesteps</strong> (<em>nparray</em>) &#8211; vector with timesteps a displacement vector is stored in u</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Only one homogeneous mesh is exported. Thus only the mesh made of the
+elements which occur most often is exported. The other meshes are
+discarded.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.mesh.Mesh.set_dirichlet_bc">
+<code class="descname">set_dirichlet_bc</code><span class="sig-paren">(</span><em>key</em>, <em>coord</em>, <em>mesh_prop='phys_group'</em>, <em>output='internal'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh.set_dirichlet_bc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh.set_dirichlet_bc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a group of the mesh to the dirichlet nodes to be fixed. It sets the
+mesh-properties &#8216;nodes_dirichlet&#8217; and &#8216;dofs_dirichlet&#8217;</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<em>int</em>) &#8211; Key for mesh property which is to be chosen. Matches the group given
+in the gmsh file. For help, the function mesh_information or
+boundary_information gives the groups</li>
+<li><strong>coord</strong> (<em>str {'x'</em><em>, </em><em>'y'</em><em>, </em><em>'z'</em><em>, </em><em>'xy'</em><em>, </em><em>'xz'</em><em>, </em><em>'yz'</em><em>, </em><em>'xyz'}</em>) &#8211; coordinates which should be fixed</li>
+<li><strong>mesh_prop</strong> (<em>str {'phys_group'</em><em>, </em><em>'geom_entity'</em><em>, </em><em>'el_type'}</em><em>, </em><em>optional</em>) &#8211; label of which the element should be chosen from. Default is
+phys_group.</li>
+<li><strong>output</strong> (<em>str {'internal'</em><em>, </em><em>'external'}</em>) &#8211; key stating, boundary information is stored internally or externally</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>nodes</strong> (<em>ndarray, if output == &#8216;external&#8217;</em>) &#8211; Array of nodes belonging to the selected group</li>
+<li><strong>dofs</strong> (<em>ndarray, if output == &#8216;external&#8217;</em>) &#8211; Array of dofs respecting the coordinates belonging to the selected
+groups</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.mesh.Mesh.set_neumann_bc">
+<code class="descname">set_neumann_bc</code><span class="sig-paren">(</span><em>key</em>, <em>val</em>, <em>direct</em>, <em>time_func=None</em>, <em>shadow_area=False</em>, <em>mesh_prop='phys_group'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh.set_neumann_bc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh.set_neumann_bc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add group of mesh to neumann boundary conditions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<em>int</em>) &#8211; Key of the physical domain to be chosen for the neumann bc</li>
+<li><strong>val</strong> (<em>float</em>) &#8211; value for the pressure/traction onto the element</li>
+<li><strong>direct</strong> (<em>str 'normal'</em><em> or </em><em>ndarray</em>) &#8211; array giving the direction, in which the traction force should act.
+alternatively, the keyword &#8216;normal&#8217; may be given. Default value:
+&#8216;normal&#8217;.</li>
+<li><strong>time_func</strong> (<em>function object</em>) &#8211; <p>Function object returning a value between -1 and 1 given the
+input t:</p>
+<div class="highlight-python3"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">val</span> <span class="o">=</span> <span class="n">time_func</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><strong>shadow_area</strong> (<em>bool</em><em>, </em><em>optional</em>) &#8211; Flat setting, if force should be proportional to the shadow area,
+i.e. the area of the surface projected on the direction. Default
+value: &#8216;False&#8217;.</li>
+<li><strong>mesh_prop</strong> (<em>str {'phys_group'</em><em>, </em><em>'geom_entity'</em><em>, </em><em>'el_type'}</em><em>, </em><em>optional</em>) &#8211; label of which the element should be chosen from. Default is
+phys_group.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="amfe.mesh.Mesh.tie_mesh">
+<code class="descname">tie_mesh</code><span class="sig-paren">(</span><em>master_key</em>, <em>slave_key</em>, <em>master_prop='phys_group'</em>, <em>slave_prop='phys_group'</em>, <em>tying_type='fixed'</em>, <em>robustness=4</em>, <em>verbose=False</em>, <em>conform_slave_mesh=True</em>, <em>fix_mesh_dist=0.001</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#Mesh.tie_mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.Mesh.tie_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tie nonconforming meshes for a given master and slave side.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>master_key</strong> (<em>int</em><em> or </em><em>string</em>) &#8211; mesh key of the master face mesh. The master face mesh has to be at
+least the size of the slave mesh. It is better, when the master
+mesh is larger than the slave mesh.</li>
+<li><strong>slave_key</strong> (<em>int</em><em> or </em><em>string</em>) &#8211; mesh key of the slave face mesh or point cloud</li>
+<li><strong>master_prop</strong> (<em>string</em><em>, </em><em>optional</em>) &#8211; mesh property for which master_key is specified.
+Default value: &#8216;phys_group&#8217;</li>
+<li><strong>slave_prop</strong> (<em>string</em><em>, </em><em>optional</em>) &#8211; mesh property for which slave_key is specified.
+Default value: &#8216;phys_group&#8217;</li>
+<li><strong>tying_type</strong> (<em>string {'fixed'</em><em>, </em><em>'slide'}</em>) &#8211; Mesh tying type. &#8216;fixed&#8217; glues the meshes together while &#8216;slide&#8217;
+allows for a sliding motion between the meshes.</li>
+<li><strong>robustness</strong> (<em>int</em><em>, </em><em>optional</em>) &#8211; Integer value indicating, how many master elements should be
+considered for one slave node.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>slave_dofs</strong> (<em>ndarray, type: int</em>) &#8211; slave dofs of the tied mesh</li>
+<li><strong>row</strong> (<em>ndarray, type: int</em>) &#8211; row indices of the triplet description of the master slave
+conversion</li>
+<li><strong>col</strong> (<em>ndarray, type: int</em>) &#8211; col indices of the triplet description of the master slave
+conversion</li>
+<li><strong>val</strong> (<em>ndarray, type: float</em>) &#8211; values of the triplet description of the master slave conversion</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The master mesh has to embrace the full slave mesh. If this is not the
+case, the routine will fail, a slave point outside the master mesh
+cannot be addressed to a specific element.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="amfe.mesh.create_xdmf_from_hdf5">
+<code class="descclassname">amfe.mesh.</code><code class="descname">create_xdmf_from_hdf5</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/amfe/mesh.html#create_xdmf_from_hdf5"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#amfe.mesh.create_xdmf_from_hdf5" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an accompanying xdmf file for a given hdmf file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>filename</strong> (<em>str</em>) &#8211; filename of the hdf5-file. Produces an XDMF-file of same name with
+.xdmf ending.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+        </div>
+        <div class="row">
+            
+    <ul class="pager">
+      <li class="previous">
+        <a href="amfe.mechanical_system.html" title="amfe.mechanical_system module">&laquo; Previous</a>
+      </li>
+      <li class="previous">
+        <a href="index.html" title="amfe Package Documentation" accesskey="U">up</a>
+      </li>
+    <li class="next">
+     <a href="amfe.num_exp_toolbox.html" title="amfe.num_exp_toolbox module">next &raquo;</a>
+    </li>
+      </ul>
+        </div>
+    </div>
+
+    
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+<script src="../../_static/js/bootstrap.min.js"></script>
+<script src="../../_static/js/theme.js"></script>
+<script>loader();</script>
+
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>
