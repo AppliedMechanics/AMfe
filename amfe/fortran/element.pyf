@@ -1,0 +1,189 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+!
+! Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
+! Universitaet Muenchen.
+!
+! Distributed under BSD-3-Clause License. See LICENSE-File for more information
+!
+
+! arrange the handling of the material callback
+
+python module tri3_k_f_s_e__user__routines
+    interface tri3_k_f_s_e_user_interface
+        subroutine s_sv_and_c_2d(e,s,s_v,c_se) ! in :f90_element:element.f90:tri3_k_f_s_e:unknown_interface
+            real(kind=8) dimension(2,2),intent(in) :: e
+            real(kind=8) dimension(2,2),intent(out) :: s
+            real(kind=8) dimension(3),intent(out) :: s_v
+            real(kind=8) dimension(3,3),intent(out) :: c_se
+        end subroutine s_sv_and_c_2d
+    end interface tri3_k_f_s_e_user_interface
+end python module tri3_k_f_s_e__user__routines
+
+python module tri6_k_f_s_e__user__routines
+    interface tri6_k_f_s_e_user_interface
+        subroutine s_sv_and_c_2d(e,s,s_v,c_se) ! in :f90_element:element.f90:tri6_k_f_s_e:unknown_interface
+            real(kind=8) dimension(2,2),intent(in) :: e
+            real(kind=8) dimension(2,2),intent(out) :: s
+            real(kind=8) dimension(3),intent(out) :: s_v
+            real(kind=8) dimension(3,3),intent(out) :: c_se
+        end subroutine s_sv_and_c_2d
+    end interface tri6_k_f_s_e_user_interface
+end python module tri6_k_f_s_e__user__routines
+
+python module tet4_k_f_s_e__user__routines
+    interface tet4_k_f_s_e_user_interface
+        subroutine s_sv_and_c(e,s,s_v,c_se) ! in :f90_element:element.f90:tet4_k_f_s_e:unknown_interface
+            real(kind=8) dimension(3,3),intent(in) :: e
+            real(kind=8) dimension(3,3),intent(out) :: s
+            real(kind=8) dimension(6),intent(out) :: s_v
+            real(kind=8) dimension(6,6),intent(out) :: c_se
+        end subroutine s_sv_and_c
+    end interface tet4_k_f_s_e_user_interface
+end python module tet4_k_f_s_e__user__routines
+
+python module tet10_k_f_s_e__user__routines
+    interface tet10_k_f_s_e_user_interface
+        subroutine s_sv_and_c(e,s,s_v,c_se) ! in :f90_element:element.f90:tet10_k_f_s_e:unknown_interface
+            real(kind=8) dimension(3,3),intent(in) :: e
+            real(kind=8) dimension(3,3),intent(out) :: s
+            real(kind=8) dimension(6),intent(out) :: s_v
+            real(kind=8) dimension(6,6),intent(out) :: c_se
+        end subroutine s_sv_and_c
+    end interface tet10_k_f_s_e_user_interface
+end python module tet10_k_f_s_e__user__routines
+
+
+python module hexa8_k_f_s_e__user__routines
+    interface hexa8_k_f_s_e_user_interface
+        subroutine s_sv_and_c(e,s,s_v,c_se) ! in :f90_element:element.f90:hexa8_k_f_s_e:unknown_interface
+            real(kind=8) dimension(3,3),intent(in) :: e
+            real(kind=8) dimension(3,3),intent(out) :: s
+            real(kind=8) dimension(6),intent(out) :: s_v
+            real(kind=8) dimension(6,6),intent(out) :: c_se
+        end subroutine s_sv_and_c
+    end interface hexa8_k_f_s_e_user_interface
+end python module hexa8_k_f_s_e__user__routines
+
+python module hexa20_k_f_s_e__user__routines
+    interface hexa20_k_f_s_e_user_interface
+        subroutine s_sv_and_c(e,s,s_v,c_se) ! in :f90_element:element.f90:hexa20_k_f_s_e:unknown_interface
+            real(kind=8) dimension(3,3),intent(in) :: e
+            real(kind=8) dimension(3,3),intent(out) :: s
+            real(kind=8) dimension(6),intent(out) :: s_v
+            real(kind=8) dimension(6,6),intent(out) :: c_se
+        end subroutine s_sv_and_c
+    end interface hexa20_k_f_s_e_user_interface
+end python module hexa20_k_f_s_e__user__routines
+
+python module f90_element ! in
+    interface  ! in :f90_element
+
+        subroutine scatter_matrix(a,b,ndim,n,m) ! in :f90_element:element.f90
+            real(kind=8) dimension(m,n),intent(in) :: a
+            real(kind=8) dimension(ndim*m,ndim*n),depend(ndim,m,ndim,n),intent(out) :: b
+            integer intent(in) :: ndim
+            integer, optional,intent(in),check(shape(a,1)==n),depend(a) :: n=shape(a,1)
+            integer, optional,intent(in),check(shape(a,0)==m),depend(a) :: m=shape(a,0)
+        end subroutine scatter_matrix
+
+        subroutine compute_b_matrix(bt,f,b,no_of_nodes,no_of_dims) ! in :f90_element:element.f90
+            real(kind=8) dimension(no_of_nodes,no_of_dims),intent(in) :: bt
+            real(kind=8) dimension(no_of_dims,no_of_dims),intent(in),depend(no_of_dims,no_of_dims) :: f
+            real(kind=8) dimension(no_of_dims*(no_of_dims+1)/2,no_of_nodes*no_of_dims),depend(no_of_dims,no_of_nodes,no_of_dims),intent(out) :: b
+            integer, optional,intent(in),check(shape(bt,0)==no_of_nodes),depend(bt) :: no_of_nodes=shape(bt,0)
+            integer, optional,intent(in),check(shape(bt,1)==no_of_dims),depend(bt) :: no_of_dims=shape(bt,1)
+        end subroutine compute_b_matrix
+
+        subroutine invert_3_by_3_matrix(a, a_inv, det) ! in :f90_element:element.f90
+            real(kind=8) dimension(3,3),intent(in) :: a
+            real(kind=8) dimension(3,3),intent(out) :: a_inv
+            real(kind=8) ,intent(out) :: det
+        end subroutine invert_3_by_3_matrix
+
+        subroutine tri3_k_f_s_e(x,u,k,f_int,t,s_exp,e_exp,s_sv_and_c_2d) ! in :f90_element:element.f90
+            use tri3_k_f_s_e__user__routines
+            real(kind=8) dimension(6),intent(in) :: x
+            real(kind=8) dimension(6),intent(in) :: u
+            real(kind=8) dimension(6,6),intent(out) :: k
+            real(kind=8) dimension(6),intent(out) :: f_int
+            real(kind=8) dimension(3,6),intent(out) :: s_exp
+            real(kind=8) dimension(3,6),intent(out) :: e_exp
+            real(kind=8) intent(in) :: t
+            external s_sv_and_c_2d
+        end subroutine tri3_k_f_s_e
+
+        subroutine tri6_k_f_s_e(x,u,k,f_int,t,s_exp,e_exp,s_sv_and_c_2d) ! in :f90_element:element.f90
+            use tri6_k_f_s_e__user__routines
+            real(kind=8) dimension(12),intent(in) :: x
+            real(kind=8) dimension(12),intent(in) :: u
+            real(kind=8) dimension(12,12),intent(out) :: k
+            real(kind=8) dimension(12),intent(out) :: f_int
+            real(kind=8) dimension(6,6),intent(out) :: s_exp
+            real(kind=8) dimension(6,6),intent(out) :: e_exp
+            real(kind=8) intent(in) :: t
+            external s_sv_and_c_2d
+        end subroutine tri6_k_f_s_e
+
+        subroutine tri6_m(x,rho,t,m) ! in :f90_element:element.f90
+            real(kind=8) dimension(12),intent(in) :: x
+            real(kind=8) intent(in) :: rho
+            real(kind=8) intent(in) :: t
+            real(kind=8) dimension(12,12), intent(out) :: m
+        end subroutine tri6_m
+
+        subroutine tet4_k_f_s_e(x,u,k,f_int,s_exp,e_exp,s_sv_and_c) ! in :f90_element:element.f90
+            use tet4_k_f_s_e__user__routines
+            real(kind=8) dimension(12),intent(in) :: x
+            real(kind=8) dimension(12),intent(in) :: u
+            real(kind=8) dimension(12,12),intent(out) :: k
+            real(kind=8) dimension(12),intent(out) :: f_int
+            real(kind=8) dimension(4,6),intent(out) :: s_exp
+            real(kind=8) dimension(4,6),intent(out) :: e_exp
+            external s_sv_and_c
+        end subroutine tet4_k_f_s_e
+
+        subroutine tet10_k_f_s_e(x,u,k,f_int,s_exp,e_exp,s_sv_and_c) ! in :f90_element:element.f90
+            use tet10_k_f_s_e__user__routines
+            real(kind=8) dimension(30),intent(in) :: x
+            real(kind=8) dimension(30),intent(in) :: u
+            real(kind=8) dimension(30,30),intent(out) :: k
+            real(kind=8) dimension(30),intent(out) :: f_int
+            real(kind=8) dimension(10,6),intent(out) :: s_exp
+            real(kind=8) dimension(10,6),intent(out) :: e_exp
+            external s_sv_and_c
+        end subroutine tet10_k_f_s_e
+
+        subroutine hexa8_k_f_s_e(x,u,k,f_int,s_exp,e_exp,s_sv_and_c) ! in :f90_element:element.f90
+            use hexa8_k_f_s_e__user__routines
+            real(kind=8) dimension(24),intent(in) :: x
+            real(kind=8) dimension(24),intent(in) :: u
+            real(kind=8) dimension(24,24),intent(out) :: k
+            real(kind=8) dimension(24),intent(out) :: f_int
+            real(kind=8) dimension(8,6),intent(out) :: s_exp
+            real(kind=8) dimension(8,6),intent(out) :: e_exp
+            external s_sv_and_c
+        end subroutine hexa8_k_f_s_e
+
+        subroutine hexa20_k_f_s_e(x,u,k,f_int,s_exp,e_exp,s_sv_and_c) ! in :f90_element:element.f90
+            use hexa20_k_f_s_e__user__routines
+            real(kind=8) dimension(60),intent(in) :: x
+            real(kind=8) dimension(60),intent(in) :: u
+            real(kind=8) dimension(60,60),intent(out) :: k
+            real(kind=8) dimension(60),intent(out) :: f_int
+            real(kind=8) dimension(20,6),intent(out) :: s_exp
+            real(kind=8) dimension(20,6),intent(out) :: e_exp
+            external s_sv_and_c
+        end subroutine hexa20_k_f_s_e
+
+        subroutine hexa20_m(x,rho,m) ! in :f90_element:element.f90
+            real(kind=8) dimension(60),intent(in) :: x
+            real(kind=8) intent(in) :: rho
+            real(kind=8) dimension(60,60), intent(out) :: m
+        end subroutine hexa20_m
+
+    end interface
+end python module f90_element
+
+! This file was auto-generated with f2py (version:2).
+! See http://cens.ioc.ee/projects/f2py2e/

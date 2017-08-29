@@ -1,0 +1,54 @@
+# Information on how to build or extend the runner:
+# http://doc.gitlab.com/ce/ci/yaml/README.html
+
+stages:
+    - build
+    - unittest
+    - doctest
+    - modeltest
+    - linttest
+
+build_without_fortran:
+    stage: build
+    script:
+        - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+        - python setup.py develop no_fortran
+
+build:
+    stage: build
+    script:
+        - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+        - python setup.py develop
+
+unittest:
+  stage: unittest
+  when: always
+  script:
+    - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+    - python setup.py develop
+    - nosetests
+
+physical_test:
+    stage: modeltest
+    when: always
+    script:
+        - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+        - python setup.py develop
+        - cd tests
+        - python run_mechanical_system.py
+        - python run_mesh.py
+
+documentation_test:
+    stage: doctest
+    when: always
+    script:
+        - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+        - python setup.py build_sphinx
+
+
+language_quality_test:
+    stage: linttest
+    when: always
+    script:
+        - export PATH="/home/gitlab-runner/anaconda3/bin:$PATH"
+        - pylint amfe || exit 0 # pylint always exits with nonzero...

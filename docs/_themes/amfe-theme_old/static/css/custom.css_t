@@ -1,0 +1,322 @@
+/* custom css */
+.hsection {
+  padding: 8rem 0 7rem;
+  text-align: center;
+}
+
+.header {
+  padding: 1rem 1rem 1rem 1rem;
+  background-color: #333333;
+  color: #CCCCC6;
+}
+
+.header-headline {
+  margin: 0;
+  font-size: 3rem;
+  display: inline;
+}
+
+.header-icon {
+  height: 2.6rem;
+  border-radius: 1.3rem;
+  display:inline;
+  margin-right: 1rem;
+}
+
+.navbar-div {
+  background-color: #0065BD;
+}
+
+.navbar div ul {
+  list-style: none;
+  margin-bottom: 0;
+}
+
+.navbar div ul li {
+  position: relative;
+  float: left;
+  margin-bottom: 0;
+}
+
+.navbar div ul li a {
+  display: block;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .2rem;
+  padding: 0 16px;
+  margin: 0;
+  text-decoration: none;
+  line-height: 6.5rem;
+  color: #ffffff;
+}
+
+.navbar div ul li a:hover, .navbar div ul li a.current:hover {
+  background-color: #003359;
+}
+
+.navbar div ul li a.current {
+  display:block;
+  background-color: #005293;
+}
+
+.relnavbar {
+  padding: 1rem;
+  background-color: #CCCCC6;
+}
+
+/* external Links */
+a.external:after {
+  content: "\00A0\2197";
+}
+
+/* Figures */
+div.figure {
+  position: relative;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 20px;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+div.figure img {
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  display: block;
+}
+
+div.figure p.caption {
+  font-style: italic;
+}
+
+/* Tables */
+
+table.docutils {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+table.docutils[border="1"] {
+  border-collapse: collapse;
+  border: none;
+}
+
+table.docutils td, table.docutils th {
+  border: none;
+  border-bottom: 1px solid #E1E1E1;
+  border-collapse: collapse;
+}
+
+
+
+
+/* Formating for class Documentation */
+
+code.descclassname {
+  padding: 0;
+  margin: 0;
+  display: inline;
+  font-size: 100%;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  border-radius: none;
+  color: #808080;
+}
+
+code.descname {
+  padding: 0;
+  margin: 0;
+  margin-right: 0.5rem;
+  display: inline;
+  font-size: 100%;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  border-radius: none;
+  /* color: #0065BD;*/
+}
+
+.viewcode-link {
+  margin-left: 1rem;
+}
+
+dl.attribute:first-of-type::before {
+  content: "Attributes";
+  display: block;
+  font-size: 1.8rem;
+  line-height: 1.5;
+  letter-spacing: -.05rem;
+}
+
+.rubric {
+  display: block;
+  font-size: 1.8rem;
+  line-height: 1.5;
+  letter-spacing: -.05rem;
+}
+
+dl.attribute dd p em:first-child {
+  color: #69085a;
+}
+
+td.field-body ul {
+  list-style: none;
+}
+
+/*dl.docutils dt {
+  Attributes/Properties
+  color: #007c30;
+  text-weight: 900;
+  display:inline;
+}
+
+span.classifier, span.classifier-delimiter {
+  color: #69085a;
+}
+
+ Add Headlines for Parameters and Returns
+dl.method dd dl.docutils:first-of-type::before {
+  content: "Parameters:";
+  display: block;
+  font-size: 1.8rem;
+  line-height: 1.5;
+  letter-spacing: -.05rem;
+  text-decoration: underline;
+}
+
+dl.method dd dl.docutils:nth-of-type(2)::before {
+  content: "Returns:";
+  display: block;
+  font-size: 1.8rem;
+  line-height: 1.5;
+  letter-spacing: -.05rem;
+  text-decoration: underline;
+}
+*/
+
+
+
+/* Admonitions */
+.admonition {
+/*  padding: .2rem .5rem;*/
+/* margin: 0 .2rem; */
+  margin-bottom: 2.5rem;
+  font-size: 90%;
+/*  white-space: nowrap; */
+  background: #F1F1F1; /* Skeleton */
+  /* background: #CCCCC6; TUM */
+  border: 1px solid #E1E1E1; /* Skeleton */
+  /* border: 1px solid #808080; TUM */
+  border-radius: 4px;
+  display: block;
+  padding: 1rem 1.5rem;
+  /* margin: 0;
+white-space: pre;*/
+}
+
+.admonition p {
+  display: inline;
+}
+
+div.note {
+  border-color: #A2AD00
+}
+
+div.admonition-todo {
+  border-color: #c4071b
+}
+
+div.admonition-todo p {
+  color: #c4071b
+}
+
+.admonition-title {
+  font-weight: 900;
+  margin-right: 0.1rem;
+}
+
+.attention .admonition-title {
+  color: #E37222
+}
+
+.caution .admonition-title {
+  color: #E37222
+}
+
+.danger .admonition-title {
+  color: #E37222
+}
+
+.error .admonition-title {
+  color: #E37222
+}
+
+.hint .admonition-title {
+  color: #A2AD00
+}
+
+.important .admonition-title {
+  color: #E37222
+}
+
+.note .admonition-title {
+  color: #A2AD00
+}
+
+.tip .admonition-title {
+  color: #A2AD00
+}
+
+.warning .admonition-title {
+  color: #E37222
+}
+
+
+
+
+
+.footer {
+  padding: 2rem 0 1rem;
+  background-color: #333333;
+  color: #CCCCC6;
+}
+
+form.search {
+  margin: 0;
+}
+
+input.searchheader {
+  margin: 0;
+}
+
+
+
+.headerlink {
+  display: none;
+}
+
+/* Contents of Documentation */
+.section {
+  text-align: left;
+}
+
+@media (min-width: 550px) {
+  .hsection {
+    padding: 12rem 0 11rem;
+  }
+}
+
+@media (min-width: 750px) {
+  .hsection {
+    padding: 14rem 0 15rem;
+  }
+}
+
+@media (minwidth: 1000px) {
+  .hsection {
+    padding: 20rem 0 19rem;
+  }
+}
