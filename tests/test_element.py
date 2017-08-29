@@ -272,7 +272,7 @@ def test_tri3_pressure():
 def test_line_pressure():
     X = np.array([0,0,1,1])
     u = X
-    my_press_ele = amfe.LineLinearBoundary(1, 'normal')
+    my_press_ele = amfe.LineLinearBoundary(-1, 'normal')
     K, f = my_press_ele.k_and_f_int(X, u)
     np.testing.assert_array_equal( K, np.zeros((4,4)))
     np.testing.assert_allclose(f, np.array([-1,1,-1,1]))
@@ -280,7 +280,7 @@ def test_line_pressure():
 def test_line_pressure2():
     X = np.array([0,0,1,1])
     u = X
-    my_press_ele = amfe.LineLinearBoundary(1, direct=np.array([1,0]))
+    my_press_ele = amfe.LineLinearBoundary(-1, direct=np.array([1,0]))
     K, f = my_press_ele.k_and_f_int(X, u)
     np.testing.assert_array_equal(K, np.zeros((4,4)))
     np.testing.assert_allclose(f, -np.sqrt(2)*np.array([-1,0,-1,0]))
