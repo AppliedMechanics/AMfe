@@ -58,8 +58,12 @@ class MechanicalSystem():
     iteration_info : ndarray
         array containing the information of an iterative solution procedure.
         iteration_info[:,0] is the time information,
-        iteration_info[:,1] is the number of iteations,
+        iteration_info[:,1] is the number of iterations,
         iteration_info[:,3] is the residual.
+    M_constr : ?
+        Mass matrix
+    D_constr : ?
+        Damping matrix
     '''
 
     def __init__(self, stress_recovery=False):
@@ -441,7 +445,8 @@ class MechanicalSystem():
     def _f_ext_unconstr(self, u, t):
         '''
         Return the unconstrained external force coming from the Neumann BCs.
-
+        
+        This function is just a placeholder if you want to change the behavior of f_ext:
         This function may be monkeypatched if necessary, for instance, when a
         global external force, e.g. gravity, should be applied.
         '''
@@ -477,7 +482,7 @@ class MechanicalSystem():
 
     def S_and_res(self, u, du, ddu, dt, t, beta, gamma):
         r'''
-        Compute jacobian and residual for implicit time integration.
+        Compute jacobian and residual for implicit Newmark time integration.
 
         Parameters
         ----------
@@ -506,20 +511,24 @@ class MechanicalSystem():
         Notes
         -----
         Time integration scheme: The iteration matrix is composed using the
-        generalized-:math:`\alpha` scheme:
+        Newmark scheme:
 
-        .. math:: \mathbf S = \frac{1}{h^2\beta}\mathbf{M}
-                  + \frac{\gamma}{h\beta} \mathbf D + \mathbf K
-
+        .. math:: \mathbf S \Delta u = -\mathbf{res}
+        
+        .. math:: \mathbf S = K + \frac{\gamma}{\beta h} \mathbf{D}
+                    + \frac{1}{\beta h^2} \mathbf{M}
+        
         which bases on the time discretization of the velocity and the
         displacement:
 
         .. math:: \mathbf{\dot{q}}_{n+1} & = \mathbf{\dot{q}}_{n} + (1-\gamma)h
                   \mathbf{\ddot{q}}_{n} + \gamma h \mathbf{\ddot{q}}_{n+1}
 
-        .. math:: \mathbf{q}_{n+1} & = \mathbf{q}_n + h \mathbf{\dot{q}}_n +
-                  \left(\frac{1}{2} - \beta\right)h^2\mathbf{\ddot{q}}_n +
-                  h^2\beta\mathbf{\ddot{q}}_{n+1}
+        #.. math:: \mathbf{q}_{n+1} & = \mathbf{q}_n + h \mathbf{\dot{q}}_n +
+        #          \left(\frac{1}{2} - \beta\right)h^2\mathbf{\ddot{q}}_n +
+        #          h^2\beta\mathbf{\ddot{q}}_{n+1}
+        .. math:: \mathbf{\ddot{q}}_{n+1} &= \frac{1}{\beta h^2} \left(
+                    \mathbf{\Delta q} - h \mathbf{q}_n - (\frac{1}{2} - \beta) h^2 \mathbf{\ddot q}_n \right)
 
         This method is using the variables/methods
 
