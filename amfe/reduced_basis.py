@@ -263,7 +263,7 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     if `one_basis=True` is chosen:
 
     V : array
-        Basis constisting of static displacement modes and internal vibration
+        Basis consisting of static displacement modes and internal vibration
         modes
 
     if `one_basis=False` is chosen:
@@ -378,8 +378,7 @@ def modal_derivatives(V, omega, K_func, M, h=1.0, verbose=True,
     M : ndarray or sparse matrix
         Mass matrix of the system.
     h : float, optional
-        step width for finite difference scheme. Default value is 500 * machine
-        epsilon
+        step width for finite difference scheme. Default value is 1.0
     verbose : bool, optional
         flag for verbosity. Default value: True
     symmetric : bool, optional
@@ -399,9 +398,7 @@ def modal_derivatives(V, omega, K_func, M, h=1.0, verbose=True,
 
     See Also
     --------
-    static_correction_theta : modal derivative with mass neglection.
-    modal_derivative : modal derivative for only two vectors.
-
+    static_derivatives : modal derivative with mass neglection but much faster in computation.
     '''
     no_of_dofs = V.shape[0]
     no_of_modes = V.shape[1]
