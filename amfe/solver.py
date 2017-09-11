@@ -12,7 +12,6 @@ __all__ = [
            'integrate_linear_gen_alpha',
            'solve_linear_displacement',
            'solve_nonlinear_displacement',
-           'give_mass_and_stiffness',
            'integrate_linear_system',
            'integrate_nonlinear_system',
            'solve_sparse',
@@ -70,7 +69,7 @@ mtypes = {'spd':2,
 
 def solve_sparse(A, b, matrix_type='symm', verbose=False):
     '''
-    Abstractoin of the solution of the sparse system Ax=b using the fastest
+    Abstraction of the solution of the sparse system Ax=b using the fastest
     solver available for sparse and non-sparse matrices.
 
     Parameters
@@ -513,7 +512,7 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
                                write_iter=False,
                                track_niter=False):
     '''
-    Time integrate the nonlinear system using a Newmark-scheme.
+    Time integrate the nonlinear system using a Newmark-scheme (Average constant acceleration alpha).
 
     Parameters
     ----------
@@ -585,6 +584,7 @@ def integrate_nonlinear_system(mechanical_system, q0, dq0, time_range, dt,
     ddq = np.zeros_like(q0)
     h = dt
 
+    # ! ddq is currently set to zero!
 #        # predict start values for ddq:
 #        ddq = linalg.spsolve(self.M, self.f_non(q, t))
     abs_f_ext = atol
@@ -960,24 +960,3 @@ def solve_nonlinear_displacement(mechanical_system, no_of_load_steps=10,
         t_clock_2 - t_clock_1))
     return u_output
 
-def give_mass_and_stiffness(mechanical_system):
-    '''
-    Determine mass and stiffness matrix of a mechanical system.
-
-    Parameters
-    ----------
-    mechanical_system : MechanicalSystem
-        Instance of the class MechanicalSystem
-
-    Returns
-    -------
-    M : ndarray
-        Mass matrix of the mechanical system
-    K : ndarray
-        Stiffness matrix of the mechanical system
-
-    '''
-
-    K = mechanical_system.K()
-    M = mechanical_system.M()
-    return M, K

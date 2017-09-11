@@ -8,10 +8,6 @@ Module handling the whole mechanical system, no matter if it's a finite element
 system, defined by certain parameters or a multibody system.
 """
 
-__all__ = ['MechanicalSystem',
-           'ReducedSystem',
-           'ExternalForce',
-           ]
 
 import time
 import os
@@ -23,7 +19,9 @@ from .mesh import Mesh
 from .assembly import Assembly
 from .boundary import DirichletBoundary
 
-
+__all__ = ['MechanicalSystem',
+           'ReducedSystem',
+           ]
 
 class MechanicalSystem():
     '''
@@ -873,49 +871,54 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False,
     return reduced_sys
 
 
-class ExternalForce:
-    '''
-    Class for mimicking the external forces based on a force basis and time
-    values. The force values are linearly interpolated.
-
-    '''
-    def __init__(self, force_basis, force_series, t_series):
-        '''
-        Parameters
-        ----------
-        force_basis : ndarray, shape(ndim, n_dofs)
-            force basis for the force series
-        force_seris : ndarray, shape(n_timesteps, n_dofs)
-            array containing the force dofs corresponding to the time values
-            given in t_series
-        t_series : ndarray, shape(n_timesteps)
-            array containing the time values
-
-        '''
-        self.force_basis = force_basis
-        self.force_series= force_series
-        self.T = t_series
-        return
-
-    def f_ext(self, u, du, t):
-        '''
-        Mimicked external force for the given force time series
-        '''
-        # Catch the case that t is larger than the data set
-        if t >= self.T[-1]:
-            return self.force_basis @ self.force_series[-1]
-
-        t2_idx = np.where(self.T > t)[0][0]
-
-        # if t is smaller than lowest value of T, pick the first value in the
-        # force series
-        if t2_idx == 0:
-            force_amplitudes = self.force_series[0]
-        else:
-            t1_idx = t2_idx - 1
-            t2 = self.T[t2_idx]
-            t1 = self.T[t1_idx]
-
-            force_amplitudes = ( (t2-t)*self.force_series[t1_idx]
-                               + (t-t1)*self.force_series[t2_idx]) / (t2-t1)
-        return self.force_basis @ force_amplitudes
+# This class is not integrated in AMfe yet.
+# It should apply linear combinations of external forces
+# f_ext = B(x) * F(t)
+# This function is not integrated in the Neumann Boundary conditions.
+#
+# class ExternalForce:
+#     '''
+#     Class for mimicking the external forces based on a force basis and time
+#     values. The force values are linearly interpolated.
+#
+#     '''
+#     def __init__(self, force_basis, force_series, t_series):
+#         '''
+#         Parameters
+#         ----------
+#         force_basis : ndarray, shape(ndim, n_dofs)
+#             force basis for the force series
+#         force_seris : ndarray, shape(n_timesteps, n_dofs)
+#             array containing the force dofs corresponding to the time values
+#             given in t_series
+#         t_series : ndarray, shape(n_timesteps)
+#             array containing the time values
+#
+#         '''
+#         self.force_basis = force_basis
+#         self.force_series= force_series
+#         self.T = t_series
+#         return
+#
+#     def f_ext(self, u, du, t):
+#         '''
+#         Mimicked external force for the given force time series
+#         '''
+#         # Catch the case that t is larger than the data set
+#         if t >= self.T[-1]:
+#             return self.force_basis @ self.force_series[-1]
+#
+#         t2_idx = np.where(self.T > t)[0][0]
+#
+#         # if t is smaller than lowest value of T, pick the first value in the
+#         # force series
+#         if t2_idx == 0:
+#             force_amplitudes = self.force_series[0]
+#         else:
+#             t1_idx = t2_idx - 1
+#             t2 = self.T[t2_idx]
+#             t1 = self.T[t1_idx]
+#
+#             force_amplitudes = ( (t2-t)*self.force_series[t1_idx]
+#                                + (t-t1)*self.force_series[t2_idx]) / (t2-t1)
+#         return self.force_basis @ force_amplitudes
