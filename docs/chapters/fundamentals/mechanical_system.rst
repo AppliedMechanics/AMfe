@@ -119,7 +119,7 @@ constrained system and the current time.
     +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
     | :py:meth:`M(u_constr, t)<amfe.mechanical_system.MechanicalSystem.M>`                                            | Returns the mass matrix                                                                           |
     +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
-    | :py:meth:`f_ext(u_constr, t)<amfe.mechanical_system.MechanicalSystem.f_ext>`                                    | Returns the external force vector                                                                 |
+    | :py:meth:`f_ext(u_constr, du_constr, t)<amfe.mechanical_system.MechanicalSystem.f_ext>`                         | Returns the external force vector                                                                 |
     +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
     | :py:meth:`K(u_constr, t)<amfe.mechanical_system.MechanicalSystem.K>`                                            | Returns the tangential stiffness matrix                                                           |
     +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
@@ -140,11 +140,11 @@ results:
 .. table:: Output properties
 
     +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
-    | Method                                                                                                          | Description                                                                                       |
+    | Property                                                                                                        | Description                                                                                       |
     +=================================================================================================================+===================================================================================================+
     | :py:attr:`T_output<amfe.mechanical_system.MechanicalSystem.T_output>`                                           | Stores timesteps                                                                                  |
     +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
-    | :py:attr:`u_output<amfe.mechanical_system.MechanicalSystem.u_output>`                                           | Stores displacements for each timestep                                                            |
+    | :py:attr:`u_output<amfe.mechanical_system.MechanicalSystem.u_output>`                                           | Stores displacements for each timestep (full displacement vector including constrained dofs)      |
     +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
     | :py:attr:`S_output<amfe.mechanical_system.MechanicalSystem.S_output>`                                           | Stores stress for each timestep                                                                   |
     +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
@@ -204,6 +204,7 @@ calculates the damping matrix of the system by using the relation
 
 
 The damping matrix is stored in the :py:attr:`D_constr<amfe.mechanical_system.MechanicalSystem.D_constr>` property.
+
 
 Helper functions
 ----------------
