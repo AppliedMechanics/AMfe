@@ -426,8 +426,8 @@ class MechanicalSystem():
 
         Returns
         -------
-        K : sp.sparse.sparse_matrix
-            Stiffness matrix with applied constraints in sparse csr-format
+        D : sp.sparse.sparse_matrix
+            Damping matrix with applied constraints in sparse csr-format
         '''
         if self.D_constr is None:
             return self.K()*0
