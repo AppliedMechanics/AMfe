@@ -1,5 +1,5 @@
-Reduced Basis
-=============
+Projective Model Order Reduction
+================================
 
 Compute reduced bases
 ---------------------
@@ -104,5 +104,77 @@ Reduce Mechanical Systems
 To reduce a mechanical system by using an arbitrary basis V (of dimension of the constrained system after Dirichlet
 boundary conditions are applied), call::
 
-    >>> reduce_mechanical_system(mechanical_system, V, overwrite=False, assembly='indirect')
+    >>> my_reduced_system = reduce_mechanical_system(mechanical_system, V, overwrite=False, assembly='indirect')
+
+If you pass the flag overwrite=True, the old unreduced system will be overwritten by the reduced system.
+Otherwise (default is overwrite=False) a new ReducedSystem object is created and the properties of the old system are
+copied.
+Nevertheless the function returns a pointer to the (overwritten) mechanical system.
+
+.. note::
+
+    You can pass the type of assembly method that will be used. You can choose either 'indirect' or 'direct'.
+    It is recommended, especially for large systems, to use the default 'indirect' method.
+
+
+
+Reduced System class
+--------------------
+
+The :py:class:`ReducedSystem<amfe.mechanical_system.ReducedSystem>` class handles reduced systems.
+It is derived from the :py:class:`MechanicalSystem<amfe.mechanical_system.MechanicalSystem>` class and thus
+provides the same methods for the reduced system and extends the class by further methods.
+
+As the MechanicalSystem class it has the same Getter Functions
+
+.. _tab_reduced_system_getter_methods:
+
+.. table:: Getter methods of :py:class:`ReducedSystem<amfe.mechanical_system.ReducedSystem>` class.
+
+    +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+    | Method                                                                                                          | Description                                                                                       |
+    +=================================================================================================================+===================================================================================================+
+    | :py:meth:`f_int(u_red, t)<amfe.mechanical_system.ReducedSystem.f_int>`                                          | Returns the nonlinear internal restoring force vector                                             |
+    +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+    | :py:meth:`M(u_red, t)<amfe.mechanical_system.ReducedSystem.M>`                                                  | Returns the mass matrix                                                                           |
+    +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+    | :py:meth:`f_ext(u_red, du_red, t)<amfe.mechanical_system.ReducedSystem.f_ext>`                                  | Returns the external force vector                                                                 |
+    +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+    | :py:meth:`K(u_red, t)<amfe.mechanical_system.ReducedSystem.K>`                                                  | Returns the tangential stiffness matrix                                                           |
+    +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+    | :py:meth:`K_and_f(u_red, t)<amfe.mechanical_system.ReducedSystem.K_and_f>`                                      | Returns both the tangential stiffness matrix and the nonlinear internal restoring force vector    |
+    +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+    | :py:meth:`D(u_red, t)<amfe.mechanical_system.ReducedSystem.D>`                                                  | Returns the damping matrix                                                                        |
+    +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+
+Additionally there are new getter functions that return the system matrices and vectors of the unreduced system:
+
+.. _tab_reduced_system_additional_getter:
+
+.. table:: Additional getter methods of :py:class:`ReducedSystem<amfe.mechanical_system.ReducedSystem>` class.
+
+    +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+    | Method                                                                                                          | Description                                                                                       |
+    +=================================================================================================================+===================================================================================================+
+    | :py:meth:`f_int_unreduced(u_constr, t)<amfe.mechanical_system.ReducedSystem.f_int>`                             | Returns the nonlinear internal restoring force vector                                             |
+    +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+    | :py:meth:`M_unreduced(u_constr, t)<amfe.mechanical_system.ReducedSystem.M_unreduced>`                           | Returns the mass matrix                                                                           |
+    +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+    | :py:meth:`K_unreduced(u_constr, t)<amfe.mechanical_system.ReducedSystem.K_unreduced>`                           | Returns the tangential stiffenss matrix                                                           |
+    +-----------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------+
+
+.. note::
+
+    These functions expect the displacements :math:`u_{constr} = V u_{reduced}` as argument.
+
+
+The ReducedSystem-class provides some additional properties to describe reduced systems:
+
+1. :py:attr:`u_red_output<amfe.mechanical_system.ReducedSystem.u_red_output>`: This property is similar to u_output of the MechanicalSystem class. Instead of storing the full displacement vector, it stores the set of reduced generalized coordinates. It is automatically stored when calling the function :py:meth:`write_timestep<amfe.mechanical_system.ReducedSystem.write_timestep>`.
+
+2. :py:attr:`V<amfe.mechanical_system.ReducedSystem.V>`: Stores the reduced basis, with dimension n_constrained x n_reduced
+
+3. :py:attr:`V_unconstr<amfe.mechanical_system.ReducedSystem.V_unconstr>`: Stores the reduced basis extended by the displacements of constrained dofs (Dirichlet b.c.)
+
+4. :py:attr:`assembly_type<amfe.mechanical_system.ReducedSystem.assembly_type>`: Stores the assembly type ('indirect' or 'direct')
 
