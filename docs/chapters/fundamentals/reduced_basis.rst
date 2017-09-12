@@ -43,14 +43,66 @@ in corresponding :py:attr:`T_output<amfe.mechanical_system.MechanicalSystem.T_ou
 
     This will delete values in u\_output that have been stored before.
 
+One can also use the function
+:py:func:`compute_modes_pardiso(mechanical_system, n=10, u_eq=None, save=False, niter_max=40, rtol=1E-14)<amfe.reduced_basis.compute_mode_pardiso>`
+to compute the vibration modes. This function uses a Lanczos iteration and the pardiso solver instead
+
 **Craig Bampton:**
 
 **POD:** Pass a mechanical system and get the POD basis of its u_output vectors. The returned dimension is the
 dimension of the constrained system (i.e. after applying Dirichlet boundary conditions).
 
+**Modal Derivatives:**
+
+V is a linear basis i.e. the mode shapes and omega is the vector of corresponding eigenfrequencies. K_func is a function that returns the tangential stiffness matrix dependent on u.
+M is the mass matrix. The parameter h controls the step size of the finite difference scheme that is used to compute
+the derivative of the tangential stiffness matrix. The optimal step size can vary for different systems.
+If you have no idea which step size you should choose, try the default value first.
+The verbose option defines the amount of output information the algorithm will print in command line.
+If symmetric flag is set to true, the matrix of modal derivatives will be made symmetric after calculation.
+The finite_diff option can be either set to 'central' for using a central finite difference scheme (recommended) or
+to 'upwind' which will use an upwind finite difference scheme.
+
+**Static Derivatives:** The use of the function is very similar to the modal derivatives.
+
+Augment linear bases
+--------------------
+
+The function
+:py:func:`augment_with_derivatives(V, theta, M=None, tol=1E-8, symm=True)<amfe.reduced_basis.augment_with_derivatives>`
+can be used to easily augment a linear basis with modal or static derivatives.
+In fact this function works with any basis that is stored in a three dimensional ndarray theta.
+
+The function expects a linear basis V, a three dimensional array theta with basis vectors to augment linear basis V
+and a mass matrix if one wants to M-normalize the basis.
+The tol value can be passed if one wants to truncate not important vectors by viewing at the singular values of the
+matrix of all basis vectors stored in its columns. All vectors whose singular values are lesser than tol times the
+largest singular value are truncated.
+
+The function returns the augmented basis V.
+
+
+Using weighting
+^^^^^^^^^^^^^^^
+
+One can use a weighting matrix W to choose the most important modal or static derivatives to augment the linear basis.
+A good measure for this is :math:`W_{ij} = 1/(\omega_i \omega_j)` for example.
+After the weighting matrix has been defined, the function
+:py:func:`augment_with_ranked_derivatives(V, Theta, W, n, tol=1E-8, symm=True)<amfe.reduced_basis.augment_with_ranked_derivatives>`
+augments the linear basis V with weighted modal/static derivatives Theta.
+It returns the augmented basis with n modal/static derivates added to it.
+
+.. todo::
+
+    This method does not M-normalize the vectors
 
 
 
 Reduce Mechanical Systems
 -------------------------
+
+To reduce a mechanical system by using an arbitrary basis V (of dimension of the constrained system after Dirichlet
+boundary conditions are applied), call::
+
+    >>> reduce_mechanical_system(mechanical_system, V, overwrite=False, assembly='indirect')
 

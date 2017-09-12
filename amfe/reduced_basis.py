@@ -538,10 +538,15 @@ def augment_with_derivatives(V, theta, M=None, tol=1E-8, symm=True):
         linear basis
     theta : ndarray
         third order tensor filled with the modal derivatices associated with V
+    M : ndarray, optional
+        Mass matrix. If mass matrix is passed, the reduction basis augmentation
+        will be M-normalized, otherwise it will just be normalized (2-norm)
     tol : float, optional
         Tolerance for the deflation via SVD. The omitted singular values are
         at least smaller than the largest one multiplied with tol.
         Default value: 1E-8.
+    symm : bool, optional
+        If set to true (default), theta will be assumed to be symmetric!
 
     Returns
     -------

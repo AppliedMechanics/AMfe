@@ -95,9 +95,9 @@ Example: Define a linear time function::
 The shadow_area parameter is Boolean parameter. If this parameter is set to true, the applied force will be scaled
 by the projected area of the boundary in the direction of the applied force. This only makes sense if a tuple of
 coordinates are passed for the direct-parameter.
-Example: Apply a linearly increased force with 1000 units after one second in x direction on physical group 105::
+Example: Apply a linearly increased force (using the time_func definition above) with 1000 units after one second in x direction on physical group 105::
 
-    >>> mechanical_system.apply_neumann_boundaries(105,1000,(1,0,0), lambda t: t)
+    >>> mechanical_system.apply_neumann_boundaries(105,1000,(1,0,0), time_func)
 
 
 
