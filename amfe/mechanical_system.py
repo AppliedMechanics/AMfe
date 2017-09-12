@@ -11,6 +11,7 @@ system, defined by certain parameters or a multibody system.
 
 import time
 import os
+import copy
 
 import h5py
 import numpy as np
@@ -21,6 +22,7 @@ from .boundary import DirichletBoundary
 
 __all__ = ['MechanicalSystem',
            'ReducedSystem',
+           'reduce_mechanical_system'
            ]
 
 class MechanicalSystem():
@@ -661,9 +663,26 @@ class ReducedSystem(MechanicalSystem):
     The system runs without providing a V_basis when constructing the method
     only for the unreduced routines.
 
+
+    Attributes
+    ----------
+    V : ?
+        Set of basis vectors the system has been reduced with u_constr = V * q
+    V_unconstr : ?
+        Extended reduction basis that is extended by the displacement coordinates of the constrained degrees of
+        freedom
+    u_red_output : ?
+        Stores the timeseries of the generalized coordinates (similar to u_output)
+    assembly_type : {'indirect', 'direct'}
+        Stores the type of assembly method how the reduced system is computed
+    
     Examples
     --------
-    TODO
+    
+    my_system = amfe.MechanicalSystem()
+    V = vibration_modes(my_system, n=20)
+    my_reduced_system = amfe.reduce_mechanical_system(my_system, V)
+    
 
     '''
 
@@ -748,12 +767,12 @@ class ReducedSystem(MechanicalSystem):
         if self.assembly_type == 'direct':
             raise NotImplementedError('The direct method is note implemented yet for damping matrices')
         elif self.assembly_type == 'indirect':
-            D = self.V.T @ MechanicalSystem.D(self, self.V_unconstr @ u, t) @ self.V
+            self.D_constr = self.V.T @ MechanicalSystem.D(self, self.V @ u, t) @ self.V
         else:
             raise ValueError('The given assembly type for a reduced system '
                              + 'is not valid.')
 
-        return D
+        return self.D_constr
 
     def M(self, u=None, t=0):
         # Just a plain projection
