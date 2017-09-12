@@ -743,6 +743,18 @@ class ReducedSystem(MechanicalSystem):
 
         return f_int
 
+    def D(self, u=None, t=0):
+
+        if self.assembly_type == 'direct':
+            raise NotImplementedError('The direct method is note implemented yet for damping matrices')
+        elif self.assembly_type == 'indirect':
+            D = self.V.T @ MechanicalSystem.D(self, self.V_unconstr @ u, t) @ self.V
+        else:
+            raise ValueError('The given assembly type for a reduced system '
+                             + 'is not valid.')
+
+        return D
+
     def M(self, u=None, t=0):
         # Just a plain projection
         # not so well but works...
