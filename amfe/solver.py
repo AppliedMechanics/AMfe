@@ -409,13 +409,6 @@ def integrate_linear_gen_alpha(mechanical_system, q0, dq0, time_range, dt,
     -------
     None
 
-    Parameters
-    ----------
-    ...
-    rho_inf : float, >= 0, <= 1
-        high-frequency spectral radius
-    ...
-
     TODO
 
     '''
