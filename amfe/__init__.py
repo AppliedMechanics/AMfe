@@ -26,6 +26,9 @@ from .mesh import *
 from .solver import *
 from .tools import *
 
+# Solver submodule
+from .solvers import *
+
 # Reduction stuff
 from .reduced_basis import *
 from .hyper_red import *
