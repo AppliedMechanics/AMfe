@@ -34,7 +34,7 @@ class LinearSolver:
 
     def solve(self, b):
         '''
-        Method for solving for a rhs
+        Method for solving for a rhs b
         :param b: 
         :return: x
         '''
@@ -55,6 +55,13 @@ class LinearSolver:
 
 
 class PardisoSolver(LinearSolver):
+
+    available_status = {0: 'Unknown/Nothing',
+                        1: 'A has been set',
+                        2: 'A has been factorized'
+                        }
+
+    status = 0
 
     mtypes = {'sym': 1,
               'spd': 2,
@@ -128,9 +135,13 @@ class PardisoSolver(LinearSolver):
                         if key in self.iparm_dict:
                             self.iparm.update({self.iparm_dict[key]: options[key]})
 
+            # instantiate PardisoWrapper object
+            # This does not! make a factorization
             self.wrapper_class = PardisoWrapper(A, mtype=self.mtype, iparm=self.iparm, verbose=self.verbose)
+            self.status = 1
         # Otherwise (if A is not sparse)
         else:
+            self.status = 0
             raise NotImplementedError('Please implement preallocation for A and updating of A')
 
     def set_A(self, A):
@@ -140,8 +151,10 @@ class PardisoSolver(LinearSolver):
                 self.wrapper_class.a = A.data
                 self.wrapper_class.ia = A.indptr
                 self.wrapper_class.ja = A.indices
+                self.status = 1
             else:
                 self.wrapper_class = PardisoWrapper(A, mtype=self.mtype, verbose=self.verbose)
+                self.status = 1
         else:
             try:
                 Acsr = sp.sparse.csr_matrix(A)
@@ -156,12 +169,20 @@ class PardisoSolver(LinearSolver):
         self.wrapper_class.factor()
 
     def solve(self, b):
-        self.wrapper_class.solve(b)
+        # Check if wrapper_class object is already factorized
+        if self.status == 2:
+            self.wrapper_class.solve(b)
+        # Else solve in one step
+        elif self.status == 1:
+            self.wrapper_class.run_pardiso(13, b)
 
     def get_options(self, prefix=''):
         print('Verbose: {}, Matrix-Type (mtype): {}, iparms: {}'.format(self.verbose, self.mtype, self.iparm))
 
-
+    def __str__(self):
+        info = 'This is a PardisoSolver object. Dimension of A: {},' \
+               ' status={} ({})'.format(self.wrapper_class.n, str(self.status), self.available_status[self.status])
+        return info
 
 # Shortcut for compatibility
 def solve_sparse(A, b, matrix_type='symm', verbose=False):
@@ -210,6 +231,7 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
             x = pSolve.run_pardiso(13, b)
             pSolve.clear()
         else:
+            # use scipy solver instead
             x = spsolve(A, b)
     else:
         x = sp.linalg.solve(A, b)
