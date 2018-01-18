@@ -10,9 +10,9 @@ Module contains linear equation solvers
 from scipy.sparse import issparse
 import scipy as sp
 from scipy.sparse.linalg import spsolve
+from .lib import PardisoWrapper
 
 try:
-    from amfe.linalg.lib import PardisoWrapper
     use_pardiso = True
 except:
     use_pardiso = False
@@ -104,45 +104,43 @@ class PardisoSolver(LinearSolver):
         self.iparm = {}
         self.verbose = False
         self.mtype = 'nonsym'
-        if A:
-            # Check if A is sparse
-            if not issparse(A):
-                raise ValueError('Error in PardisoSolver: Matrix A is not sparse!')
+        if not isinstance(A, sp.sparse.csr_matrix):
+            try:
+                A = sp.sparse.csr_matrix(A)
+            except:
+                self.status = 0
+                raise ValueError('A must be A csr_matrix or at least a csr convertible matrix')
             # First check if saddle_point problem option is set (this can be overwritten by other options)
-            if options is not None:
-                if 'saddle_point' in options:
-                    # Check if saddle_point option is None or False
-                    if options['saddle_point']:
-                        # Update two important parameters for saddle_point Problems
-                        self.iparm.update({'scaling': 1, 'maximum_weighted_matching': 1})
-                # Write other option parameters
-                for key in options:
-                    if key not in self.available_options:
-                        raise ValueError('Error in PardisoSolver: Options Value {} not valid'.format(key))
-                    else:
-                        # Check if verbose option is activated
-                        if key == 'verbose':
-                            self.verbose = options['verbose']
-                        # Check if mtype is in options
-                        if key == 'mtype':
-                            # Check if mtype is valid
-                            if options[key] in self.mtypes:
-                                self.mtype = self.mtypes[options['mtype']]
-                            # Otherwise raise value error
-                            else:
-                                raise ValueError('Error in PardisoSolver mtype {} not available'.format(options[key]))
-                        # Check if key belongs to iparm parmeters
-                        if key in self.iparm_dict:
-                            self.iparm.update({self.iparm_dict[key]: options[key]})
+        if options is not None:
+            if 'saddle_point' in options:
+                # Check if saddle_point option is None or False
+                if options['saddle_point']:
+                    # Update two important parameters for saddle_point Problems
+                    self.iparm.update({'scaling': 1, 'maximum_weighted_matching': 1})
+            # Write other option parameters
+            for key in options:
+                if key not in self.available_options:
+                    raise ValueError('Error in PardisoSolver: Options Value {} not valid'.format(key))
+                else:
+                    # Check if verbose option is activated
+                    if key == 'verbose':
+                        self.verbose = options['verbose']
+                    # Check if mtype is in options
+                    if key == 'mtype':
+                        # Check if mtype is valid
+                        if options[key] in self.mtypes:
+                            self.mtype = self.mtypes[options['mtype']]
+                        # Otherwise raise value error
+                        else:
+                            raise ValueError('Error in PardisoSolver mtype {} not available'.format(options[key]))
+                    # Check if key belongs to iparm parmeters
+                    if key in self.iparm_dict:
+                        self.iparm.update({self.iparm_dict[key]: options[key]})
 
-            # instantiate PardisoWrapper object
-            # This does not! make a factorization
-            self.wrapper_class = PardisoWrapper(A, mtype=self.mtype, iparm=self.iparm, verbose=self.verbose)
-            self.status = 1
-        # Otherwise (if A is not sparse)
-        else:
-            self.status = 0
-            raise NotImplementedError('Please implement preallocation for A and updating of A')
+        # instantiate PardisoWrapper object
+        # This does not! make a factorization
+        self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.iparm, verbose=self.verbose)
+        self.status = 1
 
     def set_A(self, A):
         if isinstance(A, sp.sparse.csr_matrix):
@@ -157,8 +155,8 @@ class PardisoSolver(LinearSolver):
                 self.status = 1
         else:
             try:
-                Acsr = sp.sparse.csr_matrix(A)
-                self.wrapper_class = PardisoWrapper(Acsr, mtype=self.mtype, verbose=self.verbose)
+                A = sp.sparse.csr_matrix(A)
+                self.wrapper_class = PardisoWrapper(A, mtype=self.mtype, verbose=self.verbose)
             except:
                 raise ValueError('A must be A csr_matrix or at least a csr convertible matrix')
 
@@ -171,10 +169,10 @@ class PardisoSolver(LinearSolver):
     def solve(self, b):
         # Check if wrapper_class object is already factorized
         if self.status == 2:
-            self.wrapper_class.solve(b)
+            return self.wrapper_class.solve(b)
         # Else solve in one step
         elif self.status == 1:
-            self.wrapper_class.run_pardiso(13, b)
+            return self.wrapper_class.run_pardiso(13, b)
 
     def get_options(self, prefix=''):
         print('Verbose: {}, Matrix-Type (mtype): {}, iparms: {}'.format(self.verbose, self.mtype, self.iparm))
