@@ -9,7 +9,7 @@ from amfe.linalg.linearsolvers import PardisoSolver
 
 class TestPardisoSolver(TestCase):
     def test_solve(self):
-        A = numpy.array([[0.3, 0.4, 0, 0],[0.4,1 , 0.3, 0],[0, 0.8, 0.9, -0.5],[0, 0, -0.4, 0.8]])
+        A = numpy.array([[0.3, 0.4, 0, 0], [0.4, 1.0 , 0.3, 0], [0, 0.8, 0.9, -0.5], [0, 0, -0.4, 0.8]])
         A = scipy.sparse.csr_matrix(A)
         b = numpy.array([1.4, 1.2, 0.8, 1.1])
         solver = PardisoSolver(A)
