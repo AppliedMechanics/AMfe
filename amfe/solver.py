@@ -59,7 +59,7 @@ abort_statement = '''
 # --------------------
 class Solver:
     '''
-    General solver class of the mechanical system.
+    General solver class for the mechanical system.
 
     Parameters
     ----------
@@ -68,7 +68,10 @@ class Solver:
     options : Dictionary
         Options for solver.
     '''
+
     def __init__(self, mechanical_system, options):
+        self.mechanical_system = mechanical_system
+
         if 'linsolver' in options:
             self.linsolver = options['linsolver']
         else:
@@ -76,8 +79,6 @@ class Solver:
 
         if 'linsolveroptions' in options:
             self.linsolveroptions = options['linsolveroptions']
-
-        self.mechanical_system = mechanical_system
         return
 
     def solve(self):
@@ -97,6 +98,7 @@ class NonlinearStaticsSolver(Solver):
     options : Dictionary
         Options for solver.
     '''
+
     def __init__(self, mechanical_system, options):
         super().__init__(mechanical_system, options)
         # TBD
@@ -117,6 +119,7 @@ class LinearStaticsSolver(Solver):
     options : Dictionary
         Options for solver.
     '''
+
     def __init__(self, mechanical_system, linearsolver=PardisoSolver, options):
         super().__init__(mechanical_system, options)
         return
@@ -129,7 +132,7 @@ class LinearStaticsSolver(Solver):
         ----------
         t : float
             Time for evaluation of external force in MechanicalSystem.
-    
+
         Returns
         -------
         q : ndaray
@@ -245,7 +248,7 @@ class NonlinearDynamicsSolver(Solver):
 
         # initialize variables and set parameters
         self.mechanical_system.clear_timesteps()
-        self.mechanical_system.iteration_info = []
+        self.iteration_info = []
         t = t0
         if self.dt_output is not None:
             time_range = np.arange(t0, t_end, self.dt_output)
@@ -269,7 +272,7 @@ class NonlinearDynamicsSolver(Solver):
     
             # write output
             if t + eps >= time_range[time_index]:
-                mechanical_system.write_timestep(t, q.copy())
+                self.mechanical_system.write_timestep(t, q.copy())
                 time_index += 1
                 if time_index == len(time_range):
                     break
@@ -320,16 +323,13 @@ class NonlinearDynamicsSolver(Solver):
                 # write iterations
                 if self.write_iter:
                     t_write = t + dt/1000000*n_iter
-                    mechanical_system.write_timestep(t_write, q.copy())
+                    self.mechanical_system.write_timestep(t_write, q.copy())
 
                 # catch failing converge
                 if n_iter > n_iter_max:
                     if self.conv_abort:
                         print(abort_statement)
-                        mechanical_system.iteration_info = np.array(
-                                mechanical_system.iteration_info)
-
-                        # end time measurement
+                        self.iteration_info = np.array(self.iteration_info)
                         t_clock_end = time.time()
                         print('Time for time marching integration: '
                               + '{0:6.3f}s.'.format(t_clock_end - t_clock_start))
@@ -347,12 +347,12 @@ class NonlinearDynamicsSolver(Solver):
             print(('Time: {0:3.6f}, #iterations: {1:3d}, '
                    + 'residual: {2:6.3E}').format(t, n_iter, res_abs))
             if self.track_niter:
-                mechanical_system.iteration_info.append((t, n_iter, res_abs))
+                self.iteration_info.append((t, n_iter, res_abs))
 
             # end of time step loop
 
-        # write iteration info to mechanical system
-        mechanical_system.iteration_info = np.array(mechanical_system.iteration_info)
+        # save iteration info
+        self.iteration_info = np.array(self.iteration_info)
 
         # end time measurement
         t_clock_end = time.time()
@@ -377,8 +377,8 @@ class LinearDynamicsSolver(Solver):
 
 class NonlinearGeneralizedAlphaSolver(NonlinearDynamicsSolver):
     '''
-    Class for solving the nonlinear dynamic problem of the mechanical system 
-    using the generalized-alpha time integration scheme.
+    Class for solving the nonlinear dynamic problem of the mechanical system using the 
+    generalized-alpha time integration scheme.
 
     Parameters
     ----------
@@ -464,12 +464,116 @@ class NonlinearGeneralizedAlphaSolver(NonlinearDynamicsSolver):
 
     def correct(self, q, dq, v, ddq, delta_q):
         '''
-        Update variables for the nonlinear generalized-alpha time integration scheme.
+        Correct variables for the nonlinear generalized-alpha time integration scheme.
         '''
 
         q += delta_q
         dq += self.gamma/(self.beta*self.dt)*delta_q
         ddq += 1/(self.beta*self.dt**2)*delta_q
+        return
+
+
+class NonlinearJWHAlphaSolver(NonlinearDynamicsSolver):
+    '''
+    Class for solving the nonlinear dynamic problem of the mechanical system using the 
+    JWH-alpha time integration scheme.
+
+    Parameters
+    ----------
+    mechanical_system : Instance of MechanicalSystem
+        Mechanical system to be solved.
+    options : Dictionary
+        Options for solver.
+
+        References
+        ----------
+           [1]  K.E. Jansen, C.H. Whiting and G.M. Hulbert (2000): A generalized-alpha
+                method for integrating the filtered Navier-Stokes equations with a
+                stabilized finite element method. Computer Methods in Applied Mechanics and
+                Engineering 190(3) 305--319. DOI 10.1016/S0045-7825(00)00203-6.
+           [2]  C. Kadapa, W.G. Dettmer and D. Perić (2017): On the advantages of using the
+                first-order generalised-alpha scheme for structural dynamic problems.
+                Computers and Structures 193 226--238. DOI 10.1016/j.compstruc.2017.08.013.
+           [3]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and
+                application to structural dynamics. ISBN 978-1-118-90020-8.
+    '''
+
+    def __init__(self, mechanical_system, options):
+        super().__init__(mechanical_system, options)
+        self.use_v = True
+        return
+
+    def set_parameters(self, dt, options):
+        '''
+        Set parameters for the nonlinear JWH-alpha time integration scheme.
+        '''
+
+        self.dt = dt
+        if 'rho_inf' in options:
+            rho_inf = options['rho_inf']
+        else:
+            rho_inf = 0.9
+
+        self.alpha_m = (3 - rho_inf)/(2*(1 + rho_inf))
+        self.alpha_f = 1/(1 + rho_inf)
+        self.gamma = 0.5 + self.alpha_m - self.alpha_f
+        return
+
+    def predict(self, q, dq, v, ddq):
+        '''
+        Predict variables for the nonlinear JWH-alpha time integration scheme.
+        '''
+
+        q += self.dt*(self.alpha_m - self.gamma)/self.alpha_m*dq \
+             + self.dt*self.gamma/self.alpha_m*v \
+             + self.alpha_f*self.dt**2*self.gamma*(1 - self.gamma)/self.alpha_m*dv
+        dq += 1/self.alpha_m*(v - dq) \
+              + self.alpha_f*self.dt*(1 - self.gamma)/self.alpha_m*dv
+        v += self.dt*(1 - self.gamma)*dv
+        dv *= 0
+        return
+
+    def newton_raphson(self, q, dq, v, ddq, q_old, dq_old, v_old, ddq_old, t, t_old):
+        '''
+        Return actual Jacobian and residuum for the nonlinear JWH-alpha time 
+        integration scheme.
+        '''
+
+        if self.mechanical_system.M_constr is None:
+            self.mechanical_system.M()
+
+        dv_m = self.alpha_m*dv + (1 - self.alpha_m)*dv_old
+        q_f = self.alpha_f*q + (1 - self.alpha_f)*q_old
+        v_f = self.alpha_f*v + (1 - self.alpha_f)*v_old
+        t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
+
+        K_f, f_f = self.mechanical_system.K_and_f(q_f, t_f)
+
+        f_ext_f = self.mechanical_system.f_ext(q_f, v_f, t_f)
+
+        if self.mechanical_system.D_constr is None:
+            Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2) \
+                    *self.mechanical_system.M_constr \
+                  - self.alpha_f*K_f
+            res = f_ext_f - self.mechanical_system.M_constr@dv_m - f_f
+        else:
+            Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2) \
+                    *self.mechanical_system.M_constr \
+                  - self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.D_constr \
+                  - self.alpha_f*K_f
+            res = f_ext_f - self.mechanical_system.M_constr@dv_m \
+                  - self.mechanical_system.D_constr@v_f - f_f
+        return Jac, res, f_ext_f
+
+    def correct(self, q, dq, v, ddq, delta_q):
+        '''
+        Correct variables for the nonlinear JWH-alpha time integration scheme.
+        '''
+
+        q += delta_q
+        dq += 1/(self.gamma*self.dt)*delta_q
+        v += self.alpha_m/(self.alpha_f*self.gamma*self.dt)*delta_q
+        dv += self.alpha_m/(self.alpha_f*self.gamma**2*self.dt**2)*delta_q
         return
 
 
