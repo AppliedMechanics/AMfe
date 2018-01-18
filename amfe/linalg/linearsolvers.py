@@ -4,7 +4,7 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
 """
-Module contains time integration
+Module contains linear equation solvers
 """
 
 from scipy.sparse import issparse
@@ -223,7 +223,7 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
     1
 
     '''
-    print('The function solve_sparse is deprecated and will be removed in next release')
+    print('The function solve_sparse is deprecated and will be removed in next release!')
     if sp.sparse.issparse(A):
         if use_pardiso:
             mtype = PardisoSolver.mtypes[matrix_type]

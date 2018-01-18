@@ -1,5 +1,5 @@
 """
-Module that contains solvers for solving systems in AMfe
+Module that contains solvers for solving systems in AMfe.
 """
 
 #IDEAS:
@@ -32,14 +32,18 @@ Module that contains solvers for solving systems in AMfe
 
 import numpy as np
 import scipy as sp
+import time
 
 from .mechanical_system import *
 from .linalg import *
 
 __all__ = ['choose_solver',
            'Solver',
+           'NonlinearStaticsSolver',
+           'LinearStaticsSolver',
            'NonlinearDynamicsSolver',
            'NonlinearGeneralizedAlphaSolver',
+           'NonlinearJWHAlphaSolver',
            'ConstraintSystemSolver',
            'StateSpaceSolver']
 
@@ -51,31 +55,71 @@ abort_statement = '''
 '''
 
 
-# General Solver Class
+# General solver class
 # --------------------
 class Solver:
-    def __init__(self, options):
-        pass
+    '''
+    General solver class of the mechanical system.
 
-# General Solver Class for all Statics solver
-# -------------------------------------------
-
-class NonlinearStaticsSolver(Solver):
+    Parameters
+    ----------
+    mechanical_system : Instance of MechanicalSystem
+        Mechanical system to be solved.
+    options : Dictionary
+        Options for solver.
+    '''
     def __init__(self, mechanical_system, options):
+        if 'linsolver' in options:
+            self.linsolver = options['linsolver']
+        else:
+            self.linsolver = PardisoSolver
+
+        if 'linsolveroptions' in options:
+            self.linsolveroptions = options['linsolveroptions']
+
+        self.mechanical_system = mechanical_system
+        return
+
+    def solve(self):
         pass
+
+
+# General solver class for all statics solver
+# -------------------------------------------
+class NonlinearStaticsSolver(Solver):
+    '''
+    Class for solving the nonlinear static problem of the mechanical system.
+
+    Parameters
+    ----------
+    mechanical_system : Instance of MechanicalSystem
+        Mechanical system to be solved.
+    options : Dictionary
+        Options for solver.
+    '''
+    def __init__(self, mechanical_system, options):
+        super().__init__(mechanical_system, options)
+        # TBD
+        return
+    
+    def solve(self):
+        # TBD
+        return
 
 class LinearStaticsSolver(Solver):
     '''
-    Solves the linear static problem of the mechanical system.
+    Class for solving the linear static problem of the mechanical system.
 
     Parameters
     ----------
     mechanical_system : Instance of MechanicalSystem
         Mechanical system to be linearized at zero displacement and solved.
+    options : Dictionary
+        Options for solver.
     '''
     def __init__(self, mechanical_system, linearsolver=PardisoSolver, options):
-        super().__init__(options)
-        self.mechanical_system = mechanical_system
+        super().__init__(mechanical_system, options)
+        return
 
     def solve(self,t):
         '''
@@ -89,7 +133,7 @@ class LinearStaticsSolver(Solver):
         Returns
         -------
         q : ndaray
-            Static solution displacement field.
+            Static displacement field (solution).
         '''
 
         # prepare mechanical_system
@@ -107,56 +151,364 @@ class LinearStaticsSolver(Solver):
         return q
 
 
-# General Solver Class for all Dynamics solver
+# General solver class for all dynamics solver
 # --------------------------------------------
-
 class NonlinearDynamicsSolver(Solver):
-    def __init__(self, mechanical_system, q0, dq0, options):
-        super().__init__(options)
+    '''
+    General class for solving the nonlinear dynamic problem of the mechanical system.
 
-        if 'linsolver' in options:
-            self.linsolver = options['linsolver']
+    Parameters
+    ----------
+    mechanical_system : Instance of MechanicalSystem
+        Mechanical system to be solved.
+    options : Dictionary
+        Options for solver.
+
+    References
+    ----------
+       [1]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and
+            application to structural dynamics. ISBN 978-1-118-90020-8.
+    '''
+
+    def __init__(self, mechanical_system, options):
+        super().__init__(mechanical_system, options)
+
+        # read options
+        if 'dt_output' in options:
+            self.dt_output = options['dt_output']
         else:
-            self.linsolver = PardisoSolver
+            self.dt_output = None
+        if 'rtol' in options:
+            self.rtol = options['rtol']
+        else:
+            self.rtol = 1.0E-9
+        if 'atol' in options:
+            self.atol = options['atol']
+        else:
+            self.atol = 1.0E-6
+        if 'n_iter_max' in options:
+            self.n_iter_max = options['n_iter_max']
+        else:
+            self.n_iter_max = 30
+        if 'conv_abort' in options:
+            self.conv_abort = options['conv_abort']
+        else:
+            self.conv_abort = True
+        if 'verbose' in options:
+            self.verbose = options['verbose']
+        else:
+            self.verbose = False
+        if 'write_iter' in options:
+            self.write_iter = options['write_iter']
+        else:
+            self.write_iter = False
+        if 'track_niter' in options:
+            self.track_niter = options['track_niter']
+        else:
+            self.track_niter = False
+        return
 
-        if 'linsolveroptions' in options:
-            self.linsolveroptions = options['linsolveroptions']
+    def set_parameters(self, dt, options):
+        pass
 
-    def solve(self):
-        # some things to do...
-        # prediction
+    def predict(self, q, dq, v, ddq):
+        pass
 
-        # solve jacobian
-        J = np.array([[1,0],[0,1]])
-        if self.linsolveroptions:
-            solver = self.linsolver(J, options=self.linsolveroptions)
+    def newton_raphson(self, q, dq, v, ddq, q_old, dq_old, v_old, ddq_old, t, t_old):
+        pass
 
-        # correction
+    def correct(self, q, dq, v, ddq, delta_q):
+        pass
+
+    def solve(self, q0, dq0, t0, t_end, dt, options):
+        '''
+        Solves the nonlinear dynamic problem of the mechanical system.
+    
+        Parameters
+        ----------
+        q0 : ndarray
+            Start displacement.
+        dq0 : ndarray
+            Start velocity.
+        t0 : float
+            Start time.
+        t_end : float
+            End time.
+        dt : float
+            Time step size.
+        options : Dictionary
+            Options for solver.
+        '''
+
+        # start time measurement
+        t_clock_start = time.time()
+
+        # initialize variables and set parameters
+        self.mechanical_system.clear_timesteps()
+        self.mechanical_system.iteration_info = []
+        t = t0
+        if self.dt_output is not None:
+            time_range = np.arange(t0, t_end, self.dt_output)
+        else:
+            time_range = np.arange(t0, t_end, dt)
+        q = q0.copy()
+        dq = dq0.copy()
+        if use_v:
+            v = dq0.copy()
+        else:
+            v = np.empty((0,0))
+        ddq = np.zeros_like(q0)
+        f_ext = np.zeros_like(q0)
+        abs_f_ext = atol
+        time_index = 0
+        eps = 1E-13
+        self.set_parameters(dt, options)
+
+        # time step loop
+        while time_index < len(time_range):
+    
+            # write output
+            if t + eps >= time_range[time_index]:
+                mechanical_system.write_timestep(t, q.copy())
+                time_index += 1
+                if time_index == len(time_range):
+                    break
+
+            # save old variables
+            q_old = q.copy()
+            dq_old = dq.copy()
+            v_old = v.copy()
+            ddq_old = ddq.copy()
+            f_ext_old = f_ext.copy()
+            t_old = t
+
+            # predict new variables
+            t += dt
+            self.predict(q, dq, v, ddq)
+
+            Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, q_old, dq_old, v_old, \
+                                                  ddq_old, t, t_old)
+
+            abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
+            res_abs = norm_of_vector(res)
+
+            # Newton-Raphson iteration loop
+            n_iter = 0
+            while res_abs > rtol*abs_f_ext + atol:
+
+                self.linsolver.set_A(Jac)
+                delta_q = -self.linsolver.solve(res)
+    
+                # update variables
+                self.correct(q, dq, v, ddq, delta_q)
+    
+                # update system
+                Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, q_old, dq_old, \
+                                                      v_old, ddq_old, t, t_old)
+
+                res_abs = norm_of_vector(res)
+                n_iter += 1
+
+                if self.verbose:
+                    if sp.sparse.issparse(Jac):
+                        cond_nr = 0.0
+                    else:
+                        cond_nr = np.linalg.cond(Jac)
+                    print(('Iteration: {0:3d}, residual: {1:6.3E}, condition# of '
+                           + 'Jacobian: {2:6.3E}').format(n_iter, res_abs, cond_nr))
+
+                # write iterations
+                if self.write_iter:
+                    t_write = t + dt/1000000*n_iter
+                    mechanical_system.write_timestep(t_write, q.copy())
+
+                # catch failing converge
+                if n_iter > n_iter_max:
+                    if self.conv_abort:
+                        print(abort_statement)
+                        mechanical_system.iteration_info = np.array(
+                                mechanical_system.iteration_info)
+
+                        # end time measurement
+                        t_clock_end = time.time()
+                        print('Time for time marching integration: '
+                              + '{0:6.3f}s.'.format(t_clock_end - t_clock_start))
+                        return
+
+                    t = t_old
+                    q = q_old.copy()
+                    dq = dq_old.copy()
+                    v = v_old.copy()
+                    f_ext = f_ext_old.copy()
+                    break
+
+                # end of Newton-Raphson iteration loop
+
+            print(('Time: {0:3.6f}, #iterations: {1:3d}, '
+                   + 'residual: {2:6.3E}').format(t, n_iter, res_abs))
+            if self.track_niter:
+                mechanical_system.iteration_info.append((t, n_iter, res_abs))
+
+            # end of time step loop
+
+        # write iteration info to mechanical system
+        mechanical_system.iteration_info = np.array(mechanical_system.iteration_info)
+
+        # end time measurement
+        t_clock_end = time.time()
+        print('Time for time marching integration: {0:6.3f} seconds'.format(
+              t_clock_end - t_clock_start))
+        return
+
 
 class LinearDynamicsSolver(Solver):
-    pass
+    def __init__(self, mechanical_system, options):
+        super().__init__(mechanical_system, options)
+        # TBD
+        return
+
+    def solve(self):
+        # TBD
+        pass
+
 
 # Special solvers derived from above
 # ---------------------------------
 
 class NonlinearGeneralizedAlphaSolver(NonlinearDynamicsSolver):
-    pass
+    '''
+    Class for solving the nonlinear dynamic problem of the mechanical system 
+    using the generalized-alpha time integration scheme.
+
+    Parameters
+    ----------
+    mechanical_system : Instance of MechanicalSystem
+        Mechanical system to be solved.
+    options : Dictionary
+        Options for solver.
+
+    References
+    ----------
+       [1]  J. Chung and G. Hulbert (1993): A time integration algorithm for structural
+            dynamics with improved numerical dissipation: the generalized-alpha method.
+            Journal of Applied Mechanics 60(2) 371--375.
+       [2]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and
+            application to structural dynamics. ISBN 978-1-118-90020-8.
+    '''
+
+    def __init__(self, mechanical_system, options):
+        super().__init__(mechanical_system, options)
+        self.use_v = False
+        return
+
+    def set_parameters(self, dt, options):
+        '''
+        Set parameters for the nonlinear generalized-alpha time integration scheme.
+        '''
+
+        self.dt = dt
+        if 'rho_inf' in options:
+            rho_inf = options['rho_inf']
+        else:
+            rho_inf = 0.9
+
+        self.alpha_m = (2*rho_inf - 1)/(rho_inf + 1)
+        self.alpha_f = rho_inf/(rho_inf + 1)
+        self.beta = 0.25*(1 - self.alpha_m + self.alpha_f)**2
+        self.gamma = 0.5 - self.alpha_m + self.alpha_f
+        return
+
+    def predict(self, q, dq, v, ddq):
+        '''
+        Predict variables for the nonlinear generalized-alpha time integration scheme.
+        '''
+
+        q += self.dt*dq + self.dt**2*(0.5 - self.beta)*ddq
+        dq += self.dt*(1 - self.gamma)*ddq
+        ddq *= 0
+        return
+
+    def newton_raphson(self, q, dq, v, ddq, q_old, dq_old, v_old, ddq_old, t, t_old):
+        '''
+        Return actual Jacobian and residuum for the nonlinear generalized-alpha time 
+        integration scheme.
+        '''
+
+        if self.mechanical_system.M_constr is None:
+            self.mechanical_system.M()
+
+        ddq_m = (1 - self.alpha_m)*ddq + self.alpha_m*ddq_old
+        q_f = (1 - self.alpha_f)*q + self.alpha_f*q_old
+        dq_f = (1 - self.alpha_f)*dq + self.alpha_f*dq_old
+        t_f = (1 - self.alpha_f)*t + self.alpha_f*t_old
+
+        K_f, f_f = self.mechanical_system.K_and_f(q_f, t_f)
+
+        f_ext_f = self.mechanical_system.f_ext(q_f, dq_f, t_f)
+
+        if self.mechanical_system.D_constr is None:
+            Jac = -(1 - self.alpha_m)/(self.beta*self.dt**2) \
+                    *self.mechanical_system.M_constr \
+                  - (1 - self.alpha_f)*K_f
+            res = f_ext_f - self.mechanical_system.M_constr@ddq_m - f_f
+        else:
+            Jac = -(1 - self.alpha_m)/(self.beta*self.dt**2) \
+                    *self.mechanical_system.M_constr \
+                  - (1 - self.alpha_f)*self.gamma/(self.beta*self.dt) \
+                    *self.mechanical_system.D_constr \
+                  - (1 - self.alpha_f)*K_f
+
+            res = f_ext_f - self.mechanical_system.M_constr@ddq_m \
+                  - self.mechanical_system.D_constr@dq_f - f_f
+        return Jac, res, f_ext_f
+
+    def correct(self, q, dq, v, ddq, delta_q):
+        '''
+        Update variables for the nonlinear generalized-alpha time integration scheme.
+        '''
+
+        q += delta_q
+        dq += self.gamma/(self.beta*self.dt)*delta_q
+        ddq += 1/(self.beta*self.dt**2)*delta_q
+        return
+
 
 class ConstraintSystemSolver(NonlinearDynamicsSolver):
+    # TBD
     pass
 
 class StateSpaceSolver(Solver):
+    # TBD
     pass
 
 # This could be a dictionary for a convenient mapping of scheme names (strings) to their solver classes
-solvers_available = {'GenAlpha': NonlinearGeneralizedAlphaSolver,
-                    }
+solvers_available = {'GeneralizedAlpha': NonlinearGeneralizedAlphaSolver,
+                     'JWHAlpha': NonlinearJWHAlphaSolver}
 
 
 def choose_solver(mechanical_system, options):
 
     if type(mechanical_system) == MechanicalSystem:
-        solvertype = 'GenAlpha'
+        solvertype = 'GeneralizedAlpha'
 
     solver = solvers_available[solvertype](options)
     return solver
+
+
+def norm_of_vector(array):
+    '''
+    Compute the 2-norm of a vector.
+
+    Parameters
+    ----------
+    array : ndarray
+        one dimensional array
+
+    Returns
+    -------
+    abs : float
+        2-norm of the given array.
+
+    '''
+    return np.sqrt(array.T.dot(array))
+
