@@ -9,14 +9,12 @@ Module contains linear equation solvers
 
 from scipy.sparse import issparse
 import scipy as sp
-from scipy.sparse.linalg import spsolve
+import scipy.sparse.linalg
 from .lib import PardisoWrapper
 
-try:
-    use_pardiso = True
-except:
-    use_pardiso = False
-
+__all__ = ['ScipySparseSolver',
+           'PardisoSolver',
+           'solve_sparse']
 
 class LinearSolver:
 
@@ -35,23 +33,95 @@ class LinearSolver:
     def solve(self, b):
         '''
         Method for solving for a rhs b
-        :param b: 
-        :return: x
+        
+        Paramters
+        ---------
+        b : numpy.array
+            Right hand side to solve A*x = b
+        Returns
+        -------
+        x : numpy.array
+            Solution vector
         '''
         pass
 
     def get_options(self):
         '''
-        Return a sting that shows current options set
-        :return: 
+        Return a string that shows current options that have been set
+        
         '''
         pass
 
     def __str__(self):
         '''
         Return a string that gives information about the solver state
-        :return: 
+
         '''
+
+
+class ScipySparseSolver(LinearSolver):
+
+    available_status = {0 : 'Unknown/Nothing',
+                        1 : 'A has been set'
+                        }
+    status = 0
+    available_options = {'permc_spec': 'How to permute the columns of the matrix for sparsity preservation'
+                                       'Allowed Values: NATURAL, MMD_ATA, MMD_AT_PLUS_A, COLAMD',
+                         'use_umfpack': 'True or False for using umfpack. This can only be done if scikit-umfpack'
+                                        'is installed',
+                         'verbose': 'Verbose version'
+                        }
+
+    def __init__(self, A=None, options=None):
+        super().__init__(A, options)
+        # Set some default Values
+        self.verbose = False
+        self.permc_spec = 'COLAMD'
+        self.use_umfpack = False
+
+        if issparse(A):
+            self.A = A
+            self.status = 1
+        elif A is not None:
+            raise ValueError('A must be a sparse matrix for this solver')
+        else:
+            self.A = None
+        if options is not None:
+            for key in options:
+                if key not in self.available_options:
+                    raise ValueError('Error in ScipySparseSolver: Options Value {} not valid'.format(key))
+                else:
+                    # Check if verbose option is activated
+                    if key == 'verbose':
+                        self.verbose = options['verbose']
+                    # Check if mtype is in options
+                    if key == 'permc_spec':
+                        self.permc_spec = options['permc_spec']
+                    if key == 'use_umfpack':
+                        self.use_umfpack = options['use_umfpack']
+
+    def set_A(self, A):
+        if issparse(A):
+            self.A = A
+            self.status = 1
+        else:
+            raise ValueError('A must be a sparse matrix for this solver')
+
+    def clear(self):
+        self.A = None
+
+    def solve(self, b):
+        return scipy.sparse.linalg.spsolve(self.A, b)
+
+    def __str__(self):
+        n = 0
+        if issparse(self.A):
+            n = self.A.shape[0]
+        info = 'This is a ScipySparseSolver object.\n  Dimension of A: {}\n' \
+               '  status: {} ({})\n  permc_spec option: {}, use_umfpack ' \
+               'option: {}'.format(n, str(self.status),
+                                   self.available_status[self.status], self.permc_spec, self.use_umfpack)
+        return info
 
 
 class PardisoSolver(LinearSolver):
@@ -60,15 +130,12 @@ class PardisoSolver(LinearSolver):
                         1: 'A has been set',
                         2: 'A has been factorized'
                         }
-
     status = 0
-
     mtypes = {'sym': 1,
               'spd': 2,
               'sid': -2,
               'nonsym': 11,
               }
-
     available_options = {'mtype': 'Matrix Type, can be sym, spd, sid or nonsym',
                          'verbose': 'Verbose',
                          'saddle_point': 'Set options for saddlepoint problem',
@@ -83,7 +150,6 @@ class PardisoSolver(LinearSolver):
                          'partial_solve': '',
                          'storage_mode': '',
     }
-
     # info:
     # For changing iparms that are not listed here, just add a name for the iparm parameter
     # Then you can pass an options dictionary to change the iparms
@@ -183,6 +249,8 @@ class PardisoSolver(LinearSolver):
         return info
 
 # Shortcut for compatibility
+
+
 def solve_sparse(A, b, matrix_type='symm', verbose=False):
     '''
     Abstraction of the solution of the sparse system Ax=b using the fastest
@@ -223,14 +291,14 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
     '''
     print('The function solve_sparse is deprecated and will be removed in next release!')
     if sp.sparse.issparse(A):
-        if use_pardiso:
-            mtype = PardisoSolver.mtypes[matrix_type]
-            pSolve = PardisoWrapper(A, mtype=mtype, verbose=verbose)
-            x = pSolve.run_pardiso(13, b)
-            pSolve.clear()
-        else:
-            # use scipy solver instead
-            x = spsolve(A, b)
+        # if use_pardiso:
+        mtype = PardisoSolver.mtypes[matrix_type]
+        pSolve = PardisoWrapper(A, mtype=mtype, verbose=verbose)
+        x = pSolve.run_pardiso(13, b)
+        pSolve.clear()
+        # else:
+        # use scipy solver instead
+        # x = spsolve(A, b)
     else:
         x = sp.linalg.solve(A, b)
     return x

@@ -39,3 +39,5 @@ def _load_mkl():
             raise e
 
     return mkllib
+
+mkllib = _load_mkl()

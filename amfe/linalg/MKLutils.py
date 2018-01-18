@@ -16,7 +16,7 @@ from __future__ import absolute_import
 #standard_library.install_aliases()
 
 from ctypes import Structure, POINTER, c_int, c_char_p
-from amfe.solvers import mkllib
+from .lib.loadmkl import mkllib
 
 class pyMKLVersion(Structure):
     _fields_ = [('MajorVersion',c_int),

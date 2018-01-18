@@ -10,16 +10,14 @@ from __future__ import absolute_import
 #from future import standard_library
 #standard_library.install_aliases()
 
-from .loadmkl import _load_mkl
-from ctypes import POINTER, c_int, c_longlong
 
+from ctypes import POINTER, c_int, c_longlong
+from .loadmkl import mkllib
 
 # Two MKL PARDISO Routines are loaded from mkllib:
 # pardisoinit: Initializes Intel MKL PARDISO with default parameters depending on the matrix type
 # pardiso: Calculates the solution of a set of sparse linear equations with single or multiple rhs
 
-# 0. loadmkl
-mkllib = _load_mkl()
 
 # 1. pardisoinit
 pardisoinit = mkllib.pardisoinit
