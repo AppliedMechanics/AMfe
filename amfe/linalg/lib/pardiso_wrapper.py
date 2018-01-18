@@ -191,6 +191,12 @@ class PardisoWrapper(object):
             self.dtype = np.float64
         self.ctypes_dtype = ctypeslib.ndpointer(self.dtype)
 
+        if not isinstance(A, sp.csr_matrix):
+            try:
+                A = A.tocsr()
+            except:
+                raise ValueError('A must be in csr-format or at least convertible to csr format')
+
         # If A is symmetric, store only the upper triangular portion 
         if mtype in [2, -2, 4, -4, 6]:
             A = sp.triu(A, format='csr')
