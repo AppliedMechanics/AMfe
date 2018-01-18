@@ -6,7 +6,7 @@ import numpy as np
 import scipy as sp
 from scipy import linalg
 
-from .solver import solve_sparse, SpSolve
+from .solver import solve_sparse, PardisoSolver
 
 __all__ = ['krylov_subspace',
            'compute_modes_pardiso',
@@ -60,7 +60,7 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
     no_of_inputs = b.size//ndim
     f = b.copy()
     V = np.zeros((ndim, no_of_moments*no_of_inputs))
-    LU_object = SpSolve(K - omega**2 * M)
+    LU_object = PardisoSolver(K - omega**2 * M)
 
     for i in np.arange(no_of_moments):
         b_new = LU_object.solve(f)
@@ -127,7 +127,8 @@ def compute_modes_pardiso(mechanical_system, n=10, u_eq=None,
     k_diag = K.diagonal().sum()
 
     # factorizing
-    K_mat = SpSolve(K)
+    K_mat = PardisoSolver(K)
+    K_mat.factorize()
 
     # build up Krylov sequence
     n_rand = n
@@ -422,7 +423,7 @@ def modal_derivatives(V, omega, K_func, M, h=1.0, verbose=True,
         if verbose:
             print('Factorizing the dynamic stiffness matrix for eigenfrequency',
                   '{0:d} with {1:4.2f} rad/s.'.format(i, omega[i]) )
-        LU_object = SpSolve(K_dyn_i)
+        LU_object = PardisoSolver(K_dyn_i)
 
         for j in range(no_of_modes): # looping over the rows
             x_j = V[:,j]
@@ -498,7 +499,7 @@ def static_derivatives(V, K_func, M=None, omega=0, h=1.0,
         K_dyn = K - omega**2 * M
     else:
         K_dyn = K
-    LU_object = SpSolve(K_dyn)
+    LU_object = PardisoSolver(K_dyn)
     for i in range(no_of_modes):
         if verbose:
             print('Computing finite difference K-matrix')

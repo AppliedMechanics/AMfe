@@ -9,7 +9,7 @@ import scipy as sp
 import multiprocessing as mp
 import copy
 
-from ..solver import SpSolve, solve_nonlinear_displacement
+from ..solver import PardisoSolver, solve_nonlinear_displacement
 from ..structural_dynamics import force_norm
 from ..num_exp_toolbox import apply_async
 
@@ -190,7 +190,7 @@ def krylov_force_subspace(M, K, b, omega=0, no_of_moments=3,
     no_of_inputs = b.size//ndim
     f = b.copy()
     V = np.zeros((ndim, no_of_moments*no_of_inputs))
-    LU_object = SpSolve(K - omega**2 * M)
+    LU_object = PardisoSolver(K - omega**2 * M)
     b_new = f
     for i in np.arange(no_of_moments):
         V[:,i*no_of_inputs:(i+1)*no_of_inputs] = b_new.reshape((-1, no_of_inputs))
@@ -238,7 +238,7 @@ def modal_force_subspace(M, K, no_of_modes=3, orth='euclidean'):
                                           maxiter=100)
     V = K @ Phi
 
-    LU_object = SpSolve(K)
+    LU_object = PardisoSolver(K)
 
     if orth == 'euclidean':
         V, _ = sp.linalg.qr(V, mode='economic')
