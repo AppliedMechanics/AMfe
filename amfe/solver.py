@@ -51,21 +51,67 @@ abort_statement = '''
 '''
 
 
-def choose_solver(mechanical_system, options):
-
-    if type(mechanical_system) == MechanicalSystem:
-        solvertype = 'GenAlpha'
-
-    solver = solvers_available[solvertype](options)
-    return solver
-
-
+# General Solver Class
+# --------------------
 class Solver:
     def __init__(self, options):
         pass
 
+# General Solver Class for all Statics solver
+# -------------------------------------------
+
+class NonlinearStaticsSolver(Solver):
+    def __init__(self, mechanical_system, options):
+        pass
+
+class LinearStaticsSolver(Solver):
+    '''
+    Solves the linear static problem of the mechanical system.
+
+    Parameters
+    ----------
+    mechanical_system : Instance of MechanicalSystem
+        Mechanical system to be linearized at zero displacement and solved.
+    '''
+    def __init__(self, mechanical_system, linearsolver=PardisoSolver, options):
+        super().__init__(options)
+        self.mechanical_system = mechanical_system
+
+    def solve(self,t):
+        '''
+        Solves the linear static problem of the mechanical system.
+            
+        Parameters
+        ----------
+        t : float
+            Time for evaluation of external force in MechanicalSystem.
+    
+        Returns
+        -------
+        q : ndaray
+            Static solution displacement field.
+        '''
+
+        # prepare mechanical_system
+        self.mechanical_system.clear_timesteps()
+
+        print('Assembling external force and stiffness')
+        K = self.mechanical_system.K(u=None, t=t)
+        f_ext = self.mechanical_system.f_ext(u=None, du=None, t=t)
+        self.mechanical_system.write_timestep(0, 0*f_ext) # write undeformed state
+
+        print('Start solving linear static problem')
+        q = solve_sparse(K, f_ext)
+        self.mechanical_system.write_timestep(t, q) # write deformed state
+        print('Static problem solved')
+        return q
+
+
+# General Solver Class for all Dynamics solver
+# --------------------------------------------
+
 class NonlinearDynamicsSolver(Solver):
-    def __init__(self, options):
+    def __init__(self, mechanical_system, q0, dq0, options):
         super().__init__(options)
 
         if 'linsolver' in options:
@@ -87,6 +133,12 @@ class NonlinearDynamicsSolver(Solver):
 
         # correction
 
+class LinearDynamicsSolver(Solver):
+    pass
+
+# Special solvers derived from above
+# ---------------------------------
+
 class NonlinearGeneralizedAlphaSolver(NonlinearDynamicsSolver):
     pass
 
@@ -96,5 +148,15 @@ class ConstraintSystemSolver(NonlinearDynamicsSolver):
 class StateSpaceSolver(Solver):
     pass
 
+# This could be a dictionary for a convenient mapping of scheme names (strings) to their solver classes
 solvers_available = {'GenAlpha': NonlinearGeneralizedAlphaSolver,
                     }
+
+
+def choose_solver(mechanical_system, options):
+
+    if type(mechanical_system) == MechanicalSystem:
+        solvertype = 'GenAlpha'
+
+    solver = solvers_available[solvertype](options)
+    return solver
