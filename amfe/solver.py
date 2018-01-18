@@ -169,7 +169,7 @@ class NonlinearDynamicsSolver(Solver):
 
     References
     ----------
-       [1]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and
+       [1]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and 
             application to structural dynamics. ISBN 978-1-118-90020-8.
     '''
 
@@ -351,6 +351,8 @@ class NonlinearDynamicsSolver(Solver):
 
             # end of time step loop
 
+        self.linsolver.clear()
+
         # save iteration info
         self.iteration_info = np.array(self.iteration_info)
 
@@ -362,14 +364,136 @@ class NonlinearDynamicsSolver(Solver):
 
 
 class LinearDynamicsSolver(Solver):
+    '''
+    General class for solving the linear dynamic problem of the mechanical system 
+    linearized around zero-displacement.
+
+    Parameters
+    ----------
+    mechanical_system : Instance of MechanicalSystem
+        Mechanical system to be solved.
+    options : Dictionary
+        Options for solver.
+
+    References
+    ----------
+       [1]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and
+            application to structural dynamics. ISBN 978-1-118-90020-8.
+    '''
+
     def __init__(self, mechanical_system, options):
         super().__init__(mechanical_system, options)
-        # TBD
+
+        # read options
+        if 'dt_output' in options:
+            self.dt_output = options['dt_output']
+        else:
+            self.dt_output = None
+        if 'verbose' in options:
+            self.verbose = options['verbose']
+        else:
+            self.verbose = False
         return
 
-    def solve(self):
-        # TBD
+    def effective_stiffness(self):
         pass
+
+    def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
+        pass
+
+    def update(self, q, q_old, dq_old, v_old, ddq_old):
+        pass
+
+    def solve(self, q0, dq0, t0, t_end, dt, options):
+        '''
+        Solves the linear dynamic problem of the mechanical system linearized around 
+        zero-displacement.
+    
+        Parameters
+        ----------
+        q0 : ndarray
+            Start displacement.
+        dq0 : ndarray
+            Start velocity.
+        t0 : float
+            Start time.
+        t_end : float
+            End time.
+        dt : float
+            Time step size.
+        options : Dictionary
+            Options for solver.
+        '''
+
+        # start time measurement
+        t_clock_start = time.time()
+
+        # initialize variables and set parameters
+        self.mechanical_system.clear_timesteps()
+        t = t0
+        if self.dt_output is not None:
+            time_range = np.arange(t0, t_end, self.dt_output)
+        else:
+            time_range = np.arange(t0, t_end, dt)
+        q = q0.copy()
+        dq = dq0.copy()
+        if use_v:
+            v = dq0.copy()
+        else:
+            v = np.empty((0,0))
+        ddq = np.zeros_like(q0)
+        time_index = 0
+        eps = 1E-13
+        self.set_parameters(dt, options)
+
+        # evaluate initial acceleration and LU-decompose effective stiffness
+        K_eff = self.effective_stiffness()
+
+        self.linsolver.set_A(self.mechanical_system.M_constr)
+        ddq = self.linsolver.solve(self.mechanical_system.f_ext(q, dq, t) \
+                                   - self.mechanical_system.D_constr@dq \
+                                   - self.mechanical_system.K_constr@q)
+
+        self.linsolver.set_A(K_eff)
+        if hasattr(self.linsolver, 'factorize'):
+            self.linsolver.factorize()
+
+        # time step loop
+        while time_index < len(time_range):
+
+            # write output
+            if t + eps >= time_range[time_index]:
+                self.mechanical_system.write_timestep(t, q.copy())
+                time_index += 1
+                if time_index == len(time_range):
+                    break
+
+            # save old variables
+            q_old = q.copy()
+            dq_old = dq.copy()
+            v_old = v.copy()
+            ddq_old = ddq.copy()
+            t_old = t
+
+            # solve system
+            t += dt
+            f_eff = self.effective_force(q_old, dq_old, v_old, ddq_old, t, t_old)
+
+            q = self.linsolver.solve(f_eff)
+
+            # update variables
+            dq, v, ddq = self.update(q, q_old, dq_old, v_old, ddq_old)
+            print('Time: {0:3.6f}'.format(t))
+
+            # end of time step loop
+
+        self.linsolver.clear()
+
+        # end time measurement
+        t_clock_end = time.time()
+        print('Time for time marching integration: {0:6.3f} seconds'.format(
+                t_clock_end - t_clock_start))
+        return
 
 
 # Special solvers derived from above
@@ -389,10 +513,10 @@ class NonlinearGeneralizedAlphaSolver(NonlinearDynamicsSolver):
 
     References
     ----------
-       [1]  J. Chung and G. Hulbert (1993): A time integration algorithm for structural
-            dynamics with improved numerical dissipation: the generalized-alpha method.
+       [1]  J. Chung and G. Hulbert (1993): A time integration algorithm for structural 
+            dynamics with improved numerical dissipation: the generalized-alpha method. 
             Journal of Applied Mechanics 60(2) 371--375.
-       [2]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and
+       [2]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and 
             application to structural dynamics. ISBN 978-1-118-90020-8.
     '''
 
@@ -485,17 +609,17 @@ class NonlinearJWHAlphaSolver(NonlinearDynamicsSolver):
     options : Dictionary
         Options for solver.
 
-        References
-        ----------
-           [1]  K.E. Jansen, C.H. Whiting and G.M. Hulbert (2000): A generalized-alpha
-                method for integrating the filtered Navier-Stokes equations with a
-                stabilized finite element method. Computer Methods in Applied Mechanics and
-                Engineering 190(3) 305--319. DOI 10.1016/S0045-7825(00)00203-6.
-           [2]  C. Kadapa, W.G. Dettmer and D. Perić (2017): On the advantages of using the
-                first-order generalised-alpha scheme for structural dynamic problems.
-                Computers and Structures 193 226--238. DOI 10.1016/j.compstruc.2017.08.013.
-           [3]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and
-                application to structural dynamics. ISBN 978-1-118-90020-8.
+    References
+    ----------
+       [1]  K.E. Jansen, C.H. Whiting and G.M. Hulbert (2000): A generalized-alpha 
+            method for integrating the filtered Navier-Stokes equations with a 
+            stabilized finite element method. Computer Methods in Applied Mechanics and 
+            Engineering 190(3) 305--319. DOI 10.1016/S0045-7825(00)00203-6.
+       [2]  C. Kadapa, W.G. Dettmer and D. Perić (2017): On the advantages of using the 
+            first-order generalised-alpha scheme for structural dynamic problems. 
+            Computers and Structures 193 226--238. DOI 10.1016/j.compstruc.2017.08.013.
+       [3]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and 
+            application to structural dynamics. ISBN 978-1-118-90020-8.
     '''
 
     def __init__(self, mechanical_system, options):
@@ -575,6 +699,200 @@ class NonlinearJWHAlphaSolver(NonlinearDynamicsSolver):
         v += self.alpha_m/(self.alpha_f*self.gamma*self.dt)*delta_q
         dv += self.alpha_m/(self.alpha_f*self.gamma**2*self.dt**2)*delta_q
         return
+
+
+class LinearGeneralizedAlphaSolver(LinearDynamicsSolver):
+    '''
+    Class for solving the linear dynamic problem of the mechanical system linearized 
+    around zero-displacement using the generalized-alpha time integration scheme.
+
+    Parameters
+    ----------
+    mechanical_system : Instance of MechanicalSystem
+        Mechanical system to be solved.
+    options : Dictionary
+        Options for solver.
+
+    References
+    ----------
+       [1]  J. Chung and G. Hulbert (1993): A time integration algorithm for structural 
+            dynamics with improved numerical dissipation: the generalized-alpha method. 
+            Journal of Applied Mechanics 60(2) 371--375.
+       [2]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and 
+            application to structural dynamics. ISBN 978-1-118-90020-8.
+    '''
+
+    def __init__(self, mechanical_system, options):
+        super().__init__(mechanical_system, options)
+        self.use_v = False
+        return
+
+    def set_parameters(self, dt, options):
+        '''
+        Set parameters for the linear generalized-alpha time integration scheme.
+        '''
+
+        self.dt = dt
+        if 'rho_inf' in options:
+            rho_inf = options['rho_inf']
+        else:
+            rho_inf = 0.9
+
+        self.alpha_m = (2*rho_inf - 1)/(rho_inf + 1)
+        self.alpha_f = rho_inf/(rho_inf + 1)
+        self.beta = 0.25*(1 - self.alpha_m + self.alpha_f)**2
+        self.gamma = 0.5 - self.alpha_m + self.alpha_f
+        return
+
+    def effective_stiffness(self):
+        '''
+        Return effective stiffness matrix for linear generalized-alpha time integration 
+        scheme.
+        '''
+
+        self.mechanical_system.M()
+        self.mechanical_system.D_constr = self.mechanical_system.D()
+        self.mechanical_system.K_constr = self.mechanical_system.K()
+
+        K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2) \
+                  *self.mechanical_system.M_constr \
+                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt) \
+                  *self.mechanical_system.D_constr \
+                + (1 - self.alpha_f)*self.mechanical_system.K_constr
+        return K_eff
+
+    def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
+        '''
+        Return actual effective force for linear generalized-alpha time integration 
+        scheme.
+        '''
+
+        t_f = (1 - self.alpha_f)*t + self.alpha_f*t_old
+
+        f_ext_f = self.f_ext(None, None, t_f)
+
+        F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*self.mechanical_system.M_constr \
+                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt) \
+                  *self.mechanical_system.D_constr \
+                - self.alpha_f*self.mechanical_system.K_constr)@q_old \
+                + ((1 - self.alpha_m)/(self.beta*self.dt)*self.mechanical_system.M_constr \
+                - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta \
+                  *self.mechanical_system.D_constr)@dq_old \
+                + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta \
+                  *self.mechanical_system.M_constr \
+                - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta \
+                  *self.mechanical_system.D_constr)@ddq_old \
+                + f_ext_f
+        return F_eff
+
+    def update(self, q, q_old, dq_old, v_old, ddq_old):
+        '''
+        Return actual velocity and acceleration for linear generalized-alpha time 
+        integration scheme.
+        '''
+
+        ddq = 1/(self.beta*self.dt**2)*(q - q_old) - 1/(self.beta*self.dt)*dq_old \
+              - (0.5 - self.beta)/self.beta*ddq_old
+        v = np.empty((0,0))
+        dq = dq_old + self.dt*((1 - self.gamma)*ddq_old + self.gamma*ddq)
+        return dq, v, ddq
+
+
+class LinearJWHAlphaSolver(LinearDynamicsSolver):
+    '''
+    Class for solving the linear dynamic problem of the mechanical system linearized 
+    around zero-displacement using the JWH-alpha time integration scheme.
+
+    Parameters
+    ----------
+    mechanical_system : Instance of MechanicalSystem
+        Mechanical system to be solved.
+    options : Dictionary
+        Options for solver.
+
+    References
+    ----------
+       [1]  K.E. Jansen, C.H. Whiting and G.M. Hulbert (2000): A generalized-alpha 
+            method for integrating the filtered Navier-Stokes equations with a 
+            stabilized finite element method. Computer Methods in Applied Mechanics and 
+            Engineering 190(3) 305--319. DOI 10.1016/S0045-7825(00)00203-6.
+       [2]  C. Kadapa, W.G. Dettmer and D. Perić (2017): On the advantages of using the 
+            first-order generalised-alpha scheme for structural dynamic problems. 
+            Computers and Structures 193 226--238. DOI 10.1016/j.compstruc.2017.08.013.
+       [3]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and 
+            application to structural dynamics. ISBN 978-1-118-90020-8.
+    '''
+
+    def __init__(self, mechanical_system, options):
+        super().__init__(mechanical_system, options)
+        self.use_v = True
+        return
+
+    def set_parameters(self, dt, options):
+        '''
+        Set parameters for the nonlinear JWH-alpha time integration scheme.
+        '''
+
+        self.dt = dt
+        if 'rho_inf' in options:
+            rho_inf = options['rho_inf']
+        else:
+            rho_inf = 0.9
+
+        self.alpha_m = (3 - rho_inf)/(2*(1 + rho_inf))
+        self.alpha_f = 1/(1 + rho_inf)
+        self.gamma = 0.5 + self.alpha_m - self.alpha_f
+        return
+
+    def effective_stiffness(self):
+        '''
+        Return effective stiffness matrix for linear JWH-alpha time integration scheme.
+        '''
+
+        self.mechanical_system.M()
+        self.mechanical_system.D_constr = self.mechanical_system.D()
+        self.mechanical_system.K_constr = self.mechanical_system.K()
+
+        K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2) \
+                  *self.mechanical_system.M_constr \
+                + self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.D_constr \
+                + self.alpha_f*self.mechanical_system.K_constr
+        return K_eff
+
+    def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
+        '''
+        Return actual effective force for linear JWH-alpha time integration scheme.
+        '''
+
+        t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
+
+        f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
+
+        F_eff = (-(1 - self.alpha_f)*self.mechanical_system.K_constr \
+                + self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.D_constr \
+                + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2) \
+                  *self.mechanical_system.M_constr)@q_old \
+                + (-(self.gamma - self.alpha_m)/self.gamma*self.mechanical_system.D_constr \
+                - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt) \
+                  *self.mechanical_system.M_constr)@dq_old \
+                + (self.alpha_m/(self.alpha_f*self.gamma*self.dt) \
+                  *self.mechanical_system.M_constr)@v_old \
+                + (-(self.gamma - self.alpha_m)/self.gamma \
+                  *self.mechanical_system.M_constr)@dv_old \
+                + f_ext_f
+        return F_eff
+
+    def update(self, q, q_old, dq_old, v_old, ddq_old):
+        '''
+        Return actual velocity and acceleration for linear JWH-alpha time integration 
+        scheme.
+        '''
+
+        dq = 1/(self.gamma*self.dt)*(q - q_old) + (self.gamma - 1)/self.gamma*dq_old
+        v = self.alpha_m/self.alpha_f*dq + (1 - self.alpha_m)/self.alpha_f*dq_old \
+            + (self.alpha_f - 1)/self.alpha_f*v_old
+        dv = 1/(self.gamma*self.dt)*(v - v_old) + (self.gamma - 1)/self.gamma*dv_old
+        return dq, v, dv
 
 
 class ConstraintSystemSolver(NonlinearDynamicsSolver):
