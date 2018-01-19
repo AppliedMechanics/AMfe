@@ -42,8 +42,11 @@ __all__ = ['choose_solver',
            'NonlinearStaticsSolver',
            'LinearStaticsSolver',
            'NonlinearDynamicsSolver',
-           'NonlinearGeneralizedAlphaSolver',
-           'NonlinearJWHAlphaSolver',
+           'LinearDynamicsSolver',
+           'GeneralizedAlphaNonlinearDynamicsSolver',
+           'JWHAlphaNonlinearDynamicsSolver',
+           'GeneralizedAlphaLinearDynamicsSolver',
+           'JWHAlphaLinearDynamicsSolver',
            'ConstraintSystemSolver',
            'StateSpaceSolver']
 
@@ -499,7 +502,7 @@ class LinearDynamicsSolver(Solver):
 # Special solvers derived from above
 # ---------------------------------
 
-class NonlinearGeneralizedAlphaSolver(NonlinearDynamicsSolver):
+class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
     '''
     Class for solving the nonlinear dynamic problem of the mechanical system using the 
     generalized-alpha time integration scheme.
@@ -597,7 +600,7 @@ class NonlinearGeneralizedAlphaSolver(NonlinearDynamicsSolver):
         return
 
 
-class NonlinearJWHAlphaSolver(NonlinearDynamicsSolver):
+class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
     '''
     Class for solving the nonlinear dynamic problem of the mechanical system using the 
     JWH-alpha time integration scheme.
@@ -701,7 +704,7 @@ class NonlinearJWHAlphaSolver(NonlinearDynamicsSolver):
         return
 
 
-class LinearGeneralizedAlphaSolver(LinearDynamicsSolver):
+class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
     '''
     Class for solving the linear dynamic problem of the mechanical system linearized 
     around zero-displacement using the generalized-alpha time integration scheme.
@@ -798,7 +801,7 @@ class LinearGeneralizedAlphaSolver(LinearDynamicsSolver):
         return dq, v, ddq
 
 
-class LinearJWHAlphaSolver(LinearDynamicsSolver):
+class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
     '''
     Class for solving the linear dynamic problem of the mechanical system linearized 
     around zero-displacement using the JWH-alpha time integration scheme.
