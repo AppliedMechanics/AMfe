@@ -104,16 +104,147 @@ class NonlinearStaticsSolver(Solver):
 
     def __init__(self, mechanical_system, options):
         super().__init__(mechanical_system, options)
-        # TBD
+
+        # read options
+        if 'no_of_load_steps' in options:
+            self.no_of_load_steps = options['no_of_load_steps']
+        else:
+            self.no_of_load_steps = 10
+        if 't' in options:
+            self.t = options['t']
+        else:
+            self.t = 0.0
+        if 'rtol' in options:
+            self.rtol = options['rtol']
+        else:
+            self.rtol = 1.0E-9
+        if 'atol' in options:
+            self.atol = options['atol']
+        else:
+            self.atol = 1.0E-6
+        if 'newton_damping' in options:
+            self.newton_damping = options['newton_damping']
+        else:
+            self.newton_damping = 1.0
+        if 'n_max_iter' in options:
+            self.n_max_iter = options['n_max_iter']
+        else:
+            self.n_max_iter = 1000
+        if 'smplfd_nwtn_itr' in options:
+            self.smplfd_nwtn_itr = options['smplfd_nwtn_itr']
+        else:
+            self.smplfd_nwtn_itr = 1
+        if 'verbose' in options:
+            self.verbose = options['verbose']
+        else:
+            self.verbose = False
+        if 'track_niter' in options:
+            self.track_niter = options['track_niter']
+        else:
+            self.track_niter = False
+        if 'write_iter' in options:
+            self.write_iter = options['write_iter']
+        else:
+            self.write_iter = False
+        if 'conv_abort' in options:
+            self.conv_abort = options['conv_abort']
+        else:
+            self.conv_abort = True
+        if 'save' in options:
+            self.save = options['save']
+        else:
+            self.save = True
         return
-    
+
     def solve(self):
-        # TBD
-        return
+        '''
+        Solves the nonlinear static problem of the mechanical system.
+            
+        Parameters
+        ----------
+
+        Returns
+        -------
+        q : ndarray, shape(ndim, no_of_load_steps)
+            Static displacement field (solution); q[:,-1] is the final (last) 
+            displacement
+        '''
+        # start time measurement
+        t_clock_start = time.time()
+
+        # initialize variables and set parameters
+        self.mechanical_system.clear_timesteps()
+        iteration_info = []
+        u_output = []
+        stepwidth = 1/self.no_of_load_steps
+        K, f_int= self.mechanical_system.K_and_f()
+        ndof = K.shape[0]
+        u = np.zeros(ndof)
+        du = np.zeros(ndof)
+
+        # write initial state
+        self.mechanical_system.write_timestep(0, u)
+
+        # load step loop
+        for t in np.arange(stepwidth, 1+stepwidth, stepwidth):
+
+            # prediction
+            K, f_int= self.mechanical_system.K_and_f(u, t)
+            f_ext = self.mechanical_system.f_ext(u, du, t)
+            res = -f_int + f_ext
+            abs_res = norm_of_vector(res)
+            abs_f_ext = norm_of_vector(f_ext)
+
+            # Newton iteration loop
+            n_iter = 0
+            while (abs_res > self.rtol*abs_f_ext + self.atol) and (self.n_max_iter > n_iter):
+                self.linsolver.set_A(K)
+                corr = self.linsolver.solve(res)
+
+                u += corr*self.newton_damping
+                if (n_iter % self.smplfd_nwtn_itr) is 0:
+                    K, f_int = self.mechanical_system.K_and_f(u, t)
+                    f_ext = self.mechanical_system.f_ext(u, du, t)
+                res = - f_int + f_ext
+                abs_f_ext = norm_of_vector(f_ext)
+                abs_res = norm_of_vector(res)
+                n_iter += 1
+
+                if self.verbose:
+                    print(('Step: {0:3d}, iteration#: {1:3d}'
+                          + ', residual: {2:6.3E}').format(int(t), n_iter, abs_res))
+
+                if self.write_iter:
+                    self.mechanical_system.write_timestep(t + n_iter*0.001, u)
+
+                # exit, if niter too large
+                if (n_iter >= self.n_max_iter) and self.conv_abort:
+                    u_output = np.array(u_output).T
+                    print(abort_statement)
+                    t_clock_end = time.time()
+                    print('Time for static solution: ' +
+                          '{0:6.3f} seconds'.format(t_clock_end - t_clock_start))
+                    return u_output
+
+            if self.save:
+                self.mechanical_system.write_timestep(t, u)
+            u_output.append(u.copy())
+
+            # export iteration infos if wanted
+            if self.track_niter:
+                iteration_info.append((t, n_iter, abs_res))
+
+        self.iteration_info = np.array(iteration_info)
+        u_output = np.array(u_output).T
+        t_clock_end = time.time()
+        print('Time for solving nonlinear displacements: {0:6.3f} seconds'.format(
+            t_clock_end - t_clock_start))
+        return u_output
 
 class LinearStaticsSolver(Solver):
     '''
-    Class for solving the linear static problem of the mechanical system.
+    Class for solving the linear static problem of the mechanical system linearized 
+    around zero-displacement.
 
     Parameters
     ----------
@@ -125,8 +256,9 @@ class LinearStaticsSolver(Solver):
 
     def solve(self,t):
         '''
-        Solves the linear static problem of the mechanical system.
-            
+        Solves the linear static problem of the mechanical system linearized around 
+        zero-displacement.
+
         Parameters
         ----------
         t : float
@@ -256,13 +388,13 @@ class NonlinearDynamicsSolver(Solver):
             time_range = np.arange(t0, t_end, dt)
         q = q0.copy()
         dq = dq0.copy()
-        if use_v:
+        if self.use_v:
             v = dq0.copy()
         else:
             v = np.empty((0,0))
         ddq = np.zeros_like(q0)
         f_ext = np.zeros_like(q0)
-        abs_f_ext = atol
+        abs_f_ext = self.atol
         time_index = 0
         eps = 1E-13
         self.set_parameters(dt, options)
@@ -297,7 +429,7 @@ class NonlinearDynamicsSolver(Solver):
 
             # Newton-Raphson iteration loop
             n_iter = 0
-            while res_abs > rtol*abs_f_ext + atol:
+            while res_abs > self.rtol*abs_f_ext + self.atol:
 
                 self.linsolver.set_A(Jac)
                 delta_q = -self.linsolver.solve(res)
@@ -326,7 +458,7 @@ class NonlinearDynamicsSolver(Solver):
                     self.mechanical_system.write_timestep(t_write, q.copy())
 
                 # catch failing converge
-                if n_iter > n_iter_max:
+                if n_iter > self.n_iter_max:
                     if self.conv_abort:
                         print(abort_statement)
                         self.iteration_info = np.array(self.iteration_info)
@@ -437,7 +569,7 @@ class LinearDynamicsSolver(Solver):
             time_range = np.arange(t0, t_end, dt)
         q = q0.copy()
         dq = dq0.copy()
-        if use_v:
+        if self.use_v:
             v = dq0.copy()
         else:
             v = np.empty((0,0))
@@ -650,11 +782,11 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
         q += self.dt*(self.alpha_m - self.gamma)/self.alpha_m*dq \
              + self.dt*self.gamma/self.alpha_m*v \
-             + self.alpha_f*self.dt**2*self.gamma*(1 - self.gamma)/self.alpha_m*dv
+             + self.alpha_f*self.dt**2*self.gamma*(1 - self.gamma)/self.alpha_m*ddq
         dq += 1/self.alpha_m*(v - dq) \
-              + self.alpha_f*self.dt*(1 - self.gamma)/self.alpha_m*dv
+              + self.alpha_f*self.dt*(1 - self.gamma)/self.alpha_m*ddq
         v += self.dt*(1 - self.gamma)*dv
-        dv *= 0
+        ddq *= 0
         return
 
     def newton_raphson(self, q, dq, v, ddq, q_old, dq_old, v_old, ddq_old, t, t_old):
@@ -666,7 +798,7 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         if self.mechanical_system.M_constr is None:
             self.mechanical_system.M()
 
-        dv_m = self.alpha_m*dv + (1 - self.alpha_m)*dv_old
+        ddq_m = self.alpha_m*ddq + (1 - self.alpha_m)*ddq_old
         q_f = self.alpha_f*q + (1 - self.alpha_f)*q_old
         v_f = self.alpha_f*v + (1 - self.alpha_f)*v_old
         t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
@@ -679,13 +811,13 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
             Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2) \
                     *self.mechanical_system.M_constr \
                   - self.alpha_f*K_f
-            res = f_ext_f - self.mechanical_system.M_constr@dv_m - f_f
+            res = f_ext_f - self.mechanical_system.M_constr@ddq_m - f_f
         else:
             Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2) \
                     *self.mechanical_system.M_constr \
                   - self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.D_constr \
                   - self.alpha_f*K_f
-            res = f_ext_f - self.mechanical_system.M_constr@dv_m \
+            res = f_ext_f - self.mechanical_system.M_constr@ddq_m \
                   - self.mechanical_system.D_constr@v_f - f_f
         return Jac, res, f_ext_f
 
@@ -697,7 +829,7 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         q += delta_q
         dq += 1/(self.gamma*self.dt)*delta_q
         v += self.alpha_m/(self.alpha_f*self.gamma*self.dt)*delta_q
-        dv += self.alpha_m/(self.alpha_f*self.gamma**2*self.dt**2)*delta_q
+        ddq += self.alpha_m/(self.alpha_f*self.gamma**2*self.dt**2)*delta_q
         return
 
 
@@ -878,7 +1010,7 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
                 + (self.alpha_m/(self.alpha_f*self.gamma*self.dt) \
                   *self.mechanical_system.M_constr)@v_old \
                 + (-(self.gamma - self.alpha_m)/self.gamma \
-                  *self.mechanical_system.M_constr)@dv_old \
+                  *self.mechanical_system.M_constr)@ddq_old \
                 + f_ext_f
         return F_eff
 
@@ -891,8 +1023,8 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         dq = 1/(self.gamma*self.dt)*(q - q_old) + (self.gamma - 1)/self.gamma*dq_old
         v = self.alpha_m/self.alpha_f*dq + (1 - self.alpha_m)/self.alpha_f*dq_old \
             + (self.alpha_f - 1)/self.alpha_f*v_old
-        dv = 1/(self.gamma*self.dt)*(v - v_old) + (self.gamma - 1)/self.gamma*dv_old
-        return dq, v, dv
+        ddq = 1/(self.gamma*self.dt)*(v - v_old) + (self.gamma - 1)/self.gamma*ddq_old
+        return dq, v, ddq
 
 
 class ConstraintSystemSolver(NonlinearDynamicsSolver):
@@ -904,8 +1036,8 @@ class StateSpaceSolver(Solver):
     pass
 
 # This could be a dictionary for a convenient mapping of scheme names (strings) to their solver classes
-solvers_available = {'GeneralizedAlpha': NonlinearGeneralizedAlphaSolver,
-                     'JWHAlpha': NonlinearJWHAlphaSolver}
+solvers_available = {'GeneralizedAlpha': GeneralizedAlphaNonlinearDynamicsSolver,
+                     'JWHAlpha': JWHAlphaNonlinearDynamicsSolver}
 
 
 def choose_solver(mechanical_system, options):
