@@ -123,10 +123,6 @@ class LinearStaticsSolver(Solver):
         Options for solver.
     '''
 
-    def __init__(self, mechanical_system, linearsolver=PardisoSolver, options):
-        super().__init__(mechanical_system, options)
-        return
-
     def solve(self,t):
         '''
         Solves the linear static problem of the mechanical system.
@@ -151,7 +147,8 @@ class LinearStaticsSolver(Solver):
         self.mechanical_system.write_timestep(0, 0*f_ext) # write undeformed state
 
         print('Start solving linear static problem')
-        q = solve_sparse(K, f_ext)
+        self.linsolver.set_A(K)
+        q = self.linsolver.solve(f_ext)
         self.mechanical_system.write_timestep(t, q) # write deformed state
         print('Static problem solved')
         return q
