@@ -785,7 +785,7 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
              + self.alpha_f*self.dt**2*self.gamma*(1 - self.gamma)/self.alpha_m*ddq
         dq += 1/self.alpha_m*(v - dq) \
               + self.alpha_f*self.dt*(1 - self.gamma)/self.alpha_m*ddq
-        v += self.dt*(1 - self.gamma)*dv
+        v += self.dt*(1 - self.gamma)*ddq
         ddq *= 0
         return
 
