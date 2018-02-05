@@ -47,8 +47,8 @@ __all__ = ['choose_solver',
            'JWHAlphaNonlinearDynamicsSolver',
            'GeneralizedAlphaLinearDynamicsSolver',
            'JWHAlphaLinearDynamicsSolver',
-           'ConstraintSystemSolver',
-           'StateSpaceSolver']
+           'ConstraintSystemSolver']
+
 
 abort_statement = '''
 ###############################################################################
@@ -58,11 +58,11 @@ abort_statement = '''
 '''
 
 
-# General solver class
+# Most general solver class
 # --------------------
 class Solver:
     '''
-    General solver class for the mechanical system.
+    Most general solver class for the mechanical system.
 
     Parameters
     ----------
@@ -75,6 +75,7 @@ class Solver:
     def __init__(self, mechanical_system, **options):
         self.mechanical_system = mechanical_system
 
+        # read options
         if 'linsolver' in options:
             self.linsolver = options['linsolver']
         else:
@@ -88,7 +89,7 @@ class Solver:
         pass
 
 
-# General solver class for all statics solver
+# Solver classes for all statics solver
 # -------------------------------------------
 class NonlinearStaticsSolver(Solver):
     '''
@@ -110,46 +111,52 @@ class NonlinearStaticsSolver(Solver):
             self.no_of_load_steps = options['no_of_load_steps']
         else:
             self.no_of_load_steps = 10
-        if 't' in options:
-            self.t = options['t']
-        else:
-            self.t = 0.0
+
         if 'rtol' in options:
             self.rtol = options['rtol']
         else:
             self.rtol = 1.0E-9
+
         if 'atol' in options:
             self.atol = options['atol']
         else:
             self.atol = 1.0E-6
+
         if 'newton_damping' in options:
             self.newton_damping = options['newton_damping']
         else:
             self.newton_damping = 1.0
+
         if 'n_max_iter' in options:
             self.n_max_iter = options['n_max_iter']
         else:
             self.n_max_iter = 1000
+
         if 'smplfd_nwtn_itr' in options:
             self.smplfd_nwtn_itr = options['smplfd_nwtn_itr']
         else:
             self.smplfd_nwtn_itr = 1
+
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
             self.verbose = False
+
         if 'track_niter' in options:
             self.track_niter = options['track_niter']
         else:
             self.track_niter = False
+
         if 'write_iter' in options:
             self.write_iter = options['write_iter']
         else:
             self.write_iter = False
+
         if 'conv_abort' in options:
             self.conv_abort = options['conv_abort']
         else:
             self.conv_abort = True
+
         if 'save' in options:
             self.save = options['save']
         else:
@@ -163,11 +170,11 @@ class NonlinearStaticsSolver(Solver):
         Parameters
         ----------
 
+
         Returns
         -------
-        q : ndarray, shape(ndim, no_of_load_steps)
-            Static displacement field (solution); q[:,-1] is the final (last) 
-            displacement
+        u_output : ndarray, shape(ndim, no_of_load_steps)
+            Static displacement field (solution); q[:,-1] is the final (last) displacement.
         '''
         # start time measurement
         t_clock_start = time.time()
@@ -177,18 +184,17 @@ class NonlinearStaticsSolver(Solver):
         iteration_info = []
         u_output = []
         stepwidth = 1/self.no_of_load_steps
-        K, f_int= self.mechanical_system.K_and_f()
+        K, f_int = self.mechanical_system.K_and_f()
         ndof = K.shape[0]
         u = np.zeros(ndof)
         du = np.zeros(ndof)
 
         # write initial state
-        self.mechanical_system.write_timestep(0, u)
+        self.mechanical_system.write_timestep(0.0, u)
 
         # load step loop
-        for t in np.arange(stepwidth, 1+stepwidth, stepwidth):
+        for t in np.arange(stepwidth, 1.0 + stepwidth, stepwidth):
 
-            # prediction
             K, f_int= self.mechanical_system.K_and_f(u, t)
             f_ext = self.mechanical_system.f_ext(u, du, t)
             res = -f_int + f_ext
@@ -198,53 +204,56 @@ class NonlinearStaticsSolver(Solver):
             # Newton iteration loop
             n_iter = 0
             while (abs_res > self.rtol*abs_f_ext + self.atol) and (self.n_max_iter > n_iter):
-                self.linsolver.set_A(K)
-                corr = self.linsolver.solve(res)
 
-                u += corr*self.newton_damping
+                # solve for correction
+                self.linsolver.set_A(K)
+                delta_u = self.linsolver.solve(res)
+
+                # correct displacement
+                u += delta_u*self.newton_damping
                 if (n_iter % self.smplfd_nwtn_itr) is 0:
                     K, f_int = self.mechanical_system.K_and_f(u, t)
                     f_ext = self.mechanical_system.f_ext(u, du, t)
-                res = - f_int + f_ext
+                res = -f_int + f_ext
                 abs_f_ext = norm_of_vector(f_ext)
                 abs_res = norm_of_vector(res)
                 n_iter += 1
 
                 if self.verbose:
-                    print(('Step: {0:3d}, iteration#: {1:3d}'
-                          + ', residual: {2:6.3E}').format(int(t), n_iter, abs_res))
+                    print('Step: {0:3d}, iteration#: {1:3d}, residual: {2:6.3E}'.format(int(t), n_iter, abs_res))
 
                 if self.write_iter:
-                    self.mechanical_system.write_timestep(t + n_iter*0.001, u)
+                    self.mechanical_system.write_timestep(t + n_iter*0.000001, u)
 
-                # exit, if niter too large
+                # exit, if max iterations exceeded
                 if (n_iter >= self.n_max_iter) and self.conv_abort:
                     u_output = np.array(u_output).T
                     print(abort_statement)
                     t_clock_end = time.time()
-                    print('Time for static solution: ' +
-                          '{0:6.3f} seconds'.format(t_clock_end - t_clock_start))
+                    print('Time for static solution: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
                     return u_output
+
+            # end of Newton iteration loop
 
             if self.save:
                 self.mechanical_system.write_timestep(t, u)
             u_output.append(u.copy())
 
-            # export iteration infos if wanted
             if self.track_niter:
                 iteration_info.append((t, n_iter, abs_res))
+
+        # end of load step loop
 
         self.iteration_info = np.array(iteration_info)
         u_output = np.array(u_output).T
         t_clock_end = time.time()
-        print('Time for solving nonlinear displacements: {0:6.3f} seconds'.format(
-            t_clock_end - t_clock_start))
+        print('Time for solving nonlinear displacements: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
         return u_output
+
 
 class LinearStaticsSolver(Solver):
     '''
-    Class for solving the linear static problem of the mechanical system linearized 
-    around zero-displacement.
+    Class for solving the linear static problem of the mechanical system linearized around zero-displacement.
 
     Parameters
     ----------
@@ -254,36 +263,45 @@ class LinearStaticsSolver(Solver):
         Options for solver.
     '''
 
-    def solve(self,t):
+    def __init__(self, mechanical_system, **options):
+        super().__init__(mechanical_system, options)
+
+        # read options
+        if 't' in options:
+            self.t = options['t']
+        else:
+            self.t = 1.0
+        return
+
+    def solve(self):
         '''
         Solves the linear static problem of the mechanical system linearized around 
         zero-displacement.
 
         Parameters
         ----------
-        t : float
-            Time for evaluation of external force in MechanicalSystem.
+
 
         Returns
         -------
-        q : ndaray
+        u : ndaray
             Static displacement field (solution).
         '''
 
         # prepare mechanical_system
         self.mechanical_system.clear_timesteps()
 
-        print('Assembling external force and stiffness')
+        print('Assembling external force and stiffness...')
         K = self.mechanical_system.K(u=None, t=t)
-        f_ext = self.mechanical_system.f_ext(u=None, du=None, t=t)
-        self.mechanical_system.write_timestep(0, 0*f_ext) # write undeformed state
+        f_ext = self.mechanical_system.f_ext(u=None, du=None, t=self.t)
+        self.mechanical_system.write_timestep(0.0, 0.0*f_ext) # write undeformed state
 
-        print('Start solving linear static problem')
+        print('Start solving linear static problem...')
         self.linsolver.set_A(K)
-        q = self.linsolver.solve(f_ext)
-        self.mechanical_system.write_timestep(t, q) # write deformed state
-        print('Static problem solved')
-        return q
+        u = self.linsolver.solve(f_ext)
+        self.mechanical_system.write_timestep(t, u) # write deformed state
+        print('Static problem solved.')
+        return u
 
 
 # General solver class for all dynamics solver
@@ -298,24 +316,33 @@ class NonlinearDynamicsSolver(Solver):
         Mechanical system to be solved.
     options : Dictionary
         Options for solver:
-        initial_conditions : dict {'q0': numpy.array, 'dq0': numpy.array, 'ddq0': numpy.array}
-            initial conditions for the solver
-        dt_output : numpy array
-            timesteps
+        initial_conditions : dict {'q0': numpy.array, 'dq0': numpy.array}
+            Initial conditions/displacement and velocity for solver.
+        t0 : float
+            Initial time.
+        t_end : float
+            End time.
+        dt : float
+            Time step size for time integration.
+        dt_output : float
+            Time step size for output.
         rtol : float
-        
+
         atol : float
-        
+
         n_iter_max : int
-        
-        conv_abort :
-        
+
+        conv_abort : Boolean
+
         verbose : Boolean
-            If true, show some more information in command line
+            If true, show some more information in command line.
         write_iter : Boolean
-            If true, write iteration steps
+            If true, write iteration steps.
         track_niter : Boolean
-            ?
+
+        use_v : Boolean
+            If true, time integration scheme needs additional variable v.
+
 
     References
     ----------
@@ -327,107 +354,96 @@ class NonlinearDynamicsSolver(Solver):
         super().__init__(mechanical_system, **options)
 
         # read options
-        if 'initial_conditions' in options:
-            self.initial_conditions = self.validate_initial_conditions(options['initial_conditions'])
+        self.set_initial_conditions(options)
+
         if 't0' in options:
             self.t0 = options['t0']
         else:
-            self.t0 = 0
-        if 'tend' in options:
-            self.tend = options['tend']
+            print('Attention: No initial time was given for time-integration, setting t0 = 0.0.')
+            self.t0 = 0.0
+
+        if 't_end' in options:
+            self.t_end = options['t_end']
         else:
-            print('Attention: No endtime was given for the time-integration, choose 1')
-            self.tend = 1
+            print('Attention: No end time was given for time-integration, setting t_end = 1.0.')
+            self.t_end = 1.0
+
+        if 'dt' in options:
+            self.dt = options['dt']
+        else:
+            raise ValueError('Error: No time step size was given for the time integration.')
+
         if 'dt_output' in options:
             self.dt_output = options['dt_output']
         else:
-            print('Attention: No dt_output was given, choose 100 timesteps')
-            self.dt_output = (self.tend - self.t0)/100
+            self.dt_output = self.dt
+
         if 'rtol' in options:
             self.rtol = options['rtol']
         else:
             self.rtol = 1.0E-9
+
         if 'atol' in options:
             self.atol = options['atol']
         else:
             self.atol = 1.0E-6
+
         if 'n_iter_max' in options:
             self.n_iter_max = options['n_iter_max']
         else:
             self.n_iter_max = 30
+
         if 'conv_abort' in options:
             self.conv_abort = options['conv_abort']
         else:
             self.conv_abort = True
+
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
             self.verbose = False
+
         if 'write_iter' in options:
             self.write_iter = options['write_iter']
         else:
             self.write_iter = False
+
         if 'track_niter' in options:
             self.track_niter = options['track_niter']
         else:
             self.track_niter = False
+
         if 'use_v' in options:
             self.use_v = options['use_v']
         else:
-            self.use_v =False
+            self.use_v = False
+        return
 
-    def validate_initial_conditions(self, initial_conditions):
-        if 'q0' in initial_conditions:
-            q0 = initial_conditions['q0']
+    def set_initial_conditions(self, **options):
+        if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
+            q0 = options['initial_conditions']['q0']
             if len(q0) != self.mechanical_system.no_of_dofs:
-                raise ValueError('The dimension of q0 is not valid for mechanical system')
+                raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
         else:
-            print('No input for q0 is given, choose q0 = 0')
-            initial_conditions['q0'] = np.zeros(self.mechanical_system.no_of_dofs)
-        if 'dq0' in initial_conditions:
-            dq0 = initial_conditions['dq0']
+            print('Attention: No input for initial displacement is given, setting q0 = 0.')
+            q0 = np.zeros(self.mechanical_system.no_of_dofs)
+
+        if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
+            dq0 = options['initial_conditions']['dq0']
             if len(dq0) != self.mechanical_system.no_of_dofs:
-                raise ValueError('The dimension of dq0 is not valid for mechanical system')
+                raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
-            print('No input for dq0 is given, choose dq0 = 0')
-            initial_conditions['dq0'] = np.zeros(self.mechanical_system.no_of_dofs)
-        if 'ddq0' in initial_conditions:
-            ddq0 = initial_conditions['ddq0']
-            if len(ddq0) != self.mechanical_system.no_of_dofs:
-                raise ValueError('The dimension of ddq0 is not valid for mechanical system')
-        return initial_conditions
+            print('Attention: No input for initial velocity is given, setting dq0 = 0.')
+            dq0 = np.zeros(self.mechanical_system.no_of_dofs)
+        return {'q0':q0, 'dq0':dq0}
 
     def set_parameters(self, **options):
-        # read options
-        if 'initial_conditions' in options:
-            self.initial_conditions = self.validate_initial_conditions(options['initial_conditions'])
-        if 't0' in options:
-            self.t0 = options['t0']
-        if 'tend' in options:
-            self.tend = options['tend']
-        if 'dt_output' in options:
-            self.dt_output = options['dt_output']
-        if 'rtol' in options:
-            self.rtol = options['rtol']
-        if 'atol' in options:
-            self.atol = options['atol']
-        if 'n_iter_max' in options:
-            self.n_iter_max = options['n_iter_max']
-        if 'conv_abort' in options:
-            self.conv_abort = options['conv_abort']
-        if 'verbose' in options:
-            self.verbose = options['verbose']
-        if 'write_iter' in options:
-            self.write_iter = options['write_iter']
-        if 'track_niter' in options:
-            self.track_niter = options['track_niter']
-        if 'use_v' in options:
-            self.use_v = options['use_v']
+        pass
 
     def predict(self, q, dq, v, ddq):
         pass
 
-    def newton_raphson(self, q, dq, v, ddq, q_old, dq_old, v_old, ddq_old, t, t_old):
+    def newton_raphson(self, q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old):
         pass
 
     def correct(self, q, dq, v, ddq, delta_q):
@@ -439,23 +455,9 @@ class NonlinearDynamicsSolver(Solver):
     
         Parameters
         ----------
-        q0 : ndarray
-            Start displacement.
-        dq0 : ndarray
-            Start velocity.
-        t0 : float
-            Start time.
-        t_end : float
-            End time.
-        dt : float
-            Time step size.
-        options : Dictionary
-            Options for solver.
+
         '''
 
-        # t0, t_end, dt, options
-        q0 = self.initial_conditions['q0']
-        dq0 = self.initial_conditions['dq0']
 
         # start time measurement
         t_clock_start = time.time()
@@ -464,17 +466,16 @@ class NonlinearDynamicsSolver(Solver):
         self.mechanical_system.clear_timesteps()
         self.iteration_info = []
         t = self.t0
-
+        dt = self.dt
         self.time_range = np.arange(self.t0, self.tend, self.dt_output)
-
-        q = q0.copy()
-        dq = dq0.copy()
+        q = self.initial_conditions['q0'].copy()
+        dq = self.initial_conditions['dq0'].copy()
         if self.use_v:
-            v = dq0.copy()
+            v = self.initial_conditions['dq0'].copy()
         else:
             v = np.empty((0,0))
-        ddq = np.zeros_like(q0)
-        f_ext = np.zeros_like(q0)
+        ddq = np.zeros_like(q)
+        f_ext = np.zeros_like(q)
         abs_f_ext = self.atol
         time_index = 0
         eps = 1E-13
@@ -502,9 +503,7 @@ class NonlinearDynamicsSolver(Solver):
             t += dt
             self.predict(q, dq, v, ddq)
 
-            Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, q_old, dq_old, v_old, \
-                                                  ddq_old, t, t_old)
-
+            Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
             abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
             res_abs = norm_of_vector(res)
 
@@ -512,16 +511,15 @@ class NonlinearDynamicsSolver(Solver):
             n_iter = 0
             while res_abs > self.rtol*abs_f_ext + self.atol:
 
+                # solve for correction
                 self.linsolver.set_A(Jac)
                 delta_q = -self.linsolver.solve(res)
     
-                # update variables
+                # correct variables
                 self.correct(q, dq, v, ddq, delta_q)
     
-                # update system
-                Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, q_old, dq_old, \
-                                                      v_old, ddq_old, t, t_old)
-
+                # update system quantities
+                Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
                 res_abs = norm_of_vector(res)
                 n_iter += 1
 
@@ -530,22 +528,20 @@ class NonlinearDynamicsSolver(Solver):
                         cond_nr = 0.0
                     else:
                         cond_nr = np.linalg.cond(Jac)
-                    print(('Iteration: {0:3d}, residual: {1:6.3E}, condition# of '
-                           + 'Jacobian: {2:6.3E}').format(n_iter, res_abs, cond_nr))
+                    print('Iteration: {0:3d}, residual: {1:6.3E}, condition# of Jacobian: {2:6.3E}'.format(
+                        n_iter, res_abs, cond_nr))
 
-                # write iterations
                 if self.write_iter:
                     t_write = t + dt/1000000*n_iter
                     self.mechanical_system.write_timestep(t_write, q.copy())
 
-                # catch failing converge
+                # catch failing convergence
                 if n_iter > self.n_iter_max:
                     if self.conv_abort:
                         print(abort_statement)
                         self.iteration_info = np.array(self.iteration_info)
                         t_clock_end = time.time()
-                        print('Time for time marching integration: '
-                              + '{0:6.3f}s.'.format(t_clock_end - t_clock_start))
+                        print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
                         return
 
                     t = t_old
@@ -557,8 +553,7 @@ class NonlinearDynamicsSolver(Solver):
 
                 # end of Newton-Raphson iteration loop
 
-            print(('Time: {0:3.6f}, #iterations: {1:3d}, '
-                   + 'residual: {2:6.3E}').format(t, n_iter, res_abs))
+            print('Time: {0:3.6f}, #iterations: {1:3d}, residual: {2:6.3E}'.format(t, n_iter, res_abs))
             if self.track_niter:
                 self.iteration_info.append((t, n_iter, res_abs))
 
@@ -571,15 +566,13 @@ class NonlinearDynamicsSolver(Solver):
 
         # end time measurement
         t_clock_end = time.time()
-        print('Time for time marching integration: {0:6.3f} seconds'.format(
-              t_clock_end - t_clock_start))
+        print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
         return
 
 
 class LinearDynamicsSolver(Solver):
     '''
-    General class for solving the linear dynamic problem of the mechanical system 
-    linearized around zero-displacement.
+    General class for solving the linear dynamic problem of the mechanical system linearized around zero-displacement.
 
     Parameters
     ----------
@@ -1161,9 +1154,6 @@ class ConstraintSystemSolver(NonlinearDynamicsSolver):
     # TBD
     pass
 
-class StateSpaceSolver(Solver):
-    # TBD
-    pass
 
 # This could be a dictionary for a convenient mapping of scheme names (strings) to their solver classes
 solvers_available = {'GeneralizedAlpha': GeneralizedAlphaNonlinearDynamicsSolver,
