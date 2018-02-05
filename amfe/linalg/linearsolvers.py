@@ -163,7 +163,7 @@ class PardisoSolver(LinearSolver):
                'storage_mode': '59',
                   }
 
-    def __init__(self, A=None, options=None):
+    def __init__(self, A=None, **options):
         # call options initialization from superclass
         super().__init__(A, options)
         # Set some default values
@@ -195,7 +195,7 @@ class PardisoSolver(LinearSolver):
                     if key == 'mtype':
                         # Check if mtype is valid
                         if options[key] in self.mtypes:
-                            self.mtype = self.mtypes[options['mtype']]
+                            self.mtype = options[key]
                         # Otherwise raise value error
                         else:
                             raise ValueError('Error in PardisoSolver mtype {} not available'.format(options[key]))
@@ -217,14 +217,14 @@ class PardisoSolver(LinearSolver):
                 self.wrapper_class.ja = A.indices
                 self.status = 1
             else:
-                self.wrapper_class = PardisoWrapper(A, mtype=self.mtype, verbose=self.verbose)
+                self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], verbose=self.verbose)
                 self.status = 1
         else:
             try:
                 A = sp.sparse.csr_matrix(A)
-                self.wrapper_class = PardisoWrapper(A, mtype=self.mtype, verbose=self.verbose)
             except:
                 raise ValueError('A must be A csr_matrix or at least a csr convertible matrix')
+            self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], verbose=self.verbose)
 
     def clear(self):
         self.wrapper_class.clear()
