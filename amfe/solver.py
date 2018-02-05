@@ -104,7 +104,7 @@ class NonlinearStaticsSolver(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, options)
+        super().__init__(mechanical_system, **options)
 
         # read options
         if 'no_of_load_steps' in options:
@@ -292,14 +292,14 @@ class LinearStaticsSolver(Solver):
         self.mechanical_system.clear_timesteps()
 
         print('Assembling external force and stiffness...')
-        K = self.mechanical_system.K(u=None, t=t)
+        K = self.mechanical_system.K(u=None, t=self.t)
         f_ext = self.mechanical_system.f_ext(u=None, du=None, t=self.t)
-        self.mechanical_system.write_timestep(0.0, 0.0*f_ext) # write undeformed state
+        self.mechanical_system.write_timestep(0.0, 0.0*f_ext)  # write initial state
 
         print('Start solving linear static problem...')
         self.linsolver.set_A(K)
         u = self.linsolver.solve(f_ext)
-        self.mechanical_system.write_timestep(t, u) # write deformed state
+        self.mechanical_system.write_timestep(self.t, u)  # write deformed state
         print('Static problem solved.')
         return u
 
@@ -354,7 +354,9 @@ class NonlinearDynamicsSolver(Solver):
         super().__init__(mechanical_system, **options)
 
         # read options
-        self.initial_conditions = self.set_initial_conditions(options)
+        self.options = dict(**options)
+
+        self.initial_conditions = self.set_initial_conditions(**options)
 
         if 't0' in options:
             self.t0 = options['t0']
@@ -467,19 +469,19 @@ class NonlinearDynamicsSolver(Solver):
         self.iteration_info = []
         t = self.t0
         dt = self.dt
-        self.time_range = np.arange(self.t0, self.t_end, self.dt_output)
+        time_range = np.arange(self.t0, self.t_end, self.dt_output)
         q = self.initial_conditions['q0'].copy()
         dq = self.initial_conditions['dq0'].copy()
         if self.use_v:
             v = self.initial_conditions['dq0'].copy()
         else:
-            v = np.empty((0,0))
+            v = np.empty((0, 0))
         ddq = np.zeros_like(q)
         f_ext = np.zeros_like(q)
         abs_f_ext = self.atol
         time_index = 0
         eps = 1E-13
-        self.set_parameters(options)
+        self.set_parameters(**self.options)
 
         # time step loop
         while time_index < len(time_range):
@@ -591,6 +593,8 @@ class LinearDynamicsSolver(Solver):
         super().__init__(mechanical_system, **options)
 
         # read options
+        self.options = dict(**options)
+
         self.initial_conditions = self.set_initial_conditions(options['initial_conditions'])
 
         if 't0' in options:
@@ -676,10 +680,10 @@ class LinearDynamicsSolver(Solver):
             v = self.initial_conditions['dq0'].copy()
         else:
             v = np.empty((0,0))
-        ddq = np.zeros_like(q0)
+        ddq = np.zeros_like(dq)
         time_index = 0
         eps = 1E-13
-        self.set_parameters(options)
+        self.set_parameters(**self.options)
 
         # evaluate initial acceleration and LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
