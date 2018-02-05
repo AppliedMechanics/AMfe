@@ -2,8 +2,8 @@
 Module that contains solvers for solving systems in AMfe.
 """
 
+
 #IDEAS:
-#
 # First define options for Solver
 #   options1 = {'beta': 0.5, 'gamma': 0.3}
 #   options2 = {'rho': 0.9, 'beta': 0.5}
@@ -28,7 +28,7 @@ Module that contains solvers for solving systems in AMfe.
 #       K = mechanical_system.K
 #       res = ...
 #       solver.solve(self)
-#
+
 
 import scipy as sp
 import numpy as np
@@ -51,10 +51,10 @@ __all__ = ['choose_solver',
 
 
 abort_statement = '''
-#############################################################################
-#### The current computation has been aborted. No convergence was gained ####
-#### within the number of given iteration steps.                         ####
-#############################################################################
+###############################################################################
+#### The current computation has been aborted.                             ####
+#### No convergence was gained within the number of given iteration steps. ####
+###############################################################################
 '''
 
 
@@ -173,8 +173,9 @@ class NonlinearStaticsSolver(Solver):
         Returns
         -------
         displacement : ndarray, shape(ndim, number_of_load_steps)
-            Static displacement field (solution); q[:,-1] is the final displacement.
+            Static displacement field (solution) at load steps; q[:,-1] is the final displacement at pseudo time 1.0.
         '''
+
         # start time measurement
         t_clock_start = time.time()
 
@@ -202,14 +203,17 @@ class NonlinearStaticsSolver(Solver):
 
             # Newton iteration loop
             n_iter = 0
-            while (abs_res > self.relative_tolerance*abs_f_ext + self.absolute_tolerance) and (self.max_number_of_iterations > n_iter):
+            while (abs_res > self.relative_tolerance*abs_f_ext + self.absolute_tolerance) and \
+                    (self.max_number_of_iterations > n_iter):
 
-                # solve for correction
+                # solve for displacement correction
                 self.linear_solver.set_A(K)
                 delta_u = self.linear_solver.solve(res)
 
                 # correct displacement
                 u += delta_u*self.newton_damping
+
+                # update system
                 if (n_iter % self.simplified_newton_iterations) is 0:
                     K, f_int = self.mechanical_system.K_and_f(u, t)
                     f_ext = self.mechanical_system.f_ext(u, du, t)
@@ -280,7 +284,6 @@ class LinearStaticsSolver(Solver):
         Parameters
         ----------
 
-
         Returns
         -------
         u : ndaray
@@ -343,8 +346,8 @@ class NonlinearDynamicsSolver(Solver):
 
     References
     ----------
-       [1]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and 
-            application to structural dynamics. ISBN 978-1-118-90020-8.
+       [1]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and application to structural dynamics.
+            ISBN 978-1-118-90020-8.
     '''
 
     def __init__(self, mechanical_system, **options):
@@ -498,7 +501,7 @@ class NonlinearDynamicsSolver(Solver):
             n_iter = 0
             while res_abs > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
 
-                # solve for correction
+                # solve for displacement correction
                 self.linear_solver.set_A(Jac)
                 delta_q = -self.linear_solver.solve(res)
     
@@ -570,8 +573,8 @@ class LinearDynamicsSolver(Solver):
 
     References
     ----------
-       [1]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and
-            application to structural dynamics. ISBN 978-1-118-90020-8.
+       [1]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and application to structural dynamics.
+            ISBN 978-1-118-90020-8.
     '''
 
     def __init__(self, mechanical_system, **options):
@@ -642,7 +645,6 @@ class LinearDynamicsSolver(Solver):
     
         Parameters
         ----------
-
         '''
 
         # start time measurement
@@ -727,11 +729,10 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
     References
     ----------
-       [1]  J. Chung and G. Hulbert (1993): A time integration algorithm for structural 
-            dynamics with improved numerical dissipation: the generalized-alpha method. 
-            Journal of Applied Mechanics 60(2) 371--375.
-       [2]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and 
-            application to structural dynamics. ISBN 978-1-118-90020-8.
+       [1]  J. Chung and G. Hulbert (1993): A time integration algorithm for structural dynamics with improved
+            numerical dissipation: the generalized-alpha method. Journal of Applied Mechanics 60(2) 371--375.
+       [2]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and application to structural dynamics.
+            ISBN 978-1-118-90020-8.
     '''
 
     def __init__(self, mechanical_system, **options):
@@ -820,7 +821,8 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
 class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
     '''
-    Class for solving the nonlinear dynamic problem of the mechanical system using the JWH-alpha time integration scheme.
+    Class for solving the nonlinear dynamic problem of the mechanical system using the JWH-alpha time integration
+    scheme.
 
     Parameters
     ----------
@@ -831,15 +833,14 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
     References
     ----------
-       [1]  K.E. Jansen, C.H. Whiting and G.M. Hulbert (2000): A generalized-alpha 
-            method for integrating the filtered Navier-Stokes equations with a 
-            stabilized finite element method. Computer Methods in Applied Mechanics and 
+       [1]  K.E. Jansen, C.H. Whiting and G.M. Hulbert (2000): A generalized-alpha method for integrating the filtered
+            Navier-Stokes equations with a stabilized finite element method. Computer Methods in Applied Mechanics and
             Engineering 190(3) 305--319. DOI 10.1016/S0045-7825(00)00203-6.
-       [2]  C. Kadapa, W.G. Dettmer and D. Perić (2017): On the advantages of using the 
-            first-order generalised-alpha scheme for structural dynamic problems. 
-            Computers and Structures 193 226--238. DOI 10.1016/j.compstruc.2017.08.013.
-       [3]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and 
-            application to structural dynamics. ISBN 978-1-118-90020-8.
+       [2]  C. Kadapa, W.G. Dettmer and D. Perić (2017): On the advantages of using the first-order generalised-alpha
+            scheme for structural dynamic problems. Computers and Structures 193 226--238.
+            DOI 10.1016/j.compstruc.2017.08.013.
+       [3]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and application to structural dynamics.
+            ISBN 978-1-118-90020-8.
     '''
 
     def __init__(self, mechanical_system, **options):
@@ -941,11 +942,10 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
     References
     ----------
-       [1]  J. Chung and G. Hulbert (1993): A time integration algorithm for structural 
-            dynamics with improved numerical dissipation: the generalized-alpha method. 
-            Journal of Applied Mechanics 60(2) 371--375.
-       [2]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and 
-            application to structural dynamics. ISBN 978-1-118-90020-8.
+       [1]  J. Chung and G. Hulbert (1993): A time integration algorithm for structural dynamics with improved
+            numerical dissipation: the generalized-alpha method. Journal of Applied Mechanics 60(2) 371--375.
+       [2]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and application to structural dynamics.
+            ISBN 978-1-118-90020-8.
     '''
 
     def __init__(self, mechanical_system, **options):
@@ -1025,8 +1025,8 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
 class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
     '''
-    Class for solving the linear dynamic problem of the mechanical system linearized 
-    around zero-displacement using the JWH-alpha time integration scheme.
+    Class for solving the linear dynamic problem of the mechanical system linearized around zero-displacement using the
+    JWH-alpha time integration scheme.
 
     Parameters
     ----------
@@ -1037,15 +1037,14 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
     References
     ----------
-       [1]  K.E. Jansen, C.H. Whiting and G.M. Hulbert (2000): A generalized-alpha 
-            method for integrating the filtered Navier-Stokes equations with a 
-            stabilized finite element method. Computer Methods in Applied Mechanics and 
+       [1]  K.E. Jansen, C.H. Whiting and G.M. Hulbert (2000): A generalized-alpha method for integrating the filtered
+            Navier-Stokes equations with a stabilized finite element method. Computer Methods in Applied Mechanics and
             Engineering 190(3) 305--319. DOI 10.1016/S0045-7825(00)00203-6.
-       [2]  C. Kadapa, W.G. Dettmer and D. Perić (2017): On the advantages of using the 
-            first-order generalised-alpha scheme for structural dynamic problems. 
-            Computers and Structures 193 226--238. DOI 10.1016/j.compstruc.2017.08.013.
-       [3]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and 
-            application to structural dynamics. ISBN 978-1-118-90020-8.
+       [2]  C. Kadapa, W.G. Dettmer and D. Perić (2017): On the advantages of using the first-order generalised-alpha
+            scheme for structural dynamic problems. Computers and Structures 193 226--238.
+            DOI 10.1016/j.compstruc.2017.08.013.
+       [3]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and application to structural dynamics.
+            ISBN 978-1-118-90020-8.
     '''
 
     def __init__(self, mechanical_system, **options):
