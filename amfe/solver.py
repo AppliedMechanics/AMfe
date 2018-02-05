@@ -731,12 +731,12 @@ class LinearDynamicsSolver(Solver):
 
 
 # Special solvers derived from above
-# ---------------------------------
+# ----------------------------------
 
 class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
     '''
-    Class for solving the nonlinear dynamic problem of the mechanical system using the 
-    generalized-alpha time integration scheme.
+    Class for solving the nonlinear dynamic problem of the mechanical system using the generalized-alpha time
+    integration scheme.
 
     Parameters
     ----------
@@ -758,30 +758,19 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         super().__init__(mechanical_system, **options)
         self.use_v = False
         if 'rho_inf' in options:
-            if options['rho_inf'] is not None:
-                rho_inf = options['rho_inf']
-            else:
-                print('No value for rho_inf given, set rho_inf = 0.9')
-                rho_inf = 0.9
+            self.rho_inf = options['rho_inf']
         else:
-            rho_inf = 0.9
-            print('No value for rho_inf given, set rho_inf = 0.9')
-
+            self.rho_inf = 0.9
+            print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
         return
 
-    def set_parameters(self, dt, options):
+    def set_parameters(self, options):
         '''
         Set parameters for the nonlinear generalized-alpha time integration scheme.
         '''
 
-        self.dt = dt
-        if 'rho_inf' in options:
-            rho_inf = options['rho_inf']
-        else:
-            rho_inf = 0.9
-
-        self.alpha_m = (2*rho_inf - 1)/(rho_inf + 1)
-        self.alpha_f = rho_inf/(rho_inf + 1)
+        self.alpha_m = (2*self.rho_inf - 1)/(self.rho_inf + 1)
+        self.alpha_f = self.rho_inf/(self.rho_inf + 1)
         self.beta = 0.25*(1 - self.alpha_m + self.alpha_f)**2
         self.gamma = 0.5 - self.alpha_m + self.alpha_f
         return
@@ -796,10 +785,9 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         ddq *= 0
         return
 
-    def newton_raphson(self, q, dq, v, ddq, q_old, dq_old, v_old, ddq_old, t, t_old):
+    def newton_raphson(self, q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old):
         '''
-        Return actual Jacobian and residuum for the nonlinear generalized-alpha time 
-        integration scheme.
+        Return actual Jacobian and residuum for the nonlinear generalized-alpha time integration scheme.
         '''
 
         if self.mechanical_system.M_constr is None:
@@ -843,8 +831,7 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
 class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
     '''
-    Class for solving the nonlinear dynamic problem of the mechanical system using the 
-    JWH-alpha time integration scheme.
+    Class for solving the nonlinear dynamic problem of the mechanical system using the JWH-alpha time integration scheme.
 
     Parameters
     ----------
@@ -866,24 +853,23 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
             application to structural dynamics. ISBN 978-1-118-90020-8.
     '''
 
-    def __init__(self, mechanical_system, options):
-        super().__init__(mechanical_system, options)
+    def __init__(self, mechanical_system, **options):
+        super().__init__(mechanical_system, **options)
         self.use_v = True
+        if 'rho_inf' in options:
+            self.rho_inf = options['rho_inf']
+        else:
+            self.rho_inf = 0.9
+            print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
         return
 
-    def set_parameters(self, dt, options):
+    def set_parameters(self, options):
         '''
         Set parameters for the nonlinear JWH-alpha time integration scheme.
         '''
 
-        self.dt = dt
-        if 'rho_inf' in options:
-            rho_inf = options['rho_inf']
-        else:
-            rho_inf = 0.9
-
-        self.alpha_m = (3 - rho_inf)/(2*(1 + rho_inf))
-        self.alpha_f = 1/(1 + rho_inf)
+        self.alpha_m = (3 - self.rho_inf)/(2*(1 + self.rho_inf))
+        self.alpha_f = 1/(1 + self.rho_inf)
         self.gamma = 0.5 + self.alpha_m - self.alpha_f
         return
 
@@ -901,10 +887,9 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         ddq *= 0
         return
 
-    def newton_raphson(self, q, dq, v, ddq, q_old, dq_old, v_old, ddq_old, t, t_old):
+    def newton_raphson(self, q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old):
         '''
-        Return actual Jacobian and residuum for the nonlinear JWH-alpha time 
-        integration scheme.
+        Return actual Jacobian and residuum for the nonlinear JWH-alpha time integration scheme.
         '''
 
         if self.mechanical_system.M_constr is None:
@@ -947,8 +932,8 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
 class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
     '''
-    Class for solving the linear dynamic problem of the mechanical system linearized 
-    around zero-displacement using the generalized-alpha time integration scheme.
+    Class for solving the linear dynamic problem of the mechanical system linearized around zero-displacement using the
+    generalized-alpha time integration scheme.
 
     Parameters
     ----------
@@ -966,9 +951,14 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
             application to structural dynamics. ISBN 978-1-118-90020-8.
     '''
 
-    def __init__(self, mechanical_system, options):
-        super().__init__(mechanical_system, options)
+    def __init__(self, mechanical_system, **options):
+        super().__init__(mechanical_system, **options)
         self.use_v = False
+        if 'rho_inf' in options:
+            self.rho_inf = options['rho_inf']
+        else:
+            self.rho_inf = 0.9
+            print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
         return
 
     def set_parameters(self, dt, options):
@@ -976,14 +966,8 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Set parameters for the linear generalized-alpha time integration scheme.
         '''
 
-        self.dt = dt
-        if 'rho_inf' in options:
-            rho_inf = options['rho_inf']
-        else:
-            rho_inf = 0.9
-
-        self.alpha_m = (2*rho_inf - 1)/(rho_inf + 1)
-        self.alpha_f = rho_inf/(rho_inf + 1)
+        self.alpha_m = (2*self.rho_inf - 1)/(self.rho_inf + 1)
+        self.alpha_f = self.rho_inf/(self.rho_inf + 1)
         self.beta = 0.25*(1 - self.alpha_m + self.alpha_f)**2
         self.gamma = 0.5 - self.alpha_m + self.alpha_f
         return
@@ -998,17 +982,14 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         self.mechanical_system.D_constr = self.mechanical_system.D()
         self.mechanical_system.K_constr = self.mechanical_system.K()
 
-        K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2) \
-                  *self.mechanical_system.M_constr \
-                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt) \
-                  *self.mechanical_system.D_constr \
+        K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)*self.mechanical_system.M_constr \
+                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.mechanical_system.D_constr \
                 + (1 - self.alpha_f)*self.mechanical_system.K_constr
         return K_eff
 
     def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
         '''
-        Return actual effective force for linear generalized-alpha time integration 
-        scheme.
+        Return actual effective force for linear generalized-alpha time integration scheme.
         '''
 
         t_f = (1 - self.alpha_f)*t + self.alpha_f*t_old
@@ -1016,27 +997,21 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         f_ext_f = self.f_ext(None, None, t_f)
 
         F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*self.mechanical_system.M_constr \
-                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt) \
-                  *self.mechanical_system.D_constr \
+                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.mechanical_system.D_constr \
                 - self.alpha_f*self.mechanical_system.K_constr)@q_old \
                 + ((1 - self.alpha_m)/(self.beta*self.dt)*self.mechanical_system.M_constr \
-                - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta \
-                  *self.mechanical_system.D_constr)@dq_old \
-                + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta \
-                  *self.mechanical_system.M_constr \
-                - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta \
-                  *self.mechanical_system.D_constr)@ddq_old \
+                - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta*self.mechanical_system.D_constr)@dq_old \
+                + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta*self.mechanical_system.M_constr \
+                - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta*self.mechanical_system.D_constr)@ddq_old \
                 + f_ext_f
         return F_eff
 
     def update(self, q, q_old, dq_old, v_old, ddq_old):
         '''
-        Return actual velocity and acceleration for linear generalized-alpha time 
-        integration scheme.
+        Return actual velocity and acceleration for linear generalized-alpha time integration scheme.
         '''
 
-        ddq = 1/(self.beta*self.dt**2)*(q - q_old) - 1/(self.beta*self.dt)*dq_old \
-              - (0.5 - self.beta)/self.beta*ddq_old
+        ddq = 1/(self.beta*self.dt**2)*(q - q_old) - 1/(self.beta*self.dt)*dq_old - (0.5 - self.beta)/self.beta*ddq_old
         v = np.empty((0,0))
         dq = dq_old + self.dt*((1 - self.gamma)*ddq_old + self.gamma*ddq)
         return dq, v, ddq
@@ -1067,9 +1042,14 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
             application to structural dynamics. ISBN 978-1-118-90020-8.
     '''
 
-    def __init__(self, mechanical_system, options):
-        super().__init__(mechanical_system, options)
+    def __init__(self, mechanical_system, **options):
+        super().__init__(mechanical_system, **options)
         self.use_v = True
+        if 'rho_inf' in options:
+            self.rho_inf = options['rho_inf']
+        else:
+            self.rho_inf = 0.9
+            print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
         return
 
     def set_parameters(self, dt, options):
@@ -1077,14 +1057,8 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Set parameters for the nonlinear JWH-alpha time integration scheme.
         '''
 
-        self.dt = dt
-        if 'rho_inf' in options:
-            rho_inf = options['rho_inf']
-        else:
-            rho_inf = 0.9
-
-        self.alpha_m = (3 - rho_inf)/(2*(1 + rho_inf))
-        self.alpha_f = 1/(1 + rho_inf)
+        self.alpha_m = (3 - self.rho_inf)/(2*(1 + self.rho_inf))
+        self.alpha_f = 1/(1 + self.rho_inf)
         self.gamma = 0.5 + self.alpha_m - self.alpha_f
         return
 
@@ -1097,8 +1071,7 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         self.mechanical_system.D_constr = self.mechanical_system.D()
         self.mechanical_system.K_constr = self.mechanical_system.K()
 
-        K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2) \
-                  *self.mechanical_system.M_constr \
+        K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.mechanical_system.M_constr \
                 + self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.D_constr \
                 + self.alpha_f*self.mechanical_system.K_constr
         return K_eff
@@ -1114,22 +1087,17 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
         F_eff = (-(1 - self.alpha_f)*self.mechanical_system.K_constr \
                 + self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.D_constr \
-                + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2) \
-                  *self.mechanical_system.M_constr)@q_old \
+                + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.mechanical_system.M_constr)@q_old \
                 + (-(self.gamma - self.alpha_m)/self.gamma*self.mechanical_system.D_constr \
-                - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt) \
-                  *self.mechanical_system.M_constr)@dq_old \
-                + (self.alpha_m/(self.alpha_f*self.gamma*self.dt) \
-                  *self.mechanical_system.M_constr)@v_old \
-                + (-(self.gamma - self.alpha_m)/self.gamma \
-                  *self.mechanical_system.M_constr)@ddq_old \
+                - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*self.mechanical_system.M_constr)@dq_old \
+                + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*self.mechanical_system.M_constr)@v_old \
+                + (-(self.gamma - self.alpha_m)/self.gamma*self.mechanical_system.M_constr)@ddq_old \
                 + f_ext_f
         return F_eff
 
     def update(self, q, q_old, dq_old, v_old, ddq_old):
         '''
-        Return actual velocity and acceleration for linear JWH-alpha time integration 
-        scheme.
+        Return actual velocity and acceleration for linear JWH-alpha time integration scheme.
         '''
 
         dq = 1/(self.gamma*self.dt)*(q - q_old) + (self.gamma - 1)/self.gamma*dq_old
@@ -1145,16 +1113,19 @@ class ConstraintSystemSolver(NonlinearDynamicsSolver):
 
 
 # This could be a dictionary for a convenient mapping of scheme names (strings) to their solver classes
-solvers_available = {'GeneralizedAlpha': GeneralizedAlphaNonlinearDynamicsSolver,
-                     'JWHAlpha': JWHAlphaNonlinearDynamicsSolver}
+solvers_available = {'NonlinearStatics' : NonlinearStaticsSolver,
+                     'LinearStatics' : LinearStaticsSolver,
+                     'NonlinearGeneralizedAlpha' : GeneralizedAlphaNonlinearDynamicsSolver,
+                     'NonlinearJWHAlpha' : JWHAlphaNonlinearDynamicsSolver,
+                     'LinearGeneralizedAlpha' : GeneralizedAlphaLinearDynamicsSolver,
+                     'LinearJWHAlpha' : JWHAlphaLinearDynamicsSolver}
 
 
-def choose_solver(mechanical_system, options):
-
+def choose_solver(mechanical_system, **options):
     if type(mechanical_system) == MechanicalSystem:
-        solvertype = 'GeneralizedAlpha'
+        solvertype = options['solvertype']
 
-    solver = solvers_available[solvertype](options)
+    solver = solvers_available[solvertype](**options)
     return solver
 
 
