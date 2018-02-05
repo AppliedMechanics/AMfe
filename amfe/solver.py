@@ -180,6 +180,7 @@ class NonlinearStaticsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
+        self.linear_solver = self.linear_solver(mtype='spd')
         self.mechanical_system.clear_timesteps()
         iteration_info = []
         u_output = []
@@ -223,7 +224,7 @@ class NonlinearStaticsSolver(Solver):
                 n_iter += 1
 
                 if self.verbose:
-                    print('Step: {0:3d}, iteration#: {1:3d}, residual: {2:6.3E}'.format(int(t), n_iter, abs_res))
+                    print('Step: {0:1.3f}, iteration#: {1:3d}, residual: {2:6.3E}'.format(t, n_iter, abs_res))
 
                 if self.write_iterations:
                     self.mechanical_system.write_timestep(t + n_iter*0.000001, u)
@@ -290,7 +291,8 @@ class LinearStaticsSolver(Solver):
             Static displacement field (solution).
         '''
 
-        # prepare mechanical_system
+        # initialize variables and set parameters
+        self.linear_solver = self.linear_solver(mtype='spd')
         self.mechanical_system.clear_timesteps()
 
         print('Assembling external force and stiffness...')
@@ -455,6 +457,7 @@ class NonlinearDynamicsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
+        self.linear_solver = self.linear_solver(mtype='sid')
         self.mechanical_system.clear_timesteps()
         self.iteration_info = []
         t = self.t0
@@ -491,7 +494,7 @@ class NonlinearDynamicsSolver(Solver):
 
             # predict new variables
             t += self.dt
-            self.predict(q, dq, v, ddq)
+            q, dq, v, ddq = self.predict(q, dq, v, ddq)
 
             Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
             abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
@@ -499,15 +502,14 @@ class NonlinearDynamicsSolver(Solver):
 
             # Newton-Raphson iteration loop
             n_iter = 0
-            linearsolver = self.linear_solver(mtype='spd')
             while res_abs > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
 
                 # solve for displacement correction
-                linearsolver.set_A(Jac)
-                delta_q = -linearsolver.solve(res)
+                self.linear_solver.set_A(Jac)
+                delta_q = -self.linear_solver.solve(res)
     
                 # correct variables
-                self.correct(q, dq, v, ddq, delta_q)
+                q, dq, v, ddq = self.correct(q, dq, v, ddq, delta_q)
     
                 # update system quantities
                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
@@ -652,6 +654,7 @@ class LinearDynamicsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
+        self.linear_solver = self.linear_solver(mtype='spd')
         self.mechanical_system.clear_timesteps()
         t = self.t0
         time_range = np.arange(self.t0, self.t_end, self.dt_output)
@@ -757,13 +760,24 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
     def overwrite_parameters(self, alpha_m, alpha_f, beta, gamma):
         '''
-        Overwrite parameters for the nonlinear generalized-alpha time integration scheme.
+        Overwrite standard parameters for the nonlinear generalized-alpha time integration scheme.
         '''
 
         self.alpha_m = alpha_m
         self.alpha_f = alpha_f
         self.beta = beta
         self.gamma = gamma
+        return
+
+    def set_newmark_beta_parameters(self, damping):
+        '''
+        Parametrize nonlinear generalized-alpha time integration scheme as Newmark-beta scheme.
+        '''
+
+        self.alpha_m = 0.0
+        self.alpha_f = 0.0
+        self.beta = 999.999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
+        self.gamma = 999.99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
         return
 
     def predict(self, q, dq, v, ddq):
@@ -774,7 +788,7 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         q += self.dt*dq + self.dt**2*(0.5 - self.beta)*ddq
         dq += self.dt*(1 - self.gamma)*ddq
         ddq *= 0
-        return
+        return q, dq, v, ddq
 
     def newton_raphson(self, q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old):
         '''
@@ -817,7 +831,7 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         q += delta_q
         dq += self.gamma/(self.beta*self.dt)*delta_q
         ddq += 1/(self.beta*self.dt**2)*delta_q
-        return
+        return q, dq, v, ddq
 
 
 class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
@@ -864,7 +878,7 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
     def overwrite_parameters(self, alpha_m, alpha_f, gamma):
         '''
-        Overwrite parameters for the nonlinear JWH-alpha time integration scheme.
+        Overwrite standard parameters for the nonlinear JWH-alpha time integration scheme.
         '''
 
         self.alpha_m = alpha_m
@@ -884,7 +898,7 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
               + self.alpha_f*self.dt*(1 - self.gamma)/self.alpha_m*ddq
         v += self.dt*(1 - self.gamma)*ddq
         ddq *= 0
-        return
+        return q, dq, v, ddq
 
     def newton_raphson(self, q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old):
         '''
@@ -926,7 +940,7 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         dq += 1/(self.gamma*self.dt)*delta_q
         v += self.alpha_m/(self.alpha_f*self.gamma*self.dt)*delta_q
         ddq += self.alpha_m/(self.alpha_f*self.gamma**2*self.dt**2)*delta_q
-        return
+        return q, dq, v, ddq
 
 
 class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
@@ -970,13 +984,24 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
     def overwrite_parameters(self, alpha_m, alpha_f, beta, gamma):
         '''
-        Overwrite parameters for the linear generalized-alpha time integration scheme.
+        Overwrite standard parameters for the linear generalized-alpha time integration scheme.
         '''
 
         self.alpha_m = alpha_m
         self.alpha_f = alpha_f
         self.beta = beta
         self.gamma = gamma
+        return
+
+    def set_newmark_beta_parameters(self, damping):
+        '''
+        Parametrize linear generalized-alpha time integration scheme as Newmark-beta scheme.
+        '''
+
+        self.alpha_m = 0.0
+        self.alpha_f = 0.0
+        self.beta = 999.999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
+        self.gamma = 999.99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
         return
 
     def effective_stiffness(self):
@@ -1001,7 +1026,7 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
         t_f = (1 - self.alpha_f)*t + self.alpha_f*t_old
 
-        f_ext_f = self.f_ext(None, None, t_f)
+        f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
 
         F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*self.mechanical_system.M_constr \
                 + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.mechanical_system.D_constr \

@@ -24,8 +24,9 @@ system = amfe.MechanicalSystem()
 system.load_mesh_from_gmsh(input_file, 1, material)
 system.apply_dirichlet_boundaries(5, 'xy')
 ndof = system.dirichlet_class.no_of_constrained_dofs
-system.apply_neumann_boundaries(key=3, val=1e8, direct=(0, -1), time_func=lambda t: 1)
-system.apply_rayleigh_damping(1e0, 1e-5)
+# system.apply_neumann_boundaries(key=3, val=5e8, direct=(0, -1), time_func=lambda t: t)  # statics
+system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: 1)  # dynamics
+# system.apply_rayleigh_damping(1e0, 1e-5)
 
 
 # define simulation parameters
@@ -34,6 +35,7 @@ options = {
     'number_of_load_steps': 10,
     'newton_damping': 1.0,
     'simplified_newton_iterations': 1,
+    't': 1.0,
     't0': 0.0,
     't_end': 0.4,
     'dt': 1e-3,
@@ -44,12 +46,12 @@ options = {
         'dq0': np.zeros(ndof)},
     'relative_tolerance': 1.0E-6,
     'absolute_tolerance': 1.0E-9,
-    'verbose': False,
+    'verbose': True,
     'max_number_of_iterations': 99,
     'convergence_abort': True,
     'write_iterations': False,
-    'track_number_of_iterations': True,
-    'save_solution': False}
+    'track_number_of_iterations': False,
+    'save_solution': True}
 
 linear = False
 # linear = True
@@ -58,13 +60,17 @@ statics = False
 scheme = 'GeneralizedAlpha'
 # scheme = 'JWHAlpha'
 if not linear:
-    filename = '_nonlinear_'
+    filename = '_nonlinear'
 else:
-    filename = '_linear_'
+    filename = '_linear'
 if not statics:
-    filename += 'dynamics_'
+    filename += '_dynamics'
 else:
-    filename += 'statics_'
+    filename += '_statics'
+if scheme is 'GeneralizedAlpha':
+    filename += '_generalizedalpha'
+elif scheme is 'JWHAlpha':
+    filename += '_jwhalpha'
 
 
 # solve system
@@ -89,8 +95,11 @@ else:
     else:  # linear statics
         solver = amfe.LinearStaticsSolver(mechanical_system=system, **options)
 
+print('\n System solver = ')
 print(solver)
+print('\n Linear solver =')
 print(solver.linear_solver)
+print('\n Solving...')
 solver.solve()
 
 
