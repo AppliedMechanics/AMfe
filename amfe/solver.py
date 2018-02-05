@@ -30,8 +30,8 @@ Module that contains solvers for solving systems in AMfe.
 #       solver.solve(self)
 #
 
-import numpy as np
 import scipy as sp
+import numpy as np
 import time
 
 from .mechanical_system import *
@@ -51,15 +51,15 @@ __all__ = ['choose_solver',
 
 
 abort_statement = '''
-###############################################################################
-#### The current computation has been aborted. No convergence was gained
-#### within the number of given iteration steps.
-###############################################################################
+#############################################################################
+#### The current computation has been aborted. No convergence was gained ####
+#### within the number of given iteration steps.                         ####
+#############################################################################
 '''
 
 
 # Most general solver class
-# --------------------
+# -------------------------
 class Solver:
     '''
     Most general solver class for the mechanical system.
@@ -76,13 +76,13 @@ class Solver:
         self.mechanical_system = mechanical_system
 
         # read options
-        if 'linsolver' in options:
-            self.linsolver = options['linsolver']
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
         else:
-            self.linsolver = PardisoSolver
+            self.linear_solver = PardisoSolver
 
-        if 'linsolveroptions' in options:
-            self.linsolveroptions = options['linsolveroptions']
+        if 'linear_solver_options' in options:
+            self.linear_solver_options = options['linear_solver_options']
         return
 
     def solve(self):
@@ -90,7 +90,7 @@ class Solver:
 
 
 # Solver classes for all statics solver
-# -------------------------------------------
+# -------------------------------------
 class NonlinearStaticsSolver(Solver):
     '''
     Class for solving the nonlinear static problem of the mechanical system.
@@ -107,55 +107,55 @@ class NonlinearStaticsSolver(Solver):
         super().__init__(mechanical_system, **options)
 
         # read options
-        if 'no_of_load_steps' in options:
-            self.no_of_load_steps = options['no_of_load_steps']
+        if 'number_of_load_steps' in options:
+            self.number_of_load_steps = options['number_of_load_steps']
         else:
-            self.no_of_load_steps = 10
+            self.number_of_load_steps = 10
 
-        if 'rtol' in options:
-            self.rtol = options['rtol']
+        if 'relative_tolerance' in options:
+            self.relative_tolerance = options['relative_tolerance']
         else:
-            self.rtol = 1.0E-9
+            self.relative_tolerance = 1.0E-9
 
-        if 'atol' in options:
-            self.atol = options['atol']
+        if 'absolute_tolerance' in options:
+            self.absolute_tolerance = options['absolute_tolerance']
         else:
-            self.atol = 1.0E-6
+            self.absolute_tolerance = 1.0E-6
 
         if 'newton_damping' in options:
             self.newton_damping = options['newton_damping']
         else:
             self.newton_damping = 1.0
 
-        if 'n_max_iter' in options:
-            self.n_max_iter = options['n_max_iter']
+        if 'max_number_of_iterations' in options:
+            self.max_number_of_iterations = options['max_number_of_iterations']
         else:
-            self.n_max_iter = 1000
+            self.max_number_of_iterations = 1000
 
-        if 'smplfd_nwtn_itr' in options:
-            self.smplfd_nwtn_itr = options['smplfd_nwtn_itr']
+        if 'simplified_newton_iterations' in options:
+            self.simplified_newton_iterations = options['simplified_newton_iterations']
         else:
-            self.smplfd_nwtn_itr = 1
+            self.simplified_newton_iterations = 1
 
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
             self.verbose = False
 
-        if 'track_niter' in options:
-            self.track_niter = options['track_niter']
+        if 'track_number_of_iterations' in options:
+            self.track_number_of_iterations = options['track_number_of_iterations']
         else:
-            self.track_niter = False
+            self.track_number_of_iterations = False
 
-        if 'write_iter' in options:
-            self.write_iter = options['write_iter']
+        if 'write_iterations' in options:
+            self.write_iterations = options['write_iterations']
         else:
-            self.write_iter = False
+            self.write_iterations = False
 
-        if 'conv_abort' in options:
-            self.conv_abort = options['conv_abort']
+        if 'convergence_abort' in options:
+            self.convergence_abort = options['convergence_abort']
         else:
-            self.conv_abort = True
+            self.convergence_abort = True
 
         if 'save' in options:
             self.save = options['save']
@@ -170,11 +170,10 @@ class NonlinearStaticsSolver(Solver):
         Parameters
         ----------
 
-
         Returns
         -------
-        u_output : ndarray, shape(ndim, no_of_load_steps)
-            Static displacement field (solution); q[:,-1] is the final (last) displacement.
+        displacement : ndarray, shape(ndim, number_of_load_steps)
+            Static displacement field (solution); q[:,-1] is the final displacement.
         '''
         # start time measurement
         t_clock_start = time.time()
@@ -183,7 +182,7 @@ class NonlinearStaticsSolver(Solver):
         self.mechanical_system.clear_timesteps()
         iteration_info = []
         u_output = []
-        stepwidth = 1/self.no_of_load_steps
+        stepwidth = 1/self.number_of_load_steps
         K, f_int = self.mechanical_system.K_and_f()
         ndof = K.shape[0]
         u = np.zeros(ndof)
@@ -203,15 +202,15 @@ class NonlinearStaticsSolver(Solver):
 
             # Newton iteration loop
             n_iter = 0
-            while (abs_res > self.rtol*abs_f_ext + self.atol) and (self.n_max_iter > n_iter):
+            while (abs_res > self.relative_tolerance*abs_f_ext + self.absolute_tolerance) and (self.max_number_of_iterations > n_iter):
 
                 # solve for correction
-                self.linsolver.set_A(K)
-                delta_u = self.linsolver.solve(res)
+                self.linear_solver.set_A(K)
+                delta_u = self.linear_solver.solve(res)
 
                 # correct displacement
                 u += delta_u*self.newton_damping
-                if (n_iter % self.smplfd_nwtn_itr) is 0:
+                if (n_iter % self.simplified_newton_iterations) is 0:
                     K, f_int = self.mechanical_system.K_and_f(u, t)
                     f_ext = self.mechanical_system.f_ext(u, du, t)
                 res = -f_int + f_ext
@@ -222,11 +221,11 @@ class NonlinearStaticsSolver(Solver):
                 if self.verbose:
                     print('Step: {0:3d}, iteration#: {1:3d}, residual: {2:6.3E}'.format(int(t), n_iter, abs_res))
 
-                if self.write_iter:
+                if self.write_iterations:
                     self.mechanical_system.write_timestep(t + n_iter*0.000001, u)
 
                 # exit, if max iterations exceeded
-                if (n_iter >= self.n_max_iter) and self.conv_abort:
+                if (n_iter >= self.max_number_of_iterations) and self.convergence_abort:
                     u_output = np.array(u_output).T
                     print(abort_statement)
                     t_clock_end = time.time()
@@ -239,7 +238,7 @@ class NonlinearStaticsSolver(Solver):
                 self.mechanical_system.write_timestep(t, u)
             u_output.append(u.copy())
 
-            if self.track_niter:
+            if self.track_number_of_iterations:
                 iteration_info.append((t, n_iter, abs_res))
 
         # end of load step loop
@@ -297,8 +296,8 @@ class LinearStaticsSolver(Solver):
         self.mechanical_system.write_timestep(0.0, 0.0*f_ext)  # write initial state
 
         print('Start solving linear static problem...')
-        self.linsolver.set_A(K)
-        u = self.linsolver.solve(f_ext)
+        self.linear_solver.set_A(K)
+        u = self.linear_solver.solve(f_ext)
         self.mechanical_system.write_timestep(self.t, u)  # write deformed state
         print('Static problem solved.')
         return u
@@ -317,7 +316,7 @@ class NonlinearDynamicsSolver(Solver):
     options : Dictionary
         Options for solver:
         initial_conditions : dict {'q0': numpy.array, 'dq0': numpy.array}
-            Initial conditions/displacement and velocity for solver.
+            Initial conditions/initial displacement and initial velocity for solver.
         t0 : float
             Initial time.
         t_end : float
@@ -326,22 +325,20 @@ class NonlinearDynamicsSolver(Solver):
             Time step size for time integration.
         dt_output : float
             Time step size for output.
-        rtol : float
+        relative_tolerance : float
 
-        atol : float
+        absolute_tolerance : float
 
-        n_iter_max : int
+        max_number_of_iterations : int
 
-        conv_abort : Boolean
+        convergence_abort : Boolean
 
         verbose : Boolean
             If true, show some more information in command line.
-        write_iter : Boolean
+        write_iterations : Boolean
             If true, write iteration steps.
-        track_niter : Boolean
+        track_number_of_iterations : Boolean
 
-        use_v : Boolean
-            If true, time integration scheme needs additional variable v.
 
 
     References
@@ -380,45 +377,40 @@ class NonlinearDynamicsSolver(Solver):
         else:
             self.dt_output = self.dt
 
-        if 'rtol' in options:
-            self.rtol = options['rtol']
+        if 'relative_tolerance' in options:
+            self.relative_tolerance = options['relative_tolerance']
         else:
-            self.rtol = 1.0E-9
+            self.relative_tolerance = 1.0E-9
 
-        if 'atol' in options:
-            self.atol = options['atol']
+        if 'absolute_tolerance' in options:
+            self.absolute_tolerance = options['absolute_tolerance']
         else:
-            self.atol = 1.0E-6
+            self.absolute_tolerance = 1.0E-6
 
-        if 'n_iter_max' in options:
-            self.n_iter_max = options['n_iter_max']
+        if 'max_number_of_iterations' in options:
+            self.max_number_of_iterations = options['max_number_of_iterations']
         else:
-            self.n_iter_max = 30
+            self.max_number_of_iterations = 30
 
-        if 'conv_abort' in options:
-            self.conv_abort = options['conv_abort']
+        if 'convergence_abort' in options:
+            self.convergence_abort = options['convergence_abort']
         else:
-            self.conv_abort = True
+            self.convergence_abort = True
 
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
             self.verbose = False
 
-        if 'write_iter' in options:
-            self.write_iter = options['write_iter']
+        if 'write_iterations' in options:
+            self.write_iterations = options['write_iterations']
         else:
-            self.write_iter = False
+            self.write_iterations = False
 
-        if 'track_niter' in options:
-            self.track_niter = options['track_niter']
+        if 'track_number_of_iterations' in options:
+            self.track_number_of_iterations = options['track_number_of_iterations']
         else:
-            self.track_niter = False
-
-        if 'use_v' in options:
-            self.use_v = options['use_v']
-        else:
-            self.use_v = False
+            self.track_number_of_iterations = False
         return
 
     def set_initial_conditions(self, **options):
@@ -439,7 +431,7 @@ class NonlinearDynamicsSolver(Solver):
             dq0 = np.zeros(self.mechanical_system.no_of_dofs)
         return {'q0':q0, 'dq0':dq0}
 
-    def set_parameters(self, **options):
+    def overwrite_parameters(self, **options):
         pass
 
     def predict(self, q, dq, v, ddq):
@@ -457,7 +449,6 @@ class NonlinearDynamicsSolver(Solver):
     
         Parameters
         ----------
-
         '''
 
 
@@ -472,16 +463,16 @@ class NonlinearDynamicsSolver(Solver):
         time_range = np.arange(self.t0, self.t_end, self.dt_output)
         q = self.initial_conditions['q0'].copy()
         dq = self.initial_conditions['dq0'].copy()
-        if self.use_v:
+        if self.use_additional_variable_v:
             v = self.initial_conditions['dq0'].copy()
         else:
             v = np.empty((0, 0))
         ddq = np.zeros_like(q)
         f_ext = np.zeros_like(q)
-        abs_f_ext = self.atol
+        abs_f_ext = self.absolute_tolerance
         time_index = 0
         eps = 1E-13
-        self.set_parameters(**self.options)
+        self.overwrite_parameters(**self.options)
 
         # time step loop
         while time_index < len(time_range):
@@ -511,11 +502,11 @@ class NonlinearDynamicsSolver(Solver):
 
             # Newton-Raphson iteration loop
             n_iter = 0
-            while res_abs > self.rtol*abs_f_ext + self.atol:
+            while res_abs > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
 
                 # solve for correction
-                self.linsolver.set_A(Jac)
-                delta_q = -self.linsolver.solve(res)
+                self.linear_solver.set_A(Jac)
+                delta_q = -self.linear_solver.solve(res)
     
                 # correct variables
                 self.correct(q, dq, v, ddq, delta_q)
@@ -533,13 +524,13 @@ class NonlinearDynamicsSolver(Solver):
                     print('Iteration: {0:3d}, residual: {1:6.3E}, condition# of Jacobian: {2:6.3E}'.format(
                         n_iter, res_abs, cond_nr))
 
-                if self.write_iter:
+                if self.write_iterations:
                     t_write = t + dt/1000000*n_iter
                     self.mechanical_system.write_timestep(t_write, q.copy())
 
                 # catch failing convergence
-                if n_iter > self.n_iter_max:
-                    if self.conv_abort:
+                if n_iter > self.max_number_of_iterations:
+                    if self.convergence_abort:
                         print(abort_statement)
                         self.iteration_info = np.array(self.iteration_info)
                         t_clock_end = time.time()
@@ -556,12 +547,12 @@ class NonlinearDynamicsSolver(Solver):
                 # end of Newton-Raphson iteration loop
 
             print('Time: {0:3.6f}, #iterations: {1:3d}, residual: {2:6.3E}'.format(t, n_iter, res_abs))
-            if self.track_niter:
+            if self.track_number_of_iterations:
                 self.iteration_info.append((t, n_iter, res_abs))
 
             # end of time step loop
 
-        self.linsolver.clear()
+        self.linear_solver.clear()
 
         # save iteration info
         self.iteration_info = np.array(self.iteration_info)
@@ -623,11 +614,6 @@ class LinearDynamicsSolver(Solver):
             self.verbose = options['verbose']
         else:
             self.verbose = False
-
-        if 'use_v' in options:
-            self.use_v = options['use_v']
-        else:
-            self.use_v = False
         return
 
     def set_initial_conditions(self, **options):
@@ -647,6 +633,9 @@ class LinearDynamicsSolver(Solver):
             print('Attention: No input for initial velocity is given, setting dq0 = 0.')
             dq0 = np.zeros(self.mechanical_system.no_of_dofs)
         return {'q0':q0, 'dq0':dq0}
+
+    def overwrite_parameters(self, **options):
+        pass
 
     def effective_stiffness(self):
         pass
@@ -676,26 +665,25 @@ class LinearDynamicsSolver(Solver):
         time_range = np.arange(self.t0, self.t_end, self.dt_output)
         q = self.initial_conditions['q0'].copy()
         dq = self.initial_conditions['dq0'].copy()
-        if self.use_v:
+        if self.use_additional_variable_v:
             v = self.initial_conditions['dq0'].copy()
         else:
             v = np.empty((0,0))
-        ddq = np.zeros_like(dq)
         time_index = 0
         eps = 1E-13
-        self.set_parameters(**self.options)
+        self.overwrite_parameters(**self.options)
 
         # evaluate initial acceleration and LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
 
-        self.linsolver.set_A(self.mechanical_system.M_constr)
-        ddq = self.linsolver.solve(self.mechanical_system.f_ext(q, dq, t)
+        self.linear_solver.set_A(self.mechanical_system.M_constr)
+        ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t)
                                    - self.mechanical_system.D_constr@dq \
                                    - self.mechanical_system.K_constr@q)
 
-        self.linsolver.set_A(K_eff)
-        if hasattr(self.linsolver, 'factorize'):
-            self.linsolver.factorize()
+        self.linear_solver.set_A(K_eff)
+        if hasattr(self.linear_solver, 'factorize'):
+            self.linear_solver.factorize()
 
         # time step loop
         while time_index < len(time_range):
@@ -718,7 +706,7 @@ class LinearDynamicsSolver(Solver):
             t += dt
             f_eff = self.effective_force(q_old, dq_old, v_old, ddq_old, t, t_old)
 
-            q = self.linsolver.solve(f_eff)
+            q = self.linear_solver.solve(f_eff)
 
             # update variables
             dq, v, ddq = self.update(q, q_old, dq_old, v_old, ddq_old)
@@ -726,7 +714,7 @@ class LinearDynamicsSolver(Solver):
 
             # end of time step loop
 
-        self.linsolver.clear()
+        self.linear_solver.clear()
 
         # end time measurement
         t_clock_end = time.time()
@@ -760,23 +748,32 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
     def __init__(self, mechanical_system, **options):
         super().__init__(mechanical_system, **options)
-        self.use_v = False
+
+        self.use_additional_variable_v = False
+
+        # read options
         if 'rho_inf' in options:
             self.rho_inf = options['rho_inf']
         else:
             self.rho_inf = 0.9
             print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
+
+        # set parameters
+        self.alpha_m = (2 * self.rho_inf - 1) / (self.rho_inf + 1)
+        self.alpha_f = self.rho_inf / (self.rho_inf + 1)
+        self.beta = 0.25 * (1 - self.alpha_m + self.alpha_f) ** 2
+        self.gamma = 0.5 - self.alpha_m + self.alpha_f
         return
 
-    def set_parameters(self, options):
+    def overwrite_parameters(self, alpha_m, alpha_f, beta, gamma):
         '''
-        Set parameters for the nonlinear generalized-alpha time integration scheme.
+        Overwrite parameters for the nonlinear generalized-alpha time integration scheme.
         '''
 
-        self.alpha_m = (2*self.rho_inf - 1)/(self.rho_inf + 1)
-        self.alpha_f = self.rho_inf/(self.rho_inf + 1)
-        self.beta = 0.25*(1 - self.alpha_m + self.alpha_f)**2
-        self.gamma = 0.5 - self.alpha_m + self.alpha_f
+        self.alpha_m = alpha_m
+        self.alpha_f = alpha_f
+        self.beta = beta
+        self.gamma = gamma
         return
 
     def predict(self, q, dq, v, ddq):
@@ -859,22 +856,30 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
     def __init__(self, mechanical_system, **options):
         super().__init__(mechanical_system, **options)
-        self.use_v = True
+
+        self.use_additional_variable_v = True
+
+        # read options
         if 'rho_inf' in options:
             self.rho_inf = options['rho_inf']
         else:
             self.rho_inf = 0.9
             print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
+
+        # set parameters
+        self.alpha_m = (3 - self.rho_inf) / (2 * (1 + self.rho_inf))
+        self.alpha_f = 1 / (1 + self.rho_inf)
+        self.gamma = 0.5 + self.alpha_m - self.alpha_f
         return
 
-    def set_parameters(self, options):
+    def overwrite_parameters(self, alpha_m, alpha_f, gamma):
         '''
-        Set parameters for the nonlinear JWH-alpha time integration scheme.
+        Overwrite parameters for the nonlinear JWH-alpha time integration scheme.
         '''
 
-        self.alpha_m = (3 - self.rho_inf)/(2*(1 + self.rho_inf))
-        self.alpha_f = 1/(1 + self.rho_inf)
-        self.gamma = 0.5 + self.alpha_m - self.alpha_f
+        self.alpha_m = alpha_m
+        self.alpha_f = alpha_f
+        self.gamma = gamma
         return
 
     def predict(self, q, dq, v, ddq):
@@ -957,23 +962,32 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
     def __init__(self, mechanical_system, **options):
         super().__init__(mechanical_system, **options)
-        self.use_v = False
+
+        self.use_additional_variable_v = False
+
+        # read options
         if 'rho_inf' in options:
             self.rho_inf = options['rho_inf']
         else:
             self.rho_inf = 0.9
             print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
+
+        # set parameters
+        self.alpha_m = (2 * self.rho_inf - 1) / (self.rho_inf + 1)
+        self.alpha_f = self.rho_inf / (self.rho_inf + 1)
+        self.beta = 0.25 * (1 - self.alpha_m + self.alpha_f) ** 2
+        self.gamma = 0.5 - self.alpha_m + self.alpha_f
         return
 
-    def set_parameters(self, dt, options):
+    def overwrite_parameters(self, alpha_m, alpha_f, beta, gamma):
         '''
-        Set parameters for the linear generalized-alpha time integration scheme.
+        Overwrite parameters for the linear generalized-alpha time integration scheme.
         '''
 
-        self.alpha_m = (2*self.rho_inf - 1)/(self.rho_inf + 1)
-        self.alpha_f = self.rho_inf/(self.rho_inf + 1)
-        self.beta = 0.25*(1 - self.alpha_m + self.alpha_f)**2
-        self.gamma = 0.5 - self.alpha_m + self.alpha_f
+        self.alpha_m = alpha_m
+        self.alpha_f = alpha_f
+        self.beta = beta
+        self.gamma = gamma
         return
 
     def effective_stiffness(self):
@@ -1048,22 +1062,30 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
     def __init__(self, mechanical_system, **options):
         super().__init__(mechanical_system, **options)
-        self.use_v = True
+
+        self.use_additional_variable_v = True
+
+        # read options
         if 'rho_inf' in options:
             self.rho_inf = options['rho_inf']
         else:
             self.rho_inf = 0.9
             print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
+
+        # set parameters
+        self.alpha_m = (3 - self.rho_inf) / (2 * (1 + self.rho_inf))
+        self.alpha_f = 1 / (1 + self.rho_inf)
+        self.gamma = 0.5 + self.alpha_m - self.alpha_f
         return
 
-    def set_parameters(self, dt, options):
+    def overwrite_parameters(self, alpha_m, alpha_f, gamma):
         '''
-        Set parameters for the nonlinear JWH-alpha time integration scheme.
+        Overwrite parameters for the nonlinear JWH-alpha time integration scheme.
         '''
 
-        self.alpha_m = (3 - self.rho_inf)/(2*(1 + self.rho_inf))
-        self.alpha_f = 1/(1 + self.rho_inf)
-        self.gamma = 0.5 + self.alpha_m - self.alpha_f
+        self.alpha_m = alpha_m
+        self.alpha_f = alpha_f
+        self.gamma = gamma
         return
 
     def effective_stiffness(self):
