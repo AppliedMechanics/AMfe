@@ -467,7 +467,7 @@ class NonlinearDynamicsSolver(Solver):
         self.iteration_info = []
         t = self.t0
         dt = self.dt
-        self.time_range = np.arange(self.t0, self.tend, self.dt_output)
+        self.time_range = np.arange(self.t0, self.t_end, self.dt_output)
         q = self.initial_conditions['q0'].copy()
         dq = self.initial_conditions['dq0'].copy()
         if self.use_v:
@@ -592,24 +592,38 @@ class LinearDynamicsSolver(Solver):
 
         # read options
         self.initial_conditions = self.set_initial_conditions(options['initial_conditions'])
+
         if 't0' in options:
             self.t0 = options['t0']
         else:
-            self.t0 = 0
-        if 'tend' in options:
-            self.tend = options['tend']
+            print('Attention: No initial time was given for time-integration, setting t0 = 0.0.')
+            self.t0 = 0.0
+
+        if 't_end' in options:
+            self.t_end = options['t_end']
         else:
-            print('Attention: No endtime was given for the time-integration, choose 1')
-            self.tend = 1
+            print('Attention: No end time was given for time-integration, setting t_end = 1.0.')
+            self.t_end = 1.0
+
+        if 'dt' in options:
+            self.dt = options['dt']
+        else:
+            raise ValueError('Error: No time step size was given for the time integration.')
+
         if 'dt_output' in options:
             self.dt_output = options['dt_output']
         else:
-            print('Attention: No dt_output was given, choose 100 timesteps')
-            self.dt_output = np.arange(self.t0, self.tend, (self.tend - self.t0)/100)
+            self.dt_output = self.dt
+
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
             self.verbose = False
+
+        if 'use_v' in options:
+            self.use_v = options['use_v']
+        else:
+            self.use_v = False
         return
 
     def set_initial_conditions(self, **options):
@@ -641,23 +655,11 @@ class LinearDynamicsSolver(Solver):
 
     def solve(self):
         '''
-        Solves the linear dynamic problem of the mechanical system linearized around 
-        zero-displacement.
+        Solves the linear dynamic problem of the mechanical system linearized around zero-displacement.
     
         Parameters
         ----------
-        q0 : ndarray
-            Start displacement.
-        dq0 : ndarray
-            Start velocity.
-        t0 : float
-            Start time.
-        t_end : float
-            End time.
-        dt : float
-            Time step size.
-        options : Dictionary
-            Options for solver.
+
         '''
 
         # start time measurement
@@ -665,33 +667,25 @@ class LinearDynamicsSolver(Solver):
 
         # initialize variables and set parameters
         self.mechanical_system.clear_timesteps()
-        # q0, dq0, t0, t_end, dt, options
         t = self.t0
-        q0 = self.initial_conditions['q0']
-        dq0 = self.initial_conditions['dq0']
-        if 'ddq0' in self.initial_conditions:
-            ddq0 = self.initial_conditions['ddq0']
-        else:
-            ddq0 = None
-
-        time_range = np.arange(self.t0, self.tend, self.dt_output)
-
-        q = q0.copy()
-        dq = dq0.copy()
+        dt = self.dt
+        time_range = np.arange(self.t0, self.t_end, self.dt_output)
+        q = self.initial_conditions['q0'].copy()
+        dq = self.initial_conditions['dq0'].copy()
         if self.use_v:
-            v = dq0.copy()
+            v = self.initial_conditions['dq0'].copy()
         else:
             v = np.empty((0,0))
         ddq = np.zeros_like(q0)
         time_index = 0
         eps = 1E-13
-        self.set_parameters(dt, options)
+        self.set_parameters(options)
 
         # evaluate initial acceleration and LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
 
         self.linsolver.set_A(self.mechanical_system.M_constr)
-        ddq = self.linsolver.solve(self.mechanical_system.f_ext(q, dq, t) \
+        ddq = self.linsolver.solve(self.mechanical_system.f_ext(q, dq, t)
                                    - self.mechanical_system.D_constr@dq \
                                    - self.mechanical_system.K_constr@q)
 
@@ -732,8 +726,7 @@ class LinearDynamicsSolver(Solver):
 
         # end time measurement
         t_clock_end = time.time()
-        print('Time for time marching integration: {0:6.3f} seconds'.format(
-                t_clock_end - t_clock_start))
+        print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
         return
 
 
