@@ -354,7 +354,7 @@ class NonlinearDynamicsSolver(Solver):
         super().__init__(mechanical_system, **options)
 
         # read options
-        self.set_initial_conditions(options)
+        self.initial_conditions = self.set_initial_conditions(options)
 
         if 't0' in options:
             self.t0 = options['t0']
@@ -591,8 +591,7 @@ class LinearDynamicsSolver(Solver):
         super().__init__(mechanical_system, **options)
 
         # read options
-        if 'initial_conditions' in options:
-            self.initial_conditions = self.validate_initial_conditions(options['initial_conditions'])
+        self.initial_conditions = self.set_initial_conditions(options['initial_conditions'])
         if 't0' in options:
             self.t0 = options['t0']
         else:
@@ -613,26 +612,23 @@ class LinearDynamicsSolver(Solver):
             self.verbose = False
         return
 
-    def validate_initial_conditions(self, initial_conditions):
-        if 'q0' in initial_conditions:
-            q0 = initial_conditions['q0']
+    def set_initial_conditions(self, **options):
+        if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
+            q0 = options['initial_conditions']['q0']
             if len(q0) != self.mechanical_system.no_of_dofs:
-                raise ValueError('The dimension of q0 is not valid for mechanical system')
+                raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
         else:
-            print('No input for q0 is given, choose q0 = 0')
-            initial_conditions['q0'] = np.zeros(self.mechanical_system.no_of_dofs)
-        if 'dq0' in initial_conditions:
-            dq0 = initial_conditions['dq0']
+            print('Attention: No input for initial displacement is given, setting q0 = 0.')
+            q0 = np.zeros(self.mechanical_system.no_of_dofs)
+
+        if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
+            dq0 = options['initial_conditions']['dq0']
             if len(dq0) != self.mechanical_system.no_of_dofs:
-                raise ValueError('The dimension of dq0 is not valid for mechanical system')
+                raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
-            print('No input for dq0 is given, choose dq0 = 0')
-            initial_conditions['dq0'] = np.zeros(self.mechanical_system.no_of_dofs)
-        if 'ddq0' in initial_conditions:
-            ddq0 = initial_conditions['ddq0']
-            if len(ddq0) != self.mechanical_system.no_of_dofs:
-                raise ValueError('The dimension of ddq0 is not valid for mechanical system')
-        return initial_conditions
+            print('Attention: No input for initial velocity is given, setting dq0 = 0.')
+            dq0 = np.zeros(self.mechanical_system.no_of_dofs)
+        return {'q0':q0, 'dq0':dq0}
 
     def effective_stiffness(self):
         pass
