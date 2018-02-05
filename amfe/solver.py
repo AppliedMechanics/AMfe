@@ -362,14 +362,14 @@ class NonlinearDynamicsSolver(Solver):
                 raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
         else:
             print('Attention: No input for initial displacement is given, setting q0 = 0.')
-            q0 = np.zeros(self.mechanical_system.no_of_dofs)
+            q0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
             dq0 = options['initial_conditions']['dq0']
             if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
                 raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
             print('Attention: No input for initial velocity is given, setting dq0 = 0.')
-            dq0 = np.zeros(self.mechanical_system.no_of_dofs)
+            dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'q0': q0, 'dq0': dq0}
 
         if 't0' in options:
@@ -585,7 +585,7 @@ class LinearDynamicsSolver(Solver):
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
-            if len(q0) != self.mechanical_system.no_of_dofs:
+            if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
                 raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
         else:
             print('Attention: No input for initial displacement is given, setting q0 = 0.')
@@ -596,7 +596,7 @@ class LinearDynamicsSolver(Solver):
                 raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
             print('Attention: No input for initial velocity is given, setting dq0 = 0.')
-            dq0 = np.zeros(self.mechanical_system.no_of_dofs)
+            dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'q0':q0, 'dq0':dq0}
 
         if 't0' in options:

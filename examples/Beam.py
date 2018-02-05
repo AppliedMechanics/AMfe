@@ -52,48 +52,53 @@ options = {
     'save_solution': False}
 
 linear = False
-static = False
-scheme = 'GeneralizedAlpha'  # 'JWHAlpha'
+# linear = True
+statics = False
+# statics = False
+scheme = 'GeneralizedAlpha'
+# scheme = 'JWHAlpha'
 if not linear:
     filename = '_nonlinear_'
 else:
     filename = '_linear_'
-if not static:
+if not statics:
     filename += 'dynamics_'
 else:
     filename += 'statics_'
 
 
 # solve system
-if not static:
-    if not linear:# non-linear dynamics
+if not statics:
+    if not linear:  # non-linear dynamics
         if scheme is 'GeneralizedAlpha':
             solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
         elif scheme is 'JWHAlpha':
-            pass
+            solver = amfe.JWHAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
         else:
-            raise ValueError('Non-supported time integration scheme.')
-    else:# linear dynamics
-        pass
+            raise ValueError('Time integration scheme not supported!')
+    else:  # linear dynamics
+        if scheme is 'GeneralizedAlpha':
+            solver = amfe.GeneralizedAlphaLinearDynamicsSolver(mechanical_system=system, **options)
+        elif scheme is 'JWHAlpha':
+            solver = amfe.JWHAlphaLinearDynamicsSolver(mechanical_system=system, **options)
+        else:
+            raise ValueError('Time integration scheme not supported!')
 else:
-    if not linear:# non-linear statics
-        pass
-    else:# linear statics
-        pass
+    if not linear:  # non-linear statics
+        solver = amfe.NonlinearStaticsSolver(mechanical_system=system, **options)
+    else:  # linear statics
+        solver = amfe.LinearStaticsSolver(mechanical_system=system, **options)
+
+print(solver)
+solver.solve()
 
 
 # write output
-# end = len(my_system.u_output)
-# my_file = open(output_file + filename + 'mechForm.dat', 'w')
-# my_time = []
-# my_displX = []
-# my_displY = []
-# for i in range(end):
-#     my_time.append(my_system.T_output[i])
-#     my_displX.append(my_system.u_output[i][2])
-#     my_displY.append(my_system.u_output[i][3])
-#     my_file.write(str(my_time[i]) + ' ' + str(my_displX[i]) + ' ' + str(my_displY[i]) + '\n')
-# my_file.close()
+system.export_paraview(output_file + filename)
 
-#my_system.export_paraview(output_file + filename + 'mechForm')
+end = len(system.u_output)
+file = open(output_file + filename + '.dat', 'w')
+for i in range(end):
+    file.write(str(system.T_output[i]) + ' ' + str(system.u_output[i][2]) + ' ' + str(system.u_output[i][3]) + '\n')
+file.close()
 
