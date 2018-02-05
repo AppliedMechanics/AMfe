@@ -72,7 +72,7 @@ class Solver:
         Options for solver.
     '''
 
-    def __init__(self, mechanical_system, options):
+    def __init__(self, mechanical_system, **options):
         self.mechanical_system = mechanical_system
 
         if 'linsolver' in options:
@@ -102,7 +102,7 @@ class NonlinearStaticsSolver(Solver):
         Options for solver.
     '''
 
-    def __init__(self, mechanical_system, options):
+    def __init__(self, mechanical_system, **options):
         super().__init__(mechanical_system, options)
 
         # read options
@@ -297,7 +297,25 @@ class NonlinearDynamicsSolver(Solver):
     mechanical_system : Instance of MechanicalSystem
         Mechanical system to be solved.
     options : Dictionary
-        Options for solver.
+        Options for solver:
+        initial_conditions : dict {'q0': numpy.array, 'dq0': numpy.array, 'ddq0': numpy.array}
+            initial conditions for the solver
+        dt_output : numpy array
+            timesteps
+        rtol : float
+        
+        atol : float
+        
+        n_iter_max : int
+        
+        conv_abort :
+        
+        verbose : Boolean
+            If true, show some more information in command line
+        write_iter : Boolean
+            If true, write iteration steps
+        track_niter : Boolean
+            ?
 
     References
     ----------
@@ -305,14 +323,26 @@ class NonlinearDynamicsSolver(Solver):
             application to structural dynamics. ISBN 978-1-118-90020-8.
     '''
 
-    def __init__(self, mechanical_system, options):
-        super().__init__(mechanical_system, options)
+    def __init__(self, mechanical_system, **options):
+        super().__init__(mechanical_system, **options)
 
         # read options
+        if 'initial_conditions' in options:
+            self.initial_conditions = self.validate_initial_conditions(options['initial_conditions'])
+        if 't0' in options:
+            self.t0 = options['t0']
+        else:
+            self.t0 = 0
+        if 'tend' in options:
+            self.tend = options['tend']
+        else:
+            print('Attention: No endtime was given for the time-integration, choose 1')
+            self.tend = 1
         if 'dt_output' in options:
             self.dt_output = options['dt_output']
         else:
-            self.dt_output = None
+            print('Attention: No dt_output was given, choose 100 timesteps')
+            self.dt_output = (self.tend - self.t0)/100
         if 'rtol' in options:
             self.rtol = options['rtol']
         else:
@@ -341,10 +371,58 @@ class NonlinearDynamicsSolver(Solver):
             self.track_niter = options['track_niter']
         else:
             self.track_niter = False
-        return
+        if 'use_v' in options:
+            self.use_v = options['use_v']
+        else:
+            self.use_v =False
 
-    def set_parameters(self, dt, options):
-        pass
+    def validate_initial_conditions(self, initial_conditions):
+        if 'q0' in initial_conditions:
+            q0 = initial_conditions['q0']
+            if len(q0) != self.mechanical_system.no_of_dofs:
+                raise ValueError('The dimension of q0 is not valid for mechanical system')
+        else:
+            print('No input for q0 is given, choose q0 = 0')
+            initial_conditions['q0'] = np.zeros(self.mechanical_system.no_of_dofs)
+        if 'dq0' in initial_conditions:
+            dq0 = initial_conditions['dq0']
+            if len(dq0) != self.mechanical_system.no_of_dofs:
+                raise ValueError('The dimension of dq0 is not valid for mechanical system')
+        else:
+            print('No input for dq0 is given, choose dq0 = 0')
+            initial_conditions['dq0'] = np.zeros(self.mechanical_system.no_of_dofs)
+        if 'ddq0' in initial_conditions:
+            ddq0 = initial_conditions['ddq0']
+            if len(ddq0) != self.mechanical_system.no_of_dofs:
+                raise ValueError('The dimension of ddq0 is not valid for mechanical system')
+        return initial_conditions
+
+    def set_parameters(self, **options):
+        # read options
+        if 'initial_conditions' in options:
+            self.initial_conditions = self.validate_initial_conditions(options['initial_conditions'])
+        if 't0' in options:
+            self.t0 = options['t0']
+        if 'tend' in options:
+            self.tend = options['tend']
+        if 'dt_output' in options:
+            self.dt_output = options['dt_output']
+        if 'rtol' in options:
+            self.rtol = options['rtol']
+        if 'atol' in options:
+            self.atol = options['atol']
+        if 'n_iter_max' in options:
+            self.n_iter_max = options['n_iter_max']
+        if 'conv_abort' in options:
+            self.conv_abort = options['conv_abort']
+        if 'verbose' in options:
+            self.verbose = options['verbose']
+        if 'write_iter' in options:
+            self.write_iter = options['write_iter']
+        if 'track_niter' in options:
+            self.track_niter = options['track_niter']
+        if 'use_v' in options:
+            self.use_v = options['use_v']
 
     def predict(self, q, dq, v, ddq):
         pass
@@ -355,7 +433,7 @@ class NonlinearDynamicsSolver(Solver):
     def correct(self, q, dq, v, ddq, delta_q):
         pass
 
-    def solve(self, q0, dq0, t0, t_end, dt, options):
+    def solve(self):
         '''
         Solves the nonlinear dynamic problem of the mechanical system.
     
@@ -375,17 +453,20 @@ class NonlinearDynamicsSolver(Solver):
             Options for solver.
         '''
 
+        # t0, t_end, dt, options
+        q0 = self.initial_conditions['q0']
+        dq0 = self.initial_conditions['dq0']
+
         # start time measurement
         t_clock_start = time.time()
 
         # initialize variables and set parameters
         self.mechanical_system.clear_timesteps()
         self.iteration_info = []
-        t = t0
-        if self.dt_output is not None:
-            time_range = np.arange(t0, t_end, self.dt_output)
-        else:
-            time_range = np.arange(t0, t_end, dt)
+        t = self.t0
+
+        self.time_range = np.arange(self.t0, self.tend, self.dt_output)
+
         q = q0.copy()
         dq = dq0.copy()
         if self.use_v:
@@ -397,7 +478,7 @@ class NonlinearDynamicsSolver(Solver):
         abs_f_ext = self.atol
         time_index = 0
         eps = 1E-13
-        self.set_parameters(dt, options)
+        self.set_parameters(options)
 
         # time step loop
         while time_index < len(time_range):
@@ -513,19 +594,52 @@ class LinearDynamicsSolver(Solver):
             application to structural dynamics. ISBN 978-1-118-90020-8.
     '''
 
-    def __init__(self, mechanical_system, options):
-        super().__init__(mechanical_system, options)
+    def __init__(self, mechanical_system, **options):
+        super().__init__(mechanical_system, **options)
 
         # read options
+        if 'initial_conditions' in options:
+            self.initial_conditions = self.validate_initial_conditions(options['initial_conditions'])
+        if 't0' in options:
+            self.t0 = options['t0']
+        else:
+            self.t0 = 0
+        if 'tend' in options:
+            self.tend = options['tend']
+        else:
+            print('Attention: No endtime was given for the time-integration, choose 1')
+            self.tend = 1
         if 'dt_output' in options:
             self.dt_output = options['dt_output']
         else:
-            self.dt_output = None
+            print('Attention: No dt_output was given, choose 100 timesteps')
+            self.dt_output = np.arange(self.t0, self.tend, (self.tend - self.t0)/100)
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
             self.verbose = False
         return
+
+    def validate_initial_conditions(self, initial_conditions):
+        if 'q0' in initial_conditions:
+            q0 = initial_conditions['q0']
+            if len(q0) != self.mechanical_system.no_of_dofs:
+                raise ValueError('The dimension of q0 is not valid for mechanical system')
+        else:
+            print('No input for q0 is given, choose q0 = 0')
+            initial_conditions['q0'] = np.zeros(self.mechanical_system.no_of_dofs)
+        if 'dq0' in initial_conditions:
+            dq0 = initial_conditions['dq0']
+            if len(dq0) != self.mechanical_system.no_of_dofs:
+                raise ValueError('The dimension of dq0 is not valid for mechanical system')
+        else:
+            print('No input for dq0 is given, choose dq0 = 0')
+            initial_conditions['dq0'] = np.zeros(self.mechanical_system.no_of_dofs)
+        if 'ddq0' in initial_conditions:
+            ddq0 = initial_conditions['ddq0']
+            if len(ddq0) != self.mechanical_system.no_of_dofs:
+                raise ValueError('The dimension of ddq0 is not valid for mechanical system')
+        return initial_conditions
 
     def effective_stiffness(self):
         pass
@@ -536,7 +650,7 @@ class LinearDynamicsSolver(Solver):
     def update(self, q, q_old, dq_old, v_old, ddq_old):
         pass
 
-    def solve(self, q0, dq0, t0, t_end, dt, options):
+    def solve(self):
         '''
         Solves the linear dynamic problem of the mechanical system linearized around 
         zero-displacement.
@@ -562,11 +676,17 @@ class LinearDynamicsSolver(Solver):
 
         # initialize variables and set parameters
         self.mechanical_system.clear_timesteps()
-        t = t0
-        if self.dt_output is not None:
-            time_range = np.arange(t0, t_end, self.dt_output)
+        # q0, dq0, t0, t_end, dt, options
+        t = self.t0
+        q0 = self.initial_conditions['q0']
+        dq0 = self.initial_conditions['dq0']
+        if 'ddq0' in self.initial_conditions:
+            ddq0 = self.initial_conditions['ddq0']
         else:
-            time_range = np.arange(t0, t_end, dt)
+            ddq0 = None
+
+        time_range = np.arange(self.t0, self.tend, self.dt_output)
+
         q = q0.copy()
         dq = dq0.copy()
         if self.use_v:
@@ -652,9 +772,19 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
             application to structural dynamics. ISBN 978-1-118-90020-8.
     '''
 
-    def __init__(self, mechanical_system, options):
-        super().__init__(mechanical_system, options)
+    def __init__(self, mechanical_system, **options):
+        super().__init__(mechanical_system, **options)
         self.use_v = False
+        if 'rho_inf' in options:
+            if options['rho_inf'] is not None:
+                rho_inf = options['rho_inf']
+            else:
+                print('No value for rho_inf given, set rho_inf = 0.9')
+                rho_inf = 0.9
+        else:
+            rho_inf = 0.9
+            print('No value for rho_inf given, set rho_inf = 0.9')
+
         return
 
     def set_parameters(self, dt, options):
