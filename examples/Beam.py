@@ -14,8 +14,8 @@ import numpy as np
 
 
 # define in- and output files
-input_file = amfe.amfe_dir('meshes/gmsh/Beam/Beam10x1Quad8.msh')
-output_file = amfe.amfe_dir('results/Beam/Beam10x1Quad8')
+input_file = amfe.amfe_dir('meshes/gmsh/beam/Beam10x1Quad8.msh')
+output_file = amfe.amfe_dir('results/beam/Beam10x1Quad8')
 
 
 # define system
@@ -53,7 +53,7 @@ options = {
 
 linear = False
 static = False
-reduce = False
+scheme = 'GeneralizedAlpha'  # 'JWHAlpha'
 if not linear:
     filename = '_nonlinear_'
 else:
@@ -67,7 +67,12 @@ else:
 # solve system
 if not static:
     if not linear:# non-linear dynamics
-        pass
+        if scheme is 'GeneralizedAlpha':
+            solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
+        elif scheme is 'JWHAlpha':
+            pass
+        else:
+            raise ValueError('Non-supported time integration scheme.')
     else:# linear dynamics
         pass
 else:
