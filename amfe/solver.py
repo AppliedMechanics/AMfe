@@ -157,10 +157,10 @@ class NonlinearStaticsSolver(Solver):
         else:
             self.convergence_abort = True
 
-        if 'save' in options:
-            self.save = options['save']
+        if 'save_solution' in options:
+            self.save_solution = options['save_solution']
         else:
-            self.save = True
+            self.save_solution = True
         return
 
     def solve(self):
@@ -234,7 +234,7 @@ class NonlinearStaticsSolver(Solver):
 
             # end of Newton iteration loop
 
-            if self.save:
+            if self.save_solution:
                 self.mechanical_system.write_timestep(t, u)
             u_output.append(u.copy())
 
@@ -263,7 +263,7 @@ class LinearStaticsSolver(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, options)
+        super().__init__(mechanical_system, **options)
 
         # read options
         if 't' in options:
@@ -353,7 +353,21 @@ class NonlinearDynamicsSolver(Solver):
         # read options
         self.options = dict(**options)
 
-        self.initial_conditions = self.set_initial_conditions(**options)
+        if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
+            q0 = options['initial_conditions']['q0']
+            if len(q0) != self.mechanical_system.no_of_dofs:
+                raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
+        else:
+            print('Attention: No input for initial displacement is given, setting q0 = 0.')
+            q0 = np.zeros(self.mechanical_system.no_of_dofs)
+        if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
+            dq0 = options['initial_conditions']['dq0']
+            if len(dq0) != self.mechanical_system.no_of_dofs:
+                raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
+        else:
+            print('Attention: No input for initial velocity is given, setting dq0 = 0.')
+            dq0 = np.zeros(self.mechanical_system.no_of_dofs)
+        self.initial_conditions = {'q0': q0, 'dq0': dq0}
 
         if 't0' in options:
             self.t0 = options['t0']
@@ -413,24 +427,6 @@ class NonlinearDynamicsSolver(Solver):
             self.track_number_of_iterations = False
         return
 
-    def set_initial_conditions(self, **options):
-        if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
-            q0 = options['initial_conditions']['q0']
-            if len(q0) != self.mechanical_system.no_of_dofs:
-                raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
-        else:
-            print('Attention: No input for initial displacement is given, setting q0 = 0.')
-            q0 = np.zeros(self.mechanical_system.no_of_dofs)
-
-        if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
-            dq0 = options['initial_conditions']['dq0']
-            if len(dq0) != self.mechanical_system.no_of_dofs:
-                raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
-        else:
-            print('Attention: No input for initial velocity is given, setting dq0 = 0.')
-            dq0 = np.zeros(self.mechanical_system.no_of_dofs)
-        return {'q0':q0, 'dq0':dq0}
-
     def overwrite_parameters(self, **options):
         pass
 
@@ -459,7 +455,6 @@ class NonlinearDynamicsSolver(Solver):
         self.mechanical_system.clear_timesteps()
         self.iteration_info = []
         t = self.t0
-        dt = self.dt
         time_range = np.arange(self.t0, self.t_end, self.dt_output)
         q = self.initial_conditions['q0'].copy()
         dq = self.initial_conditions['dq0'].copy()
@@ -472,7 +467,6 @@ class NonlinearDynamicsSolver(Solver):
         abs_f_ext = self.absolute_tolerance
         time_index = 0
         eps = 1E-13
-        self.overwrite_parameters(**self.options)
 
         # time step loop
         while time_index < len(time_range):
@@ -484,7 +478,7 @@ class NonlinearDynamicsSolver(Solver):
                 if time_index == len(time_range):
                     break
 
-            # save old variables
+            # save_solution old variables
             q_old = q.copy()
             dq_old = dq.copy()
             v_old = v.copy()
@@ -493,7 +487,7 @@ class NonlinearDynamicsSolver(Solver):
             t_old = t
 
             # predict new variables
-            t += dt
+            t += self.dt
             self.predict(q, dq, v, ddq)
 
             Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
@@ -525,7 +519,7 @@ class NonlinearDynamicsSolver(Solver):
                         n_iter, res_abs, cond_nr))
 
                 if self.write_iterations:
-                    t_write = t + dt/1000000*n_iter
+                    t_write = t + self.dt/1000000*n_iter
                     self.mechanical_system.write_timestep(t_write, q.copy())
 
                 # catch failing convergence
@@ -554,7 +548,7 @@ class NonlinearDynamicsSolver(Solver):
 
         self.linear_solver.clear()
 
-        # save iteration info
+        # save_solution iteration info
         self.iteration_info = np.array(self.iteration_info)
 
         # end time measurement
@@ -586,7 +580,21 @@ class LinearDynamicsSolver(Solver):
         # read options
         self.options = dict(**options)
 
-        self.initial_conditions = self.set_initial_conditions(options['initial_conditions'])
+        if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
+            q0 = options['initial_conditions']['q0']
+            if len(q0) != self.mechanical_system.no_of_dofs:
+                raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
+        else:
+            print('Attention: No input for initial displacement is given, setting q0 = 0.')
+            q0 = np.zeros(self.mechanical_system.no_of_dofs)
+        if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
+            dq0 = options['initial_conditions']['dq0']
+            if len(dq0) != self.mechanical_system.no_of_dofs:
+                raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
+        else:
+            print('Attention: No input for initial velocity is given, setting dq0 = 0.')
+            dq0 = np.zeros(self.mechanical_system.no_of_dofs)
+        self.initial_conditions = {'q0':q0, 'dq0':dq0}
 
         if 't0' in options:
             self.t0 = options['t0']
@@ -616,24 +624,6 @@ class LinearDynamicsSolver(Solver):
             self.verbose = False
         return
 
-    def set_initial_conditions(self, **options):
-        if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
-            q0 = options['initial_conditions']['q0']
-            if len(q0) != self.mechanical_system.no_of_dofs:
-                raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
-        else:
-            print('Attention: No input for initial displacement is given, setting q0 = 0.')
-            q0 = np.zeros(self.mechanical_system.no_of_dofs)
-
-        if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
-            dq0 = options['initial_conditions']['dq0']
-            if len(dq0) != self.mechanical_system.no_of_dofs:
-                raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
-        else:
-            print('Attention: No input for initial velocity is given, setting dq0 = 0.')
-            dq0 = np.zeros(self.mechanical_system.no_of_dofs)
-        return {'q0':q0, 'dq0':dq0}
-
     def overwrite_parameters(self, **options):
         pass
 
@@ -661,17 +651,15 @@ class LinearDynamicsSolver(Solver):
         # initialize variables and set parameters
         self.mechanical_system.clear_timesteps()
         t = self.t0
-        dt = self.dt
         time_range = np.arange(self.t0, self.t_end, self.dt_output)
         q = self.initial_conditions['q0'].copy()
         dq = self.initial_conditions['dq0'].copy()
         if self.use_additional_variable_v:
             v = self.initial_conditions['dq0'].copy()
         else:
-            v = np.empty((0,0))
+            v = np.empty((0, 0))
         time_index = 0
         eps = 1E-13
-        self.overwrite_parameters(**self.options)
 
         # evaluate initial acceleration and LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
@@ -695,7 +683,7 @@ class LinearDynamicsSolver(Solver):
                 if time_index == len(time_range):
                     break
 
-            # save old variables
+            # save_solution old variables
             q_old = q.copy()
             dq_old = dq.copy()
             v_old = v.copy()
@@ -703,7 +691,7 @@ class LinearDynamicsSolver(Solver):
             t_old = t
 
             # solve system
-            t += dt
+            t += self.dt
             f_eff = self.effective_force(q_old, dq_old, v_old, ddq_old, t, t_old)
 
             q = self.linear_solver.solve(f_eff)
