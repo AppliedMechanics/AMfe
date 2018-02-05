@@ -77,11 +77,19 @@ class IntegratorTest(unittest.TestCase):
         system1 = self.my_system
         system2 = copy.deepcopy(self.my_system)
 
-        amfe.integrate_nonlinear_system(system1, self.q_start, self.dq_start,
-                                     self.T, dt, alpha)
+        #amfe.integrate_nonlinear_system(system1, self.q_start, self.dq_start,
+        #                             self.T, dt, alpha)
 
-        amfe.integrate_linear_system(system2, self.q_start, self.dq_start,
-                                     self.T, dt, alpha)
+        #amfe.integrate_linear_system(system2, self.q_start, self.dq_start,
+        #                             self.T, dt, alpha)
+
+        initial_conditions = {'q0': self.q_start, 'dq0': self.dq_start}
+        nlsolver = amfe.NonlinearDynamicsSolver(system1, initial_conditions=initial_conditions, tend=self.T, dt_output=dt)
+        nlsolver.solve()
+
+        initial_conditions = {'q0': self.q_start, 'dq0': self.dq_start}
+        linsolver = amfe.LinearDynamicsSolver(system1, initial_conditions=initial_conditions, tend=self.T, dt_output = dt)
+        linsolver.solve()
 
         q_nl = sp.array(system1.q)
         t_nl = sp.array(system1.t)
