@@ -499,11 +499,12 @@ class NonlinearDynamicsSolver(Solver):
 
             # Newton-Raphson iteration loop
             n_iter = 0
+            linearsolver = self.linear_solver(mtype='spd')
             while res_abs > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
 
                 # solve for displacement correction
-                self.linear_solver.set_A(Jac)
-                delta_q = -self.linear_solver.solve(res)
+                linearsolver.set_A(Jac)
+                delta_q = -linearsolver.solve(res)
     
                 # correct variables
                 self.correct(q, dq, v, ddq, delta_q)
