@@ -42,6 +42,7 @@ options = {
     'dt_output': 5e-4,
     'rho_inf': 0.95,
     'initial_conditions': {
+        'x0': np.zeros(2*ndof),
         'q0': np.zeros(ndof),
         'dq0': np.zeros(ndof)},
     'relative_tolerance': 1.0E-6,
@@ -55,15 +56,16 @@ options = {
 rho_inf = 0.95
 alpha = 0.0005
 
-linear = False
+linear = True
 # linear = True
 statics = False
 # statics = False
-scheme = 'GeneralizedAlpha'
+# scheme = 'GeneralizedAlpha'
 # scheme = 'WBZAlpha'
 # scheme = 'HHTAlpha'
 # scheme = 'NewmarkBeta'
 # scheme = 'JWHAlpha'
+scheme = 'JWHAlphaStateSpace'
 
 
 # adapt file name
@@ -85,6 +87,23 @@ elif scheme is 'NewmarkBeta':
     filename += '_newmarkbeta'
 elif scheme is 'JWHAlpha':
     filename += '_jwhalpha'
+elif scheme is 'JWHAlphaStateSpace':
+    filename += '_jwhalphastatespace'
+
+
+# represent mechanical system as state-space system
+# solve for non-linear static displacement of system still in mechanical form
+system.apply_neumann_boundaries(key=3, val=-2.5e8, direct=(0, -1), time_func=lambda t: 1)  # dynamics
+system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: t)  # statics
+solver = solver = amfe.NonlinearStaticsSolver(mechanical_system=system, **options)
+solver.solve()
+q_static = system.constrain_vec(system.u_output[-1][:])
+system.clear_timesteps()
+system.apply_neumann_boundaries(key=3, val=-2.5e8, direct=(0, -1), time_func=lambda t: t)  # statics
+system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: 1)  # dynamics
+# convert system to state-space form
+state_space_system = amfe.mechanical_system.convert_mechanical_system_to_state_space(
+    system, regular_matrix=system.K(q_static), overwrite=False)
 
 
 # solve system
@@ -103,6 +122,9 @@ if not statics:
             solver.set_newmark_beta_parameters(beta=0.25*(1 + alpha)**2, gamma=0.5 + alpha)
         elif scheme is 'JWHAlpha':
             solver = amfe.JWHAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
+        elif scheme is 'JWHAlphaStateSpace':
+            system = state_space_system
+            solver = amfe.JWHAlphaNonlinearDynamicsSolverStateSpace(mechanical_system=system, **options)
         else:
             raise ValueError('Time integration scheme not supported!')
     else:  # linear dynamics
@@ -119,6 +141,9 @@ if not statics:
             solver.set_newmark_beta_parameters(beta=0.25*(1 + alpha)**2, gamma=0.5 + alpha)
         elif scheme is 'JWHAlpha':
             solver = amfe.JWHAlphaLinearDynamicsSolver(mechanical_system=system, **options)
+        elif scheme is 'JWHAlphaStateSpace':
+            system = state_space_system
+            solver = amfe.JWHAlphaLinearDynamicsSolverStateSpace(mechanical_system=system, **options)
         else:
             raise ValueError('Time integration scheme not supported!')
 else:

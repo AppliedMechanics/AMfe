@@ -52,6 +52,8 @@ __all__ = [
     'JWHAlphaNonlinearDynamicsSolver',
     'GeneralizedAlphaLinearDynamicsSolver',
     'JWHAlphaLinearDynamicsSolver',
+    'JWHAlphaNonlinearDynamicsSolverStateSpace',
+    'JWHAlphaLinearDynamicsSolverStateSpace',
     # 'ConstraintSystemSolver'
 ]
 
@@ -850,7 +852,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         self.iteration_info = []
         t = self.t0
         time_range = np.arange(self.t0, self.t_end, self.dt_output)
-        x = self.initial_conditions['xq0'].copy()
+        x = self.initial_conditions['x0'].copy()
         dx = np.zeros_like(x)
         F_ext = np.zeros_like(x)
         abs_F_ext = self.absolute_tolerance
@@ -1858,8 +1860,8 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         Return effective stiffness matrix for linear JWH-alpha time integration scheme.
         '''
 
-        self.E()
-        self.A_constr = self.A()
+        self.mechanical_system.E()
+        self.mechanical_system.A_constr = self.mechanical_system.A()
 
         K_eff = self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.E_constr \
                 - self.alpha_f*self.mechanical_system.A_constr
