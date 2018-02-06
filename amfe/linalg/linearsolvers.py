@@ -7,14 +7,19 @@
 Module contains linear equation solvers
 """
 
+
 from scipy.sparse import issparse
 import scipy as sp
 import scipy.sparse.linalg
 from .lib import PardisoWrapper
 
-__all__ = ['ScipySparseSolver',
-           'PardisoSolver',
-           'solve_sparse']
+
+__all__ = [
+    'ScipySparseSolver',
+    'PardisoSolver',
+    'solve_sparse'
+]
+
 
 class LinearSolver:
 

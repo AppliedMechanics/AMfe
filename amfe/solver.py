@@ -49,7 +49,7 @@ __all__ = [
     'GeneralizedAlphaLinearDynamicsSolver',
     'JWHAlphaLinearDynamicsSolver',
     # 'ConstraintSystemSolver'
-    ]
+]
 
 
 abort_statement = '''
@@ -201,8 +201,8 @@ class NonlinearStaticsSolver(Solver):
             K, f_int= self.mechanical_system.K_and_f(u, t)
             f_ext = self.mechanical_system.f_ext(u, du, t)
             res = -f_int + f_ext
-            abs_res = norm_of_vector(res)
-            abs_f_ext = norm_of_vector(f_ext)
+            abs_res = euclidean_norm_of_vector(res)
+            abs_f_ext = euclidean_norm_of_vector(f_ext)
 
             # Newton iteration loop
             n_iter = 0
@@ -221,8 +221,8 @@ class NonlinearStaticsSolver(Solver):
                     K, f_int = self.mechanical_system.K_and_f(u, t)
                     f_ext = self.mechanical_system.f_ext(u, du, t)
                 res = -f_int + f_ext
-                abs_f_ext = norm_of_vector(f_ext)
-                abs_res = norm_of_vector(res)
+                abs_f_ext = euclidean_norm_of_vector(f_ext)
+                abs_res = euclidean_norm_of_vector(res)
                 n_iter += 1
 
                 if self.verbose:
@@ -281,7 +281,7 @@ class LinearStaticsSolver(Solver):
 
     def solve(self):
         '''
-        Solves the linear static problem of the mechanical system linearized around 
+        Solves the linear static problem of the mechanical system linearized around
         zero-displacement.
 
         Parameters
@@ -449,7 +449,7 @@ class NonlinearDynamicsSolver(Solver):
     def solve(self):
         '''
         Solves the nonlinear dynamic problem of the mechanical system.
-    
+
         Parameters
         ----------
         '''
@@ -478,7 +478,7 @@ class NonlinearDynamicsSolver(Solver):
 
         # time step loop
         while time_index < len(time_range):
-    
+
             # write output
             if t + eps >= time_range[time_index]:
                 self.mechanical_system.write_timestep(t, q.copy())
@@ -499,8 +499,8 @@ class NonlinearDynamicsSolver(Solver):
             q, dq, v, ddq = self.predict(q, dq, v, ddq)
 
             Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-            abs_f_ext = max(abs_f_ext, norm_of_vector(f_ext))
-            res_abs = norm_of_vector(res)
+            abs_f_ext = max(abs_f_ext, euclidean_norm_of_vector(f_ext))
+            res_abs = euclidean_norm_of_vector(res)
 
             # Newton-Raphson iteration loop
             n_iter = 0
@@ -509,13 +509,13 @@ class NonlinearDynamicsSolver(Solver):
                 # solve for displacement correction
                 self.linear_solver.set_A(Jac)
                 delta_q = -self.linear_solver.solve(res)
-    
+
                 # correct variables
                 q, dq, v, ddq = self.correct(q, dq, v, ddq, delta_q)
-    
+
                 # update system quantities
                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                res_abs = norm_of_vector(res)
+                res_abs = euclidean_norm_of_vector(res)
                 n_iter += 1
 
                 if self.verbose:
@@ -647,7 +647,7 @@ class LinearDynamicsSolver(Solver):
     def solve(self):
         '''
         Solves the linear dynamic problem of the mechanical system linearized around zero-displacement.
-    
+
         Parameters
         ----------
         '''
@@ -1173,7 +1173,7 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
     def effective_stiffness(self):
         '''
-        Return effective stiffness matrix for linear generalized-alpha time integration 
+        Return effective stiffness matrix for linear generalized-alpha time integration
         scheme.
         '''
 
@@ -1350,20 +1350,20 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 #     return solver
 
 
-def norm_of_vector(array):
-    '''
-    Compute the 2-norm of a vector.
-
-    Parameters
-    ----------
-    array : ndarray
-        one dimensional array
-
-    Returns
-    -------
-    abs : float
-        2-norm of the given array.
-
-    '''
-    return np.sqrt(array.T.dot(array))
+# def euclidean_norm_of_vector(array):
+#     '''
+#     Compute the 2-norm of a vector.
+#
+#     Parameters
+#     ----------
+#     array : ndarray
+#         one dimensional array
+#
+#     Returns
+#     -------
+#     abs : float
+#         2-norm of the given array.
+#
+#     '''
+#     return np.sqrt(array.T.dot(array))
 

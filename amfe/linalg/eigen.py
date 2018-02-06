@@ -4,5 +4,5 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
 """
-Module contains nonlinear solvers
+Module contains eigensolvers
 """
