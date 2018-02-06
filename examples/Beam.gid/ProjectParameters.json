@@ -1,0 +1,87 @@
+{
+    "problem_data"             : {
+        "problem_name"    : "Beam",
+        "model_part_name" : "Solid_Domain",
+        "dimension"       : 2,
+        "parallel_type"   : "OpenMP",
+        "time_step"       : 0.0005,
+        "start_time"      : 0.0,
+        "end_time"        : 0.4,
+        "echo_level"      : 0
+    },
+    "solver_settings"          : {
+        "solver_type"                        : "solid_mechanics_implicit_dynamic_solver",
+        "echo_level"                         : 0,
+        "solution_type"                      : "Dynamic",
+        "time_integration_method"            : "Implicit",
+        "scheme_type"                        : "Bossak",
+        "model_import_settings"              : {
+            "input_type"       : "mdpa",
+            "input_filename"   : "Beam",
+            "input_file_label" : 0
+        },
+        "dofs"                               : [],
+        "line_search"                        : false,
+        "convergence_criterion"              : "And_criterion",
+        "displacement_relative_tolerance"    : 1e-9,
+        "displacement_absolute_tolerance"    : 1e-12,
+        "residual_relative_tolerance"        : 1e-9,
+        "residual_absolute_tolerance"        : 1e-12,
+        "max_iteration"                      : 30,
+        "bossak_factor"                      : -0.0256410256,
+        "lumped_mass_matrix"                 : false,
+        "consistent_mass_matrix"             : true,
+        "problem_domain_sub_model_part_list" : ["Parts_Solid"],
+        "processes_sub_model_part_list"      : ["DISPLACEMENT_Dirichlet","LineLoad2D_Neumann"]
+    },
+    "constraints_process_list" : [{
+        "python_module" : "assign_vector_components_to_nodes_process",
+        "kratos_module" : "KratosMultiphysics.SolidMechanicsApplication",
+        "help"          : "This process fixes the selected components of a given vector variable",
+        "process_name"  : "AssignVectorComponentsToNodesProcess",
+        "Parameters"    : {
+            "model_part_name" : "DISPLACEMENT_Dirichlet",
+            "variable_name"   : "DISPLACEMENT",
+            "value"           : [0.0,0.0,0.0],
+            "interval"        : [0.0,"End"]
+        }
+    }],
+    "loads_process_list"       : [{
+        "python_module" : "assign_modulus_and_direction_to_conditions_process",
+        "kratos_module" : "KratosMultiphysics.SolidMechanicsApplication",
+        "help"          : "This process sets a vector variable value over a condition",
+        "check"         : "DirectorVectorNonZero direction",
+        "process_name"  : "AssignModulusAndDirectionToConditionsProcess",
+        "Parameters"    : {
+            "model_part_name" : "LineLoad2D_Neumann",
+            "variable_name"   : "LINE_LOAD",
+            "modulus"         : 250000000.0,
+            "direction"       : [0.0,-1.0,0.0],
+            "interval"        : [0.0,"End"]
+        }
+    }],
+    "output_configuration"     : {
+        "result_file_configuration" : {
+            "gidpost_flags"       : {
+                "GiDPostMode"           : "GiD_PostBinary",
+                "WriteDeformedMeshFlag" : "WriteDeformed",
+                "WriteConditionsFlag"   : "WriteElementsOnly",
+                "MultiFileFlag"         : "SingleFile"
+            },
+            "file_label"          : "step",
+            "output_control_type" : "step",
+            "output_frequency"    : 1,
+            "node_output"         : false,
+            "plane_output"        : [],
+            "nodal_results"       : ["DISPLACEMENT","REACTION","VELOCITY","ACCELERATION"],
+            "gauss_point_results" : []
+        },
+        "point_data_configuration"  : []
+    },
+    "restart_options"          : {
+        "SaveRestart"      : false,
+        "RestartFrequency" : 0,
+        "LoadRestart"      : false,
+        "Restart_Step"     : 0
+    }
+}

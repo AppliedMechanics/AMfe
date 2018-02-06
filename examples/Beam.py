@@ -19,7 +19,7 @@ output_file = amfe.amfe_dir('results/beam/Beam10x1Quad8')
 
 
 # define system
-material = amfe.KirchhoffMaterial(E=2.1E11, nu=0.3, rho=7.867E3, plane_stress=False)
+material = amfe.KirchhoffMaterial(E=2.1e11, nu=0.3, rho=7.867e3, plane_stress=False)
 system = amfe.MechanicalSystem()
 system.load_mesh_from_gmsh(input_file, 1, material)
 system.apply_dirichlet_boundaries(5, 'xy')
@@ -38,9 +38,9 @@ options = {
     't': 1.0,
     't0': 0.0,
     't_end': 0.4,
-    'dt': 5e-3,
-    'dt_output': 5e-3,
-    'rho_inf': 0.5,
+    'dt': 5e-4,
+    'dt_output': 5e-4,
+    'rho_inf': 0.95,
     'initial_conditions': {
         'q0': np.zeros(ndof),
         'dq0': np.zeros(ndof)},
@@ -52,8 +52,8 @@ options = {
     'write_iterations': False,
     'track_number_of_iterations': False,
     'save_solution': True}
-rho_inf = 0.5
-alpha = 0.05
+rho_inf = 0.95
+alpha = 0.0005
 
 linear = False
 # linear = True

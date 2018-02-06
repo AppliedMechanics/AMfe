@@ -1349,21 +1349,3 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 #     solver = solvers_available[solvertype](**options)
 #     return solver
 
-
-# def euclidean_norm_of_vector(array):
-#     '''
-#     Compute the 2-norm of a vector.
-#
-#     Parameters
-#     ----------
-#     array : ndarray
-#         one dimensional array
-#
-#     Returns
-#     -------
-#     abs : float
-#         2-norm of the given array.
-#
-#     '''
-#     return np.sqrt(array.T.dot(array))
-
