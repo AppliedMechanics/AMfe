@@ -38,9 +38,9 @@ options = {
     't': 1.0,
     't0': 0.0,
     't_end': 0.4,
-    'dt': 1e-3,
-    'dt_output': 1e-3,
-    'rho_inf': 0.9,
+    'dt': 5e-3,
+    'dt_output': 5e-3,
+    'rho_inf': 0.5,
     'initial_conditions': {
         'q0': np.zeros(ndof),
         'dq0': np.zeros(ndof)},
@@ -52,13 +52,21 @@ options = {
     'write_iterations': False,
     'track_number_of_iterations': False,
     'save_solution': True}
+rho_inf = 0.5
+alpha = 0.05
 
 linear = False
 # linear = True
 statics = False
 # statics = False
 scheme = 'GeneralizedAlpha'
+# scheme = 'WBZAlpha'
+# scheme = 'HHTAlpha'
+# scheme = 'NewmarkBeta'
 # scheme = 'JWHAlpha'
+
+
+# adapt file name
 if not linear:
     filename = '_nonlinear'
 else:
@@ -69,6 +77,12 @@ else:
     filename += '_statics'
 if scheme is 'GeneralizedAlpha':
     filename += '_generalizedalpha'
+elif scheme is 'WBZAlpha':
+    filename += '_wbzalpha'
+elif scheme is 'HHTAlpha':
+    filename += '_hhtalpha'
+elif scheme is 'NewmarkBeta':
+    filename += '_newmarkbeta'
 elif scheme is 'JWHAlpha':
     filename += '_jwhalpha'
 
@@ -78,6 +92,15 @@ if not statics:
     if not linear:  # non-linear dynamics
         if scheme is 'GeneralizedAlpha':
             solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
+        elif scheme is 'WBZAlpha':
+            solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
+            solver.set_wbz_alpha_parameters(rho_inf=rho_inf)
+        elif scheme is 'HHTAlpha':
+            solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
+            solver.set_hht_alpha_parameters(rho_inf=rho_inf)
+        elif scheme is 'NewmarkBeta':
+            solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
+            solver.set_newmark_beta_parameters(beta=0.25*(1 + alpha)**2, gamma=0.5 + alpha)
         elif scheme is 'JWHAlpha':
             solver = amfe.JWHAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
         else:
@@ -85,6 +108,15 @@ if not statics:
     else:  # linear dynamics
         if scheme is 'GeneralizedAlpha':
             solver = amfe.GeneralizedAlphaLinearDynamicsSolver(mechanical_system=system, **options)
+        elif scheme is 'WBZAlpha':
+            solver = amfe.GeneralizedAlphaLinearDynamicsSolver(mechanical_system=system, **options)
+            solver.set_wbz_alpha_parameters(rho_inf=rho_inf)
+        elif scheme is 'HHTAlpha':
+            solver = amfe.GeneralizedAlphaLinearDynamicsSolver(mechanical_system=system, **options)
+            solver.set_hht_alpha_parameters(rho_inf=rho_inf)
+        elif scheme is 'NewmarkBeta':
+            solver = amfe.GeneralizedAlphaLinearDynamicsSolver(mechanical_system=system, **options)
+            solver.set_newmark_beta_parameters(beta=0.25*(1 + alpha)**2, gamma=0.5 + alpha)
         elif scheme is 'JWHAlpha':
             solver = amfe.JWHAlphaLinearDynamicsSolver(mechanical_system=system, **options)
         else:
