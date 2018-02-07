@@ -82,11 +82,6 @@ class SolversTest(unittest.TestCase):
         self.system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: 1)
         self.solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=self.system, **self.options)
         self.solver.solve()
-        last = len(self.system.u_output)
-        with open(self.output_file + '.dat', 'w') as fp:
-            for i in range(last):
-                fp.write(str(self.system.T_output[i]) + ' ' + str(self.system.u_output[i][2]) + ' ' + str(self.system.u_output[i][3]) + '\n')
-
         x = np.array([self.system.T_output[:], [displacement[2] for displacement in self.system.u_output]])
         y = np.array([self.system.T_output[:], [displacement[3] for displacement in self.system.u_output]])
         fnx = amfe.amfe_dir('tests/kratos/Kratos_beam10x1Quad8_nonlinear_dynamics_x_wbzalpha_rhoinf095_dt5e-4.grf')
