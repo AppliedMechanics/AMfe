@@ -666,7 +666,7 @@ class NonlinearDynamicsSolver(Solver):
     #             print(abs_local_tmp_err)
     #
     #             # update time step
-    #             kappa = np.abs(absolute_temporal_tolerance/abs_local_tmp_err)
+    #             kappa = np.cbrt(absolute_temporal_tolerance/abs_local_tmp_err)
     #             print(kappa)
     #             if no_convergence:
     #                 self.dt *= 0.8
