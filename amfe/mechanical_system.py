@@ -488,6 +488,9 @@ class MechanicalSystem():
         self.iteration_info = np.array([])
         return
 
+    def solve(self, solver, **options):
+        solver.solve()
+
 
 class MechanicalSystemStateSpace(MechanicalSystem):
     def __init__(self, regular_matrix=None, **kwargs):

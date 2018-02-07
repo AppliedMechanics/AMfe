@@ -1,4 +1,4 @@
-# Copyright (c) 2017, Lehrstuhl fuer Regelungstechnik, Technische Universitaet Muenchen.
+# Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische Universitaet Muenchen.
 #
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information.
 #
