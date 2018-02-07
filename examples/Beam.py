@@ -76,7 +76,7 @@ options = {
     't0': 0.0,
     't_end': 0.4,
     'dt': 5e-4,
-    'dt_output': 5e-4,
+    'output_frequency': 1,
     'rho_inf': 0.95,
     'initial_conditions': {
         'x0': np.zeros(2*ndof),
@@ -88,7 +88,7 @@ options = {
     'max_number_of_iterations': 99,
     'convergence_abort': True,
     'write_iterations': False,
-    'track_number_of_iterations': False,
+    'track_iterations': False,
     'save_solution': True}
 rho_inf = 0.95
 alpha = 0.0005

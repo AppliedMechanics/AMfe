@@ -7,33 +7,6 @@ Module that contains solvers for solving systems in AMfe.
 """
 
 
-#IDEAS:
-# First define options for Solver
-#   options1 = {'beta': 0.5, 'gamma': 0.3}
-#   options2 = {'rho': 0.9, 'beta': 0.5}
-#
-# Second instantiate Solver instances
-#   solver1 = NonlinearGeneralizedAlphaSolver(options1)
-#   solver2 = LinearGeneralizedAlphaSolver(options2)
-#
-# Third call the solve method and pass a system to solve
-#   mysys = amfe.MechanicalSystem()
-#   solver1.solve(mysys)
-#   solver2.solve(mysys)
-#
-#
-# Optional: Generate Shortcut for MechanicalSystem-class mysys.solve(solver1)
-#
-# The first way is advantageous: Example:
-# Solve Method of Solver class:
-#   def solve(mechanical_system):
-#       if type(mechanical_system)== 'ConstrainedSystem':
-#           raise ValueError('This kind of system cannot be solved by this solver, use ConstrainedSolver for ConstrainedSystems instead')
-#       K = mechanical_system.K
-#       res = ...
-#       solver.solve(self)
-
-
 import scipy as sp
 import numpy as np
 import time
@@ -58,12 +31,11 @@ __all__ = [
 ]
 
 
-abort_statement = '''
-###############################################################################
-#### The current computation has been aborted.                             ####
-#### No convergence was gained within the number of given iteration steps. ####
-###############################################################################
-'''
+abort_statement = '''###################################################
+                     #### The current computation has been aborted. ####
+                     #### No convergence was gained within the      ####
+                     #### number of given iteration steps.          ####
+                     ###################################################'''
 
 
 # Most general solver class
@@ -87,6 +59,7 @@ class Solver:
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
         else:
+            print('Attention: No input for linear solver was given, setting linear_solver = PardisoSolver.')
             self.linear_solver = PardisoSolver
 
         if 'linear_solver_options' in options:
@@ -118,56 +91,70 @@ class NonlinearStaticsSolver(Solver):
         if 'number_of_load_steps' in options:
             self.number_of_load_steps = options['number_of_load_steps']
         else:
+            print('Attention: No input for number of load steps was given, setting number_of_load_steps = 10.')
             self.number_of_load_steps = 10
 
         if 'relative_tolerance' in options:
             self.relative_tolerance = options['relative_tolerance']
         else:
-            self.relative_tolerance = 1.0E-9
+            print('Attention: No input for relative tolerance was given, setting relative_tolerance = 1.0e-9.')
+            self.relative_tolerance = 1.0e-9
 
         if 'absolute_tolerance' in options:
             self.absolute_tolerance = options['absolute_tolerance']
         else:
-            self.absolute_tolerance = 1.0E-6
+            print('Attention: No input for absolute tolerance was given, setting absolute_tolerance = 1.0e-6.')
+            self.absolute_tolerance = 1.0e-6
 
         if 'newton_damping' in options:
             self.newton_damping = options['newton_damping']
         else:
+            print('Attention: No input for newton damping was given, setting newton_damping = 1.0.')
             self.newton_damping = 1.0
 
         if 'max_number_of_iterations' in options:
             self.max_number_of_iterations = options['max_number_of_iterations']
         else:
+            print('Attention: No input for maximum number of iterations was given, ' \
+                  + 'setting max_number_of_iterations = 1000.')
             self.max_number_of_iterations = 1000
 
-        if 'simplified_newton_iterations' in options:
-            self.simplified_newton_iterations = options['simplified_newton_iterations']
+        if 'simplified_newtoiterationations' in options:
+            self.simplified_newtoiterationations = options['simplified_newtoiterationations']
         else:
-            self.simplified_newton_iterations = 1
+            print('Attention: No input for simplified Newton iterations was given, ' \
+                  + 'setting simplified_newtoiterationations = 1.')
+            self.simplified_newtoiterationations = 1
 
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
+            print('Attention: No input for verbose was given, setting verbose = False.')
             self.verbose = False
 
-        if 'track_number_of_iterations' in options:
-            self.track_number_of_iterations = options['track_number_of_iterations']
+        if 'track_iterations' in options:
+            self.track_iterations = options['track_iterations']
         else:
-            self.track_number_of_iterations = False
+            print('Attention: No input for track number of iterations was given, ' \
+                  + 'setting track_iterations = False.')
+            self.track_iterations = False
 
         if 'write_iterations' in options:
             self.write_iterations = options['write_iterations']
         else:
+            print('Attention: No input for write iterations was given, setting write_iterations = False.')
             self.write_iterations = False
 
         if 'convergence_abort' in options:
             self.convergence_abort = options['convergence_abort']
         else:
+            print('Attention: No input for convergence abort was given, setting convergence_abort = True.')
             self.convergence_abort = True
 
         if 'save_solution' in options:
             self.save_solution = options['save_solution']
         else:
+            print('Attention: No input for save solution was given, setting save_solution = True.')
             self.save_solution = True
         return
 
@@ -211,9 +198,9 @@ class NonlinearStaticsSolver(Solver):
             abs_f_ext = euclidean_norm_of_vector(f_ext)
 
             # Newton iteration loop
-            n_iter = 0
+            iteration = 0
             while (abs_res > self.relative_tolerance*abs_f_ext + self.absolute_tolerance) and \
-                    (self.max_number_of_iterations > n_iter):
+                    (self.max_number_of_iterations > iteration):
 
                 # solve for displacement correction
                 self.linear_solver.set_A(K)
@@ -223,22 +210,22 @@ class NonlinearStaticsSolver(Solver):
                 u += delta_u*self.newton_damping
 
                 # update system
-                if (n_iter % self.simplified_newton_iterations) is 0:
+                if (iteration % self.simplified_newtoiterationations) is 0:
                     K, f_int = self.mechanical_system.K_and_f(u, t)
                     f_ext = self.mechanical_system.f_ext(u, du, t)
                 res = -f_int + f_ext
                 abs_f_ext = euclidean_norm_of_vector(f_ext)
                 abs_res = euclidean_norm_of_vector(res)
-                n_iter += 1
+                iteration += 1
 
                 if self.verbose:
-                    print('Step: {0:1.3f}, iteration#: {1:3d}, residual: {2:6.3E}'.format(t, n_iter, abs_res))
+                    print('Step: {0:1.3f}, iteration#: {1:3d}, residual: {2:6.3E}'.format(t, iteration, abs_res))
 
                 if self.write_iterations:
-                    self.mechanical_system.write_timestep(t + n_iter*0.000001, u)
+                    self.mechanical_system.write_timestep(t + iteration*0.000001, u)
 
                 # exit, if max iterations exceeded
-                if (n_iter >= self.max_number_of_iterations) and self.convergence_abort:
+                if (iteration >= self.max_number_of_iterations) and self.convergence_abort:
                     u_output = np.array(u_output).T
                     print(abort_statement)
                     t_clock_end = time.time()
@@ -251,8 +238,8 @@ class NonlinearStaticsSolver(Solver):
                 self.mechanical_system.write_timestep(t, u)
             u_output.append(u.copy())
 
-            if self.track_number_of_iterations:
-                iteration_info.append((t, n_iter, abs_res))
+            if self.track_iterations:
+                iteration_info.append((t, iteration, abs_res))
 
         # end of load step loop
 
@@ -282,6 +269,7 @@ class LinearStaticsSolver(Solver):
         if 't' in options:
             self.t = options['t']
         else:
+            print('Attention: No input for pseudo time evaluation was given, setting t = 1.0.')
             self.t = 1.0
         return
 
@@ -347,7 +335,7 @@ class NonlinearDynamicsSolver(Solver):
             If true, show some more information in command line.
         write_iterations : Boolean
             If true, write iteration steps.
-        track_number_of_iterations : Boolean
+        track_iterations : Boolean
 
     References
     ----------
@@ -366,73 +354,82 @@ class NonlinearDynamicsSolver(Solver):
             if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
                 raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
         else:
-            print('Attention: No input for initial displacement is given, setting q0 = 0.')
+            print('Attention: No input for initial displacement was given, setting q0 = 0.')
             q0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
             dq0 = options['initial_conditions']['dq0']
             if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
                 raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
-            print('Attention: No input for initial velocity is given, setting dq0 = 0.')
+            print('Attention: No input for initial velocity was given, setting dq0 = 0.')
             dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'q0': q0, 'dq0': dq0}
 
         if 't0' in options:
             self.t0 = options['t0']
         else:
-            print('Attention: No initial time was given for time-integration, setting t0 = 0.0.')
+            print('Attention: No initial time was given, setting t0 = 0.0.')
             self.t0 = 0.0
 
         if 't_end' in options:
             self.t_end = options['t_end']
         else:
-            print('Attention: No end time was given for time-integration, setting t_end = 1.0.')
+            print('Attention: No end time was given, setting t_end = 1.0.')
             self.t_end = 1.0
 
         if 'dt' in options:
             self.dt = options['dt']
         else:
-            raise ValueError('Error: No time step size was given for the time integration.')
+            print('Attention: No time step size was given, setting dt = 1.0e-4.')
+            self.dt = 1.0e-4
 
-        if 'dt_output' in options:
-            self.dt_output = options['dt_output']
+        if 'output_frequency' in options:
+            self.output_frequency = options['output_frequency']
         else:
-            self.dt_output = self.dt
+            print('Attention: No output frequency was given, setting output_frequency = 1.')
+            self.output_frequency = 1
 
         if 'relative_tolerance' in options:
             self.relative_tolerance = options['relative_tolerance']
         else:
+            print('Attention: No relative tolerance was given, setting relative_tolerance = 1.0e-9.')
             self.relative_tolerance = 1.0E-9
 
         if 'absolute_tolerance' in options:
             self.absolute_tolerance = options['absolute_tolerance']
         else:
+            print('Attention: No absolute tolerance was given, setting absolute_tolerance = 1.0e-6.')
             self.absolute_tolerance = 1.0E-6
 
         if 'max_number_of_iterations' in options:
             self.max_number_of_iterations = options['max_number_of_iterations']
         else:
+            print('Attention: No maximum number of iterations was given, setting max_number_of_iterations = 30.')
             self.max_number_of_iterations = 30
 
         if 'convergence_abort' in options:
             self.convergence_abort = options['convergence_abort']
         else:
+            print('Attention: No convergence abort was given, setting convergence_abort = True.')
             self.convergence_abort = True
 
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
+            print('Attention: No verbose was given, setting verbose = False.')
             self.verbose = False
 
         if 'write_iterations' in options:
             self.write_iterations = options['write_iterations']
         else:
+            print('Attention: No write iterations was given, setting write_iterations = False.')
             self.write_iterations = False
 
-        if 'track_number_of_iterations' in options:
-            self.track_number_of_iterations = options['track_number_of_iterations']
+        if 'track_iterations' in options:
+            self.track_iterations = options['track_iterations']
         else:
-            self.track_number_of_iterations = False
+            print('Attention: No track number of iterations was given, setting track_iterations = False.')
+            self.track_iterations = False
         return
 
     def overwrite_parameters(self, **options):
@@ -460,7 +457,6 @@ class NonlinearDynamicsSolver(Solver):
         self.mechanical_system.clear_timesteps()
         self.iteration_info = []
         t = self.t0
-        time_range = np.arange(self.t0, self.t_end, self.dt_output)
         q = self.initial_conditions['q0'].copy()
         dq = self.initial_conditions['dq0'].copy()
         if self.use_additional_variable_v:
@@ -470,18 +466,13 @@ class NonlinearDynamicsSolver(Solver):
         ddq = np.zeros_like(q)
         f_ext = np.zeros_like(q)
         abs_f_ext = self.absolute_tolerance
-        time_index = 0
-        eps = 1E-13
+
+        # write output of initial conditions
+        self.mechanical_system.write_timestep(t, q.copy())
 
         # time step loop
-        while time_index < len(time_range):
-
-            # write output
-            if t + eps >= time_range[time_index]:
-                self.mechanical_system.write_timestep(t, q.copy())
-                time_index += 1
-                if time_index == len(time_range):
-                    break
+        output_index = 0
+        while t < self.t_end:
 
             # save_solution old variables
             q_old = q.copy()
@@ -492,6 +483,7 @@ class NonlinearDynamicsSolver(Solver):
             t_old = t
 
             # predict new variables
+            output_index += 1
             t += self.dt
             q, dq, v, ddq = self.predict(q, dq, v, ddq)
 
@@ -500,7 +492,7 @@ class NonlinearDynamicsSolver(Solver):
             res_abs = euclidean_norm_of_vector(res)
 
             # Newton-Raphson iteration loop
-            n_iter = 0
+            iteration = 0
             while res_abs > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
 
                 # solve for displacement correction
@@ -513,7 +505,7 @@ class NonlinearDynamicsSolver(Solver):
                 # update system quantities
                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
                 res_abs = euclidean_norm_of_vector(res)
-                n_iter += 1
+                iteration += 1
 
                 if self.verbose:
                     if sp.sparse.issparse(Jac):
@@ -521,14 +513,14 @@ class NonlinearDynamicsSolver(Solver):
                     else:
                         cond_nr = np.linalg.cond(Jac)
                     print('Iteration: {0:3d}, residual: {1:6.3E}, condition# of Jacobian: {2:6.3E}'.format(
-                        n_iter, res_abs, cond_nr))
+                        iteration, res_abs, cond_nr))
 
                 if self.write_iterations:
-                    t_write = t + self.dt/1000000*n_iter
+                    t_write = t + self.dt/1000000*iteration
                     self.mechanical_system.write_timestep(t_write, q.copy())
 
                 # catch failing convergence
-                if n_iter > self.max_number_of_iterations:
+                if iteration > self.max_number_of_iterations:
                     if self.convergence_abort:
                         print(abort_statement)
                         self.iteration_info = np.array(self.iteration_info)
@@ -545,9 +537,131 @@ class NonlinearDynamicsSolver(Solver):
 
                 # end of Newton-Raphson iteration loop
 
-            print('Time: {0:3.6f}, #iterations: {1:3d}, residual: {2:6.3E}'.format(t, n_iter, res_abs))
-            if self.track_number_of_iterations:
-                self.iteration_info.append((t, n_iter, res_abs))
+            # write output
+            if output_index == self.output_frequency:
+                self.mechanical_system.write_timestep(t, q.copy())
+                output_index = 0
+
+            if self.track_iterations:
+                self.iteration_info.append((t, iteration, res_abs))
+
+            print('Time: {0:3.6f}, #iterations: {1:3d}, residual: {2:6.3E}'.format(t, iteration, res_abs))
+
+            # end of time step loop
+
+        self.linear_solver.clear()
+
+        # save iteration info
+        self.iteration_info = np.array(self.iteration_info)
+
+        # end time measurement
+        t_clock_end = time.time()
+        print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
+        return
+
+    def solve_adaptive(self):
+        '''
+        Solves the nonlinear dynamic problem of the mechanical system with adaptive time step.
+        '''
+
+        # start time measurement
+        t_clock_start = time.time()
+
+        # initialize variables and set parameters
+        self.linear_solver = self.linear_solver(mtype='sid')
+        self.mechanical_system.clear_timesteps()
+        self.iteration_info = []
+        t = self.t0
+        #dt = self.dt_start
+        q = self.initial_conditions['q0'].copy()
+        dq = self.initial_conditions['dq0'].copy()
+        if self.use_additional_variable_v:
+            v = self.initial_conditions['dq0'].copy()
+        else:
+            v = np.empty((0, 0))
+        ddq = np.zeros_like(q)
+        f_ext = np.zeros_like(q)
+        abs_f_ext = self.absolute_tolerance
+
+        # write output of initial conditions
+        self.mechanical_system.write_timestep(t, q.copy())
+
+        # time step loop
+        output_index = 0
+        while t < self.t_end:
+
+            # save_solution old variables
+            q_old = q.copy()
+            dq_old = dq.copy()
+            v_old = v.copy()
+            ddq_old = ddq.copy()
+            f_ext_old = f_ext.copy()
+            t_old = t
+
+            # predict new variables
+            output_index += 1
+            t += self.dt
+            q, dq, v, ddq = self.predict(q, dq, v, ddq)
+
+            Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
+            abs_f_ext = max(abs_f_ext, euclidean_norm_of_vector(f_ext))
+            res_abs = euclidean_norm_of_vector(res)
+
+            # Newton-Raphson iteration loop
+            iteration = 0
+            while res_abs > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
+
+                # solve for displacement correction
+                self.linear_solver.set_A(Jac)
+                delta_q = -self.linear_solver.solve(res)
+
+                # correct variables
+                q, dq, v, ddq = self.correct(q, dq, v, ddq, delta_q)
+
+                # update system quantities
+                Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
+                res_abs = euclidean_norm_of_vector(res)
+                iteration += 1
+
+                if self.verbose:
+                    if sp.sparse.issparse(Jac):
+                        cond_nr = 0.0
+                    else:
+                        cond_nr = np.linalg.cond(Jac)
+                    print('Iteration: {0:3d}, residual: {1:6.3E}, condition# of Jacobian: {2:6.3E}'.format(
+                        iteration, res_abs, cond_nr))
+
+                if self.write_iterations:
+                    t_write = t + self.dt/1000000*iteration
+                    self.mechanical_system.write_timestep(t_write, q.copy())
+
+                # catch failing convergence
+                if iteration > self.max_number_of_iterations:
+                    if self.convergence_abort:
+                        print(abort_statement)
+                        self.iteration_info = np.array(self.iteration_info)
+                        t_clock_end = time.time()
+                        print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
+                        return
+
+                    t = t_old
+                    q = q_old.copy()
+                    dq = dq_old.copy()
+                    v = v_old.copy()
+                    f_ext = f_ext_old.copy()
+                    break
+
+                # end of Newton-Raphson iteration loop
+
+            # write output
+            if output_index == self.output_frequency:
+                self.mechanical_system.write_timestep(t, q.copy())
+                output_index = 0
+
+            if self.track_iterations:
+                self.iteration_info.append((t, iteration, res_abs))
+
+            print('Time: {0:3.6f}, #iterations: {1:3d}, residual: {2:6.3E}'.format(t, iteration, res_abs))
 
             # end of time step loop
 
@@ -604,28 +718,31 @@ class LinearDynamicsSolver(Solver):
         if 't0' in options:
             self.t0 = options['t0']
         else:
-            print('Attention: No initial time was given for time-integration, setting t0 = 0.0.')
+            print('Attention: No initial time was given, setting t0 = 0.0.')
             self.t0 = 0.0
 
         if 't_end' in options:
             self.t_end = options['t_end']
         else:
-            print('Attention: No end time was given for time-integration, setting t_end = 1.0.')
+            print('Attention: No end time was given, setting t_end = 1.0.')
             self.t_end = 1.0
 
         if 'dt' in options:
             self.dt = options['dt']
         else:
-            raise ValueError('Error: No time step size was given for the time integration.')
+            print('Attention: No time step size was, setting dt = 1.0e-4.')
+            self.dt = 1.0e-4
 
-        if 'dt_output' in options:
-            self.dt_output = options['dt_output']
+        if 'output_frequency' in options:
+            self.output_frequency = options['output_frequency']
         else:
-            self.dt_output = self.dt
+            print('Attention: No input for output frequency was given, setting output_frequency = 1.')
+            self.output_frequency = 1
 
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
+            print('Attention: No input for verbose was given, setting verbose = False.')
             self.verbose = False
         return
 
@@ -653,15 +770,12 @@ class LinearDynamicsSolver(Solver):
         self.linear_solver = self.linear_solver(mtype='spd')
         self.mechanical_system.clear_timesteps()
         t = self.t0
-        time_range = np.arange(self.t0, self.t_end, self.dt_output)
         q = self.initial_conditions['q0'].copy()
         dq = self.initial_conditions['dq0'].copy()
         if self.use_additional_variable_v:
             v = self.initial_conditions['dq0'].copy()
         else:
             v = np.empty((0, 0))
-        time_index = 0
-        eps = 1E-13
 
         # evaluate initial acceleration and LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
@@ -675,15 +789,12 @@ class LinearDynamicsSolver(Solver):
         if hasattr(self.linear_solver, 'factorize'):
             self.linear_solver.factorize()
 
-        # time step loop
-        while time_index < len(time_range):
+        # write output of initial conditions
+        self.mechanical_system.write_timestep(t, q.copy())
 
-            # write output
-            if t + eps >= time_range[time_index]:
-                self.mechanical_system.write_timestep(t, q.copy())
-                time_index += 1
-                if time_index == len(time_range):
-                    break
+        # time step loop
+        output_index = 0
+        while t < self.t_end:
 
             # save_solution old variables
             q_old = q.copy()
@@ -693,6 +804,7 @@ class LinearDynamicsSolver(Solver):
             t_old = t
 
             # solve system
+            output_index += 1
             t += self.dt
             f_eff = self.effective_force(q_old, dq_old, v_old, ddq_old, t, t_old)
 
@@ -700,6 +812,12 @@ class LinearDynamicsSolver(Solver):
 
             # update variables
             dq, v, ddq = self.update(q, q_old, dq_old, v_old, ddq_old)
+
+            # write output
+            if output_index == self.output_frequency:
+                self.mechanical_system.write_timestep(t, q.copy())
+                output_index = 0
+
             print('Time: {0:3.6f}'.format(t))
 
             # end of time step loop
@@ -744,7 +862,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
             If true, show some more information in command line.
         write_iterations : Boolean
             If true, write iteration steps.
-        track_number_of_iterations : Boolean
+        track_iterations : Boolean
 
     References
     ----------
@@ -770,59 +888,69 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         if 't0' in options:
             self.t0 = options['t0']
         else:
-            print('Attention: No initial time was given for time-integration, setting t0 = 0.0.')
+            print('Attention: No initial time was given, setting t0 = 0.0.')
             self.t0 = 0.0
 
         if 't_end' in options:
             self.t_end = options['t_end']
         else:
-            print('Attention: No end time was given for time-integration, setting t_end = 1.0.')
+            print('Attention: No end time was given, setting t_end = 1.0.')
             self.t_end = 1.0
 
         if 'dt' in options:
             self.dt = options['dt']
         else:
-            raise ValueError('Error: No time step size was given for the time integration.')
+            print('Attention: No time step size was given, setting dt = 1.0e-4.')
+            self.dt = 1.0e-4
 
-        if 'dt_output' in options:
-            self.dt_output = options['dt_output']
+        if 'output_frequency' in options:
+            self.output_frequency = options['output_frequency']
         else:
-            self.dt_output = self.dt
+            print('Attention: No input for output frequency was given, setting output_frequency = 1.')
+            self.output_frequency = 1
 
         if 'relative_tolerance' in options:
             self.relative_tolerance = options['relative_tolerance']
         else:
+            print('Attention: No input for relative tolerance was given, setting relative_tolerance = 1.0e-9.')
             self.relative_tolerance = 1.0E-9
 
         if 'absolute_tolerance' in options:
             self.absolute_tolerance = options['absolute_tolerance']
         else:
+            print('Attention: No input for absolute tolerance was given, setting absolute_tolerance = 1.0e-6.')
             self.absolute_tolerance = 1.0E-6
 
         if 'max_number_of_iterations' in options:
             self.max_number_of_iterations = options['max_number_of_iterations']
         else:
+            print('Attention: No input for maximum number of iterations was given, ' \
+                  + 'setting max_number_of_iterations = 30.')
             self.max_number_of_iterations = 30
 
         if 'convergence_abort' in options:
             self.convergence_abort = options['convergence_abort']
         else:
+            print('Attention: No input for convergence abort was given, setting convergence_abort = True.')
             self.convergence_abort = True
 
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
+            print('Attention: No input for verbose was given, setting verbose = False.')
             self.verbose = False
 
         if 'write_iterations' in options:
             self.write_iterations = options['write_iterations']
         else:
+            print('Attention: No input for write iterations was given, setting write_iterations = False.')
             self.write_iterations = False
 
-        if 'track_number_of_iterations' in options:
-            self.track_number_of_iterations = options['track_number_of_iterations']
+        if 'track_iterations' in options:
+            self.track_iterations = options['track_iterations']
         else:
-            self.track_number_of_iterations = False
+            print('Attention: No input for track iterations was given, setting track_iterations = False.')
+            self.track_iterations = False
         return
 
     def overwrite_parameters(self, **options):
@@ -851,23 +979,17 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         self.mechanical_system.clear_timesteps()
         self.iteration_info = []
         t = self.t0
-        time_range = np.arange(self.t0, self.t_end, self.dt_output)
         x = self.initial_conditions['x0'].copy()
         dx = np.zeros_like(x)
         F_ext = np.zeros_like(x)
         abs_F_ext = self.absolute_tolerance
-        time_index = 0
-        eps = 1E-13
+
+        # write output of initial conditions
+        self.mechanical_system.write_timestep(t, x.copy())
 
         # time step loop
-        while time_index < len(time_range):
-
-            # write output
-            if t + eps >= time_range[time_index]:
-                self.mechanical_system.write_timestep(t, x.copy())
-                time_index += 1
-                if time_index == len(time_range):
-                    break
+        output_index = 0
+        while t < self.t_end:
 
             # save_solution old variables
             x_old = x.copy()
@@ -876,6 +998,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
             t_old = t
 
             # predict new variables
+            output_index += 1
             t += self.dt
             x, xq = self.predict(x, dx)
 
@@ -884,7 +1007,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
             Res_abs = euclidean_norm_of_vector(Res)
 
             # Newton-Raphson iteration loop
-            n_iter = 0
+            iteration = 0
             while Res_abs > self.relative_tolerance*abs_F_ext + self.absolute_tolerance:
 
                 # solve for state correction
@@ -897,7 +1020,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
                 # update system quantities
                 Jac, Res, F_ext = self.newton_raphson(x, dx, t, x_old, dx_old, t_old)
                 Res_abs = euclidean_norm_of_vector(Res)
-                n_iter += 1
+                iteration += 1
 
                 if self.verbose:
                     if sp.sparse.issparse(Jac):
@@ -905,14 +1028,14 @@ class NonlinearDynamicsSolverStateSpace(Solver):
                     else:
                         cond_nr = np.linalg.cond(Jac)
                     print('Iteration: {0:3d}, residual: {1:6.3E}, condition# of Jacobian: {2:6.3E}'.format(
-                        n_iter, Res_abs, cond_nr))
+                        iteration, Res_abs, cond_nr))
 
                 if self.write_iterations:
-                    t_write = t + self.dt/1000000*n_iter
+                    t_write = t + self.dt/1000000*iteration
                     self.mechanical_system.write_timestep(t_write, x.copy())
 
                 # catch failing convergence
-                if n_iter > self.max_number_of_iterations:
+                if iteration > self.max_number_of_iterations:
                     if self.convergence_abort:
                         print(abort_statement)
                         self.iteration_info = np.array(self.iteration_info)
@@ -928,9 +1051,15 @@ class NonlinearDynamicsSolverStateSpace(Solver):
 
                 # end of Newton-Raphson iteration loop
 
-            print('Time: {0:3.6f}, #iterations: {1:3d}, residual: {2:6.3E}'.format(t, n_iter, Res_abs))
-            if self.track_number_of_iterations:
-                self.iteration_info.append((t, n_iter, Res_abs))
+            # write output
+            if output_index == self.output_frequency:
+                self.mechanical_system.write_timestep(t, q.copy())
+                output_index = 0
+
+            if self.track_iterations:
+                self.iteration_info.append((t, iteration, Res_abs))
+
+            print('Time: {0:3.6f}, #iterations: {1:3d}, residual: {2:6.3E}'.format(t, iteration, Res_abs))
 
             # end of time step loop
 
@@ -980,28 +1109,31 @@ class LinearDynamicsSolverStateSpace(Solver):
         if 't0' in options:
             self.t0 = options['t0']
         else:
-            print('Attention: No initial time was given for time-integration, setting t0 = 0.0.')
+            print('Attention: No initial time was given, setting t0 = 0.0.')
             self.t0 = 0.0
 
         if 't_end' in options:
             self.t_end = options['t_end']
         else:
-            print('Attention: No end time was given for time-integration, setting t_end = 1.0.')
+            print('Attention: No end time was given, setting t_end = 1.0.')
             self.t_end = 1.0
 
         if 'dt' in options:
             self.dt = options['dt']
         else:
-            raise ValueError('Error: No time step size was given for the time integration.')
+            print('Attention: No time step size was, setting dt = 1.0e-4.')
+            self.dt = 1.0e-4
 
-        if 'dt_output' in options:
-            self.dt_output = options['dt_output']
+        if 'output_frequency' in options:
+            self.output_frequency = options['output_frequency']
         else:
-            self.dt_output = self.dt
+            print('Attention: No input for output frequency was given, setting output_frequency = 1.')
+            self.output_frequency = 1
 
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
+            print('Attention: No input for verbose was given, setting verbose = False.')
             self.verbose = False
         return
 
@@ -1029,10 +1161,7 @@ class LinearDynamicsSolverStateSpace(Solver):
         self.linear_solver = self.linear_solver(mtype='nonsym')
         self.mechanical_system.clear_timesteps()
         t = self.t0
-        time_range = np.arange(self.t0, self.t_end, self.dt_output)
         x = self.initial_conditions['x0'].copy()
-        time_index = 0
-        eps = 1E-13
 
         # evaluate initial derivative and LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
@@ -1044,15 +1173,12 @@ class LinearDynamicsSolverStateSpace(Solver):
         if hasattr(self.linear_solver, 'factorize'):
             self.linear_solver.factorize()
 
-        # time step loop
-        while time_index < len(time_range):
+        # write output of initial conditions
+        self.mechanical_system.write_timestep(t, x.copy())
 
-            # write output
-            if t + eps >= time_range[time_index]:
-                self.mechanical_system.write_timestep(t, x.copy())
-                time_index += 1
-                if time_index == len(time_range):
-                    break
+        # time step loop
+        output_index = 0
+        while t < self.t_end:
 
             # save_solution old variables
             x_old = x.copy()
@@ -1060,6 +1186,7 @@ class LinearDynamicsSolverStateSpace(Solver):
             t_old = t
 
             # solve system
+            output_index += 1
             t += self.dt
             F_eff = self.effective_force(x_old, dx_old, t, t_old)
 
@@ -1067,6 +1194,12 @@ class LinearDynamicsSolverStateSpace(Solver):
 
             # update variables
             dx = self.update(x, x_old, dx_old)
+
+            # write output
+            if output_index == self.output_frequency:
+                self.mechanical_system.write_timestep(t, q.copy())
+                output_index = 0
+
             print('Time: {0:3.6f}'.format(t))
 
             # end of time step loop
@@ -1122,8 +1255,8 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         if 'rho_inf' in options:
             self.rho_inf = options['rho_inf']
         else:
-            self.rho_inf = 0.9
             print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
+            self.rho_inf = 0.9
 
         # set parameters
         self.alpha_m = (2*self.rho_inf - 1)/(self.rho_inf + 1)
@@ -1304,8 +1437,8 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         if 'rho_inf' in options:
             self.rho_inf = options['rho_inf']
         else:
-            self.rho_inf = 0.9
             print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
+            self.rho_inf = 0.9
 
         # set parameters
         self.alpha_m = (3 - self.rho_inf)/(2*(1 + self.rho_inf))
@@ -1428,8 +1561,8 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         if 'rho_inf' in options:
             self.rho_inf = options['rho_inf']
         else:
-            self.rho_inf = 0.9
             print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
+            self.rho_inf = 0.9
 
         # set parameters
         self.alpha_m = (2 * self.rho_inf - 1) / (self.rho_inf + 1)
@@ -1605,8 +1738,8 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         if 'rho_inf' in options:
             self.rho_inf = options['rho_inf']
         else:
-            self.rho_inf = 0.9
             print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
+            self.rho_inf = 0.9
 
         # set parameters
         self.alpha_m = (3 - self.rho_inf) / (2 * (1 + self.rho_inf))
@@ -1717,8 +1850,8 @@ class JWHAlphaNonlinearDynamicsSolverStateSpace(NonlinearDynamicsSolverStateSpac
         if 'rho_inf' in options:
             self.rho_inf = options['rho_inf']
         else:
-            self.rho_inf = 0.9
             print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
+            self.rho_inf = 0.9
 
         # set parameters
         self.alpha_m = (3 - self.rho_inf)/(2*(1 + self.rho_inf))
@@ -1824,8 +1957,8 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         if 'rho_inf' in options:
             self.rho_inf = options['rho_inf']
         else:
-            self.rho_inf = 0.9
             print('Attention: No value for high frequency spectral radius was given, setting rho_inf = 0.9.')
+            self.rho_inf = 0.9
 
         # set parameters
         self.alpha_m = (3 - self.rho_inf) / (2 * (1 + self.rho_inf))
