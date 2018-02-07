@@ -429,6 +429,10 @@ class NonlinearDynamicsSolver(Solver):
         else:
             print('Attention: No track number of iterations was given, setting track_iterations = False.')
             self.track_iterations = False
+        if 'use_v' in options:
+            self.use_additional_variable_v = options['use_additional_variable_v']
+        else:
+            self.use_additional_variable_v = False
         return
 
     def overwrite_parameters(self, **options):
@@ -522,7 +526,6 @@ class NonlinearDynamicsSolver(Solver):
                 if iteration > self.max_number_of_iterations:
                     if self.convergence_abort:
                         print(abort_statement)
-                        self.iteration_info = np.array(self.iteration_info)
                         t_clock_end = time.time()
                         print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
                         return
