@@ -54,7 +54,7 @@ __all__ = [
     'JWHAlphaLinearDynamicsSolver',
     'JWHAlphaNonlinearDynamicsSolverStateSpace',
     'JWHAlphaLinearDynamicsSolverStateSpace',
-    # 'ConstraintSystemSolver'
+    'ConstrainedNonlinearDynamicsSolver'
 ]
 
 
@@ -1891,9 +1891,8 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         return dx
 
 
-# class ConstraintSystemSolver(NonlinearDynamicsSolver):
-#     # TBD
-#     pass
+class ConstrainedNonlinearDynamicsSolver(NonlinearDynamicsSolver):
+    pass
 
 
 # This could be a dictionary for a convenient mapping of scheme names (strings) to their solver classes

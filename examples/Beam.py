@@ -164,6 +164,10 @@ print(solver.linear_solver)
 print('\n Solving...')
 solver.solve()
 
+# alternative for solving system
+# system.set_solver(solver=amfe.GeneralizedAlphaNonlinearDynamicsSolver, **options)
+# system.solve()
+
 
 # write output
 system.export_paraview(output_file)

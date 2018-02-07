@@ -18,6 +18,7 @@ from scipy.sparse import bmat
 from .mesh import Mesh
 from .assembly import Assembly
 from .boundary import DirichletBoundary
+from .solver import *
 
 
 __all__ = [
@@ -486,6 +487,25 @@ class MechanicalSystem():
         self.stress = None
         self.strain = None
         self.iteration_info = np.array([])
+        return
+
+    def set_solver(self, solver, **solver_options):
+        '''
+        Set solver to be able to use shortcut my_system.solve() for solving the system.
+        '''
+
+        self.solver = solver(mechanical_system=self, **solver_options)
+        return
+
+    def solve(self):
+        '''
+        Shortcut to solve system.
+        '''
+
+        if not hasattr(self, 'solver'):
+            raise ValueError('No solver set. Use my_system.set_solver(solver, **solver_options) to set solver first.')
+
+        self.solver.solve()
         return
 
 
