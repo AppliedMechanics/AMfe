@@ -85,7 +85,7 @@ options = {
     'relative_tolerance': 1.0E-6,
     'absolute_tolerance': 1.0E-9,
     'verbose': True,
-    'max_number_of_iterations': 99,
+    'max_number_of_iterations': 10,
     'convergence_abort': True,
     'write_iterations': False,
     'track_iterations': False,
@@ -163,6 +163,8 @@ print('\n Linear solver =')
 print(solver.linear_solver)
 print('\n Solving...')
 solver.solve()
+# solver.solve_adaptive(dt_start=1.0e-2, dt_min=1.0e-6, dt_max=1.0e-2, kappa_min=0.1, kappa_max=10.0, kappa_savety=0.8,
+#                       absolute_temporal_tolerance=1.0e-4)
 
 # alternative for solving system
 # system.set_solver(solver=amfe.GeneralizedAlphaNonlinearDynamicsSolver, **options)
