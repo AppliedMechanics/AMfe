@@ -26,7 +26,9 @@ my_system.apply_dirichlet_boundaries(3, 'xyz')
 my_system.apply_neumann_boundaries(4, 1E10, (1, 1, 1), lambda t: t)
 
 #%%
-amfe.solve_linear_displacement(my_system)
+solver = amfe.LinearStaticsSolver(my_system)
+solver.solve()
+
 my_system.export_paraview(output_file + '_full_linear')
 
 #%% Modal analysis

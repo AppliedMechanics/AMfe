@@ -34,12 +34,14 @@ omega, V = amfe.vibration_modes(my_system)
 #%%
 
 dt = 0.001
-T = np.arange(0, 10, dt)
+T = 10
 ndof = my_system.K().shape[0]
 q0 = np.zeros(ndof)
 dq0 = np.zeros(ndof)
 
-amfe.integrate_nonlinear_system(my_system, q0, dq0, T, dt, alpha=0.1,
-                                track_niter=True)
-
+#amfe.integrate_nonlinear_system(my_system, q0, dq0, T, dt, alpha=0.1,
+#                                track_niter=True)
+dynsolver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(my_system, initial_conditions={'q0': q0, 'dq0': dq0}, t_end=T, dt=dt,
+                                        track_iterations=True)
+dynsolver.solve()
 my_system.export_paraview(output_file + '_3')
