@@ -98,12 +98,16 @@ class NonlinearStaticsSolver(Solver):
 
         if 'relative_tolerance' in options:
             self.relative_tolerance = options['relative_tolerance']
+        elif 'rtol' in options:
+            self.relative_tolerance = options['rtol']
         else:
             print('Attention: No relative tolerance was given, setting relative_tolerance = 1.0e-9.')
             self.relative_tolerance = 1.0e-9
 
         if 'absolute_tolerance' in options:
             self.absolute_tolerance = options['absolute_tolerance']
+        elif 'atol' in options:
+            self.absolute_tolerance = options['atol']
         else:
             print('Attention: No absolute tolerance was given, setting absolute_tolerance = 1.0e-6.')
             self.absolute_tolerance = 1.0e-6
@@ -390,15 +394,19 @@ class NonlinearDynamicsSolver(Solver):
 
         if 'relative_tolerance' in options:
             self.relative_tolerance = options['relative_tolerance']
+        elif 'rtol' in options:
+            self.relative_tolerance = options['rtol']
         else:
             print('Attention: No relative tolerance was given, setting relative_tolerance = 1.0e-9.')
-            self.relative_tolerance = 1.0E-9
+            self.relative_tolerance = 1.0e-9
 
         if 'absolute_tolerance' in options:
             self.absolute_tolerance = options['absolute_tolerance']
+        elif 'atol' in options:
+            self.absolute_tolerance = options['atol']
         else:
             print('Attention: No absolute tolerance was given, setting absolute_tolerance = 1.0e-6.')
-            self.absolute_tolerance = 1.0E-6
+            self.absolute_tolerance = 1.0e-6
 
         if 'max_number_of_iterations' in options:
             self.max_number_of_iterations = options['max_number_of_iterations']
