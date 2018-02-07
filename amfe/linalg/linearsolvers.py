@@ -256,7 +256,7 @@ class PardisoSolver(LinearSolver):
 # Shortcut for compatibility
 
 
-def solve_sparse(A, b, matrix_type='symm', verbose=False):
+def solve_sparse(A, b, matrix_type='sid', verbose=False):
     '''
     Abstraction of the solution of the sparse system Ax=b using the fastest
     solver available for sparse and non-sparse matrices.
@@ -271,8 +271,8 @@ def solve_sparse(A, b, matrix_type='symm', verbose=False):
         Specifier for the matrix type:
 
         - 'spd' : symmetric positive definite
-        - 'symm' : symmetric indefinite, default.
-        - 'unsymm' : generally unsymmetric
+        - 'sid' : symmetric indefinite, default.
+        - 'nonsym' : generally unsymmetric
 
     Returns
     -------

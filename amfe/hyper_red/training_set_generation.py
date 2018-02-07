@@ -10,6 +10,7 @@ import multiprocessing as mp
 import copy
 
 from ..solver import PardisoSolver
+from ..solver import NonlinearStaticsSolver
 from ..structural_dynamics import force_norm
 from ..num_exp_toolbox import apply_async
 
@@ -86,13 +87,14 @@ def compute_nskts(mechanical_system,
         f_ext_tmp = mechanical_system.f_ext
         mechanical_system.f_ext = f_ext_monkeypatched
 
-        u_arr = solve_nonlinear_displacement(mechanical_system,
-                                             no_of_load_steps=no_of_force_increments,
-                                             n_max_iter=no_of_force_increments,
-                                             verbose=verbose,
-                                             conv_abort=True,
-                                             save=False)
-
+        nlsolver = NonlinearStaticsSolver(mechanical_system,
+                                          number_of_load_steps=no_of_force_increments,
+                                          max_number_of_iterations=no_of_force_increments,
+                                          verbose=verbose,
+                                          convergence_abort=True,
+                                          save_solution=False)
+        u_arr = nlsolver.solve()
+        
         mechanical_system.f_ext = f_ext_tmp
         return u_arr
 
@@ -128,18 +130,26 @@ def compute_nskts(mechanical_system,
             [norm_of_forces for i in range(no_of_moments)]))
     standard_deviation *= load_factor
 
+# PARALLEL IMPLEMENTATION IS NOT WORKING ANYMORE
     # Do the parallel run
-    with mp.Pool(processes=no_of_procs) as pool:
-        results = []
-        for i in range(no_of_static_cases):
-            F_rand = F_basis @ np.random.normal(0, standard_deviation)
-            vals = [copy.deepcopy(mechanical_system), F_rand.copy()]
-            res = apply_async(pool, compute_stochastic_displacements, vals)
-            results.append(res)
-        u_list = []
-        for res in results:
-            u = res.get()
-            u_list.append(u)
+    # with mp.Pool(processes=no_of_procs) as pool:
+    #    results = []
+#        for i in range(no_of_static_cases):
+#            F_rand = F_basis @ np.random.normal(0, standard_deviation)
+#            vals = [copy.deepcopy(mechanical_system), F_rand.copy()]
+#            res = apply_async(pool, compute_stochastic_displacements, vals)
+#            results.append(res)
+#        u_list = []
+#        for res in results:
+#            u = res.get()
+#            u_list.append(u)
+# NON PARALLEL IMPLEMENTATION
+    u_list = []
+    for i in range(no_of_static_cases):
+        F_rand = F_basis @ np.random.normal(0, standard_deviation)
+        res = compute_stochastic_displacements(mechanical_system, F_rand)
+        u_list.append(res)
+
 
     snapshot_arr = np.concatenate(u_list, axis=1)
     time_2 = time.time()

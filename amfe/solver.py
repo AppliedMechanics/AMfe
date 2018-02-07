@@ -496,6 +496,7 @@ class NonlinearDynamicsSolver(Solver):
             # predict new variables
             output_index += 1
             t += self.dt
+
             q, dq, v, ddq = self.predict(q, dq, v, ddq)
 
             Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
