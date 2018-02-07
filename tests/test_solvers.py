@@ -1,0 +1,112 @@
+# -*- coding: utf-8 -*-
+'''
+Test for testing the solvers
+'''
+
+import unittest
+import numpy as np
+import scipy as sp
+import nose
+import re
+
+from numpy.testing import assert_allclose, assert_almost_equal
+import amfe
+
+
+def read_grf(file):
+    times = list()
+    displacements = list()
+    with open(file,'r') as fp:
+        for line in fp.readlines():
+            if not line.startswith('#'):
+                matchobject = re.search(r'([0-9.\-]*)\s([0-9.\-]*)', line)
+                time = float(matchobject.group(1))
+                displacement = float(matchobject.group(2))
+                times.append(time)
+                displacements.append(displacement)
+    # First dimension (rows): 0: time, 1: displacement
+    # Second dimension (columns): different timesteps
+    data = np.array([times, displacements])
+    return data
+
+
+class SolversTest(unittest.TestCase):
+    def setUp(self):
+        # define input-file and prefix for output
+        self.input_file = amfe.amfe_dir('meshes/gmsh/beam/Beam10x1Quad8.msh')
+        self.output_file_prefix = amfe.amfe_dir('results/beam/Beam10x1Quad8')
+        # setup mechanical system
+        self.material = amfe.KirchhoffMaterial(E=2.1e11, nu=0.3, rho=7.867e3, plane_stress=False)
+        self.system = amfe.MechanicalSystem()
+        self.system.load_mesh_from_gmsh(self.input_file, 1, self.material)
+        self.system.apply_dirichlet_boundaries(5, 'xy')
+        ndof = self.system.dirichlet_class.no_of_constrained_dofs
+        # system.apply_rayleigh_damping(1e0, 1e-5)
+        self.options = {
+    'linear_solver': amfe.linalg.PardisoSolver,  # amfe.linalg.ScipySparseSolver
+    'number_of_load_steps': 10,
+    'newton_damping': 1.0,
+    'simplified_newton_iterations': 1,
+    't': 1.0,
+    't0': 0.0,
+    't_end': 0.4,
+    'dt': 5e-4,
+    'dt_output': 5e-4,
+    'rho_inf': 0.95,
+    'initial_conditions': {
+        'x0': np.zeros(2*ndof),
+        'q0': np.zeros(ndof),
+        'dq0': np.zeros(ndof)},
+    'relative_tolerance': 1.0E-6,
+    'absolute_tolerance': 1.0E-9,
+    'verbose': True,
+    'max_number_of_iterations': 99,
+    'convergence_abort': True,
+    'write_iterations': False,
+    'track_number_of_iterations': False,
+    'save_solution': True}
+    rho_inf = 0.95
+    alpha = 0.0005
+
+    def tearDown(self):
+        self.system = None
+
+    def test_nonlinear_dynamics_solver(self):
+        pass
+
+    def test_linear_dynamics_solver(self):
+        pass
+
+    def test_generalized_alpha_nonlinear_dynamics_solver(self):
+        self.output_file = self.output_file_prefix + '_nonlinear_generalized_alpha'
+        self.system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: 1)
+        self.solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=self.system, **self.options)
+        self.solver.solve()
+        last = len(self.system.u_output)
+        with open(self.output_file + '.dat', 'w') as fp:
+            for i in range(last):
+                fp.write(str(self.system.T_output[i]) + ' ' + str(self.system.u_output[i][2]) + ' ' + str(self.system.u_output[i][3]) + '\n')
+
+        x = np.array([self.system.T_output[:], [displacement[2] for displacement in self.system.u_output]])
+        y = np.array([self.system.T_output[:], [displacement[3] for displacement in self.system.u_output]])
+        fnx = amfe.amfe_dir('tests/kratos/Kratos_beam10x1Quad8_nonlinear_dynamics_x_wbzalpha_rhoinf095_dt5e-4.grf')
+        fny = amfe.amfe_dir('tests/kratos/Kratos_beam10x1Quad8_nonlinear_dynamics_y_wbzalpha_rhoinf095_dt5e-4.grf')
+        reference_x = read_grf(fnx)
+        reference_y = read_grf(fny)
+        assert_allclose(x[:, 1:], reference_x[:, :], rtol=1e-12, atol=1)
+        assert_allclose(y[:, 1:], reference_y[:, :], rtol=1e-12, atol=1)
+
+    def test_jwh_alpha_nonlinear_dynamics_solver(self):
+        pass
+
+    def test_generalized_alpha_linear_dynamics_solver(self):
+        pass
+
+    def test_jwh_alpha_linear_dynamics_solver(self):
+        pass
+
+
+if __name__ == '__main__':
+    st = SolversTest()
+    st.setUp()
+    st.test_generalized_alpha_nonlinear_dynamics_solver()
