@@ -59,7 +59,7 @@ class Solver:
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
         else:
-            print('Attention: No input for linear solver was given, setting linear_solver = PardisoSolver.')
+            print('Attention: No linear solver was given, setting linear_solver = PardisoSolver.')
             self.linear_solver = PardisoSolver
 
         if 'linear_solver_options' in options:
@@ -91,70 +91,68 @@ class NonlinearStaticsSolver(Solver):
         if 'number_of_load_steps' in options:
             self.number_of_load_steps = options['number_of_load_steps']
         else:
-            print('Attention: No input for number of load steps was given, setting number_of_load_steps = 10.')
+            print('Attention: No number of load steps was given, setting number_of_load_steps = 10.')
             self.number_of_load_steps = 10
 
         if 'relative_tolerance' in options:
             self.relative_tolerance = options['relative_tolerance']
         else:
-            print('Attention: No input for relative tolerance was given, setting relative_tolerance = 1.0e-9.')
+            print('Attention: No relative tolerance was given, setting relative_tolerance = 1.0e-9.')
             self.relative_tolerance = 1.0e-9
 
         if 'absolute_tolerance' in options:
             self.absolute_tolerance = options['absolute_tolerance']
         else:
-            print('Attention: No input for absolute tolerance was given, setting absolute_tolerance = 1.0e-6.')
+            print('Attention: No absolute tolerance was given, setting absolute_tolerance = 1.0e-6.')
             self.absolute_tolerance = 1.0e-6
 
         if 'newton_damping' in options:
             self.newton_damping = options['newton_damping']
         else:
-            print('Attention: No input for newton damping was given, setting newton_damping = 1.0.')
+            print('Attention: No newton damping was given, setting newton_damping = 1.0.')
             self.newton_damping = 1.0
 
         if 'max_number_of_iterations' in options:
             self.max_number_of_iterations = options['max_number_of_iterations']
         else:
-            print('Attention: No input for maximum number of iterations was given, ' \
-                  + 'setting max_number_of_iterations = 1000.')
+            print('Attention: No maximum number of iterations was given, setting max_number_of_iterations = 1000.')
             self.max_number_of_iterations = 1000
 
-        if 'simplified_newtoiterationations' in options:
-            self.simplified_newtoiterationations = options['simplified_newtoiterationations']
+        if 'simplified_newton_iterations' in options:
+            self.simplified_newton_iterations = options['simplified_newton_iterations']
         else:
-            print('Attention: No input for simplified Newton iterations was given, ' \
-                  + 'setting simplified_newtoiterationations = 1.')
-            self.simplified_newtoiterationations = 1
+            print('Attention: No number of simplified Newton iterations was given, ' \
+                  + 'setting simplified_newton_iterations = 1.')
+            self.simplified_newton_iterations = 1
 
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
-            print('Attention: No input for verbose was given, setting verbose = False.')
+            print('Attention: No verbose was given, setting verbose = False.')
             self.verbose = False
 
         if 'track_iterations' in options:
             self.track_iterations = options['track_iterations']
         else:
-            print('Attention: No input for track number of iterations was given, ' \
-                  + 'setting track_iterations = False.')
+            print('Attention: No track number of iterations was given, setting track_iterations = False.')
             self.track_iterations = False
 
         if 'write_iterations' in options:
             self.write_iterations = options['write_iterations']
         else:
-            print('Attention: No input for write iterations was given, setting write_iterations = False.')
+            print('Attention: No write iterations was given, setting write_iterations = False.')
             self.write_iterations = False
 
         if 'convergence_abort' in options:
             self.convergence_abort = options['convergence_abort']
         else:
-            print('Attention: No input for convergence abort was given, setting convergence_abort = True.')
+            print('Attention: No convergence abort was given, setting convergence_abort = True.')
             self.convergence_abort = True
 
         if 'save_solution' in options:
             self.save_solution = options['save_solution']
         else:
-            print('Attention: No input for save solution was given, setting save_solution = True.')
+            print('Attention: No save solution was given, setting save_solution = True.')
             self.save_solution = True
         return
 
@@ -210,7 +208,7 @@ class NonlinearStaticsSolver(Solver):
                 u += delta_u*self.newton_damping
 
                 # update system
-                if (iteration % self.simplified_newtoiterationations) is 0:
+                if (iteration % self.simplified_newton_iterations) is 0:
                     K, f_int = self.mechanical_system.K_and_f(u, t)
                     f_ext = self.mechanical_system.f_ext(u, du, t)
                 res = -f_int + f_ext
@@ -269,14 +267,13 @@ class LinearStaticsSolver(Solver):
         if 't' in options:
             self.t = options['t']
         else:
-            print('Attention: No input for pseudo time evaluation was given, setting t = 1.0.')
+            print('Attention: No pseudo time evaluation was given, setting t = 1.0.')
             self.t = 1.0
         return
 
     def solve(self):
         '''
-        Solves the linear static problem of the mechanical system linearized around
-        zero-displacement.
+        Solves the linear static problem of the mechanical system linearized around zero-displacement.
 
         Returns
         -------
@@ -354,14 +351,14 @@ class NonlinearDynamicsSolver(Solver):
             if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
                 raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
         else:
-            print('Attention: No input for initial displacement was given, setting q0 = 0.')
+            print('Attention: No initial displacement was given, setting q0 = 0.')
             q0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
             dq0 = options['initial_conditions']['dq0']
             if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
                 raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
-            print('Attention: No input for initial velocity was given, setting dq0 = 0.')
+            print('Attention: No initial velocity was given, setting dq0 = 0.')
             dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'q0': q0, 'dq0': dq0}
 
@@ -704,14 +701,14 @@ class LinearDynamicsSolver(Solver):
             if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
                 raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
         else:
-            print('Attention: No input for initial displacement is given, setting q0 = 0.')
+            print('Attention: No initial displacement is given, setting q0 = 0.')
             q0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
             dq0 = options['initial_conditions']['dq0']
             if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
                 raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
-            print('Attention: No input for initial velocity is given, setting dq0 = 0.')
+            print('Attention: No initial velocity is given, setting dq0 = 0.')
             dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'q0':q0, 'dq0':dq0}
 
@@ -736,13 +733,13 @@ class LinearDynamicsSolver(Solver):
         if 'output_frequency' in options:
             self.output_frequency = options['output_frequency']
         else:
-            print('Attention: No input for output frequency was given, setting output_frequency = 1.')
+            print('Attention: No output frequency was given, setting output_frequency = 1.')
             self.output_frequency = 1
 
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
-            print('Attention: No input for verbose was given, setting verbose = False.')
+            print('Attention: No verbose was given, setting verbose = False.')
             self.verbose = False
         return
 
@@ -881,7 +878,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
             if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
                 raise ValueError('Error: Dimension of x0 not valid for mechanical system.')
         else:
-            print('Attention: No input for initial state is given, setting x0 = 0.')
+            print('Attention: No initial state is given, setting x0 = 0.')
             x0 = np.zeros(2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'x0': x0}
 
@@ -906,50 +903,49 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         if 'output_frequency' in options:
             self.output_frequency = options['output_frequency']
         else:
-            print('Attention: No input for output frequency was given, setting output_frequency = 1.')
+            print('Attention: No output frequency was given, setting output_frequency = 1.')
             self.output_frequency = 1
 
         if 'relative_tolerance' in options:
             self.relative_tolerance = options['relative_tolerance']
         else:
-            print('Attention: No input for relative tolerance was given, setting relative_tolerance = 1.0e-9.')
+            print('Attention: No relative tolerance was given, setting relative_tolerance = 1.0e-9.')
             self.relative_tolerance = 1.0E-9
 
         if 'absolute_tolerance' in options:
             self.absolute_tolerance = options['absolute_tolerance']
         else:
-            print('Attention: No input for absolute tolerance was given, setting absolute_tolerance = 1.0e-6.')
+            print('Attention: No absolute tolerance was given, setting absolute_tolerance = 1.0e-6.')
             self.absolute_tolerance = 1.0E-6
 
         if 'max_number_of_iterations' in options:
             self.max_number_of_iterations = options['max_number_of_iterations']
         else:
-            print('Attention: No input for maximum number of iterations was given, ' \
-                  + 'setting max_number_of_iterations = 30.')
+            print('Attention: No maximum number of iterations was given, setting max_number_of_iterations = 30.')
             self.max_number_of_iterations = 30
 
         if 'convergence_abort' in options:
             self.convergence_abort = options['convergence_abort']
         else:
-            print('Attention: No input for convergence abort was given, setting convergence_abort = True.')
+            print('Attention: No convergence abort was given, setting convergence_abort = True.')
             self.convergence_abort = True
 
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
-            print('Attention: No input for verbose was given, setting verbose = False.')
+            print('Attention: No verbose was given, setting verbose = False.')
             self.verbose = False
 
         if 'write_iterations' in options:
             self.write_iterations = options['write_iterations']
         else:
-            print('Attention: No input for write iterations was given, setting write_iterations = False.')
+            print('Attention: No write iterations was given, setting write_iterations = False.')
             self.write_iterations = False
 
         if 'track_iterations' in options:
             self.track_iterations = options['track_iterations']
         else:
-            print('Attention: No input for track iterations was given, setting track_iterations = False.')
+            print('Attention: No track iterations was given, setting track_iterations = False.')
             self.track_iterations = False
         return
 
@@ -1053,7 +1049,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
 
             # write output
             if output_index == self.output_frequency:
-                self.mechanical_system.write_timestep(t, q.copy())
+                self.mechanical_system.write_timestep(t, x.copy())
                 output_index = 0
 
             if self.track_iterations:
@@ -1102,7 +1098,7 @@ class LinearDynamicsSolverStateSpace(Solver):
             if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
                 raise ValueError('Error: Dimension of x0 not valid for mechanical system.')
         else:
-            print('Attention: No input for initial state is given, setting x0 = 0.')
+            print('Attention: No initial state is given, setting x0 = 0.')
             x0 = np.zeros(2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'x0': x0}
 
@@ -1127,13 +1123,13 @@ class LinearDynamicsSolverStateSpace(Solver):
         if 'output_frequency' in options:
             self.output_frequency = options['output_frequency']
         else:
-            print('Attention: No input for output frequency was given, setting output_frequency = 1.')
+            print('Attention: No output frequency was given, setting output_frequency = 1.')
             self.output_frequency = 1
 
         if 'verbose' in options:
             self.verbose = options['verbose']
         else:
-            print('Attention: No input for verbose was given, setting verbose = False.')
+            print('Attention: No verbose was given, setting verbose = False.')
             self.verbose = False
         return
 
@@ -1197,7 +1193,7 @@ class LinearDynamicsSolverStateSpace(Solver):
 
             # write output
             if output_index == self.output_frequency:
-                self.mechanical_system.write_timestep(t, q.copy())
+                self.mechanical_system.write_timestep(t, x.copy())
                 output_index = 0
 
             print('Time: {0:3.6f}'.format(t))
