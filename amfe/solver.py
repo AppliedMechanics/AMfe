@@ -711,7 +711,7 @@ class NonlinearDynamicsSolver(Solver):
             # track final time step size
             self.dt_info.append(self.dt)
 
-            print('Time: {0:3.6f}, dt-iteration: {1:3d}, #iterations: {2:3d}, residual: {3:6.3E}'.format(
+            print('Time: {0:3.6f}, #dt-iterations: {1:3d}, #NR-iterations: {2:3d}, NR-residual: {3:6.3E}'.format(
                 t, tmp_iteration, newton_iteration, res_abs))
 
             # end of time step loop
