@@ -507,6 +507,15 @@ class NonlinearDynamicsSolver(Solver):
             iteration = 0
             while res_abs > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
 
+                # catch failing convergence
+                if iteration > self.max_number_of_iterations:
+                    if self.convergence_abort:
+                        print(abort_statement)
+                        t_clock_end = time.time()
+                        print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
+                        return
+                    break
+
                 # solve for displacement correction
                 self.linear_solver.set_A(Jac)
                 delta_q = -self.linear_solver.solve(res)
@@ -530,21 +539,6 @@ class NonlinearDynamicsSolver(Solver):
                 if self.write_iterations:
                     t_write = t + self.dt/1000000*iteration
                     self.mechanical_system.write_timestep(t_write, q.copy())
-
-                # catch failing convergence
-                if iteration > self.max_number_of_iterations:
-                    if self.convergence_abort:
-                        print(abort_statement)
-                        t_clock_end = time.time()
-                        print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
-                        return
-
-                    t = t_old
-                    q = q_old.copy()
-                    dq = dq_old.copy()
-                    v = v_old.copy()
-                    f_ext = f_ext_old.copy()
-                    break
 
                 # end of Newton-Raphson iteration loop
 
@@ -656,7 +650,7 @@ class NonlinearDynamicsSolver(Solver):
                 newton_iteration = 0
                 while res_abs > self.relative_tolerance * abs_f_ext + self.absolute_tolerance:
 
-                    # catch failing Newton convergence
+                    # catch failing Newton-Raphson convergence
                     if newton_iteration > self.max_number_of_iterations:
                         no_convergence = True
                         break
@@ -1066,6 +1060,16 @@ class NonlinearDynamicsSolverStateSpace(Solver):
             iteration = 0
             while Res_abs > self.relative_tolerance*abs_F_ext + self.absolute_tolerance:
 
+                # catch failing convergence
+                if iteration > self.max_number_of_iterations:
+                    if self.convergence_abort:
+                        print(abort_statement)
+                        self.iteration_info = np.array(self.iteration_info)
+                        t_clock_end = time.time()
+                        print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
+                        return
+                    break
+
                 # solve for state correction
                 self.linear_solver.set_A(Jac)
                 delta_x = -self.linear_solver.solve(Res)
@@ -1089,21 +1093,6 @@ class NonlinearDynamicsSolverStateSpace(Solver):
                 if self.write_iterations:
                     t_write = t + self.dt/1000000*iteration
                     self.mechanical_system.write_timestep(t_write, x.copy())
-
-                # catch failing convergence
-                if iteration > self.max_number_of_iterations:
-                    if self.convergence_abort:
-                        print(abort_statement)
-                        self.iteration_info = np.array(self.iteration_info)
-                        t_clock_end = time.time()
-                        print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
-                        return
-
-                    t = t_old
-                    x = x_old.copy()
-                    dx = dx_old.copy()
-                    F_ext = F_ext_old.copy()
-                    break
 
                 # end of Newton-Raphson iteration loop
 
