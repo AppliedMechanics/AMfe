@@ -564,8 +564,9 @@ class NonlinearDynamicsSolver(Solver):
         print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
         return
 
-    def solve_with_adaptive_time_step(self, dt_start, dt_min, dt_max, kappa_min, kappa_max, kappa_savety,
-                                      relative_temporal_tolerance, max_temporal_iterations):
+    def solve_with_adaptive_time_step(self, dt_start, dt_min, dt_max, change_factor_min, change_factor_max,
+                                      savety_factor, trust_in_new_increased_dt, relative_dt_tolerance,
+                                      max_dt_iterations, new_dt_for_failing_newton_convergence):
         '''
         Solves the nonlinear dynamic problem of the mechanical system with adaptive time step.
 
@@ -615,16 +616,16 @@ class NonlinearDynamicsSolver(Solver):
             t_old = t
 
             output_index += 1
-            abs_local_tmp_err = 1.0e16
-            no_convergence = False
+            abs_local_dt_err = 1.0e16
+            no_newton_convergence = False
 
-            tmp_iteration = 0
-            while abs_local_tmp_err > relative_temporal_tolerance*max_q:
+            dt_iteration = 0
+            while abs_local_dt_err > relative_dt_tolerance*max_q:
 
-                tmp_iteration += 1
+                dt_iteration += 1
 
                 # catch failing dt convergence
-                if tmp_iteration > max_temporal_iterations:
+                if dt_iteration > max_dt_iterations:
                     return
 
                 # update max displacement
@@ -635,7 +636,7 @@ class NonlinearDynamicsSolver(Solver):
                 dq = dq_old.copy()
                 v = v_old.copy()
                 ddq = ddq_old.copy()
-                # f_ext = f_ext_old.copy()
+                f_ext = f_ext_old.copy()
                 t = t_old
 
                 # predict new variables
@@ -652,7 +653,7 @@ class NonlinearDynamicsSolver(Solver):
 
                     # catch failing Newton-Raphson convergence
                     if newton_iteration > self.max_number_of_iterations:
-                        no_convergence = True
+                        no_newton_convergence = True
                         break
 
                     # solve for displacement correction
@@ -682,19 +683,19 @@ class NonlinearDynamicsSolver(Solver):
                     # end of Newton-Raphson iteration loop
 
                 # update time step
-                if no_convergence:  # reduce time step to 80%
-                    self.dt *= 0.8
+                if no_newton_convergence:  # reduce time step to defined percentage
+                    self.dt *= new_dt_for_failing_newton_convergence
                     if self.dt < dt_min:
                         self.dt = dt_min
-                    abs_local_tmp_err = 1.0e16
-                    no_convergence = False
+                    abs_local_dt_err = 1.0e16
+                    no_newton_convergence = False
                 else:  # evaluate local temporal discretization error and update time step accordingly
-                    abs_local_tmp_err = (self.beta - 1/6)*self.dt**2*euclidean_norm_of_vector(ddq - ddq_old)
-                    kappa = np.cbrt(relative_temporal_tolerance*max_q/abs_local_tmp_err)
-                    dt_new = min(dt_max, max(min(kappa_max, max(kappa_min, kappa_savety*kappa))*self.dt, dt_min))
-                    if (dt_new > self.dt) and (len(self.dt_info) >= 3):
-                        self.dt = 0.534*dt_new + 0.300*self.dt_info[-1] + 0.133*self.dt_info[-2] \
-                                  + 0.033*self.dt_info[-3]
+                    abs_local_dt_err = (self.beta - 1/6)*self.dt**2*euclidean_norm_of_vector(ddq - ddq_old)
+                    kappa = np.cbrt(relative_dt_tolerance*max_q/abs_local_dt_err)
+                    dt_new = min(dt_max, max(min(change_factor_max,
+                                                 max(change_factor_min, savety_factor*kappa))*self.dt, dt_min))
+                    if (dt_new > self.dt) and (len(self.dt_info) > 1):
+                        self.dt = trust_in_new_increased_dt*dt_new + (1 - trust_in_new_increased_dt)*self.dt_info[-1]
                     else:
                         self.dt = dt_new
 
@@ -712,7 +713,7 @@ class NonlinearDynamicsSolver(Solver):
             self.dt_info.append(self.dt)
 
             print('Time: {0:3.6f}, #dt-iterations: {1:3d}, #NR-iterations: {2:3d}, NR-residual: {3:6.3E}'.format(
-                t, tmp_iteration, newton_iteration, res_abs))
+                t, dt_iteration, newton_iteration, res_abs))
 
             # end of time step loop
 

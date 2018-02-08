@@ -165,8 +165,10 @@ print('\n Solving...')
 solver.solve()
 
 # alternative solver with adaptive time stepping (available only for nonlinear mechanical forms)
-# solver.solve_with_adaptive_time_step(dt_start=1.0e-3, dt_min=1.0e-6, dt_max=1.0e-1, kappa_min=0.5, kappa_max=2.0,
-#                                      kappa_savety=0.9, relative_temporal_tolerance=1.0e-3, max_temporal_iterations=10)
+# solver.solve_with_adaptive_time_step(dt_start=1.0e-4, dt_min=1.0e-6, dt_max=1.0e-1, change_factor_min=0.5,
+#                                      change_factor_max=2.0, savety_factor=0.9, trust_in_new_increased_dt = 0.01,
+#                                      relative_dt_tolerance=1.0e-2, max_dt_iterations=10,
+#                                      new_dt_for_failing_newton_convergence=0.8)
 
 # alternative for solving system
 # system.set_solver(solver=amfe.GeneralizedAlphaNonlinearDynamicsSolver, **options)
