@@ -625,10 +625,13 @@ class NonlinearDynamicsSolver(Solver):
             no_convergence = False
 
             tmp_iteration = 0
-            while (abs_local_tmp_err > relative_temporal_tolerance*max_q) \
-                    and not (tmp_iteration >= max_temporal_iterations):
+            while abs_local_tmp_err > relative_temporal_tolerance*max_q:
 
                 tmp_iteration += 1
+
+                # catch failing dt convergence
+                if tmp_iteration > max_temporal_iterations:
+                    return
 
                 # update max displacement
                 max_q = max(max_q, np.max(q))
@@ -652,6 +655,11 @@ class NonlinearDynamicsSolver(Solver):
                 # Newton-Raphson iteration loop
                 newton_iteration = 0
                 while res_abs > self.relative_tolerance * abs_f_ext + self.absolute_tolerance:
+
+                    # catch failing Newton convergence
+                    if newton_iteration > self.max_number_of_iterations:
+                        no_convergence = True
+                        break
 
                     # solve for displacement correction
                     self.linear_solver.set_A(Jac)
@@ -677,26 +685,24 @@ class NonlinearDynamicsSolver(Solver):
                         t_write = t + self.dt / 1000000 * newton_iteration
                         self.mechanical_system.write_timestep(t_write, q.copy())
 
-                    # catch failing convergence
-                    if newton_iteration >= self.max_number_of_iterations:
-                        no_convergence = True
-                        break
-
                     # end of Newton-Raphson iteration loop
 
-                # evaluate local temporal discretization error
-                abs_local_tmp_err = (self.beta - 1/6)*self.dt**2*euclidean_norm_of_vector(ddq - ddq_old)
-
                 # update time step
-                kappa = np.cbrt(relative_temporal_tolerance*max_q/abs_local_tmp_err)
-                if no_convergence:
-                    self.dt *= 0.8  # evtl. replace hard coded value by user input
+                if no_convergence:  # reduce time step to 80%
+                    self.dt *= 0.8
                     if self.dt < dt_min:
                         self.dt = dt_min
                     abs_local_tmp_err = 1.0e16
                     no_convergence = False
-                else:
-                    self.dt = min(dt_max, max(min(kappa_max, max(kappa_min, kappa_savety*kappa))*self.dt, dt_min))
+                else:  # evaluate local temporal discretization error and update time step accordingly
+                    abs_local_tmp_err = (self.beta - 1/6)*self.dt**2*euclidean_norm_of_vector(ddq - ddq_old)
+                    kappa = np.cbrt(relative_temporal_tolerance*max_q/abs_local_tmp_err)
+                    dt_new = min(dt_max, max(min(kappa_max, max(kappa_min, kappa_savety*kappa))*self.dt, dt_min))
+                    if (dt_new > self.dt) and (len(self.dt_info) >= 3):
+                        self.dt = 0.534*dt_new + 0.300*self.dt_info[-1] + 0.133*self.dt_info[-2] \
+                                  + 0.033*self.dt_info[-3]
+                    else:
+                        self.dt = dt_new
 
             # end time step adaption loop
 
