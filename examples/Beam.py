@@ -85,7 +85,7 @@ options = {
     'relative_tolerance': 1.0E-6,
     'absolute_tolerance': 1.0E-9,
     'verbose': True,
-    'max_number_of_iterations': 10,
+    'max_number_of_iterations': 30,
     'convergence_abort': True,
     'write_iterations': False,
     'track_iterations': False,
@@ -163,8 +163,10 @@ print('\n Linear solver =')
 print(solver.linear_solver)
 print('\n Solving...')
 solver.solve()
-# solver.solve_adaptive(dt_start=1.0e-2, dt_min=1.0e-6, dt_max=1.0e-2, kappa_min=0.1, kappa_max=10.0, kappa_savety=0.8,
-#                       absolute_temporal_tolerance=1.0e-4)
+
+# alternative solver with adaptive time stepping (available only for nonlinear mechanical forms)
+# solver.solve_with_adaptive_time_step(dt_start=1.0e-3, dt_min=1.0e-6, dt_max=1.0e-1, kappa_min=0.5, kappa_max=2.0,
+#                                      kappa_savety=0.9, relative_temporal_tolerance=1.0e-3, max_temporal_iterations=10)
 
 # alternative for solving system
 # system.set_solver(solver=amfe.GeneralizedAlphaNonlinearDynamicsSolver, **options)
@@ -174,9 +176,11 @@ solver.solve()
 # write output
 system.export_paraview(output_file)
 
-end = len(system.u_output)
+end = len(system.T_output)
 file = open(output_file + '.dat', 'w')
 for i in range(end):
     file.write(str(system.T_output[i]) + ' ' + str(system.u_output[i][2]) + ' ' + str(system.u_output[i][3]) + '\n')
+    # file.write(str(system.T_output[i]) + ' ' + str(system.u_output[i][2]) + ' ' + str(system.u_output[i][3]) \
+    #            + ' ' + str(solver.dt_info[i]) + '\n')  # for time step adapting solvers only
 file.close()
 

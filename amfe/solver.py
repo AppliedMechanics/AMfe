@@ -570,148 +570,161 @@ class NonlinearDynamicsSolver(Solver):
         print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
         return
 
-    # def solve_adaptive(self, dt_start, dt_min, dt_max, kappa_min, kappa_max, kappa_savety, absolute_temporal_tolerance):
-    #     '''
-    #     Solves the nonlinear dynamic problem of the mechanical system with adaptive time step.
-    #     '''
-    #
-    #     # start time measurement
-    #     t_clock_start = time.time()
-    #
-    #     # initialize variables and set parameters
-    #     self.linear_solver = self.linear_solver(mtype='sid')
-    #     self.mechanical_system.clear_timesteps()
-    #     self.iteration_info = []
-    #     t = self.t0
-    #     self.dt = dt_start
-    #     q = self.initial_conditions['q0'].copy()
-    #     dq = self.initial_conditions['dq0'].copy()
-    #     if self.use_additional_variable_v:
-    #         v = self.initial_conditions['dq0'].copy()
-    #     else:
-    #         v = np.empty((0, 0))
-    #     ddq = np.zeros_like(q)
-    #     f_ext = np.zeros_like(q)
-    #     abs_f_ext = self.absolute_tolerance
-    #
-    #     # write output of initial conditions
-    #     self.mechanical_system.write_timestep(t, q.copy())
-    #
-    #     # time step loop
-    #     output_index = 0
-    #     while t < self.t_end:
-    #
-    #         # save old variables
-    #         q_old = q.copy()
-    #         dq_old = dq.copy()
-    #         v_old = v.copy()
-    #         ddq_old = ddq.copy()
-    #         f_ext_old = f_ext.copy()
-    #         t_old = t
-    #         dt_old = self.dt
-    #
-    #         output_index += 1
-    #         abs_local_tmp_err = 999.999*absolute_temporal_tolerance
-    #         no_convergence = False
-    #
-    #         tmp_iteration = 0
-    #         while (abs_local_tmp_err > absolute_temporal_tolerance) and not (tmp_iteration > 30):
-    #
-    #             tmp_iteration += 1
-    #             print(tmp_iteration)
-    #
-    #             # reset variables
-    #             q = q_old.copy()
-    #             dq = dq_old.copy()
-    #             v = v_old.copy()
-    #             ddq = ddq_old.copy()
-    #             f_ext = f_ext_old.copy()
-    #             t = t_old
-    #
-    #             # predict new variables
-    #             t += self.dt
-    #             q, dq, v, ddq = self.predict(q, dq, v, ddq)
-    #
-    #             Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-    #             abs_f_ext = max(abs_f_ext, euclidean_norm_of_vector(f_ext))
-    #             res_abs = euclidean_norm_of_vector(res)
-    #
-    #             # Newton-Raphson iteration loop
-    #             newton_iteration = 0
-    #             while res_abs > self.relative_tolerance * abs_f_ext + self.absolute_tolerance:
-    #
-    #                 # solve for displacement correction
-    #                 self.linear_solver.set_A(Jac)
-    #                 delta_q = -self.linear_solver.solve(res)
-    #
-    #                 # correct variables
-    #                 q, dq, v, ddq = self.correct(q, dq, v, ddq, delta_q)
-    #
-    #                 # update system quantities
-    #                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-    #                 res_abs = euclidean_norm_of_vector(res)
-    #                 newton_iteration += 1
-    #
-    #                 if self.verbose:
-    #                     if sp.sparse.issparse(Jac):
-    #                         cond_nr = 0.0
-    #                     else:
-    #                         cond_nr = np.linalg.cond(Jac)
-    #                     print('Iteration: {0:3d}, residual: {1:6.3E}, condition# of Jacobian: {2:6.3E}'.format(
-    #                         newton_iteration, res_abs, cond_nr))
-    #
-    #                 if self.write_iterations:
-    #                     t_write = t + self.dt / 1000000 * newton_iteration
-    #                     self.mechanical_system.write_timestep(t_write, q.copy())
-    #
-    #                 # catch failing convergence
-    #                 if newton_iteration is self.max_number_of_iterations:
-    #                     no_convergence = True
-    #                     break
-    #
-    #                 # end of Newton-Raphson iteration loop
-    #
-    #             # evaluate local temporal discretization error
-    #             abs_local_tmp_err_old = abs_local_tmp_err
-    #             abs_local_tmp_err = euclidean_norm_of_vector((self.beta - 1/6)*dt_old**2*(ddq - ddq_old))
-    #             abs_local_tmp_err /= euclidean_norm_of_vector(ddq)
-    #             print(abs_local_tmp_err)
-    #
-    #             # update time step
-    #             kappa = np.cbrt(absolute_temporal_tolerance/abs_local_tmp_err)
-    #             print(kappa)
-    #             if no_convergence:
-    #                 self.dt *= 0.8
-    #                 if self.dt < dt_min:
-    #                     self.dt = dt_min
-    #                 abs_local_tmp_err = abs_local_tmp_err_old
-    #             else:
-    #                 self.dt = min(dt_max, max(min(kappa_max, max(kappa_min, kappa_savety*kappa))*self.dt, dt_min))
-    #             print(self.dt)
-    #
-    #         # end time step adaption loop
-    #
-    #         # write output
-    #         if output_index == self.output_frequency:
-    #             self.mechanical_system.write_timestep(t, q.copy())
-    #             output_index = 0
-    #
-    #         if self.track_iterations:
-    #             self.iteration_info.append((t, newton_iteration, res_abs))
-    #
-    #         print('Time: {0:3.6f}, #iterations: {1:3d}, residual: {2:6.3E}'.format(t, newton_iteration, res_abs))
-    #
-    #         # end of time step loop
-    #
-    #     self.linear_solver.clear()
-    #
-    #     # save iteration info
-    #     self.iteration_info = np.array(self.iteration_info)
-    #
-    #     # end time measurement
-    #     t_clock_end = time.time()
-    #     print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
-    #     return
+    def solve_with_adaptive_time_step(self, dt_start, dt_min, dt_max, kappa_min, kappa_max, kappa_savety,
+                                      relative_temporal_tolerance, max_temporal_iterations):
+        '''
+        Solves the nonlinear dynamic problem of the mechanical system with adaptive time step.
+
+        References
+        ----------
+           [1]  O. C. Zienkiewicz and Y. M. Xie (1991): A simple error estimator and adaptive time stepping procedure
+                for dynamic analysis. Earthquake Engineering & Structural Dynamics 20(9) 871--887.
+                DOI: 10.1002/eqe.4290200907
+           [2]  M. Mayr, W.A. Wall and M.W. Gee (2018): Adaptive time stepping for fluid-structure interaction solvers.
+                Finite Elements in Analysis and Design 14155--69. DOI: 10.1016/j.finel.2017.12.002
+        '''
+
+        # start time measurement
+        t_clock_start = time.time()
+
+        # initialize variables and set parameters
+        self.linear_solver = self.linear_solver(mtype='sid')
+        self.mechanical_system.clear_timesteps()
+        self.iteration_info = []
+        t = self.t0
+        self.dt = dt_start
+        q = self.initial_conditions['q0'].copy()
+        dq = self.initial_conditions['dq0'].copy()
+        if self.use_additional_variable_v:
+            v = self.initial_conditions['dq0'].copy()
+        else:
+            v = np.empty((0, 0))
+        ddq = np.zeros_like(q)
+        max_q = 0.0
+        f_ext = np.zeros_like(q)
+        abs_f_ext = self.absolute_tolerance
+        self.dt_info = [dt_start]
+
+        # write output of initial conditions
+        self.mechanical_system.write_timestep(t, q.copy())
+
+        # time step loop
+        output_index = 0
+        while t < self.t_end:
+
+            # save old variables
+            q_old = q.copy()
+            dq_old = dq.copy()
+            v_old = v.copy()
+            ddq_old = ddq.copy()
+            f_ext_old = f_ext.copy()
+            t_old = t
+
+            output_index += 1
+            abs_local_tmp_err = 1.0e16
+            no_convergence = False
+
+            tmp_iteration = 0
+            while (abs_local_tmp_err > relative_temporal_tolerance*max_q) \
+                    and not (tmp_iteration >= max_temporal_iterations):
+
+                tmp_iteration += 1
+
+                # update max displacement
+                max_q = max(max_q, np.max(q))
+
+                # reset variables
+                q = q_old.copy()
+                dq = dq_old.copy()
+                v = v_old.copy()
+                ddq = ddq_old.copy()
+                # f_ext = f_ext_old.copy()
+                t = t_old
+
+                # predict new variables
+                t += self.dt
+                q, dq, v, ddq = self.predict(q, dq, v, ddq)
+
+                Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
+                abs_f_ext = max(abs_f_ext, euclidean_norm_of_vector(f_ext))
+                res_abs = euclidean_norm_of_vector(res)
+
+                # Newton-Raphson iteration loop
+                newton_iteration = 0
+                while res_abs > self.relative_tolerance * abs_f_ext + self.absolute_tolerance:
+
+                    # solve for displacement correction
+                    self.linear_solver.set_A(Jac)
+                    delta_q = -self.linear_solver.solve(res)
+
+                    # correct variables
+                    q, dq, v, ddq = self.correct(q, dq, v, ddq, delta_q)
+
+                    # update system quantities
+                    Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
+                    res_abs = euclidean_norm_of_vector(res)
+                    newton_iteration += 1
+
+                    if self.verbose:
+                        if sp.sparse.issparse(Jac):
+                            cond_nr = 0.0
+                        else:
+                            cond_nr = np.linalg.cond(Jac)
+                        print('Iteration: {0:3d}, residual: {1:6.3E}, condition# of Jacobian: {2:6.3E}'.format(
+                            newton_iteration, res_abs, cond_nr))
+
+                    if self.write_iterations:
+                        t_write = t + self.dt / 1000000 * newton_iteration
+                        self.mechanical_system.write_timestep(t_write, q.copy())
+
+                    # catch failing convergence
+                    if newton_iteration >= self.max_number_of_iterations:
+                        no_convergence = True
+                        break
+
+                    # end of Newton-Raphson iteration loop
+
+                # evaluate local temporal discretization error
+                abs_local_tmp_err = (self.beta - 1/6)*self.dt**2*euclidean_norm_of_vector(ddq - ddq_old)
+
+                # update time step
+                kappa = np.cbrt(relative_temporal_tolerance*max_q/abs_local_tmp_err)
+                if no_convergence:
+                    self.dt *= 0.8  # evtl. replace hard coded value by user input
+                    if self.dt < dt_min:
+                        self.dt = dt_min
+                    abs_local_tmp_err = 1.0e16
+                    no_convergence = False
+                else:
+                    self.dt = min(dt_max, max(min(kappa_max, max(kappa_min, kappa_savety*kappa))*self.dt, dt_min))
+
+            # end time step adaption loop
+
+            # write output
+            if output_index == self.output_frequency:
+                self.mechanical_system.write_timestep(t, q.copy())
+                output_index = 0
+
+            if self.track_iterations:
+                self.iteration_info.append((t, newton_iteration, res_abs))
+
+            # track final time step size
+            self.dt_info.append(self.dt)
+
+            print('Time: {0:3.6f}, dt-iteration: {1:3d}, #iterations: {2:3d}, residual: {3:6.3E}'.format(
+                t, tmp_iteration, newton_iteration, res_abs))
+
+            # end of time step loop
+
+        self.linear_solver.clear()
+
+        # save iteration info
+        self.iteration_info = np.array(self.iteration_info)
+
+        # end time measurement
+        t_clock_end = time.time()
+        print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
+        return
 
 
 class LinearDynamicsSolver(Solver):
