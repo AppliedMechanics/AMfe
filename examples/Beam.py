@@ -99,7 +99,7 @@ alpha = 0.0005
 if not statics:  # dynamics
     system.apply_neumann_boundaries(key=3, val=-2.5e8, direct=(0, -1), time_func=lambda t: 1)  # deleted dynamic NBCs
     system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: t)  # set static NBCs
-solver = solver = amfe.NonlinearStaticsSolver(mechanical_system=system, **options)
+solver = amfe.NonlinearStaticsSolver(mechanical_system=system, **options)
 solver.solve()
 q_static = system.constrain_vec(system.u_output[-1][:])
 system.clear_timesteps()

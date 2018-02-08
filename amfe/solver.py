@@ -98,12 +98,16 @@ class NonlinearStaticsSolver(Solver):
 
         if 'relative_tolerance' in options:
             self.relative_tolerance = options['relative_tolerance']
+        elif 'rtol' in options:
+            self.relative_tolerance = options['rtol']
         else:
             print('Attention: No relative tolerance was given, setting relative_tolerance = 1.0e-9.')
             self.relative_tolerance = 1.0e-9
 
         if 'absolute_tolerance' in options:
             self.absolute_tolerance = options['absolute_tolerance']
+        elif 'atol' in options:
+            self.absolute_tolerance = options['atol']
         else:
             print('Attention: No absolute tolerance was given, setting absolute_tolerance = 1.0e-6.')
             self.absolute_tolerance = 1.0e-6
@@ -390,15 +394,19 @@ class NonlinearDynamicsSolver(Solver):
 
         if 'relative_tolerance' in options:
             self.relative_tolerance = options['relative_tolerance']
+        elif 'rtol' in options:
+            self.relative_tolerance = options['rtol']
         else:
             print('Attention: No relative tolerance was given, setting relative_tolerance = 1.0e-9.')
-            self.relative_tolerance = 1.0E-9
+            self.relative_tolerance = 1.0e-9
 
         if 'absolute_tolerance' in options:
             self.absolute_tolerance = options['absolute_tolerance']
+        elif 'atol' in options:
+            self.absolute_tolerance = options['atol']
         else:
             print('Attention: No absolute tolerance was given, setting absolute_tolerance = 1.0e-6.')
-            self.absolute_tolerance = 1.0E-6
+            self.absolute_tolerance = 1.0e-6
 
         if 'max_number_of_iterations' in options:
             self.max_number_of_iterations = options['max_number_of_iterations']
@@ -429,6 +437,10 @@ class NonlinearDynamicsSolver(Solver):
         else:
             print('Attention: No track number of iterations was given, setting track_iterations = False.')
             self.track_iterations = False
+        if 'use_v' in options:
+            self.use_additional_variable_v = options['use_additional_variable_v']
+        else:
+            self.use_additional_variable_v = False
         return
 
     def overwrite_parameters(self, **options):
@@ -484,6 +496,7 @@ class NonlinearDynamicsSolver(Solver):
             # predict new variables
             output_index += 1
             t += self.dt
+
             q, dq, v, ddq = self.predict(q, dq, v, ddq)
 
             Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
@@ -522,7 +535,6 @@ class NonlinearDynamicsSolver(Solver):
                 if iteration > self.max_number_of_iterations:
                     if self.convergence_abort:
                         print(abort_statement)
-                        self.iteration_info = np.array(self.iteration_info)
                         t_clock_end = time.time()
                         print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
                         return

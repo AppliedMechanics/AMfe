@@ -24,11 +24,13 @@ my_system.apply_neumann_boundaries(key=9, val=1E8, direct=(0,-1),
                                    time_func=lambda t: t)
 
 
-amfe.solve_linear_displacement(my_system)
+solverlin = amfe.LinearStaticsSolver(my_system)
+solverlin.solve()
 my_system.export_paraview(output_file + '_linear')
 
-
-amfe.solve_nonlinear_displacement(my_system, no_of_load_steps=50)
+my_system.clear_timesteps()
+solvernl = amfe.NonlinearStaticsSolver(my_system, number_of_load_steps=50)
+solvernl.solve()
 my_system.export_paraview(output_file + '_nonlinear')
 
 
