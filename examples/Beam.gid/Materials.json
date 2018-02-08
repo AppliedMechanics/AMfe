@@ -8,7 +8,7 @@
             "model_part_name"  : "Parts_Solid",
             "properties_id"    : 1,
             "constitutive_law" : {
-                "name" : "KratosMultiphysics.ConstitutiveModelsApplication.LargeStrainPlaneStrain2DLaw.SaintVenantKirchhoffModel"
+                "name" : "KratosMultiphysics.ConstitutiveModelsApplication.SmallStrainPlaneStrain2DLaw.LinearElasticModel"
             },
             "variables"        : {
                 "DENSITY"       : 7867.0,
