@@ -19,7 +19,7 @@ def read_grf(file):
     with open(file,'r') as fp:
         for line in fp.readlines():
             if not line.startswith('#'):
-                matchobject = re.search(r'([0-9.\-]*)\s([0-9.\-]*)', line)
+                matchobject = re.search(r'([0-9eE.\-]*)\s([0-9eE.\-]*)', line)
                 time = float(matchobject.group(1))
                 displacement = float(matchobject.group(2))
                 times.append(time)
@@ -65,8 +65,8 @@ class SolversTest(unittest.TestCase):
     'write_iterations': False,
     'track_number_of_iterations': False,
     'save_solution': True}
-    rho_inf = 0.95
-    alpha = 0.0005
+        rho_inf = 0.95
+        alpha = 0.0005
 
     def tearDown(self):
         self.system = None
@@ -78,18 +78,17 @@ class SolversTest(unittest.TestCase):
         pass
 
     def test_generalized_alpha_nonlinear_dynamics_solver(self):
-        self.output_file = self.output_file_prefix + '_nonlinear_generalized_alpha'
         self.system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: 1)
         self.solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=self.system, **self.options)
         self.solver.solve()
         x = np.array([self.system.T_output[:], [displacement[2] for displacement in self.system.u_output]])
         y = np.array([self.system.T_output[:], [displacement[3] for displacement in self.system.u_output]])
-        fnx = amfe.amfe_dir('tests/kratos/Kratos_beam10x1Quad8_nonlinear_dynamics_x_wbzalpha_rhoinf095_dt5e-4.grf')
-        fny = amfe.amfe_dir('tests/kratos/Kratos_beam10x1Quad8_nonlinear_dynamics_y_wbzalpha_rhoinf095_dt5e-4.grf')
+        fnx = amfe.amfe_dir('tests/kratos/Kratos_beam10x1Quad8_nonlinear_dynamics_x_wbzalpha_rhoinf095_dt1e-6.grf')
+        fny = amfe.amfe_dir('tests/kratos/Kratos_beam10x1Quad8_nonlinear_dynamics_y_wbzalpha_rhoinf095_dt1e-6.grf')
         reference_x = read_grf(fnx)
         reference_y = read_grf(fny)
-        assert_allclose(x[:, 1:], reference_x[:, :], rtol=1e-12, atol=1)
-        assert_allclose(y[:, 1:], reference_y[:, :], rtol=1e-12, atol=1)
+        assert_allclose(x[1, 1:], reference_x[1, 499::500], rtol=1e-12, atol=0.06)
+        assert_allclose(y[1, 1:], reference_y[1, 499::500], rtol=1e-12, atol=0.06)
 
     def test_jwh_alpha_nonlinear_dynamics_solver(self):
         pass
