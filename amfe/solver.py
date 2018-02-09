@@ -507,6 +507,8 @@ class NonlinearDynamicsSolver(Solver):
             iteration = 0
             while res_abs > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
 
+                iteration += 1
+
                 # catch failing convergence
                 if iteration > self.max_number_of_iterations:
                     if self.convergence_abort:
@@ -526,7 +528,6 @@ class NonlinearDynamicsSolver(Solver):
                 # update system quantities
                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
                 res_abs = euclidean_norm_of_vector(res)
-                iteration += 1
 
                 if self.verbose:
                     if sp.sparse.issparse(Jac):
@@ -651,6 +652,8 @@ class NonlinearDynamicsSolver(Solver):
                 newton_iteration = 0
                 while res_abs > self.relative_tolerance * abs_f_ext + self.absolute_tolerance:
 
+                    newton_iteration += 1
+
                     # catch failing Newton-Raphson convergence
                     if newton_iteration > self.max_number_of_iterations:
                         no_newton_convergence = True
@@ -666,7 +669,6 @@ class NonlinearDynamicsSolver(Solver):
                     # update system quantities
                     Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
                     res_abs = euclidean_norm_of_vector(res)
-                    newton_iteration += 1
 
                     if self.verbose:
                         if sp.sparse.issparse(Jac):
@@ -690,7 +692,7 @@ class NonlinearDynamicsSolver(Solver):
                     abs_local_dt_err = 1.0e16
                     no_newton_convergence = False
                 else:  # evaluate local temporal discretization error and update time step accordingly
-                    abs_local_dt_err = (self.beta - 1/6)*self.dt**2*euclidean_norm_of_vector(ddq - ddq_old)
+                    abs_local_dt_err = (self.beta - 1/6)*self.dt**2*length_scaled_euclidean_norm_of_vector(ddq - ddq_old)
                     kappa = np.cbrt(relative_dt_tolerance*max_q/abs_local_dt_err)
                     dt_new = min(dt_max, max(min(change_factor_max,
                                                  max(change_factor_min, savety_factor*kappa))*self.dt, dt_min))
@@ -1061,6 +1063,8 @@ class NonlinearDynamicsSolverStateSpace(Solver):
             iteration = 0
             while Res_abs > self.relative_tolerance*abs_F_ext + self.absolute_tolerance:
 
+                iteration += 1
+
                 # catch failing convergence
                 if iteration > self.max_number_of_iterations:
                     if self.convergence_abort:
@@ -1081,7 +1085,6 @@ class NonlinearDynamicsSolverStateSpace(Solver):
                 # update system quantities
                 Jac, Res, F_ext = self.newton_raphson(x, dx, t, x_old, dx_old, t_old)
                 Res_abs = euclidean_norm_of_vector(Res)
-                iteration += 1
 
                 if self.verbose:
                     if sp.sparse.issparse(Jac):

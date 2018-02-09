@@ -12,7 +12,8 @@ import numpy as np
 
 
 __all__ = [
-    'euclidean_norm_of_vector'
+    'euclidean_norm_of_vector',
+    'length_scaled_euclidean_norm_of_vector'
 ]
 
 
@@ -32,5 +33,24 @@ def euclidean_norm_of_vector(vector):
 
     '''
 
-    return np.sqrt(vector.T@(vector))
+    return np.sqrt(vector.T@vector)
+
+
+def length_scaled_euclidean_norm_of_vector(vector):
+    '''
+    Computes the length scaled Euclidean norm = 2-norm of a vector.
+
+    Parameters
+    ----------
+    vector : ndarray
+        One dimensional array
+
+    Returns
+    -------
+    norm : float
+        Length scaled Euclidean norm = 2-norm of given vector.
+
+    '''
+
+    return np.sqrt((vector.T@vector))/len(vector)
 
