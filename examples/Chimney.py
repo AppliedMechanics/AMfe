@@ -13,8 +13,8 @@ import numpy as np
 
 
 # define in- and output files
-input_file = amfe.amfe_dir('meshes/gmsh/chimney/Chimney20x8Hex20.msh')
-output_file = amfe.amfe_dir('results/chimney/Chimney20x8Hex20_nonlinear_dynamics_generalizedalpha')
+input_file = amfe.amfe_dir('meshes/gmsh/chimney/Chimney100x40Hex20.msh')
+output_file = amfe.amfe_dir('results/chimney/Chimney200x80Hex20_nonlinear_dynamics_generalizedalpha')
 
 
 # define system
@@ -31,7 +31,7 @@ system.apply_neumann_boundaries(key=4, val=1.0e4, direct=(1, 1, 0), time_func=la
 options = {
     'linear_solver': amfe.linalg.PardisoSolver,
     't0': 0.0,
-    't_end': 1.0,
+    't_end': 10.0,
     'dt': 1.0e-4,
     'output_frequency': 1,
     'rho_inf': 0.95,
@@ -51,9 +51,9 @@ options = {
 # solve system
 solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
 # solver.solve()
-solver.solve_with_adaptive_time_step(dt_start=5.0e-5, dt_min=1.0e-6, dt_max=1.0e-1, change_factor_min=0.5,
+solver.solve_with_adaptive_time_step(dt_start=1.0e-5, dt_min=1.0e-6, dt_max=1.0e-1, change_factor_min=0.5,
                                      change_factor_max=2.0, savety_factor=0.9, trust_in_new_increased_dt = 0.01,
-                                     relative_dt_tolerance=1.0e+1, max_dt_iterations=10,
+                                     relative_dt_tolerance=1.0e-1, max_dt_iterations=10,
                                      new_dt_for_failing_newton_convergence=0.8)
 
 
