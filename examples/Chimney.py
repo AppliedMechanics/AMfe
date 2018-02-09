@@ -23,8 +23,13 @@ system = amfe.MechanicalSystem()
 system.load_mesh_from_gmsh(input_file, 1, material)
 system.apply_dirichlet_boundaries(2, 'xy')
 ndof = system.dirichlet_class.no_of_constrained_dofs
-system.apply_neumann_boundaries(key=4, val=1.0e4, direct=(1, 1, 0), time_func=lambda t: np.sin(231*t))
+system.apply_neumann_boundaries(key=4, val=1.0e4, direct=(1, 1, 0), time_func=lambda t: np.sin(180.32*t))
 # system.apply_rayleigh_damping(1e0, 1e-5)
+
+
+# vibration modes
+# amfe.vibration_modes(mechanical_system=system, n=20, save=True)
+# system.export_paraview(output_file + '_vibration_modes')
 
 
 # define simulation parameters
