@@ -511,6 +511,7 @@ class NonlinearDynamicsSolver(Solver):
 
                 # catch failing convergence
                 if iteration > self.max_number_of_iterations:
+                    iteration -= 1
                     if self.convergence_abort:
                         print(abort_statement)
                         t_clock_end = time.time()
@@ -567,7 +568,7 @@ class NonlinearDynamicsSolver(Solver):
 
     def solve_with_adaptive_time_step(self, dt_start, dt_min, dt_max, change_factor_min, change_factor_max,
                                       safety_factor, failing_newton_convergence_factor, trust_value,
-                                      relative_dt_tolerance, max_dt_iterations):
+                                      relative_dt_tolerance, max_dt_iterations, failing_dt_convergence_abort=True):
         '''
         Solves the nonlinear dynamic problem of the mechanical system with adaptive time step.
 
@@ -659,7 +660,13 @@ class NonlinearDynamicsSolver(Solver):
 
                 # catch failing dt convergence
                 if dt_iteration > max_dt_iterations:
-                    return
+                    dt_iteration -= 1
+                    if failing_dt_convergence_abort:
+                        print(abort_statement)
+                        t_clock_end = time.time()
+                        print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
+                        return
+                    break
 
                 # update max displacement
                 max_q = max(max_q, np.max(q))
@@ -688,6 +695,7 @@ class NonlinearDynamicsSolver(Solver):
 
                     # catch failing Newton-Raphson convergence
                     if newton_iteration > self.max_number_of_iterations:
+                        newton_iteration -= 1
                         no_newton_convergence = True
                         break
 
@@ -1102,6 +1110,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
 
                 # catch failing convergence
                 if iteration > self.max_number_of_iterations:
+                    iteration -= 1
                     if self.convergence_abort:
                         print(abort_statement)
                         self.iteration_info = np.array(self.iteration_info)
