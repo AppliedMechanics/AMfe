@@ -566,10 +566,42 @@ class NonlinearDynamicsSolver(Solver):
         return
 
     def solve_with_adaptive_time_step(self, dt_start, dt_min, dt_max, change_factor_min, change_factor_max,
-                                      savety_factor, trust_in_new_increased_dt, relative_dt_tolerance,
-                                      max_dt_iterations, new_dt_for_failing_newton_convergence):
+                                      safety_factor, failing_newton_convergence_factor, trust_value,
+                                      relative_dt_tolerance, max_dt_iterations):
         '''
         Solves the nonlinear dynamic problem of the mechanical system with adaptive time step.
+
+        Parameters
+        ----------
+        dt_start : float
+            Starting time step size.
+        dt_min : float
+            Minimal time step size, i.e. lower bound.
+        dt_max : float
+            Maximal time step size, i.e. upper bound.
+        change_factor_min : float
+            Minimal change factor for time step size, i.e. lower bound. 0 < change_factor_min <= 1 required.
+            0.1 <= change_factor_min <= 0.5 recommended.
+        change_factor_max : float
+            Maximal change factor for time step size, i.e. upper bound. 1 <= change_factor_max < infinity required.
+            1.5 <= change_factor_max <= 5 recommended.
+        safety_factor : float
+            Safty factor for time step size change. 0 < safty_factor < 1 required. 0.8 <= safty_factor < 0.95
+            recommended.
+        failing_newton_convergence_factor : float
+            Change factor for time step size for failing Newton-Raphson convergence.
+            0 < failing_newton_convergence_factor < 1 required. 0.5 <= failing_newton_convergence_factor <= 0.8
+            recommended.
+        trust_value : float
+            Trust value for new time step size, i.e. parameter for PT1 low-pass filtering in case of increasing time
+            step sizes (dt_new_used = trust_value*dt_new_calculated + (1 - trust_value)*dt_old). 0 < trust_value <= 1
+            required. 0 < trust_value << 1 recommended.
+        relative_dt_tolerance : float
+            Tolerance for relative local time discretization error. absolute local time discretization error =
+            relative_dt_tolerance*maximal displacement so far.
+        max_dt_iterations : int
+            Maximal number of time step size adaption iterations per time step.
+
 
         References
         ----------
@@ -686,7 +718,7 @@ class NonlinearDynamicsSolver(Solver):
 
                 # update time step
                 if no_newton_convergence:  # reduce time step to defined percentage
-                    self.dt *= new_dt_for_failing_newton_convergence
+                    self.dt *= failing_newton_convergence_factor
                     if self.dt < dt_min:
                         self.dt = dt_min
                     abs_local_dt_err = 1.0e16
@@ -695,9 +727,9 @@ class NonlinearDynamicsSolver(Solver):
                     abs_local_dt_err = self.estimate_local_time_discretization_error(ddq, ddq_old)
                     kappa = np.cbrt(relative_dt_tolerance*max_q/abs_local_dt_err)
                     dt_new = min(dt_max, max(min(change_factor_max,
-                                                 max(change_factor_min, savety_factor*kappa))*self.dt, dt_min))
+                                                 max(change_factor_min, safety_factor*kappa))*self.dt, dt_min))
                     if (dt_new > self.dt) and (len(self.dt_info) > 1):
-                        self.dt = trust_in_new_increased_dt*dt_new + (1 - trust_in_new_increased_dt)*self.dt_info[-1]
+                        self.dt = trust_value*dt_new + (1 - trust_value)*self.dt_info[-1]
                     else:
                         self.dt = dt_new
 
