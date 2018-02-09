@@ -62,14 +62,14 @@ class Solver:
             self.linear_solver = options['linear_solver']
         else:
             print('Attention: No linear solver was given, setting linear_solver = PardisoSolver.')
-            self.linear_solver = PardisoSolver
+            self.linear_solver = PardisoSolver(A=None)
 
         if 'linear_solver_options' in options:
-            self.linear_solver_options = options['linear_solver_options']
+            self.linear_solver.set_options(**options['linear_solver_options'])
         return
 
     def solve(self):
-        pass
+        return None
 
 
 # Solver classes for all statics solver
@@ -160,6 +160,8 @@ class NonlinearStaticsSolver(Solver):
         else:
             print('Attention: No save solution was given, setting save_solution = True.')
             self.save_solution = True
+
+        self.iteration_info = np.array([])
         return
 
     def solve(self):
@@ -178,26 +180,32 @@ class NonlinearStaticsSolver(Solver):
         # start time measurement
         t_clock_start = time.time()
 
+        # TODO: getter method insert getter method for ndof (K is not needed)
+        K, f_int = self.mechanical_system.K_and_f()
+        ndof = K.shape[0]
+
+        # initialize u, du
+        u = np.zeros(ndof)
+        du = np.zeros(ndof)
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='spd')
-        self.mechanical_system.clear_timesteps()
+        if self.save_solution:
+            self.mechanical_system.clear_timesteps()
+            # write initial state
+            self.mechanical_system.write_timestep(0.0, u)
+
         iteration_info = []
         u_output = []
         stepwidth = 1/self.number_of_load_steps
-        K, f_int = self.mechanical_system.K_and_f()
-        ndof = K.shape[0]
-        u = np.zeros(ndof)
-        du = np.zeros(ndof)
 
-        # write initial state
-        self.mechanical_system.write_timestep(0.0, u)
-
-        # load step loop
+        # load step loop: t goes from (0+stepwidth) to 1
         for t in np.arange(stepwidth, 1.0 + stepwidth, stepwidth):
 
-            K, f_int= self.mechanical_system.K_and_f(u, t)
+            # Calculate residuum:
+            K, f_int = self.mechanical_system.K_and_f(u, t)
             f_ext = self.mechanical_system.f_ext(u, du, t)
             res = -f_int + f_ext
+
+            # calculate norms
             abs_res = euclidean_norm_of_vector(res)
             abs_f_ext = euclidean_norm_of_vector(f_ext)
 
@@ -213,10 +221,11 @@ class NonlinearStaticsSolver(Solver):
                 # correct displacement
                 u += delta_u*self.newton_damping
 
-                # update system
+                # update K, f_int and f_ext if not a simplified newton iteration
                 if (iteration % self.simplified_newton_iterations) is 0:
                     K, f_int = self.mechanical_system.K_and_f(u, t)
                     f_ext = self.mechanical_system.f_ext(u, du, t)
+                # update residuum and norms
                 res = -f_int + f_ext
                 abs_f_ext = euclidean_norm_of_vector(f_ext)
                 abs_res = euclidean_norm_of_vector(res)
