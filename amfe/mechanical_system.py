@@ -735,7 +735,11 @@ class ReducedSystem(MechanicalSystem):
         if self.assembly_type == 'direct':
             raise NotImplementedError('The direct method is note implemented yet for damping matrices')
         elif self.assembly_type == 'indirect':
-            self.D_constr = self.V.T @ MechanicalSystem.D(self, self.V @ u, t) @ self.V
+            if u is None:
+                u_full = None
+            else:
+                u_full = self.V @ u
+            self.D_constr = self.V.T @ MechanicalSystem.D(self, u_full, t) @ self.V
         else:
             raise ValueError('The given assembly type for a reduced system '
                              + 'is not valid.')
