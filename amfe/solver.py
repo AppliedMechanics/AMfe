@@ -602,6 +602,9 @@ class NonlinearDynamicsSolver(Solver):
             relative_dt_tolerance*maximal displacement so far.
         max_dt_iterations : int
             Maximal number of time step size adaption iterations per time step.
+        failing_dt_convergence_abort : Boolean
+            If True abort simulation when exceeding maximal number of time step size adaption iterations, otherwise
+            proceed with last result to next time step.
 
 
         References
