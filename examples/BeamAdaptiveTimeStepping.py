@@ -13,8 +13,8 @@ import numpy as np
 
 
 # define in- and output files
-input_file = amfe.amfe_dir('meshes/gmsh/beam/Beam10x1Quad8.msh')
-output_file = amfe.amfe_dir('results/beam/Beam10x1Quad8_nonlinear_dynamics_generalizedalpha')
+input_file = amfe.amfe_dir('meshes/gmsh/beam/Beam20x2Quad8.msh')
+output_file = amfe.amfe_dir('results/beam/Beam20x2Quad8_nonlinear_dynamics_generalizedalpha')
 
 
 # define system
@@ -57,8 +57,8 @@ solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, 
 # solver.solve()
 solver.solve_with_adaptive_time_step(dt_start=1.0e-4, dt_min=1.0e-9, dt_max=1.0e-1, change_factor_min=0.1,
                                      change_factor_max=10.0, savety_factor=0.99, trust_in_new_increased_dt = 0.01,
-                                     relative_dt_tolerance=1.0e-3, max_dt_iterations=10,
-                                     new_dt_for_failing_newton_convergence=0.8)
+                                     relative_dt_tolerance=1.0e-3, max_dt_iterations=100,
+                                     new_dt_for_failing_newton_convergence=0.5)
 
 
 # write output

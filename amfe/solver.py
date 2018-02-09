@@ -692,7 +692,7 @@ class NonlinearDynamicsSolver(Solver):
                     abs_local_dt_err = 1.0e16
                     no_newton_convergence = False
                 else:  # evaluate local temporal discretization error and update time step accordingly
-                    abs_local_dt_err = (self.beta - 1/6)*self.dt**2*length_scaled_euclidean_norm_of_vector(ddq - ddq_old)
+                    abs_local_dt_err = self.estimate_local_time_discretization_error(ddq, ddq_old)
                     kappa = np.cbrt(relative_dt_tolerance*max_q/abs_local_dt_err)
                     dt_new = min(dt_max, max(min(change_factor_max,
                                                  max(change_factor_min, savety_factor*kappa))*self.dt, dt_min))
@@ -728,6 +728,9 @@ class NonlinearDynamicsSolver(Solver):
         t_clock_end = time.time()
         print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
         return
+
+    def estimate_local_time_discretization_error(self, ddq, ddq_old):
+        pass
 
 
 class LinearDynamicsSolver(Solver):
@@ -1449,6 +1452,15 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         ddq += 1/(self.beta*self.dt**2)*delta_q
         return q, dq, v, ddq
 
+    def estimate_local_time_discretization_error(self, ddq, ddq_old):
+        '''
+        Returns an estimate for the absolute local time discretization error for the nonlinear generalized-alpha time
+        integration scheme.
+        '''
+
+        abs_local_dt_err = (self.beta - 1/6)*self.dt**2*length_scaled_euclidean_norm_of_vector(ddq - ddq_old)
+        return abs_local_dt_err
+
 
 class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
     '''
@@ -1568,6 +1580,16 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         v += self.alpha_m/(self.alpha_f*self.gamma*self.dt)*delta_q
         ddq += self.alpha_m/(self.alpha_f*self.gamma**2*self.dt**2)*delta_q
         return q, dq, v, ddq
+
+    def estimate_local_time_discretization_error(self, ddq, ddq_old):
+        '''
+        Returns an estimate for the absolute local time discretization error for the nonlinear JWH-alpha time
+        integration scheme.
+        '''
+
+        raise ValueError('Error: Adaptive time stepping is not yet implemented for time integration with the '
+                         + 'JWH-alpha scheme. Use the generalized-alpha scheme instead.')
+        return
 
 
 class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
