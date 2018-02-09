@@ -603,8 +603,8 @@ class NonlinearDynamicsSolver(Solver):
         max_dt_iterations : int
             Maximal number of time step size adaption iterations per time step.
         failing_dt_convergence_abort : Boolean
-            If True abort simulation when exceeding maximal number of time step size adaption iterations, otherwise
-            proceed with last result to next time step.
+            If True abort simulation, otherwise proceed with last result to next time step, when exceeding maximal
+            number of time step size adaption iterations. Default failing_dt_convergence_abort = True.
 
 
         References
