@@ -52,5 +52,5 @@ def length_scaled_euclidean_norm_of_vector(vector):
 
     '''
 
-    return np.sqrt((vector.T@vector))/len(vector)
+    return np.sqrt((vector.T@vector)/len(vector))
 

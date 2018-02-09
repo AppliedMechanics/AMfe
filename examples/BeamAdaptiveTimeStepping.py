@@ -24,7 +24,7 @@ system.load_mesh_from_gmsh(input_file, 1, material)
 system.apply_dirichlet_boundaries(5, 'xy')
 ndof = system.dirichlet_class.no_of_constrained_dofs
 system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: 1.0 + np.sin(326.848*t))
-# system.apply_rayleigh_damping(1e0, 1e-5)
+system.apply_rayleigh_damping(1e0, 1e-6)
 
 
 # vibration modes
@@ -36,7 +36,7 @@ system.export_paraview(output_file + '_vibration_modes')
 options = {
     'linear_solver': amfe.linalg.PardisoSolver,
     't0': 0.0,
-    't_end': 0.5,
+    't_end': 1.0,
     'dt': 1e-4,
     'output_frequency': 1,
     'rho_inf': 0.95,
