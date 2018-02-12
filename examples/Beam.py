@@ -17,7 +17,7 @@ import numpy as np
 # set simulation type
 ###############################################################################
 #  > static (True) or dynamic (False) analysis
-statics = True
+statics = False
 ###############################################################################
 #  > linear (True) or nonlinear (False) analysis
 linear = False

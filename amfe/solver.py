@@ -187,7 +187,7 @@ class NonlinearStaticsSolver(Solver):
         # TODO: systems?
         K, f_int = self.mechanical_system.K_and_f()
         ndof = K.shape[0]
-        # TODO: 
+        # TODO:
         u = np.zeros(ndof)
         du = np.zeros(ndof)
         self.mechanical_system.clear_timesteps()
