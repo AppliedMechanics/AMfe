@@ -180,19 +180,20 @@ class NonlinearStaticsSolver(Solver):
         # start time measurement
         t_clock_start = time.time()
 
+        # initialize variables and set parameters
+        self.linear_solver = self.linear_solver(mtype='spd')
         # TODO: getter method insert getter method for ndof (K is not needed)
+        # TODO: Does ndof = self.mechanical_system.dirichlet_class.no_of_constrained_dofs only work for non-reduced
+        # TODO: systems?
         K, f_int = self.mechanical_system.K_and_f()
         ndof = K.shape[0]
-
-        # initialize u, du
+        # TODO: 
         u = np.zeros(ndof)
         du = np.zeros(ndof)
-        # initialize variables and set parameters
+        self.mechanical_system.clear_timesteps()
         if self.save_solution:
-            self.mechanical_system.clear_timesteps()
             # write initial state
             self.mechanical_system.write_timestep(0.0, u)
-
         iteration_info = []
         u_output = []
         stepwidth = 1/self.number_of_load_steps
