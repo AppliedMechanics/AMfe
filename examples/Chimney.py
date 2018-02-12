@@ -34,7 +34,6 @@ system.apply_neumann_boundaries(key=4, val=1.0e4, direct=(1, 1, 0), time_func=la
 
 # define simulation parameters
 options = {
-    'linear_solver': amfe.linalg.PardisoSolver,
     't0': 0.0,
     't_end': 10.0,
     'dt': 1.0e-4,

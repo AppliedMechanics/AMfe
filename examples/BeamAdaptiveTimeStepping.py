@@ -34,7 +34,6 @@ system.export_paraview(output_file + '_vibration_modes')
 
 # define simulation parameters
 options = {
-    'linear_solver': amfe.linalg.PardisoSolver,
     't0': 0.0,
     't_end': 1.0,
     'dt': 1e-4,
