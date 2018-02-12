@@ -13,7 +13,7 @@ import os
 import copy
 import h5py
 import numpy as np
-from scipy.sparse import bmat
+import scipy as sp
 
 from .mesh import Mesh
 from .assembly import Assembly
@@ -530,8 +530,7 @@ class MechanicalSystemStateSpace(MechanicalSystem):
     def E(self, x=None, t=0):
         if self.M_constr is None:
             self.M(x, t)
-        self.E_constr = bmat([[self.R_constr, None],
-                              [None, self.M_constr]])
+        self.E_constr = sp.sparse.bmat([[self.R_constr, None], [None, self.M_constr]])
         return self.E_constr
 
     def D(self, x=None, t=0):
@@ -550,9 +549,9 @@ class MechanicalSystemStateSpace(MechanicalSystem):
 
     def A(self, x=None, t=0):
         if self.D_constr is None:
-            A = bmat([[None, self.R_constr], [-self.K(x, t), None]])
+            A = sp.sparse.bmat([[None, self.R_constr], [-self.K(x, t), None]])
         else:
-            A = bmat([[None, self.R_constr], [-self.K(x, t), -self.D_constr]])
+            A = sp.sparse.bmat([[None, self.R_constr], [-self.K(x, t), -self.D_constr]])
         return A
 
     def f_int(self, x=None, t=0):
@@ -598,12 +597,11 @@ class MechanicalSystemStateSpace(MechanicalSystem):
             x = np.zeros(2*self.dirichlet_class.no_of_constrained_dofs)
         K, f_int = self.K_and_f(x, t)
         if self.D_constr is None:
-            A = bmat([[None, self.R_constr], [-K, None]])
+            A = sp.sparse.bmat([[None, self.R_constr], [-K, None]])
             F_int = np.concatenate((self.R_constr@x[int(x.size/2):], -f_int), axis=0)
         else:
-            A = bmat([[None, self.R_constr], [-K, -self.D_constr]])
-            F_int = np.concatenate((self.R_constr@x[int(x.size/2):],
-                                    -self.D_constr@x[int(x.size/2):] - f_int), axis=0)
+            A = sp.sparse.bmat([[None, self.R_constr], [-K, -self.D_constr]])
+            F_int = np.concatenate((self.R_constr@x[int(x.size/2):], -self.D_constr@x[int(x.size/2):] - f_int), axis=0)
         return A, F_int
 
     def write_timestep(self, t, x):

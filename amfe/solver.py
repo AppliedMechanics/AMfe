@@ -198,8 +198,8 @@ class NonlinearStaticsSolver(Solver):
             K, f_int= self.mechanical_system.K_and_f(u, t)
             f_ext = self.mechanical_system.f_ext(u, du, t)
             res = -f_int + f_ext
-            abs_res = euclidean_norm_of_vector(res)
-            abs_f_ext = euclidean_norm_of_vector(f_ext)
+            abs_res = np.linalg.norm(res, 2)
+            abs_f_ext = np.linalg.norm(f_ext, 2)
 
             # Newton iteration loop
             iteration = 0
@@ -218,8 +218,8 @@ class NonlinearStaticsSolver(Solver):
                     K, f_int = self.mechanical_system.K_and_f(u, t)
                     f_ext = self.mechanical_system.f_ext(u, du, t)
                 res = -f_int + f_ext
-                abs_f_ext = euclidean_norm_of_vector(f_ext)
-                abs_res = euclidean_norm_of_vector(res)
+                abs_res = np.linalg.norm(res, 2)
+                abs_f_ext = np.linalg.norm(f_ext, 2)
                 iteration += 1
 
                 if self.verbose:
@@ -500,8 +500,8 @@ class NonlinearDynamicsSolver(Solver):
             q, dq, v, ddq = self.predict(q, dq, v, ddq)
 
             Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-            abs_f_ext = max(abs_f_ext, euclidean_norm_of_vector(f_ext))
-            res_abs = euclidean_norm_of_vector(res)
+            res_abs = np.linalg.norm(res, 2)
+            abs_f_ext = max(abs_f_ext, np.linalg.norm(f_ext, 2))
 
             # Newton-Raphson iteration loop
             iteration = 0
@@ -528,7 +528,7 @@ class NonlinearDynamicsSolver(Solver):
 
                 # update system quantities
                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                res_abs = euclidean_norm_of_vector(res)
+                res_abs = np.linalg.norm(res, 2)
 
                 if self.verbose:
                     if sp.sparse.issparse(Jac):
@@ -687,8 +687,8 @@ class NonlinearDynamicsSolver(Solver):
                 q, dq, v, ddq = self.predict(q, dq, v, ddq)
 
                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                abs_f_ext = max(abs_f_ext, euclidean_norm_of_vector(f_ext))
-                res_abs = euclidean_norm_of_vector(res)
+                res_abs = np.linalg.norm(res, 2)
+                abs_f_ext = max(abs_f_ext, np.linalg.norm(f_ext, 2))
 
                 # Newton-Raphson iteration loop
                 newton_iteration = 0
@@ -711,7 +711,7 @@ class NonlinearDynamicsSolver(Solver):
 
                     # update system quantities
                     Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                    res_abs = euclidean_norm_of_vector(res)
+                    res_abs = np.linalg.norm(res, 2)
 
                     if self.verbose:
                         if sp.sparse.issparse(Jac):
@@ -1102,8 +1102,8 @@ class NonlinearDynamicsSolverStateSpace(Solver):
             x, xq = self.predict(x, dx)
 
             Jac, Res, F_ext = self.newton_raphson(x, dx, t, x_old, dx_old, t_old)
-            abs_F_ext = max(abs_F_ext, euclidean_norm_of_vector(F_ext))
-            Res_abs = euclidean_norm_of_vector(Res)
+            Res_abs = np.linalg.norm(Res, 2)
+            abs_F_ext = max(abs_F_ext, np.linalg.norm(F_ext, 2))
 
             # Newton-Raphson iteration loop
             iteration = 0
@@ -1131,7 +1131,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
 
                 # update system quantities
                 Jac, Res, F_ext = self.newton_raphson(x, dx, t, x_old, dx_old, t_old)
-                Res_abs = euclidean_norm_of_vector(Res)
+                Res_abs = np.linalg.norm(Res, 2)
 
                 if self.verbose:
                     if sp.sparse.issparse(Jac):
@@ -1502,7 +1502,7 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         integration scheme.
         '''
 
-        abs_local_dt_err = (self.beta - 1/6)*self.dt**2*length_scaled_euclidean_norm_of_vector(ddq - ddq_old)
+        abs_local_dt_err = (self.beta - 1/6)*self.dt**2*np.linalg.norm(ddq - ddq_old, 2)/np.sqrt(ddq.size)
         return abs_local_dt_err
 
 
