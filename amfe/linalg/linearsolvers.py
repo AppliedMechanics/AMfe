@@ -173,10 +173,12 @@ class PardisoSolver(LinearSolver):
         # call options initialization from superclass
         super().__init__(A, options)
         # Set some default values
+        self.shape = None
         self.iparm = {}
         self.verbose = False
         self.mtype = 'nonsym'
         self.wrapper_class = None
+        # Overwrite default values with options
         self.set_options(**options)
         if A is not None:
             if not isinstance(A, sp.sparse.csr_matrix):
@@ -190,6 +192,7 @@ class PardisoSolver(LinearSolver):
 
             # instantiate PardisoWrapper object
             # This does not! make a factorization
+            self.shape = A.shape
             self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.__parse_iparms(), verbose=self.verbose)
             self.status = 1
 
@@ -213,6 +216,7 @@ class PardisoSolver(LinearSolver):
                 A = sp.sparse.csr_matrix(A)
             except:
                 raise ValueError('A must be A csr_matrix or at least a csr convertible matrix')
+            self.shape = A.shape
             self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.__parse_iparms(), verbose=self.verbose)
             self.status = 1
 
@@ -271,7 +275,7 @@ class PardisoSolver(LinearSolver):
 
     def __str__(self):
         info = 'This is a PardisoSolver object. Dimension of A: {},' \
-               ' status={} ({})'.format(self.wrapper_class.n, str(self.status), self.available_status[self.status])
+               ' status={} ({})'.format(self.shape, str(self.status), self.available_status[self.status])
         return info
 
 # Shortcut for compatibility
