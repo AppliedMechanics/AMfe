@@ -62,6 +62,7 @@ class LinearSolver:
         Return a string that gives information about the solver state
 
         '''
+        pass
 
 
 class ScipySparseSolver(LinearSolver):

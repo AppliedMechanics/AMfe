@@ -68,7 +68,6 @@ else:  # statics
 
 # define simulation parameters
 options = {
-    'linear_solver': amfe.linalg.PardisoSolver,  # amfe.linalg.ScipySparseSolver
     'number_of_load_steps': 10,
     'newton_damping': 1.0,
     'simplified_newton_iterations': 1,
@@ -160,7 +159,7 @@ else:
 print('\n System solver = ')
 print(solver)
 print('\n Linear solver =')
-print(solver.linear_solver)
+# print(solver.linear_solver)
 print('\n Solving...')
 solver.solve()
 

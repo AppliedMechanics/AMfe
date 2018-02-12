@@ -9,6 +9,7 @@ Module that contains solvers for solving systems in AMfe.
 
 import scipy as sp
 import numpy as np
+import abc
 import time
 
 from .mechanical_system import *
@@ -42,34 +43,18 @@ abort_statement = '''
 
 # Most general solver class
 # -------------------------
-class Solver:
+class Solver(abc.ABC):
     '''
-    Most general solver class for the mechanical system.
-
-    Parameters
-    ----------
-    mechanical_system : Instance of MechanicalSystem
-        Mechanical system to be solved.
-    options : Dictionary
-        Options for solver.
+    Abstract super class for all solvers of the mechanical system.
     '''
 
+    @abc.abstractmethod
     def __init__(self, mechanical_system, **options):
-        self.mechanical_system = mechanical_system
+        pass
 
-        # read options
-        if 'linear_solver' in options:
-            self.linear_solver = options['linear_solver']
-        else:
-            print('Attention: No linear solver was given, setting linear_solver = PardisoSolver.')
-            self.linear_solver = PardisoSolver(A=None)
-
-        if 'linear_solver_options' in options:
-            self.linear_solver.set_options(**options['linear_solver_options'])
-        return
-
+    @abc.abstractmethod
     def solve(self):
-        return None
+        pass
 
 
 # Solver classes for all statics solver
@@ -87,9 +72,15 @@ class NonlinearStaticsSolver(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='spd')
+
         if 'number_of_load_steps' in options:
             self.number_of_load_steps = options['number_of_load_steps']
         else:
@@ -167,7 +158,7 @@ class NonlinearStaticsSolver(Solver):
     def solve(self):
         '''
         Solves the nonlinear static problem of the mechanical system.
-            
+
         Parameters
         ----------
 
@@ -181,7 +172,6 @@ class NonlinearStaticsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='spd')
         # TODO: getter method insert getter method for ndof (K is not needed)
         # TODO: Does ndof = self.mechanical_system.dirichlet_class.no_of_constrained_dofs only work for non-reduced
         # TODO: systems?
@@ -277,9 +267,15 @@ class LinearStaticsSolver(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='spd')
+
         if 't' in options:
             self.t = options['t']
         else:
@@ -298,7 +294,6 @@ class LinearStaticsSolver(Solver):
         '''
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='spd')
         self.mechanical_system.clear_timesteps()
 
         print('Assembling external force and stiffness...')
@@ -326,30 +321,32 @@ class NonlinearDynamicsSolver(Solver):
         Mechanical system to be solved.
     options : Dictionary
         Options for solver:
+        linear_solver : Instance of LinearSolver
+            Linear solver object for linear equation system in solver. Default PardisoSolver(...).
         initial_conditions : dict {'q0': numpy.array, 'dq0': numpy.array}
-            Initial conditions/initial displacement and initial velocity for solver.
+            Initial conditions/initial displacement and initial velocity for solver. Default 0 and 0.
         t0 : float
-            Initial time.
+            Initial time. Default 0.
         t_end : float
-            End time.
+            End time. Default 1.
         dt : float
-            Time step size for time integration.
+            Time step size for time integration. Default 1e-4.
         dt_output : float
-            Time step size for output.
+            Time step size for output. Default 1.
         relative_tolerance : float
-
+            Default 1e-9.
         absolute_tolerance : float
-
+            Default 1e-6.
         max_number_of_iterations : int
-
+            Default 30.
         convergence_abort : Boolean
-
+            Default True.
         verbose : Boolean
-            If true, show some more information in command line.
+            If True, show some more information in command line. Default False.
         write_iterations : Boolean
-            If true, write iteration steps.
+            If True, write iteration steps. Default False.
         track_iterations : Boolean
-
+            If True, save iteration infos. Default False.
     References
     ----------
        [1]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and application to structural dynamics.
@@ -357,10 +354,14 @@ class NonlinearDynamicsSolver(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
-        self.options = dict(**options)
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='sid')
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
@@ -474,7 +475,6 @@ class NonlinearDynamicsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='sid')
         self.mechanical_system.clear_timesteps()
         self.iteration_info = []
         t = self.t0
@@ -630,7 +630,6 @@ class NonlinearDynamicsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='sid')
         self.mechanical_system.clear_timesteps()
         self.iteration_info = []
         t = self.t0
@@ -804,10 +803,14 @@ class LinearDynamicsSolver(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
-        self.options = dict(**options)
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='spd')
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
@@ -877,7 +880,6 @@ class LinearDynamicsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='spd')
         self.mechanical_system.clear_timesteps()
         t = self.t0
         q = self.initial_conditions['q0'].copy()
@@ -950,29 +952,32 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         State-space system to be solved.
     options : Dictionary
         Options for solver:
+        linear_solver : Instance of LinearSolver
+            Linear solver object for linear equation system in solver. Default PardisoSolver(...).
         initial_conditions : dict {'x0': numpy.array}
-            Initial conditions/states for solver.
+            Initial conditions/states for solver. Default 0.
         t0 : float
-            Initial time.
+            Initial time. Default 0.
         t_end : float
-            End time.
+            End time. Default 1.
         dt : float
-            Time step size for time integration.
+            Time step size for time integration. Default 1e-4.
         dt_output : float
-            Time step size for output.
+            Time step size for output. Default 1.
         relative_tolerance : float
-
+            Default 1e-9.
         absolute_tolerance : float
-
+            Default 1e-6.
         max_number_of_iterations : int
-
+            Default 30.
         convergence_abort : Boolean
-
+            Default True.
         verbose : Boolean
-            If true, show some more information in command line.
+            If True, show some more information in command line. Default False.
         write_iterations : Boolean
-            If true, write iteration steps.
+            If True, write iteration steps. Default False.
         track_iterations : Boolean
+            If True, save iteration infos. Default False.
 
     References
     ----------
@@ -981,10 +986,14 @@ class NonlinearDynamicsSolverStateSpace(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
-        self.options = dict(**options)
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='nonsym')
 
         if ('initial_conditions' in options) and ('x0' in options['initial_conditions']):
             x0 = options['initial_conditions']['x0']
@@ -1084,7 +1093,6 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='nonsym')
         self.mechanical_system.clear_timesteps()
         self.iteration_info = []
         t = self.t0
@@ -1198,10 +1206,14 @@ class LinearDynamicsSolverStateSpace(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
-        self.options = dict(**options)
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='nonsym')
 
         if ('initial_conditions' in options) and ('x0' in options['initial_conditions']):
             x0 = options['initial_conditions']['x0']
@@ -1264,7 +1276,6 @@ class LinearDynamicsSolverStateSpace(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='nonsym')
         self.mechanical_system.clear_timesteps()
         t = self.t0
         x = self.initial_conditions['x0'].copy()
