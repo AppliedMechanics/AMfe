@@ -44,7 +44,7 @@ def signal_norm(x, t=None, dt=1.0, ord=2, axis=-1):
         with dt. Default is None.
     dt : float, optional
         Spacing between samples x when t is None. Default is 1.
-    ord : {non-zero int or float, inf, -inf, 2, 1, 'rms'}, optional
+    ord : {non-zero int or float, inf, -inf, 2, 1, 'mean', 'rms', 'max', 'min'}, optional
         Order of the norm (see table under Notes). inf means numpy's inf object. Default is 2.
     axis : int, optional
         Axis along which to integrate in norm. Default -1.
@@ -56,36 +56,49 @@ def signal_norm(x, t=None, dt=1.0, ord=2, axis=-1):
 
     Notes
     -----
-    For values of ord < 0 and ord = 'rms' the result is - strictly speaking - not a mathematical 'norm', but it may
-    still be useful for various numerical purposes.
+    For values of ord < 0 and ord in {'mean', 'rms', 'max', 'min'} the result is - strictly speaking - not a
+    mathematical 'norm', but it may still be useful for various numerical purposes.
     The following norms can be calculated:
-    =====  ========================================
-    ord    norm for signals
-    =====  ========================================
-    inf    L_inf-norm: sup(abs(x))
-    > 0    L_ord-norm: (integral(abs(x)^ord)^(1/ord)
-    2      L_2-norm: sqrt(integral(abs(x)^2))
-    1      L_1-norm: integral(abs(x))
-    < 0    (integral(abs(x)^ord)^(1/ord)
-    -inf   inf(abs(x))
-    'rms'  rms value: sqrt(1/T*integral(x^2))
-    =====  ========================================
+    ======  =========================================
+    ord     norm for signals
+    ======  =========================================
+    inf     L_inf-norm: sup(abs(x)) in [t_0,t_end]
+    > 0     L_ord-norm: (integral(abs(x)^ord)^(1/ord)
+    2       L_2-norm: sqrt(integral(abs(x)^2))
+    1       L_1-norm: integral(abs(x))
+    < 0     (integral(abs(x)^ord)^(1/ord)
+    -inf    inf(abs(x)) in [t_0,t_end]
+    'mean'  mean value: 1/T*integral(x)
+    'rms'   rms value: sqrt(1/T*integral(x^2))
+    'max'   maximal value: max(x) in [t_0,t_end]
+    'min'   minimal value: min(x) in [t_0,t_end]
+    ======  =========================================
     """
 
-    if ord == 1:
-        norm_x = np.trapz(y=np.abs(x), x=t, dx=dt, axis=axis)
-    elif ord == 2:
+    if ord == 2:
         norm_x = np.sqrt(np.trapz(y=x**2, x=t, dx=dt, axis=axis))
+    elif ord == 1:
+        norm_x = np.trapz(y=np.abs(x), x=t, dx=dt, axis=axis)
     elif ord == np.inf:
         norm_x = np.amax(a=np.abs(x), axis=axis)
     elif ord == -np.inf:
         norm_x = np.amin(a=np.abs(x), axis=axis)
+    elif ord == 'mean':
+        if t is not None:
+            T = t[-1] - t[0]
+        else:
+            T = (np.ma.size(obj=x, axis=axis) - 1)*dt
+        norm_x = np.trapz(y=x, x=t, dx=dt, axis=axis)/T
     elif ord == 'rms':
         if t is not None:
             T = t[-1] - t[0]
         else:
             T = (np.ma.size(obj=x, axis=axis) - 1)*dt
         norm_x = np.sqrt(np.trapz(y=x**2, x=t, dx=dt, axis=axis)/T)
+    elif ord == 'max':
+        norm_x = np.amax(a=x, axis=axis)
+    elif ord == 'min':
+        norm_x = np.amin(a=x, axis=axis)
     else:
         try:
             ord + 1
