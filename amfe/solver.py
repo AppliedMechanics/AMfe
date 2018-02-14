@@ -363,15 +363,18 @@ class NonlinearDynamicsSolver(Solver):
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
-            if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems
+            # because these systems do not have a ndof property
+            #if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #    raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
         else:
             print('Attention: No initial displacement was given, setting q0 = 0.')
             q0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
             dq0 = options['initial_conditions']['dq0']
-            if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
+            # TODO: See above
+            #if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #    raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
             print('Attention: No initial velocity was given, setting dq0 = 0.')
             dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)

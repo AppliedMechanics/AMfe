@@ -740,18 +740,8 @@ class ReducedSystem(MechanicalSystem):
 
     def D(self, u=None, t=0, force_update=False):
         if self.D_constr is None or force_update:
-            if self.assembly_type == 'direct':
-                raise NotImplementedError('The direct method is note implemented yet for damping matrices')
-            elif self.assembly_type == 'indirect':
-                if u is None:
-                    u_full = None
-                else:
-                    u_full = self.V @ u
-                self.D_constr = self.V.T @ MechanicalSystem.D(self, u_full, t, force_update=True) @ self.V
-            else:
-                raise ValueError('The given assembly type for a reduced system '
-                                 + 'is not valid.')
-
+            if self.D_constr is None:
+                self.D_constr = self.V.T @ MechanicalSystem.K(self)*0 @ self.V
         return self.D_constr
 
     def M(self, u=None, t=0, force_update=False):
@@ -959,10 +949,12 @@ def reduce_mechanical_system(
     reduced_sys.V = V.copy()
     reduced_sys.V_unconstr = reduced_sys.dirichlet_class.unconstrain_vec(V)
     reduced_sys.u_red_output = []
+    reduced_sys.M_constr = None
+    reduced_sys.assembly_type = assembly
     reduced_sys.M(force_update=True)
     # reduce Rayleigh damping matrix
-    reduced_sys.D(force_update=True)
-    reduced_sys.assembly_type = assembly
+    if mechanical_system.D_constr is not None:
+        reduced_sys.D_constr = reduced_sys.V.T @ mechanical_system.D_constr @ reduced_sys.V
     return reduced_sys
 
 
