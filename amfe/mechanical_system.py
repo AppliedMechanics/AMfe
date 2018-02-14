@@ -420,7 +420,7 @@ class MechanicalSystem():
             self.assembly_class.assemble_k_and_f_neumann(self.unconstrain_vec(u), t)[1]
         return f_unconstr
 
-    def f_ext(self, u, du, t):
+    def f_ext(self, u=None, du=None, t=0):
         '''
         Return the nonlinear external force of the right hand side of the equation, i.e. the excitation.
         '''
@@ -719,7 +719,7 @@ class ReducedSystem(MechanicalSystem):
                              + 'is not valid.')
         return K
 
-    def f_ext(self, u, du, t):
+    def f_ext(self, u=None, du=None, t=0):
         return self.V.T @ MechanicalSystem.f_ext(self, self.V @ u, du, t)
 
     def f_int(self, u, t=0):
