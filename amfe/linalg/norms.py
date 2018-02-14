@@ -13,14 +13,24 @@ import scipy as sp
 
 
 __all__ = [
+    'vector_norm',
+    'matrix_norm',
     'signal_norm',
     'lti_system_norm'
 ]
 
 
+# shortcut for vector norm to numpy.linalg's norm
+vector_norm = np.linalg.norm
+
+
+# shortcut for matrix norm to numpy.linalg's norm
+matrix_norm = np.linalg.norm
+
+
 def signal_norm(x, t=None, dt=1.0, ord=2, axis=-1):
     """
-    Signal norm ||x(t)||_ord.
+    Returns signal norm ||x(t)||.
     Function is able to return one of an infinite number of signal norms (described below) depending on the value of
     the parameter ord. The function uses numpy's amax (maximum of array) for finding the supremum, amin (minimum of
     array) for finding infimum or trapz (composite trapezoidal rule) for time integration.
@@ -34,7 +44,7 @@ def signal_norm(x, t=None, dt=1.0, ord=2, axis=-1):
         with dt. Default is None.
     dt : float, optional
         Spacing between samples x when t is None. Default is 1.
-    ord : {non-zero int or float, inf, -inf, 2, 1}, optional
+    ord : {non-zero int or float, inf, -inf, 2, 1, 'rms'}, optional
         Order of the norm (see table under Notes). inf means numpy's inf object. Default is 2.
     axis : int, optional
         Axis along which to integrate in norm. Default -1.
@@ -46,19 +56,20 @@ def signal_norm(x, t=None, dt=1.0, ord=2, axis=-1):
 
     Notes
     -----
-    For values of ord < 0 the result is - strictly speaking - not a mathematical 'norm', but it may still be useful for
-    various numerical purposes
+    For values of ord < 0 and ord = 'rms' the result is - strictly speaking - not a mathematical 'norm', but it may
+    still be useful for various numerical purposes.
     The following norms can be calculated:
-    ====  ========================================
-    ord   norm for signals
-    ====  ========================================
-    inf   L_inf-norm sup(abs(x))
-    > 0   L_ord-norm (integral(abs(x)^ord)^(1/ord)
-    2     L_2-norm integral(abs(x))
-    1     L_1-norm sqrt(integral(abs(x)^2))
-    < 0   (integral(abs(x)^ord)^(1/ord)
-    -inf  inf(abs(x))
-    ====  ========================================
+    =====  ========================================
+    ord    norm for signals
+    =====  ========================================
+    inf    L_inf-norm: sup(abs(x))
+    > 0    L_ord-norm: (integral(abs(x)^ord)^(1/ord)
+    2      L_2-norm: sqrt(integral(abs(x)^2))
+    1      L_1-norm: integral(abs(x))
+    < 0    (integral(abs(x)^ord)^(1/ord)
+    -inf   inf(abs(x))
+    'rms'  rms value: sqrt(1/T*integral(x^2))
+    =====  ========================================
     """
 
     if ord == 1:
@@ -69,40 +80,99 @@ def signal_norm(x, t=None, dt=1.0, ord=2, axis=-1):
         norm_x = np.amax(a=np.abs(x), axis=axis)
     elif ord == -np.inf:
         norm_x = np.amin(a=np.abs(x), axis=axis)
+    elif ord == 'rms':
+        if t is not None:
+            T = t[-1] - t[0]
+        else:
+            T = (np.ma.size(obj=x, axis=axis) - 1)*dt
+        norm_x = np.sqrt(np.trapz(y=x**2, x=t, dx=dt, axis=axis)/T)
     else:
         try:
             ord + 1
         except TypeError:
-            raise ValueError('Error: Invalid norm order for signals.')
+            raise ValueError('Invalid norm order for signals.')
         if ord == 0:
-            raise ValueError('Error: Invalid norm order for signals.')
+            raise ValueError('Invalid norm order for signals.')
         norm_x = np.trapz(y=np.abs(x)**(1.0*ord), x=t, dx=dt, axis=axis)**(1/ord)
     return norm_x
 
 
-def lti_system_norm(A, B, C, E=None, ord=2):
+def lti_system_norm(A, B, C, E=None, ord=2, **kwargs):
+    """
+    Returns norm ||G(s)|| of LTI system (E,A,B,C,D=0) or (A,B,C,D=0).
+    Function is able to return one of the LTI system norms (described below) depending on the value of the parameter
+    ord.
+
+    Parameters
+    ----------
+    E : 2darray
+        Descriptor matrix of LTI system.
+    A : 2darray
+        Dynamic matrix of LTI system.
+    B : 1darray or 2darray
+        Input vector/matrix of LTI system. 1darray will be automatically broadcasted to appropriate 2darray.
+    C : 1darray or 2darray
+        Output vector/matrix of LTI system. 1darray will be automatically broadcasted to appropriate 2darray.
+    ord : {inf, 2}, optional
+        Order of the norm (see table under Notes). inf means numpy's inf object. Default is 2.
+    **kwargs : additional arguments, optional
+        Additional optional arguments:
+        relative_tolerance : float
+            Maximal relative difference between solution via controllability and observability Gramian in H_2-norm
+            calculation.
+
+    Returns
+    -------
+    norm_sys : float
+        Norm of the LTI system.
+
+    Notes
+    -----
+    The following norms can be calculated:
+    ===  ====================
+    ord  norm for LTI systems
+    ===  ====================
+    inf  H_inf-norm
+    2    H_2-norm
+    ===  ====================
+    """
+
     if ord == 2:
+        # convert to and prepare system (A, B, C)
         if E is not None:
             A = sp.sparse.linalg.spsolve(E, A)
             B = sp.sparse.linalg.spsolve(E, B)
-        if len(B.shape) == 1:
+        if B.ndim == 1:
             B = B.reshape((-1, 1))
-        if len(C.shape) == 1:
+        if C.ndim == 1:
             C = C.reshape((1, -1))
+
+        # compute norm via controllability Gramian
+        # TODO: Find/implement sparse solver for lyapunov equations.
         G_c = sp.linalg.solve_continuous_lyapunov(A.todense(), -B@B.T)
         norm_sys_c = np.sqrt(np.trace(C@G_c@C.T))
-        G_o = sp.linalg.solve_continuous_lyapunov(A.todense().T, -C.T@C)
+
+        # compute norm via observability Gramian
+        # TODO: Find/implement sparse solver for lyapunov equations.
+        G_o = sp.linalg.solve_continuous_lyapunov(A.T.todense(), -C.T@C)
         norm_sys_o = np.sqrt(np.trace(B.T@G_o@B))
-        print(norm_sys_c)
-        print(norm_sys_o)
-        print((norm_sys_c - norm_sys_o)/norm_sys_c)
-        if abs((norm_sys_o - norm_sys_c)/norm_sys_c) < 1.0e-6:
+
+        # compare solutions
+        if 'relative_tolerance' in kwargs:
+            relative_tolerance = kwargs['relative_tolerance']
+        else:
+            print('Attention: No relative tolerance was given, setting relative_tolerance = 1e-6.')
+            relative_tolerance = 1.0e-6
+
+        relative_difference = abs((norm_sys_c - norm_sys_o)/norm_sys_c)
+
+        if relative_difference < relative_tolerance:
             norm_sys = norm_sys_c
         else:
-            raise ValueError('Error: H_2-norm calculation failed.')
+            raise ValueError('H_2-norm calculation failed: Relative difference  > relative tolerance.')
     elif ord == np.inf:
-        raise ValueError('Error: Not implemented yet. You may do so.')
+        raise ValueError('Not implemented yet. You may do so.')
     else:
-        raise ValueError('Error: Invalid norm order for systems.')
+        raise ValueError('Invalid norm order for LTI systems.')
     return norm_sys
 

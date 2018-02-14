@@ -198,8 +198,8 @@ class NonlinearStaticsSolver(Solver):
             K, f_int= self.mechanical_system.K_and_f(u, t)
             f_ext = self.mechanical_system.f_ext(u, du, t)
             res = -f_int + f_ext
-            abs_res = np.linalg.norm(res, 2)
-            abs_f_ext = np.linalg.norm(f_ext, 2)
+            abs_res = vector_norm(res, 2)
+            abs_f_ext = vector_norm(f_ext, 2)
 
             # Newton iteration loop
             iteration = 0
@@ -218,8 +218,8 @@ class NonlinearStaticsSolver(Solver):
                     K, f_int = self.mechanical_system.K_and_f(u, t)
                     f_ext = self.mechanical_system.f_ext(u, du, t)
                 res = -f_int + f_ext
-                abs_res = np.linalg.norm(res, 2)
-                abs_f_ext = np.linalg.norm(f_ext, 2)
+                abs_res = vector_norm(res, 2)
+                abs_f_ext = vector_norm(f_ext, 2)
                 iteration += 1
 
                 if self.verbose:
@@ -355,7 +355,7 @@ class NonlinearDynamicsSolver(Solver):
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
             if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
+                raise ValueError('Error: Dimension of q0 is not valid for mechanical system.')
         else:
             print('Attention: No initial displacement was given, setting q0 = 0.')
             q0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
@@ -500,8 +500,8 @@ class NonlinearDynamicsSolver(Solver):
             q, dq, v, ddq = self.predict(q, dq, v, ddq)
 
             Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-            res_abs = np.linalg.norm(res, 2)
-            abs_f_ext = max(abs_f_ext, np.linalg.norm(f_ext, 2))
+            res_abs = vector_norm(res, 2)
+            abs_f_ext = max(abs_f_ext, vector_norm(f_ext, 2))
 
             # Newton-Raphson iteration loop
             iteration = 0
@@ -528,7 +528,7 @@ class NonlinearDynamicsSolver(Solver):
 
                 # update system quantities
                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                res_abs = np.linalg.norm(res, 2)
+                res_abs = vector_norm(res, 2)
 
                 if self.verbose:
                     if sp.sparse.issparse(Jac):
@@ -687,8 +687,8 @@ class NonlinearDynamicsSolver(Solver):
                 q, dq, v, ddq = self.predict(q, dq, v, ddq)
 
                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                res_abs = np.linalg.norm(res, 2)
-                abs_f_ext = max(abs_f_ext, np.linalg.norm(f_ext, 2))
+                res_abs = vector_norm(res, 2)
+                abs_f_ext = max(abs_f_ext, vector_norm(f_ext, 2))
 
                 # Newton-Raphson iteration loop
                 newton_iteration = 0
@@ -711,7 +711,7 @@ class NonlinearDynamicsSolver(Solver):
 
                     # update system quantities
                     Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                    res_abs = np.linalg.norm(res, 2)
+                    res_abs = vector_norm(res, 2)
 
                     if self.verbose:
                         if sp.sparse.issparse(Jac):
@@ -802,16 +802,16 @@ class LinearDynamicsSolver(Solver):
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
             if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
+                raise ValueError('Error: Dimension of q0 is not valid for mechanical system.')
         else:
-            print('Attention: No initial displacement is given, setting q0 = 0.')
+            print('Attention: No initial displacement was given, setting q0 = 0.')
             q0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
             dq0 = options['initial_conditions']['dq0']
             if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
                 raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
-            print('Attention: No initial velocity is given, setting dq0 = 0.')
+            print('Attention: No initial velocity was given, setting dq0 = 0.')
             dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'q0':q0, 'dq0':dq0}
 
@@ -979,9 +979,9 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         if ('initial_conditions' in options) and ('x0' in options['initial_conditions']):
             x0 = options['initial_conditions']['x0']
             if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of x0 not valid for mechanical system.')
+                raise ValueError('Error: Dimension of x0 is not valid for mechanical system.')
         else:
-            print('Attention: No initial state is given, setting x0 = 0.')
+            print('Attention: No initial state was given, setting x0 = 0.')
             x0 = np.zeros(2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'x0': x0}
 
@@ -1102,8 +1102,8 @@ class NonlinearDynamicsSolverStateSpace(Solver):
             x, xq = self.predict(x, dx)
 
             Jac, Res, F_ext = self.newton_raphson(x, dx, t, x_old, dx_old, t_old)
-            Res_abs = np.linalg.norm(Res, 2)
-            abs_F_ext = max(abs_F_ext, np.linalg.norm(F_ext, 2))
+            Res_abs = vector_norm(Res, 2)
+            abs_F_ext = max(abs_F_ext, vector_norm(F_ext, 2))
 
             # Newton-Raphson iteration loop
             iteration = 0
@@ -1131,7 +1131,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
 
                 # update system quantities
                 Jac, Res, F_ext = self.newton_raphson(x, dx, t, x_old, dx_old, t_old)
-                Res_abs = np.linalg.norm(Res, 2)
+                Res_abs = vector_norm(Res, 2)
 
                 if self.verbose:
                     if sp.sparse.issparse(Jac):
@@ -1196,9 +1196,9 @@ class LinearDynamicsSolverStateSpace(Solver):
         if ('initial_conditions' in options) and ('x0' in options['initial_conditions']):
             x0 = options['initial_conditions']['x0']
             if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of x0 not valid for mechanical system.')
+                raise ValueError('Error: Dimension of x0 is not valid for mechanical system.')
         else:
-            print('Attention: No initial state is given, setting x0 = 0.')
+            print('Attention: No initial state was given, setting x0 = 0.')
             x0 = np.zeros(2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'x0': x0}
 
@@ -1502,7 +1502,7 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         integration scheme.
         '''
 
-        abs_local_dt_err = (self.beta - 1/6)*self.dt**2*np.linalg.norm(ddq - ddq_old, 2)/np.sqrt(ddq.size)
+        abs_local_dt_err = (self.beta - 1/6)*self.dt**2*vector_norm(ddq - ddq_old, 2)/np.sqrt(ddq.size)
         return abs_local_dt_err
 
 
