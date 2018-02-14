@@ -394,7 +394,10 @@ class MechanicalSystem():
         '''
 
         if self.D_constr is None or force_update:
-            return self.K()*0
+            if self.D_constr is None:
+                return self.K()*0
+            else:
+                return self.D_constr
         else:
             return self.D_constr
 
@@ -521,25 +524,28 @@ class MechanicalSystemStateSpace(MechanicalSystem):
         self.R_constr = regular_matrix
         self.E_constr = None
 
-    def M(self, x=None, t=0):
-        if x is not None:
-            self.M_constr = MechanicalSystem.M(self, x[0:int(x.size/2)], t)
-        else:
-            self.M_constr = MechanicalSystem.M(self, None, t)
+    def M(self, x=None, t=0, force_update=False):
+        if self.M_constr is None or force_update:
+            if x is not None:
+                self.M_constr = MechanicalSystem.M(self, x[0:int(x.size/2)], t)
+            else:
+                self.M_constr = MechanicalSystem.M(self, None, t)
         return self.M_constr
 
-    def E(self, x=None, t=0):
-        if self.M_constr is None:
-            self.M(x, t)
-        self.E_constr = bmat([[self.R_constr, None],
+    def E(self, x=None, t=0, force_update=False):
+        if self.E_constr is None or force_update:
+            if self.M_constr is None:
+                self.M(x, t)
+            self.E_constr = bmat([[self.R_constr, None],
                               [None, self.M_constr]])
         return self.E_constr
 
-    def D(self, x=None, t=0):
-        if x is not None:
-            self.D_constr = MechanicalSystem.D(self, x[0:int(x.size/2)], t)
-        else:
-            self.D_constr = MechanicalSystem.D(self, None, t)
+    def D(self, x=None, t=0, force_update=False):
+        if self.D_constr is None or force_update:
+            if x is not None:
+                self.D_constr = MechanicalSystem.D(self, x[0:int(x.size/2)], t)
+            else:
+                self.D_constr = MechanicalSystem.D(self, None, t)
         return self.D_constr
 
     def K(self, x=None, t=0):
@@ -844,16 +850,17 @@ class ReducedSystemStateSpace(MechanicalSystemStateSpace):
         self.W = left_basis
         self.x_red_output = []
 
-    def E(self, x=None, t=0):
-        if x is not None:
-            self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, self.V@x, \
+    def E(self, x=None, t=0, force_update=False):
+        if self.E_constr is None or force_update:
+            if x is not None:
+                self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, self.V@x, \
                                                                   t)@self.V
-        else:
-            self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, None, t)@self.V
+            else:
+                self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, None, t)@self.V
         return self.E_constr
 
-    def E_unreduced(self, x_unreduced=None, t=0):
-        return MechanicalSystemStateSpace.E(self, x_unreduced, t)
+    def E_unreduced(self, x_unreduced=None, t=0, force_update=False):
+        return MechanicalSystemStateSpace.E(self, x_unreduced, t, force_update)
 
     def A(self, x=None, t=0):
         if x is not None:
@@ -973,7 +980,7 @@ def convert_mechanical_system_to_state_space(
         sys.R_constr = sys.K()
     else:
         sys.R_constr = regular_matrix
-    sys.E()
+    sys.E(force_update=True)
     return sys
 
 
