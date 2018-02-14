@@ -84,8 +84,6 @@ def compute_nskts(mechanical_system,
         '''
         def f_ext_monkeypatched(u, du, t):
             return F_rand * t
-        # f_ext_tmp = mechanical_system.f_ext
-        # mechanical_system.f_ext = f_ext_monkeypatched
 
         nlsolver = NonlinearStaticsSolver(mechanical_system,
                                           number_of_load_steps=no_of_force_increments,
@@ -96,7 +94,6 @@ def compute_nskts(mechanical_system,
                                           f_ext=f_ext_monkeypatched)
         u_arr = nlsolver.solve()
         
-        #mechanical_system.f_ext = f_ext_tmp
         return u_arr
 
     print('*'*80)
