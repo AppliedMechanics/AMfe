@@ -7,8 +7,10 @@ Example showing a cantilever beam which is loaded on the tip with a force
 showing nonlinear displacements.
 """
 
+import numpy as np
 
 import amfe
+
 
 
 input_file = amfe.amfe_dir('meshes/gmsh/bar.msh')
@@ -20,7 +22,7 @@ my_system = amfe.MechanicalSystem()
 my_system.load_mesh_from_gmsh(input_file, 7, my_material)
 my_system.apply_dirichlet_boundaries(8, 'xy') # fixature of the left side
 my_system.apply_neumann_boundaries(key=9, val=1E8, direct=(0,-1),
-                                   time_func=lambda t: t)
+                                   time_func=lambda t: np.sin(31*t))
 
 solverlin = amfe.LinearStaticsSolver(my_system)
 solverlin.solve()
@@ -31,29 +33,54 @@ solvernl = amfe.NonlinearStaticsSolver(my_system, number_of_load_steps=50)
 solvernl.solve()
 my_system.export_paraview(output_file + '_nonlinear')
 
-
-
-#%% Modal analysis
-
-#omega, V = amfe.vibration_modes(my_system, save=True)
-#my_system.export_paraview(output_file + '_modes')
+solverti = amfe.GeneralizedAlphaNonlinearDynamicsSolver(my_system, dt=0.001, t_end=1)
+my_system.clear_timesteps()
+solverti.solve()
+my_system.export_paraview(output_file + '_nonlinear_ti')
 
 # Basis generation:
 
 omega, V = amfe.reduced_basis.vibration_modes(my_system,6)
 Theta = amfe.reduced_basis.modal_derivatives(V,omega,my_system.K,my_system.M())
 
+V_extended = amfe.augment_with_derivatives(V, Theta)
+
+# Training Set Generation
 nskts = amfe.hyper_red.compute_nskts(my_system)
 
+my_system.clear_timesteps()
 for i in range(nskts.shape[1]):
     my_system.write_timestep(i,nskts[:,i])
 
 my_system.export_paraview(output_file + '_nskts')
 
 
+# Reduce system
+my_red_system = amfe.reduce_mechanical_system(my_system, V_extended)
+ndofs = V_extended.shape[1]
+initial_conditions = {'q0': np.zeros(ndofs), 'dq0': np.zeros(ndofs)}
+solverti_red = amfe.GeneralizedAlphaNonlinearDynamicsSolver(my_red_system, dt=0.001, t_end=1, initial_conditions=initial_conditions)
+my_red_system.clear_timesteps()
+
+solverti_red.solve()
+my_red_system.export_paraview(output_file + '_nonlinear_ti_red')
 
 
+# Hyperreduction
 
+my_hyperred = amfe.reduce_mechanical_system_ecsw(my_system,V_extended)
+q_training = np.linalg.solve((V_extended.T @ V_extended), V_extended.T @ nskts)
+my_hyperred.reduce_mesh(q_training)
+
+my_hyperred.export_paraview(output_file + '_weights_ecsw')
+solverti_hyperred = amfe.GeneralizedAlphaNonlinearDynamicsSolver(my_hyperred, dt=0.001, t_end=1, initial_conditions=initial_conditions)
+my_hyperred.clear_timesteps()
+solverti_hyperred.solve()
+my_hyperred.export_paraview(output_file + '_nonlinear_ti_hyperred')
+
+print('END')
+
+# OLD Version
 # from .. experiments.benchmarks.cantilever import my_system, dt, T, \
 # input_file, output_file
 #
