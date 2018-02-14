@@ -521,7 +521,6 @@ class MechanicalSystemStateSpace(MechanicalSystem):
         else:
             self.R_constr = regular_matrix
         self.x_red_output = []
-        self.R_constr = regular_matrix
         self.E_constr = None
 
     def M(self, x=None, t=0, force_update=False):
@@ -972,6 +971,7 @@ def convert_mechanical_system_to_state_space(
         sys.R_constr = sys.K()
     else:
         sys.R_constr = regular_matrix
+    sys.E_constr = None
     sys.E(force_update=True)
     return sys
 

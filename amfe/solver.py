@@ -181,6 +181,7 @@ class NonlinearStaticsSolver(Solver):
         u = np.zeros(ndof)
         du = np.zeros(ndof)
         self.mechanical_system.clear_timesteps()
+        self.iteration_info = []
         if self.save_solution:
             # write initial state
             self.mechanical_system.write_timestep(0.0, u)
@@ -201,8 +202,19 @@ class NonlinearStaticsSolver(Solver):
 
             # Newton iteration loop
             iteration = 0
-            while (abs_res > self.relative_tolerance*abs_f_ext + self.absolute_tolerance) and \
-                    (self.max_number_of_iterations > iteration):
+            while abs_res > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
+
+                iteration += 1
+
+                # catch failing convergence
+                if iteration > self.max_number_of_iterations:
+                    if self.convergence_abort:
+                        u_output = np.array(u_output).T
+                        print(abort_statement)
+                        t_clock_end = time.time()
+                        print('Time for static solution: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
+                        return u_output
+                    break
 
                 # solve for displacement correction
                 self.linear_solver.set_A(K)
@@ -219,21 +231,12 @@ class NonlinearStaticsSolver(Solver):
                 res = -f_int + f_ext
                 abs_f_ext = euclidean_norm_of_vector(f_ext)
                 abs_res = euclidean_norm_of_vector(res)
-                iteration += 1
 
                 if self.verbose:
                     print('Step: {0:1.3f}, iteration#: {1:3d}, residual: {2:6.3E}'.format(t, iteration, abs_res))
 
                 if self.write_iterations:
                     self.mechanical_system.write_timestep(t + iteration*0.000001, u)
-
-                # exit, if max iterations exceeded
-                if (iteration >= self.max_number_of_iterations) and self.convergence_abort:
-                    u_output = np.array(u_output).T
-                    print(abort_statement)
-                    t_clock_end = time.time()
-                    print('Time for static solution: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
-                    return u_output
 
             # end of Newton iteration loop
 
@@ -242,10 +245,11 @@ class NonlinearStaticsSolver(Solver):
             u_output.append(u.copy())
 
             if self.track_iterations:
-                iteration_info.append((t, iteration, abs_res))
+                self.iteration_info.append((t, iteration, abs_res))
 
         # end of load step loop
 
+        self.iteration_info = np.array(self.iteration_info)
         u_output = np.array(u_output).T
         t_clock_end = time.time()
         print('Time for solving nonlinear displacements: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
