@@ -43,7 +43,6 @@ class SolversTest(unittest.TestCase):
         ndof = self.system.dirichlet_class.no_of_constrained_dofs
         # system.apply_rayleigh_damping(1e0, 1e-5)
         self.options = {
-    'linear_solver': amfe.linalg.PardisoSolver,  # amfe.linalg.ScipySparseSolver
     'number_of_load_steps': 10,
     'newton_damping': 1.0,
     'simplified_newton_iterations': 1,
