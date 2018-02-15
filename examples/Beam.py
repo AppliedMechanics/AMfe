@@ -9,7 +9,6 @@ Example: Cantilever beam loaded at tip.
 
 # load packages
 import amfe
-from scipy import linalg
 import numpy as np
 
 
@@ -94,20 +93,21 @@ alpha = 0.0005
 
 
 # represent mechanical system as state-space system
-#  > solve for non-linear static displacement of system still in mechanical form
-if not statics:  # dynamics
-    system.apply_neumann_boundaries(key=3, val=-2.5e8, direct=(0, -1), time_func=lambda t: 1)  # deleted dynamic NBCs
-    system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: t)  # set static NBCs
-solver = amfe.NonlinearStaticsSolver(mechanical_system=system, **options)
-solver.solve()
-q_static = system.constrain_vec(system.u_output[-1][:])
-system.clear_timesteps()
-if not statics:  # dynamics
-    system.apply_neumann_boundaries(key=3, val=-2.5e8, direct=(0, -1), time_func=lambda t: t)  # delete static NBCs
-    system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: 1)  # reset dynamic NBCs
-#  > convert system to state-space form
-state_space_system = amfe.mechanical_system.convert_mechanical_system_to_state_space(
-    system, regular_matrix=system.K(q_static), overwrite=False)
+if scheme == 'JWHAlphaStateSpace':
+    #  > solve for non-linear static displacement of system still in mechanical form
+    if not statics:  # dynamics
+        system.apply_neumann_boundaries(key=3, val=-2.5e8, direct=(0, -1), time_func=lambda t: 1)  # deleted dynamic NBCs
+        system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: t)  # set static NBCs
+    solver = amfe.NonlinearStaticsSolver(mechanical_system=system, **options)
+    solver.solve()
+    q_static = system.constrain_vec(system.u_output[-1][:])
+    system.clear_timesteps()
+    if not statics:  # dynamics
+        system.apply_neumann_boundaries(key=3, val=-2.5e8, direct=(0, -1), time_func=lambda t: t)  # delete static NBCs
+        system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: 1)  # reset dynamic NBCs
+    #  > convert system to state-space form
+    state_space_system = amfe.mechanical_system.convert_mechanical_system_to_state_space(
+        system, regular_matrix=system.K(q_static), overwrite=False)
 
 
 # solve system

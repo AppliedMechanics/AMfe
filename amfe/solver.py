@@ -15,6 +15,7 @@ import time
 from .mechanical_system import *
 from .linalg import *
 
+
 __all__ = [
     # 'choose_solver',
     'Solver',
@@ -176,33 +177,29 @@ class NonlinearStaticsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        # TODO: getter method insert getter method for ndof (K is not needed)
-        # TODO: Does ndof = self.mechanical_system.dirichlet_class.no_of_constrained_dofs only work for non-reduced
-        # TODO: systems?
+        # TODO: Insert getter method for ndof. (K is not needed.) ndof = self.mechanical_system.dirichlet_class.no_...
+        # TODO: ...of_constrained_dofs only works for non-reduced systems!
         K, f_int = self.mechanical_system.K_and_f()
         ndof = K.shape[0]
-        # TODO:
         u = np.zeros(ndof)
         du = np.zeros(ndof)
-        self.mechanical_system.clear_timesteps()
         self.iteration_info = []
+        self.mechanical_system.clear_timesteps()
         if self.save_solution:
             # write initial state
             self.mechanical_system.write_timestep(0.0, u)
         u_output = []
         stepwidth = 1/self.number_of_load_steps
 
-        # load step loop: t goes from (0+stepwidth) to 1
+        # load step loop: pseudo time t goes from 0 + stepwidth to 1
         for t in np.arange(stepwidth, 1.0 + stepwidth, stepwidth):
 
             # Calculate residuum:
             K, f_int = self.mechanical_system.K_and_f(u, t)
             f_ext = self.f_ext(u, du, t)
             res = -f_int + f_ext
-
-            # calculate norms
-            abs_res = euclidean_norm_of_vector(res)
-            abs_f_ext = euclidean_norm_of_vector(f_ext)
+            abs_f_ext = vector_norm(f_ext, 2)
+            abs_res = vector_norm(res, 2)
 
             # Newton iteration loop
             iteration = 0
@@ -216,7 +213,8 @@ class NonlinearStaticsSolver(Solver):
                         u_output = np.array(u_output).T
                         print(abort_statement)
                         t_clock_end = time.time()
-                        print('Time for static solution: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
+                        print('Time for solving nonlinear static problem: {0:6.3f} seconds.' \
+                              .format(t_clock_end - t_clock_start))
                         return u_output
                     break
 
@@ -233,14 +231,17 @@ class NonlinearStaticsSolver(Solver):
                     f_ext = self.f_ext(u, du, t)
                 # update residuum and norms
                 res = -f_int + f_ext
-                abs_f_ext = euclidean_norm_of_vector(f_ext)
-                abs_res = euclidean_norm_of_vector(res)
-
-                if self.verbose:
-                    print('Step: {0:1.3f}, iteration#: {1:3d}, residual: {2:6.3E}'.format(t, iteration, abs_res))
+                abs_f_ext = vector_norm(f_ext, 2)
+                abs_res = vector_norm(res, 2)
 
                 if self.write_iterations:
                     self.mechanical_system.write_timestep(t + iteration*0.000001, u)
+
+                if self.track_iterations:
+                    self.iteration_info.append((t, iteration, abs_res))
+
+                if self.verbose:
+                    print('Step: {0:1.3f}, iteration: {1:3d}, residual: {2:6.3E}.'.format(t, iteration, abs_res))
 
             # end of Newton iteration loop
 
@@ -248,15 +249,14 @@ class NonlinearStaticsSolver(Solver):
                 self.mechanical_system.write_timestep(t, u)
             u_output.append(u.copy())
 
-            if self.track_iterations:
-                self.iteration_info.append((t, iteration, abs_res))
-
         # end of load step loop
 
-        self.iteration_info = np.array(self.iteration_info)
         u_output = np.array(u_output).T
+        self.iteration_info = np.array(self.iteration_info)
+
+        # end time measurement
         t_clock_end = time.time()
-        print('Time for solving nonlinear displacements: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
+        print('Time for solving nonlinear static problem: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
         return u_output
 
 
@@ -299,19 +299,29 @@ class LinearStaticsSolver(Solver):
             Static displacement field (solution).
         '''
 
+        # start time measurement
+        t_clock_start = time.time()
+
         # initialize variables and set parameters
         self.mechanical_system.clear_timesteps()
 
         print('Assembling external force and stiffness...')
         K = self.mechanical_system.K(u=None, t=self.t)
         f_ext = self.mechanical_system.f_ext(u=None, du=None, t=self.t)
-        self.mechanical_system.write_timestep(0.0, 0.0*f_ext)  # write initial state
 
-        print('Start solving linear static problem...')
+        # write initial state
+        self.mechanical_system.write_timestep(0.0, 0.0*f_ext)
+
+        print('Solving linear static problem...')
         self.linear_solver.set_A(K)
         u = self.linear_solver.solve(f_ext)
-        self.mechanical_system.write_timestep(self.t, u)  # write deformed state
-        print('Static problem solved.')
+
+        # write deformed state
+        self.mechanical_system.write_timestep(self.t, u)
+
+        # end time measurement
+        t_clock_end = time.time()
+        print('Time for solving linear static problem: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
         return u
 
 
@@ -371,18 +381,19 @@ class NonlinearDynamicsSolver(Solver):
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
-            # TODO: The following section is commented out because this prevents solving reduced mechanical systems
-            # because these systems do not have a ndof property
-            #if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-            #    raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems,
+            # TODO: because these systems do not have a ndof property.
+            # if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
         else:
             print('Attention: No initial displacement was given, setting q0 = 0.')
             q0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
             dq0 = options['initial_conditions']['dq0']
-            # TODO: See above
-            #if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-            #    raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems,
+            # TODO: because these systems do not have a ndof property. (See above.)
+            # if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
             print('Attention: No initial velocity was given, setting dq0 = 0.')
             dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
@@ -520,8 +531,8 @@ class NonlinearDynamicsSolver(Solver):
             q, dq, v, ddq = self.predict(q, dq, v, ddq)
 
             Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-            abs_f_ext = max(abs_f_ext, euclidean_norm_of_vector(f_ext))
-            res_abs = euclidean_norm_of_vector(res)
+            res_abs = vector_norm(res, 2)
+            abs_f_ext = max(abs_f_ext, vector_norm(f_ext, 2))
 
             # Newton-Raphson iteration loop
             iteration = 0
@@ -535,7 +546,8 @@ class NonlinearDynamicsSolver(Solver):
                     if self.convergence_abort:
                         print(abort_statement)
                         t_clock_end = time.time()
-                        print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
+                        print('Time for solving nonlinear dynamic problem: {0:6.3f} seconds.' \
+                              .format(t_clock_end - t_clock_start))
                         return
                     break
 
@@ -548,19 +560,22 @@ class NonlinearDynamicsSolver(Solver):
 
                 # update system quantities
                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                res_abs = euclidean_norm_of_vector(res)
+                res_abs = vector_norm(res, 2)
+
+                if self.write_iterations:
+                    t_write = t + self.dt/1000000*iteration
+                    self.mechanical_system.write_timestep(t_write, q.copy())
+
+                if self.track_iterations:
+                    self.iteration_info.append((t, iteration, res_abs))
 
                 if self.verbose:
                     if sp.sparse.issparse(Jac):
                         cond_nr = 0.0
                     else:
                         cond_nr = np.linalg.cond(Jac)
-                    print('Iteration: {0:3d}, residual: {1:6.3E}, condition# of Jacobian: {2:6.3E}'.format(
-                        iteration, res_abs, cond_nr))
-
-                if self.write_iterations:
-                    t_write = t + self.dt/1000000*iteration
-                    self.mechanical_system.write_timestep(t_write, q.copy())
+                    print('Iteration: {0:3d}, residual: {1:6.3E}, condition: {2:6.3E}.' \
+                          .format(iteration, res_abs, cond_nr))
 
                 # end of Newton-Raphson iteration loop
 
@@ -569,10 +584,7 @@ class NonlinearDynamicsSolver(Solver):
                 self.mechanical_system.write_timestep(t, q.copy())
                 output_index = 0
 
-            if self.track_iterations:
-                self.iteration_info.append((t, iteration, res_abs))
-
-            print('Time: {0:3.6f}, #iterations: {1:3d}, residual: {2:6.3E}'.format(t, iteration, res_abs))
+            print('Time: {0:3.6f}, iterations: {1:3d}, residual: {2:6.3E}.'.format(t, iteration, res_abs))
 
             # end of time step loop
 
@@ -583,7 +595,7 @@ class NonlinearDynamicsSolver(Solver):
 
         # end time measurement
         t_clock_end = time.time()
-        print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
+        print('Time for solving nonlinear dynamic problem: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
         return
 
     def solve_with_adaptive_time_step(self, dt_start, dt_min, dt_max, change_factor_min, change_factor_max,
@@ -676,6 +688,7 @@ class NonlinearDynamicsSolver(Solver):
             no_newton_convergence = False
 
             dt_iteration = 0
+            sum_newton_iterations = 0
             while abs_local_dt_err > relative_dt_tolerance*max_q:
 
                 dt_iteration += 1
@@ -686,7 +699,8 @@ class NonlinearDynamicsSolver(Solver):
                     if failing_dt_convergence_abort:
                         print(abort_statement)
                         t_clock_end = time.time()
-                        print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
+                        print('Time for solving nonlinear dynamic problem: {0:6.3f} seconds.' \
+                              .format(t_clock_end - t_clock_start))
                         return
                     break
 
@@ -706,14 +720,15 @@ class NonlinearDynamicsSolver(Solver):
                 q, dq, v, ddq = self.predict(q, dq, v, ddq)
 
                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                abs_f_ext = max(abs_f_ext, euclidean_norm_of_vector(f_ext))
-                res_abs = euclidean_norm_of_vector(res)
+                res_abs = vector_norm(res, 2)
+                abs_f_ext = max(abs_f_ext, vector_norm(f_ext, 2))
 
                 # Newton-Raphson iteration loop
                 newton_iteration = 0
                 while res_abs > self.relative_tolerance * abs_f_ext + self.absolute_tolerance:
 
                     newton_iteration += 1
+                    sum_newton_iterations += 1
 
                     # catch failing Newton-Raphson convergence
                     if newton_iteration > self.max_number_of_iterations:
@@ -730,19 +745,23 @@ class NonlinearDynamicsSolver(Solver):
 
                     # update system quantities
                     Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                    res_abs = euclidean_norm_of_vector(res)
+                    res_abs = vector_norm(res, 2)
+
+                    if self.write_iterations:
+                        t_write = t + dt_min/1000000*sum_newton_iterations
+                        self.mechanical_system.write_timestep(t_write, q.copy())
+
+                    if self.track_iterations:
+                        self.iteration_info.append((t, dt_iteration, newton_iteration, res_abs))
 
                     if self.verbose:
                         if sp.sparse.issparse(Jac):
                             cond_nr = 0.0
                         else:
                             cond_nr = np.linalg.cond(Jac)
-                        print('Iteration: {0:3d}, residual: {1:6.3E}, condition# of Jacobian: {2:6.3E}'.format(
-                            newton_iteration, res_abs, cond_nr))
-
-                    if self.write_iterations:
-                        t_write = t + self.dt / 1000000 * newton_iteration
-                        self.mechanical_system.write_timestep(t_write, q.copy())
+                        print('Time step iter.: ' \
+                              + '{0:3d}, Newton-Raphson iter.: {1:3d}, residual: {2:6.3E}, condition: {3:6.3E}.' \
+                              .format(dt_iteration, newton_iteration, res_abs, cond_nr))
 
                     # end of Newton-Raphson iteration loop
 
@@ -770,25 +789,25 @@ class NonlinearDynamicsSolver(Solver):
                 self.mechanical_system.write_timestep(t, q.copy())
                 output_index = 0
 
-            if self.track_iterations:
-                self.iteration_info.append((t, newton_iteration, res_abs))
-
             # track final time step size
             self.dt_info.append(self.dt)
 
-            print('Time: {0:3.6f}, #dt-iterations: {1:3d}, #NR-iterations: {2:3d}, NR-residual: {3:6.3E}'.format(
-                t, dt_iteration, newton_iteration, res_abs))
+            print('Time: {0:3.6f}, time step iter.s: {1:3d}, Newton-Raphson iter.s: {2:3d}, NR-residual: {3:6.3E}.' \
+                  .format(t, dt_iteration, sum_newton_iterations, res_abs))
 
             # end of time step loop
 
         self.linear_solver.clear()
+
+        # track final time step size
+        self.dt_info = np.array(self.dt_info)
 
         # save iteration info
         self.iteration_info = np.array(self.iteration_info)
 
         # end time measurement
         t_clock_end = time.time()
-        print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
+        print('Time for solving nonlinear dynamic problem: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
         return
 
     def estimate_local_time_discretization_error(self, ddq, ddq_old):
@@ -824,17 +843,21 @@ class LinearDynamicsSolver(Solver):
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
-            if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems,
+            # TODO: because these systems do not have a ndof property.
+            # if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of q0 is not valid for mechanical system.')
         else:
-            print('Attention: No initial displacement is given, setting q0 = 0.')
+            print('Attention: No initial displacement was given, setting q0 = 0.')
             q0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
             dq0 = options['initial_conditions']['dq0']
-            if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems
+            # TODO: because these systems do not have a ndof property.
+            # if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
-            print('Attention: No initial velocity is given, setting dq0 = 0.')
+            print('Attention: No initial velocity was given, setting dq0 = 0.')
             dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'q0':q0, 'dq0':dq0}
 
@@ -903,10 +926,10 @@ class LinearDynamicsSolver(Solver):
         # evaluate initial acceleration and LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
 
-        self.linear_solver.set_A(self.mechanical_system.M_constr)
+        self.linear_solver.set_A(self.mechanical_system.M())
         ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t)
-                                       - self.mechanical_system.D_constr@dq \
-                                       - self.mechanical_system.K_constr@q)
+                                       - self.mechanical_system.D()@dq \
+                                       - self.mechanical_system.K()@q)
 
         self.linear_solver.set_A(K_eff)
         if hasattr(self.linear_solver, 'factorize'):
@@ -941,7 +964,7 @@ class LinearDynamicsSolver(Solver):
                 self.mechanical_system.write_timestep(t, q.copy())
                 output_index = 0
 
-            print('Time: {0:3.6f}'.format(t))
+            print('Time: {0:3.6f}.'.format(t))
 
             # end of time step loop
 
@@ -949,7 +972,7 @@ class LinearDynamicsSolver(Solver):
 
         # end time measurement
         t_clock_end = time.time()
-        print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
+        print('Time for solving linear dynamic problem: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
         return
 
 
@@ -1008,10 +1031,12 @@ class NonlinearDynamicsSolverStateSpace(Solver):
 
         if ('initial_conditions' in options) and ('x0' in options['initial_conditions']):
             x0 = options['initial_conditions']['x0']
-            if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of x0 not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems
+            # TODO: because these systems do not have a ndof property.
+            # if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of x0 is not valid for state-space system.')
         else:
-            print('Attention: No initial state is given, setting x0 = 0.')
+            print('Attention: No initial state was given, setting x0 = 0.')
             x0 = np.zeros(2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'x0': x0}
 
@@ -1131,8 +1156,8 @@ class NonlinearDynamicsSolverStateSpace(Solver):
             x, xq = self.predict(x, dx)
 
             Jac, Res, F_ext = self.newton_raphson(x, dx, t, x_old, dx_old, t_old)
-            abs_F_ext = max(abs_F_ext, euclidean_norm_of_vector(F_ext))
-            Res_abs = euclidean_norm_of_vector(Res)
+            Res_abs = vector_norm(Res, 2)
+            abs_F_ext = max(abs_F_ext, vector_norm(F_ext, 2))
 
             # Newton-Raphson iteration loop
             iteration = 0
@@ -1147,7 +1172,8 @@ class NonlinearDynamicsSolverStateSpace(Solver):
                         print(abort_statement)
                         self.iteration_info = np.array(self.iteration_info)
                         t_clock_end = time.time()
-                        print('Time for time marching integration: {0:6.3f}s.'.format(t_clock_end - t_clock_start))
+                        print('Time for solving nonlinear dynamic problem: {0:6.3f} seconds.' \
+                              .format(t_clock_end - t_clock_start))
                         return
                     break
 
@@ -1160,19 +1186,22 @@ class NonlinearDynamicsSolverStateSpace(Solver):
 
                 # update system quantities
                 Jac, Res, F_ext = self.newton_raphson(x, dx, t, x_old, dx_old, t_old)
-                Res_abs = euclidean_norm_of_vector(Res)
+                Res_abs = vector_norm(Res, 2)
+
+                if self.write_iterations:
+                    t_write = t + self.dt/1000000*iteration
+                    self.mechanical_system.write_timestep(t_write, x.copy())
+
+                if self.track_iterations:
+                    self.iteration_info.append((t, iteration, Res_abs))
 
                 if self.verbose:
                     if sp.sparse.issparse(Jac):
                         cond_nr = 0.0
                     else:
                         cond_nr = np.linalg.cond(Jac)
-                    print('Iteration: {0:3d}, residual: {1:6.3E}, condition# of Jacobian: {2:6.3E}'.format(
-                        iteration, Res_abs, cond_nr))
-
-                if self.write_iterations:
-                    t_write = t + self.dt/1000000*iteration
-                    self.mechanical_system.write_timestep(t_write, x.copy())
+                    print('Iteration: {0:3d}, residual: {1:6.3E}, condition: {2:6.3E}.' \
+                          .format(iteration, Res_abs, cond_nr))
 
                 # end of Newton-Raphson iteration loop
 
@@ -1181,10 +1210,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
                 self.mechanical_system.write_timestep(t, x.copy())
                 output_index = 0
 
-            if self.track_iterations:
-                self.iteration_info.append((t, iteration, Res_abs))
-
-            print('Time: {0:3.6f}, #iterations: {1:3d}, residual: {2:6.3E}'.format(t, iteration, Res_abs))
+            print('Time: {0:3.6f}, iterations: {1:3d}, residual: {2:6.3E}.'.format(t, iteration, Res_abs))
 
             # end of time step loop
 
@@ -1195,7 +1221,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
 
         # end time measurement
         t_clock_end = time.time()
-        print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
+        print('Time for solving nonlinear dynamic problem: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
         return
 
 
@@ -1228,10 +1254,12 @@ class LinearDynamicsSolverStateSpace(Solver):
 
         if ('initial_conditions' in options) and ('x0' in options['initial_conditions']):
             x0 = options['initial_conditions']['x0']
-            if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of x0 not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems
+            # TODO: because these systems do not have a ndof property.
+            # if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of x0 is not valid for state-space system.')
         else:
-            print('Attention: No initial state is given, setting x0 = 0.')
+            print('Attention: No initial state was given, setting x0 = 0.')
             x0 = np.zeros(2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'x0': x0}
 
@@ -1294,8 +1322,8 @@ class LinearDynamicsSolverStateSpace(Solver):
         # evaluate initial derivative and LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
 
-        self.linear_solver.set_A(self.mechanical_system.E_constr)
-        dx = self.linear_solver.solve(self.mechanical_system.A_constr@x + self.mechanical_system.F_ext(x, t))
+        self.linear_solver.set_A(self.mechanical_system.E())
+        dx = self.linear_solver.solve(self.mechanical_system.A()@x + self.mechanical_system.F_ext(x, t))
 
         self.linear_solver.set_A(K_eff)
         if hasattr(self.linear_solver, 'factorize'):
@@ -1328,7 +1356,7 @@ class LinearDynamicsSolverStateSpace(Solver):
                 self.mechanical_system.write_timestep(t, x.copy())
                 output_index = 0
 
-            print('Time: {0:3.6f}'.format(t))
+            print('Time: {0:3.6f}.'.format(t))
 
             # end of time step loop
 
@@ -1336,7 +1364,7 @@ class LinearDynamicsSolverStateSpace(Solver):
 
         # end time measurement
         t_clock_end = time.time()
-        print('Time for time marching integration: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
+        print('Time for solving linear dynamic problem: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
         return
 
 
@@ -1534,7 +1562,7 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         integration scheme.
         '''
 
-        abs_local_dt_err = (self.beta - 1/6)*self.dt**2*length_scaled_euclidean_norm_of_vector(ddq - ddq_old)
+        abs_local_dt_err = (self.beta - 1/6)*self.dt**2*vector_norm(ddq - ddq_old, 2)/np.sqrt(ddq.size)
         return abs_local_dt_err
 
 
@@ -1813,13 +1841,13 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         D = self.mechanical_system.D()
         K = self.mechanical_system.K()
 
-        if D is None:
-            K_eff = (1 - self.alpha_m) / (self.beta * self.dt ** 2) * M \
-                    + (1 - self.alpha_f) * K
+        if D is None:  # TODO: D ist nie None!
+            K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)* M \
+                    + (1 - self.alpha_f)*K
         else:
             K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)*M \
-                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
-                + (1 - self.alpha_f)*K
+                    + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
+                    + (1 - self.alpha_f)*K
         return K_eff
 
     def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
@@ -1829,7 +1857,7 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
         M = self.mechanical_system.M()
         D = self.mechanical_system.D()
-        K = self.mechanical_system.D()
+        K = self.mechanical_system.K()  # TODO: K wird jedesmal neue assembliert!
 
 
         t_f = (1 - self.alpha_f)*t + self.alpha_f*t_old
@@ -1837,20 +1865,19 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
 
         if D is None:
-            F_eff = ((1 - self.alpha_m) / (self.beta * self.dt ** 2) * M \
-                     - self.alpha_f * K) @ q_old \
-                    + (1 - self.alpha_m) / (self.beta * self.dt) * M @ dq_old \
-                    -(0.5 * (self.alpha_m - 1) + self.beta) / self.beta * M @ ddq_old \
+            F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*M - self.alpha_f*K)@q_old \
+                    + (1 - self.alpha_m)/(self.beta*self.dt)*M@dq_old \
+                    - (0.5*(self.alpha_m - 1) + self.beta)/self.beta*M @ ddq_old \
                     + f_ext_f
         else:
             F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*M \
-                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
-                - self.alpha_f*K)@q_old \
-                + ((1 - self.alpha_m)/(self.beta*self.dt)*M \
-                - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta*D)@dq_old \
-                + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta*M \
-                - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta*D)@ddq_old \
-                + f_ext_f
+                      + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
+                      - self.alpha_f*K)@q_old \
+                    + ((1 - self.alpha_m)/(self.beta*self.dt)*M \
+                       - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta*D)@dq_old \
+                    + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta*M \
+                       - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta*D)@ddq_old \
+                    + f_ext_f
         return F_eff
 
     def update(self, q, q_old, dq_old, v_old, ddq_old):
@@ -1940,13 +1967,12 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         D = self.mechanical_system.D()
         K = self.mechanical_system.K()
 
-        if D is None:
-            K_eff = self.alpha_m ** 2 / (self.alpha_f * self.gamma ** 2 * self.dt ** 2) * M \
-                    + self.alpha_f * K
+        if D is None:  # TODO: D ist nie None!
+            K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M + self.alpha_f*K
         else:
             K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M \
-                + self.alpha_m/(self.gamma*self.dt)*D \
-                + self.alpha_f*K
+                    + self.alpha_m/(self.gamma*self.dt)*D \
+                    + self.alpha_f*K
         return K_eff
 
     def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
@@ -1956,28 +1982,26 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
         M = self.mechanical_system.M()
         D = self.mechanical_system.D()
-        K = self.mechanical_system.K()
+        K = self.mechanical_system.K()  # TODO: K wird jedesmal neu assembliert!
 
         t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
 
         f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
 
         if D is None:
-            F_eff = (-(1 - self.alpha_f)*K \
-                + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M)@q_old \
-                - (self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*M)@dq_old \
-                + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*M)@v_old \
-                + (-(self.gamma - self.alpha_m)/self.gamma*M)@ddq_old \
-                + f_ext_f
+            F_eff = (-(1 - self.alpha_f)*K + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M)@q_old \
+                    - (self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*M)@dq_old \
+                    + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*M)@v_old \
+                    + (-(self.gamma - self.alpha_m)/self.gamma*M)@ddq_old \
+                    + f_ext_f
         else:
-            F_eff = (-(1 - self.alpha_f)*K \
-                + self.alpha_m/(self.gamma*self.dt)*D \
-                + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M)@q_old \
-                + (-(self.gamma - self.alpha_m)/self.gamma*D \
-                - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*M)@dq_old \
-                + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*M)@v_old \
-                + (-(self.gamma - self.alpha_m)/self.gamma*M)@ddq_old \
-                + f_ext_f
+            F_eff = (-(1 - self.alpha_f)*K + self.alpha_m/(self.gamma*self.dt)*D \
+                     + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M)@q_old \
+                    + (-(self.gamma - self.alpha_m)/self.gamma*D \
+                       - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*M)@dq_old \
+                    + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*M)@v_old \
+                    + (-(self.gamma - self.alpha_m)/self.gamma*M)@ddq_old \
+                    + f_ext_f
         return F_eff
 
     def update(self, q, q_old, dq_old, v_old, ddq_old):
@@ -2174,8 +2198,7 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         E = self.mechanical_system.E()
         A = self.mechanical_system.A()
 
-        K_eff = self.alpha_m/(self.gamma*self.dt)*E \
-                - self.alpha_f*A
+        K_eff = self.alpha_m/(self.gamma*self.dt)*E - self.alpha_f*A
         return K_eff
 
     def effective_force(self, x_old, dx_old, t, t_old):
@@ -2184,15 +2207,15 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         '''
 
         E = self.mechanical_system.E()
-        A = self.mechanical_system.A()
+        A = self.mechanical_system.A()  # TODO: K wird in A jedesmal neu assembliert!
+
         t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
 
         F_ext_f = self.mechanical_system.F_ext(None, t_f)
 
-        F_eff = (self.alpha_m/(self.gamma*self.dt)*E \
-                 + (1 - self.alpha_f)*A)@x_old \
-                 + ((self.alpha_m - self.gamma)/self.gamma*E)@dx_old \
-                 + F_ext_f
+        F_eff = (self.alpha_m/(self.gamma*self.dt)*E + (1 - self.alpha_f)*A)@x_old \
+                + ((self.alpha_m - self.gamma)/self.gamma*E)@dx_old \
+                + F_ext_f
         return F_eff
 
     def update(self, x, x_old, dx_old):

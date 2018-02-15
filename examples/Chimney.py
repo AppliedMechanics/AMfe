@@ -3,7 +3,7 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information.
 #
 """
-Example: Cantilever beam loaded at tip.
+Example: Cantilever beam loaded at tip solved with adaptive time stepping.
 """
 
 
@@ -13,7 +13,7 @@ import numpy as np
 
 
 # define in- and output files
-input_file = amfe.amfe_dir('meshes/gmsh/chimney/Chimney100x40Hex20.msh')
+input_file = amfe.amfe_dir('meshes/gmsh/chimney/Chimney200x80Hex20.msh')
 output_file = amfe.amfe_dir('results/chimney/Chimney200x80Hex20_nonlinear_dynamics_generalizedalpha')
 
 
@@ -28,7 +28,7 @@ system.apply_neumann_boundaries(key=4, val=1.0e4, direct=(1, 1, 0), time_func=la
 
 
 # vibration modes
-# amfe.vibration_modes(mechanical_system=system, n=20, save=True)
+# amfe.vibration_modes(mechanical_system=system, n=10, save=True)
 # system.export_paraview(output_file + '_vibration_modes')
 
 
@@ -56,13 +56,13 @@ options = {
 solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
 # solver.solve()
 solver.solve_with_adaptive_time_step(dt_start=1.0e-5, dt_min=1.0e-6, dt_max=1.0e-1, change_factor_min=0.5,
-                                     change_factor_max=2.0, savety_factor=0.9, trust_in_new_increased_dt = 0.01,
-                                     relative_dt_tolerance=1.0e-1, max_dt_iterations=10,
-                                     new_dt_for_failing_newton_convergence=0.8)
+                                     change_factor_max=2.0, safety_factor=0.95, failing_newton_convergence_factor=0.5,
+                                     trust_value=0.01, relative_dt_tolerance=1.0e-1, max_dt_iterations=100,
+                                     failing_dt_convergence_abort=False)
 
 
 # write output
-# system.export_paraview(output_file)
+system.export_paraview(output_file)
 
 end = len(system.T_output)
 file = open(output_file + '.dat', 'w')

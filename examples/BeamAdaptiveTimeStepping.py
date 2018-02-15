@@ -3,7 +3,7 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information.
 #
 """
-Example: Cantilever beam loaded at tip.
+Example: Cantilever beam loaded at tip solved with adaptive time stepping.
 """
 
 
@@ -57,7 +57,7 @@ solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, 
 solver.solve_with_adaptive_time_step(dt_start=1.0e-4, dt_min=1.0e-9, dt_max=1.0e-1, change_factor_min=0.1,
                                      change_factor_max=10.0, safety_factor=0.95,
                                      failing_newton_convergence_factor=0.5, trust_value = 0.01,
-                                     relative_dt_tolerance=1.0e-6, max_dt_iterations=100,
+                                     relative_dt_tolerance=1.0e-3, max_dt_iterations=100,
                                      failing_dt_convergence_abort=False)
 
 
