@@ -138,8 +138,7 @@ class MechanicalSystem():
         self.dirichlet_class.no_of_unconstrained_dofs = self.mesh_class.no_of_dofs
         self.dirichlet_class.update()
 
-    def load_mesh_from_csv(self, node_list_csv, element_list_csv, no_of_dofs_per_node=2,
-                           explicit_node_numbering=False,
+    def load_mesh_from_csv(self, node_list_csv, element_list_csv, no_of_dofs_per_node=2, explicit_node_numbering=False,
                            ele_type=False):
         '''
         Loads the mesh from two csv-files containing the node and the element list.
@@ -167,13 +166,8 @@ class MechanicalSystem():
         self.assembly_class.preallocate_csr()
         return
 
-    def tie_mesh(self, master_key, slave_key,
-                 master_prop='phys_group',
-                 slave_prop='phys_group',
-                 tying_type='fixed',
-                 verbose=False,
-                 conform_slave_mesh=False,
-                 fix_mesh_dist=1E-3):
+    def tie_mesh(self, master_key, slave_key, master_prop='phys_group', slave_prop='phys_group', tying_type='fixed',
+                 verbose=False, conform_slave_mesh=False, fix_mesh_dist=1E-3):
         '''
         Tie nonconforming meshes for a given master and slave side.
 
@@ -198,12 +192,8 @@ class MechanicalSystem():
         point outside the master mesh cannot be addressed to a specific element.
         '''
 
-        vals = self.mesh_class.tie_mesh(master_key=master_key,
-                                        slave_key=slave_key,
-                                        master_prop=master_prop,
-                                        slave_prop=slave_prop,
-                                        tying_type=tying_type,
-                                        verbose=verbose,
+        vals = self.mesh_class.tie_mesh(master_key=master_key, slave_key=slave_key, master_prop=master_prop,
+                                        slave_prop=slave_prop, tying_type=tying_type, verbose=verbose,
                                         fix_mesh_dist=fix_mesh_dist)
 
         self.dirichlet_class.add_constraints(*vals)
@@ -229,10 +219,7 @@ class MechanicalSystem():
         self.dirichlet_class.constrain_dofs(self.mesh_class.dofs_dirichlet)
         return
 
-    def apply_neumann_boundaries(self, key, val, direct,
-                                 time_func=None,
-                                 shadow_area=False,
-                                 mesh_prop='phys_group'):
+    def apply_neumann_boundaries(self, key, val, direct, time_func=None, shadow_area=False, mesh_prop='phys_group'):
         '''
         Apply neumann boundaries to the system via skin elements.
 
@@ -255,11 +242,7 @@ class MechanicalSystem():
             Label of which the element should be chosen from. Default is phys_group.
         '''
 
-        self.mesh_class.set_neumann_bc(key=key,
-                                       val=val,
-                                       direct=direct,
-                                       time_func=time_func,
-                                       shadow_area=shadow_area,
+        self.mesh_class.set_neumann_bc(key=key, val=val, direct=direct, time_func=time_func, shadow_area=shadow_area,
                                        mesh_prop=mesh_prop)
         self.assembly_class.compute_element_indices()
         return
@@ -385,7 +368,7 @@ class MechanicalSystem():
         t : float, optional
             Time.
         force_update : bool (default=False)
-            Flag to force update of D otherwise already calcuated D is returned
+            Flag to force update of D otherwise already calculated D is returned
 
         Returns
         -------
@@ -395,7 +378,7 @@ class MechanicalSystem():
 
         if self.D_constr is None or force_update:
             if self.D_constr is None:
-                return self.K()*0
+                return self.K()*0  # TODO: Besser sparse 0 mit Dimensionen von K, da K*0 tatsächliche 0-Einträge hat!
             else:
                 return self.D_constr
         else:

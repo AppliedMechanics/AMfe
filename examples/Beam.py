@@ -9,7 +9,6 @@ Example: Cantilever beam loaded at tip.
 
 # load packages
 import amfe
-from scipy import linalg
 import numpy as np
 
 
@@ -20,11 +19,11 @@ import numpy as np
 statics = False
 ###############################################################################
 #  > linear (True) or nonlinear (False) analysis
-linear = False
+linear = True
 ###############################################################################
 #  > time integration scheme ('GeneralizedAlpha', 'WBZAlpha', 'HHTAlpha',
 #    'NewmarkBeta', 'JWHAlpha' or 'JWHAlphaStateSpace') for dynamic analysis
-scheme = 'GeneralizedAlpha'
+scheme = 'JWHAlphaStateSpace'
 ###############################################################################
 
 

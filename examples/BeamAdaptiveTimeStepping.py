@@ -3,7 +3,7 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information.
 #
 """
-Example: Cantilever beam loaded at tip.
+Example: Cantilever beam loaded at tip solved with adaptive time stepping.
 """
 
 

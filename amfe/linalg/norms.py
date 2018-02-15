@@ -23,10 +23,8 @@ __all__ = [
 # shortcut for vector norm to numpy.linalg's norm
 vector_norm = np.linalg.norm
 
-
 # shortcut for matrix norm to numpy.linalg's norm
 matrix_norm = np.linalg.norm
-
 
 def signal_norm(x, t=None, dt=1.0, ord=2, axis=-1):
     """
@@ -109,7 +107,6 @@ def signal_norm(x, t=None, dt=1.0, ord=2, axis=-1):
         norm_x = np.trapz(y=np.abs(x)**(1.0*ord), x=t, dx=dt, axis=axis)**(1/ord)
     return norm_x
 
-
 def lti_system_norm(A, B, C, E=None, ord=2, **kwargs):
     """
     Returns norm ||G(s)|| of LTI system (E,A,B,C,D=0) or (A,B,C,D=0).
@@ -130,9 +127,9 @@ def lti_system_norm(A, B, C, E=None, ord=2, **kwargs):
         Order of the norm (see table under Notes). inf means numpy's inf object. Default is 2.
     **kwargs : additional arguments, optional
         Additional optional arguments:
-        relative_tolerance : float
-            Maximal relative difference between solution via controllability and observability Gramian in H_2-norm
-            calculation.
+        use_controllability_gramian : boolean
+            Whether to use the controllability Gramian (True) or the observability Gramian (False) in the H_2-norm
+            calculation. Default True, i.e. use controllability Gramian.
 
     Returns
     -------
@@ -160,29 +157,22 @@ def lti_system_norm(A, B, C, E=None, ord=2, **kwargs):
         if C.ndim == 1:
             C = C.reshape((1, -1))
 
-        # compute norm via controllability Gramian
-        # TODO: Find/implement sparse solver for lyapunov equations.
-        G_c = sp.linalg.solve_continuous_lyapunov(A.todense(), -B@B.T)
-        norm_sys_c = np.sqrt(np.trace(C@G_c@C.T))
-
-        # compute norm via observability Gramian
-        # TODO: Find/implement sparse solver for lyapunov equations.
-        G_o = sp.linalg.solve_continuous_lyapunov(A.T.todense(), -C.T@C)
-        norm_sys_o = np.sqrt(np.trace(B.T@G_o@B))
-
-        # compare solutions
-        if 'relative_tolerance' in kwargs:
-            relative_tolerance = kwargs['relative_tolerance']
+        # read kwargs
+        if 'use_controllability_gramian' in kwargs:
+            use_controllability_gramian = kwargs['use_controllability_gramian']
         else:
-            print('Attention: No relative tolerance was given, setting relative_tolerance = 1e-6.')
-            relative_tolerance = 1.0e-6
+            print('Attention: No instruction which Gramian to use was given, setting ' \
+                  + 'use_controllability_gramian = True.')
 
-        relative_difference = abs((norm_sys_c - norm_sys_o)/norm_sys_c)
+        if use_controllability_gramian: # via controllability Gramian
+            # TODO: Find/implement sparse solver for lyapunov equations.
+            G_c = sp.linalg.solve_continuous_lyapunov(A.todense(), -B@B.T)
+            norm_sys = np.sqrt(np.trace(C@G_c@C.T))
 
-        if relative_difference < relative_tolerance:
-            norm_sys = norm_sys_c
-        else:
-            raise ValueError('H_2-norm calculation failed: Relative difference  > relative tolerance.')
+        if not use_controllability_gramian: # via observability Gramian
+            # TODO: Find/implement sparse solver for lyapunov equations.
+            G_o = sp.linalg.solve_continuous_lyapunov(A.T.todense(), -C.T@C)
+            norm_sys = np.sqrt(np.trace(B.T@G_o@B))
     elif ord == np.inf:
         raise ValueError('Not implemented yet. You may do so.')
     else:
