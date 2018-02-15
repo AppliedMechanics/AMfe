@@ -926,10 +926,16 @@ class LinearDynamicsSolver(Solver):
         # evaluate initial acceleration and LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
 
-        self.linear_solver.set_A(self.mechanical_system.M())
-        ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t)
-                                       - self.mechanical_system.D()@dq \
-                                       - self.mechanical_system.K()@q)
+        M = self.mechanical_system.M()
+        D = self.mechanical_system.D()
+        K = self.mechanical_system.K()
+
+
+        self.linear_solver.set_A(M)
+        if D is not None:
+            ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - D@dq - K@q)
+        else:
+            ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - K @ q)
 
         self.linear_solver.set_A(K_eff)
         if hasattr(self.linear_solver, 'factorize'):
