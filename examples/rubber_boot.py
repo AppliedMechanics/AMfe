@@ -20,12 +20,18 @@ my_material = amfe.KirchhoffMaterial(E=200E6, nu=0.3, rho=1E3)
 my_system = amfe.MechanicalSystem(stress_recovery=False)
 my_system.load_mesh_from_gmsh(input_file, 977, my_material, scale_factor=1E-3)
 my_system.apply_dirichlet_boundaries(978, 'xyz')
-my_system.apply_neumann_boundaries(979, 1E7, (0,1,0), lambda t:t)
+my_system.apply_neumann_boundaries(979, 1E7, (0,1,0), lambda t:1)
 
 #%%
 
-amfe.vibration_modes(my_system, save=True)
+solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(my_system)
+solver.solve()
+my_system.export_paraview(output_file + '_full_ti')
 
-my_system.export_paraview(output_file + '_modes')
+
+
+#amfe.vibration_modes(my_system, save=True)
+
+#my_system.export_paraview(output_file + '_modes')
 
 #%%
