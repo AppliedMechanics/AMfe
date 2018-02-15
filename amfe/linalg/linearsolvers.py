@@ -62,6 +62,7 @@ class LinearSolver:
         Return a string that gives information about the solver state
 
         '''
+        pass
 
 
 class ScipySparseSolver(LinearSolver):
@@ -116,7 +117,7 @@ class ScipySparseSolver(LinearSolver):
         self.A = None
 
     def solve(self, b):
-        return scipy.sparse.linalg.spsolve(self.A, b)
+        return scipy.sparse.linalg.spsolve(self.A, b, permc_spec=self.permc_spec, use_umfpack=self.use_umfpack)
 
     def __str__(self):
         n = 0
@@ -158,30 +159,83 @@ class PardisoSolver(LinearSolver):
     # info:
     # For changing iparms that are not listed here, just add a name for the iparm parameter
     # Then you can pass an options dictionary to change the iparms
-    iparm_dict = {'refinement_steps': '7',
-               'pivoting_perturbation': '9',
-               'scaling': '10',
-               'transposed': '11',
-               'maximum_weighted_matching': '12',
-               'indefinite_pivoting': '20',
-               'partial_solve': '30',
-               'storage_mode': '59',
+    iparm_dict = {'refinement_steps': 7,
+               'pivoting_perturbation': 9,
+               'scaling': 10,
+               'transposed': 11,
+               'maximum_weighted_matching': 12,
+               'indefinite_pivoting': 20,
+               'partial_solve': 30,
+               'storage_mode': 59,
                   }
 
     def __init__(self, A=None, **options):
         # call options initialization from superclass
         super().__init__(A, options)
         # Set some default values
+        self.shape = None
         self.iparm = {}
         self.verbose = False
         self.mtype = 'nonsym'
-        if not isinstance(A, sp.sparse.csr_matrix):
+        self.wrapper_class = None
+        # Overwrite default values with options
+        self.set_options(**options)
+        if A is not None:
+            if not isinstance(A, sp.sparse.csr_matrix):
+                try:
+                    A = sp.sparse.csr_matrix(A)
+                except:
+                    self.status = 0
+                    raise ValueError('A must be A csr_matrix or at least a csr convertible matrix')
+                # First check if saddle_point problem option is set (this can be overwritten by other options)
+
+
+            # instantiate PardisoWrapper object
+            # This does not! make a factorization
+            self.shape = A.shape
+            self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.__parse_iparms(), verbose=self.verbose)
+            self.status = 1
+
+    def set_A(self, A):
+        if isinstance(A, sp.sparse.csr_matrix):
+            if self.wrapper_class is not None:
+                if len(A.data) == len(self.wrapper_class.a) & len(A.indptr) == len(self.wrapper_class.ia) & \
+                        len(A.indices) == len(self.wrapper_class.ja):
+                    self.wrapper_class.a = A.data
+                    self.wrapper_class.ia = A.indptr
+                    self.wrapper_class.ja = A.indices
+                    self.status = 1
+                else:
+                    self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.__parse_iparms(), verbose=self.verbose)
+                    self.status = 1
+            else:
+                self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.__parse_iparms(), verbose=self.verbose)
+                self.status = 1
+        else:
             try:
                 A = sp.sparse.csr_matrix(A)
             except:
-                self.status = 0
                 raise ValueError('A must be A csr_matrix or at least a csr convertible matrix')
-            # First check if saddle_point problem option is set (this can be overwritten by other options)
+            self.shape = A.shape
+            self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.__parse_iparms(), verbose=self.verbose)
+            self.status = 1
+
+    def clear(self):
+        self.wrapper_class.clear()
+
+    def factorize(self):
+        self.wrapper_class.factor()
+        self.status = 2
+
+    def solve(self, b):
+        # Check if wrapper_class object is already factorized
+        if self.status == 2:
+            return self.wrapper_class.solve(b)
+        # Else solve in one step
+        elif self.status == 1:
+            return self.wrapper_class.run_pardiso(13, b)
+
+    def set_options(self, **options):
         if options is not None:
             if 'saddle_point' in options:
                 # Check if saddle_point option is None or False
@@ -191,7 +245,8 @@ class PardisoSolver(LinearSolver):
             # Write other option parameters
             for key in options:
                 if key not in self.available_options:
-                    raise ValueError('Error in PardisoSolver: Options Value {} not valid'.format(key))
+                    out = 'Error in PardisoSolver: Options Value {} not valid\nAvailable options are:\n{}'.format(key, ''.join(['\t' + key + ': ' + self.available_options[key] + '\n' for key in self.available_options]))
+                    raise ValueError(out)
                 else:
                     # Check if verbose option is activated
                     if key == 'verbose':
@@ -206,51 +261,21 @@ class PardisoSolver(LinearSolver):
                             raise ValueError('Error in PardisoSolver mtype {} not available'.format(options[key]))
                     # Check if key belongs to iparm parmeters
                     if key in self.iparm_dict:
-                        self.iparm.update({self.iparm_dict[key]: options[key]})
-
-        # instantiate PardisoWrapper object
-        # This does not! make a factorization
-        self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.iparm, verbose=self.verbose)
-        self.status = 1
-
-    def set_A(self, A):
-        if isinstance(A, sp.sparse.csr_matrix):
-            if len(A.data) == len(self.wrapper_class.a) & len(A.indptr) == len(self.wrapper_class.ia) & \
-                    len(A.indices) == len(self.wrapper_class.ja):
-                self.wrapper_class.a = A.data
-                self.wrapper_class.ia = A.indptr
-                self.wrapper_class.ja = A.indices
-                self.status = 1
-            else:
-                self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], verbose=self.verbose)
-                self.status = 1
-        else:
-            try:
-                A = sp.sparse.csr_matrix(A)
-            except:
-                raise ValueError('A must be A csr_matrix or at least a csr convertible matrix')
-            self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], verbose=self.verbose)
-
-    def clear(self):
-        self.wrapper_class.clear()
-
-    def factorize(self):
-        self.wrapper_class.factor()
-
-    def solve(self, b):
-        # Check if wrapper_class object is already factorized
-        if self.status == 2:
-            return self.wrapper_class.solve(b)
-        # Else solve in one step
-        elif self.status == 1:
-            return self.wrapper_class.run_pardiso(13, b)
+                        self.iparm.update({key: options[key]})
+            # update wrapper_class
+            if self.wrapper_class is not None:
+                self.wrapper_class.set_iparms(self.__parse_iparms())
+                self.wrapper_class.set_mtype(self.mtypes[self.mtype])
 
     def get_options(self, prefix=''):
         print('Verbose: {}, Matrix-Type (mtype): {}, iparms: {}'.format(self.verbose, self.mtype, self.iparm))
 
+    def __parse_iparms(self):
+        return dict([(self.iparm_dict[key], self.iparm[key]) for key in self.iparm])
+
     def __str__(self):
         info = 'This is a PardisoSolver object. Dimension of A: {},' \
-               ' status={} ({})'.format(self.wrapper_class.n, str(self.status), self.available_status[self.status])
+               ' status={} ({})'.format(self.shape, str(self.status), self.available_status[self.status])
         return info
 
 # Shortcut for compatibility

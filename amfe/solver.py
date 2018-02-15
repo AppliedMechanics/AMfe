@@ -9,10 +9,12 @@ Module that contains solvers for solving systems in AMfe.
 
 import scipy as sp
 import numpy as np
+import abc
 import time
 
 from .mechanical_system import *
 from .linalg import *
+
 
 __all__ = [
     # 'choose_solver',
@@ -42,32 +44,16 @@ abort_statement = '''
 
 # Most general solver class
 # -------------------------
-class Solver:
+class Solver(abc.ABC):
     '''
-    Most general solver class for the mechanical system.
-
-    Parameters
-    ----------
-    mechanical_system : Instance of MechanicalSystem
-        Mechanical system to be solved.
-    options : Dictionary
-        Options for solver.
+    Abstract super class for all solvers of the mechanical system.
     '''
 
-    def __init__(self, mechanical_system, **options):
-        self.mechanical_system = mechanical_system
+    @abc.abstractmethod
+    def __init__(self, mechanical_system=None, **options):
+        pass
 
-        # read options
-        if 'linear_solver' in options:
-            self.linear_solver = options['linear_solver']
-        else:
-            print('Attention: No linear solver was given, setting linear_solver = PardisoSolver.')
-            self.linear_solver = PardisoSolver
-
-        if 'linear_solver_options' in options:
-            self.linear_solver_options = options['linear_solver_options']
-        return
-
+    @abc.abstractmethod
     def solve(self):
         pass
 
@@ -87,9 +73,15 @@ class NonlinearStaticsSolver(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='spd')
+
         if 'number_of_load_steps' in options:
             self.number_of_load_steps = options['number_of_load_steps']
         else:
@@ -160,12 +152,14 @@ class NonlinearStaticsSolver(Solver):
         else:
             print('Attention: No save solution was given, setting save_solution = True.')
             self.save_solution = True
+
+        self.iteration_info = list()
         return
 
     def solve(self):
         '''
         Solves the nonlinear static problem of the mechanical system.
-            
+
         Parameters
         ----------
 
@@ -179,32 +173,47 @@ class NonlinearStaticsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='spd')
-        self.mechanical_system.clear_timesteps()
-        iteration_info = []
-        u_output = []
-        stepwidth = 1/self.number_of_load_steps
+        # TODO: getter method insert getter method for ndof (K is not needed)
+        # TODO: Does ndof = self.mechanical_system.dirichlet_class.no_of_constrained_dofs only work for non-reduced
+        # TODO: systems?
         K, f_int = self.mechanical_system.K_and_f()
         ndof = K.shape[0]
+        # TODO:
         u = np.zeros(ndof)
         du = np.zeros(ndof)
+        self.mechanical_system.clear_timesteps()
+        self.iteration_info = []
+        if self.save_solution:
+            # write initial state
+            self.mechanical_system.write_timestep(0.0, u)
+        u_output = []
+        stepwidth = 1/self.number_of_load_steps
 
-        # write initial state
-        self.mechanical_system.write_timestep(0.0, u)
-
-        # load step loop
+        # load step loop: t goes from (0+stepwidth) to 1
         for t in np.arange(stepwidth, 1.0 + stepwidth, stepwidth):
 
-            K, f_int= self.mechanical_system.K_and_f(u, t)
+            # Calculate residuum:
+            K, f_int = self.mechanical_system.K_and_f(u, t)
             f_ext = self.mechanical_system.f_ext(u, du, t)
             res = -f_int + f_ext
-            abs_res = vector_norm(res, 2)
             abs_f_ext = vector_norm(f_ext, 2)
+            abs_res = vector_norm(res, 2)
 
             # Newton iteration loop
             iteration = 0
-            while (abs_res > self.relative_tolerance*abs_f_ext + self.absolute_tolerance) and \
-                    (self.max_number_of_iterations > iteration):
+            while abs_res > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
+
+                iteration += 1
+
+                # catch failing convergence
+                if iteration > self.max_number_of_iterations:
+                    if self.convergence_abort:
+                        u_output = np.array(u_output).T
+                        print(abort_statement)
+                        t_clock_end = time.time()
+                        print('Time for static solution: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
+                        return u_output
+                    break
 
                 # solve for displacement correction
                 self.linear_solver.set_A(K)
@@ -213,28 +222,20 @@ class NonlinearStaticsSolver(Solver):
                 # correct displacement
                 u += delta_u*self.newton_damping
 
-                # update system
+                # update K, f_int and f_ext if not a simplified newton iteration
                 if (iteration % self.simplified_newton_iterations) is 0:
                     K, f_int = self.mechanical_system.K_and_f(u, t)
                     f_ext = self.mechanical_system.f_ext(u, du, t)
+                # update residuum and norms
                 res = -f_int + f_ext
-                abs_res = vector_norm(res, 2)
                 abs_f_ext = vector_norm(f_ext, 2)
-                iteration += 1
+                abs_res = vector_norm(res, 2)
 
                 if self.verbose:
                     print('Step: {0:1.3f}, iteration#: {1:3d}, residual: {2:6.3E}'.format(t, iteration, abs_res))
 
                 if self.write_iterations:
                     self.mechanical_system.write_timestep(t + iteration*0.000001, u)
-
-                # exit, if max iterations exceeded
-                if (iteration >= self.max_number_of_iterations) and self.convergence_abort:
-                    u_output = np.array(u_output).T
-                    print(abort_statement)
-                    t_clock_end = time.time()
-                    print('Time for static solution: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
-                    return u_output
 
             # end of Newton iteration loop
 
@@ -243,11 +244,11 @@ class NonlinearStaticsSolver(Solver):
             u_output.append(u.copy())
 
             if self.track_iterations:
-                iteration_info.append((t, iteration, abs_res))
+                self.iteration_info.append((t, iteration, abs_res))
 
         # end of load step loop
 
-        self.iteration_info = np.array(iteration_info)
+        self.iteration_info = np.array(self.iteration_info)
         u_output = np.array(u_output).T
         t_clock_end = time.time()
         print('Time for solving nonlinear displacements: {0:6.3f} seconds'.format(t_clock_end - t_clock_start))
@@ -267,9 +268,15 @@ class LinearStaticsSolver(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='spd')
+
         if 't' in options:
             self.t = options['t']
         else:
@@ -288,7 +295,6 @@ class LinearStaticsSolver(Solver):
         '''
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='spd')
         self.mechanical_system.clear_timesteps()
 
         print('Assembling external force and stiffness...')
@@ -316,30 +322,32 @@ class NonlinearDynamicsSolver(Solver):
         Mechanical system to be solved.
     options : Dictionary
         Options for solver:
+        linear_solver : Instance of LinearSolver
+            Linear solver object for linear equation system in solver. Default PardisoSolver(...).
         initial_conditions : dict {'q0': numpy.array, 'dq0': numpy.array}
-            Initial conditions/initial displacement and initial velocity for solver.
+            Initial conditions/initial displacement and initial velocity for solver. Default 0 and 0.
         t0 : float
-            Initial time.
+            Initial time. Default 0.
         t_end : float
-            End time.
+            End time. Default 1.
         dt : float
-            Time step size for time integration.
+            Time step size for time integration. Default 1e-4.
         dt_output : float
-            Time step size for output.
+            Time step size for output. Default 1.
         relative_tolerance : float
-
+            Default 1e-9.
         absolute_tolerance : float
-
+            Default 1e-6.
         max_number_of_iterations : int
-
+            Default 30.
         convergence_abort : Boolean
-
+            Default True.
         verbose : Boolean
-            If true, show some more information in command line.
+            If True, show some more information in command line. Default False.
         write_iterations : Boolean
-            If true, write iteration steps.
+            If True, write iteration steps. Default False.
         track_iterations : Boolean
-
+            If True, save iteration infos. Default False.
     References
     ----------
        [1]  M. Géradin and D.J. Rixen (2015): Mechanical vibrations. Theory and application to structural dynamics.
@@ -347,22 +355,30 @@ class NonlinearDynamicsSolver(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
-        self.options = dict(**options)
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='sid')
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
-            if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of q0 is not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems
+            # TODO: because these systems do not have a ndof property.
+            # if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of q0 not valid for mechanical system.')
         else:
             print('Attention: No initial displacement was given, setting q0 = 0.')
             q0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
             dq0 = options['initial_conditions']['dq0']
-            if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems
+            # TODO: because these systems do not have a ndof property. (See above.)
+            # if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
             print('Attention: No initial velocity was given, setting dq0 = 0.')
             dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
@@ -441,6 +457,7 @@ class NonlinearDynamicsSolver(Solver):
             self.use_additional_variable_v = options['use_additional_variable_v']
         else:
             self.use_additional_variable_v = False
+        self.iteration_info = list()
         return
 
     def overwrite_parameters(self, **options):
@@ -464,7 +481,6 @@ class NonlinearDynamicsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='sid')
         self.mechanical_system.clear_timesteps()
         self.iteration_info = []
         t = self.t0
@@ -620,7 +636,6 @@ class NonlinearDynamicsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='sid')
         self.mechanical_system.clear_timesteps()
         self.iteration_info = []
         t = self.t0
@@ -794,22 +809,30 @@ class LinearDynamicsSolver(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
-        self.options = dict(**options)
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='spd')
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
-            if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of q0 is not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems,
+            # TODO: because these systems do not have a ndof property.
+            # if len(q0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of q0 is not valid for mechanical system.')
         else:
             print('Attention: No initial displacement was given, setting q0 = 0.')
             q0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         if ('initial_conditions' in options) and ('dq0' in options['initial_conditions']):
             dq0 = options['initial_conditions']['dq0']
-            if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems
+            # TODO: because these systems do not have a ndof property.
+            # if len(dq0) != self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of dq0 is not valid for mechanical system.')
         else:
             print('Attention: No initial velocity was given, setting dq0 = 0.')
             dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
@@ -844,6 +867,7 @@ class LinearDynamicsSolver(Solver):
         else:
             print('Attention: No verbose was given, setting verbose = False.')
             self.verbose = False
+        self.use_additional_variable_v = None
         return
 
     def overwrite_parameters(self, **options):
@@ -867,7 +891,6 @@ class LinearDynamicsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='spd')
         self.mechanical_system.clear_timesteps()
         t = self.t0
         q = self.initial_conditions['q0'].copy()
@@ -940,29 +963,32 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         State-space system to be solved.
     options : Dictionary
         Options for solver:
+        linear_solver : Instance of LinearSolver
+            Linear solver object for linear equation system in solver. Default PardisoSolver(...).
         initial_conditions : dict {'x0': numpy.array}
-            Initial conditions/states for solver.
+            Initial conditions/states for solver. Default 0.
         t0 : float
-            Initial time.
+            Initial time. Default 0.
         t_end : float
-            End time.
+            End time. Default 1.
         dt : float
-            Time step size for time integration.
+            Time step size for time integration. Default 1e-4.
         dt_output : float
-            Time step size for output.
+            Time step size for output. Default 1.
         relative_tolerance : float
-
+            Default 1e-9.
         absolute_tolerance : float
-
+            Default 1e-6.
         max_number_of_iterations : int
-
+            Default 30.
         convergence_abort : Boolean
-
+            Default True.
         verbose : Boolean
-            If true, show some more information in command line.
+            If True, show some more information in command line. Default False.
         write_iterations : Boolean
-            If true, write iteration steps.
+            If True, write iteration steps. Default False.
         track_iterations : Boolean
+            If True, save iteration infos. Default False.
 
     References
     ----------
@@ -971,15 +997,21 @@ class NonlinearDynamicsSolverStateSpace(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
-        self.options = dict(**options)
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='nonsym')
 
         if ('initial_conditions' in options) and ('x0' in options['initial_conditions']):
             x0 = options['initial_conditions']['x0']
-            if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of x0 is not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems
+            # TODO: because these systems do not have a ndof property.
+            # if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of x0 is not valid for state-space system.')
         else:
             print('Attention: No initial state was given, setting x0 = 0.')
             x0 = np.zeros(2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
@@ -1074,9 +1106,8 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='nonsym')
-        self.mechanical_system.clear_timesteps()
         self.iteration_info = []
+        self.mechanical_system.clear_timesteps()
         t = self.t0
         x = self.initial_conditions['x0'].copy()
         dx = np.zeros_like(x)
@@ -1188,15 +1219,21 @@ class LinearDynamicsSolverStateSpace(Solver):
     '''
 
     def __init__(self, mechanical_system, **options):
-        super().__init__(mechanical_system, **options)
+        self.mechanical_system = mechanical_system
 
         # read options
-        self.options = dict(**options)
+        if 'linear_solver' in options:
+            self.linear_solver = options['linear_solver']
+        else:
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='nonsym')
 
         if ('initial_conditions' in options) and ('x0' in options['initial_conditions']):
             x0 = options['initial_conditions']['x0']
-            if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
-                raise ValueError('Error: Dimension of x0 is not valid for mechanical system.')
+            # TODO: The following section is commented out because this prevents solving reduced mechanical systems
+            # TODO: because these systems do not have a ndof property.
+            # if len(x0) != 2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs:
+            #     raise ValueError('Error: Dimension of x0 is not valid for state-space system.')
         else:
             print('Attention: No initial state was given, setting x0 = 0.')
             x0 = np.zeros(2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
@@ -1254,7 +1291,6 @@ class LinearDynamicsSolverStateSpace(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.linear_solver = self.linear_solver(mtype='nonsym')
         self.mechanical_system.clear_timesteps()
         t = self.t0
         x = self.initial_conditions['x0'].copy()
@@ -1462,8 +1498,6 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         Return actual Jacobian and residuum for the nonlinear generalized-alpha time integration scheme.
         '''
 
-        if self.mechanical_system.M_constr is None:
-            self.mechanical_system.M()
 
         ddq_m = (1 - self.alpha_m)*ddq + self.alpha_m*ddq_old
         q_f = (1 - self.alpha_f)*q + self.alpha_f*q_old
@@ -1474,16 +1508,18 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
         f_ext_f = self.mechanical_system.f_ext(q_f, dq_f, t_f)
 
-        if self.mechanical_system.D_constr is None:
-            Jac = -(1 - self.alpha_m)/(self.beta*self.dt**2)*self.mechanical_system.M_constr - (1 - self.alpha_f)*K_f
-            res = f_ext_f - self.mechanical_system.M_constr@ddq_m - f_f
+        M = self.mechanical_system.M()
+        D = self.mechanical_system.D()
+        if D is None:
+            Jac = -(1 - self.alpha_m)/(self.beta*self.dt**2)*M - (1 - self.alpha_f)*K_f
+            res = f_ext_f - M@ddq_m - f_f
         else:
-            Jac = -(1 - self.alpha_m)/(self.beta*self.dt**2)*self.mechanical_system.M_constr \
-                  - (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.mechanical_system.D_constr \
+            Jac = -(1 - self.alpha_m)/(self.beta*self.dt**2)*M \
+                  - (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
                   - (1 - self.alpha_f)*K_f
 
-            res = f_ext_f - self.mechanical_system.M_constr@ddq_m \
-                  - self.mechanical_system.D_constr@dq_f - f_f
+            res = f_ext_f - M@ddq_m \
+                  - D@dq_f - f_f
         return Jac, res, f_ext_f
 
     def correct(self, q, dq, v, ddq, delta_q):
@@ -1590,10 +1626,6 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         '''
         Return actual Jacobian and residuum for the nonlinear JWH-alpha time integration scheme.
         '''
-
-        if self.mechanical_system.M_constr is None:
-            self.mechanical_system.M()
-
         ddq_m = self.alpha_m*ddq + (1 - self.alpha_m)*ddq_old
         q_f = self.alpha_f*q + (1 - self.alpha_f)*q_old
         v_f = self.alpha_f*v + (1 - self.alpha_f)*v_old
@@ -1603,15 +1635,18 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
         f_ext_f = self.mechanical_system.f_ext(q_f, v_f, t_f)
 
-        if self.mechanical_system.D_constr is None:
-            Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.mechanical_system.M_constr \
+        D = self.mechanical_system.D()
+        M = self.mechanical_system.M()
+
+        if D is None:
+            Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M \
                   - self.alpha_f*K_f
-            res = f_ext_f - self.mechanical_system.M_constr@ddq_m - f_f
+            res = f_ext_f - M@ddq_m - f_f
         else:
-            Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.mechanical_system.M_constr \
-                  - self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.D_constr \
+            Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M \
+                  - self.alpha_m/(self.gamma*self.dt)*D \
                   - self.alpha_f*K_f
-            res = f_ext_f - self.mechanical_system.M_constr@ddq_m - self.mechanical_system.D_constr@v_f - f_f
+            res = f_ext_f - M@ddq_m - D@v_f - f_f
         return Jac, res, f_ext_f
 
     def correct(self, q, dq, v, ddq, delta_q):
@@ -1778,13 +1813,17 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         scheme.
         '''
 
-        self.mechanical_system.M()
-        self.mechanical_system.D_constr = self.mechanical_system.D()
-        self.mechanical_system.K_constr = self.mechanical_system.K()
+        M = self.mechanical_system.M()
+        D = self.mechanical_system.D()
+        K = self.mechanical_system.K()
 
-        K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)*self.mechanical_system.M_constr \
-                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.mechanical_system.D_constr \
-                + (1 - self.alpha_f)*self.mechanical_system.K_constr
+        if D is None:
+            K_eff = (1 - self.alpha_m) / (self.beta * self.dt ** 2) * M \
+                    + (1 - self.alpha_f) * K
+        else:
+            K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)*M \
+                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
+                + (1 - self.alpha_f)*K
         return K_eff
 
     def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
@@ -1792,17 +1831,29 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return actual effective force for linear generalized-alpha time integration scheme.
         '''
 
+        M = self.mechanical_system.M()
+        D = self.mechanical_system.D()
+        K = self.mechanical_system.D()
+
+
         t_f = (1 - self.alpha_f)*t + self.alpha_f*t_old
 
         f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
 
-        F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*self.mechanical_system.M_constr \
-                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.mechanical_system.D_constr \
-                - self.alpha_f*self.mechanical_system.K_constr)@q_old \
-                + ((1 - self.alpha_m)/(self.beta*self.dt)*self.mechanical_system.M_constr \
-                - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta*self.mechanical_system.D_constr)@dq_old \
-                + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta*self.mechanical_system.M_constr \
-                - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta*self.mechanical_system.D_constr)@ddq_old \
+        if D is None:
+            F_eff = ((1 - self.alpha_m) / (self.beta * self.dt ** 2) * M \
+                     - self.alpha_f * K) @ q_old \
+                    + (1 - self.alpha_m) / (self.beta * self.dt) * M @ dq_old \
+                    -(0.5 * (self.alpha_m - 1) + self.beta) / self.beta * M @ ddq_old \
+                    + f_ext_f
+        else:
+            F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*M \
+                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
+                - self.alpha_f*K)@q_old \
+                + ((1 - self.alpha_m)/(self.beta*self.dt)*M \
+                - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta*D)@dq_old \
+                + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta*M \
+                - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta*D)@ddq_old \
                 + f_ext_f
         return F_eff
 
@@ -1889,13 +1940,17 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return effective stiffness matrix for linear JWH-alpha time integration scheme.
         '''
 
-        self.mechanical_system.M()
-        self.mechanical_system.D_constr = self.mechanical_system.D()
-        self.mechanical_system.K_constr = self.mechanical_system.K()
+        M = self.mechanical_system.M()
+        D = self.mechanical_system.D()
+        K = self.mechanical_system.K()
 
-        K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.mechanical_system.M_constr \
-                + self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.D_constr \
-                + self.alpha_f*self.mechanical_system.K_constr
+        if D is None:
+            K_eff = self.alpha_m ** 2 / (self.alpha_f * self.gamma ** 2 * self.dt ** 2) * M \
+                    + self.alpha_f * K
+        else:
+            K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M \
+                + self.alpha_m/(self.gamma*self.dt)*D \
+                + self.alpha_f*K
         return K_eff
 
     def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
@@ -1903,17 +1958,29 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return actual effective force for linear JWH-alpha time integration scheme.
         '''
 
+        M = self.mechanical_system.M()
+        D = self.mechanical_system.D()
+        K = self.mechanical_system.K()
+
         t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
 
         f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
 
-        F_eff = (-(1 - self.alpha_f)*self.mechanical_system.K_constr \
-                + self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.D_constr \
-                + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.mechanical_system.M_constr)@q_old \
-                + (-(self.gamma - self.alpha_m)/self.gamma*self.mechanical_system.D_constr \
-                - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*self.mechanical_system.M_constr)@dq_old \
-                + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*self.mechanical_system.M_constr)@v_old \
-                + (-(self.gamma - self.alpha_m)/self.gamma*self.mechanical_system.M_constr)@ddq_old \
+        if D is None:
+            F_eff = (-(1 - self.alpha_f)*K \
+                + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M)@q_old \
+                - (self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*M)@dq_old \
+                + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*M)@v_old \
+                + (-(self.gamma - self.alpha_m)/self.gamma*M)@ddq_old \
+                + f_ext_f
+        else:
+            F_eff = (-(1 - self.alpha_f)*K \
+                + self.alpha_m/(self.gamma*self.dt)*D \
+                + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M)@q_old \
+                + (-(self.gamma - self.alpha_m)/self.gamma*D \
+                - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*M)@dq_old \
+                + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*M)@v_old \
+                + (-(self.gamma - self.alpha_m)/self.gamma*M)@ddq_old \
                 + f_ext_f
         return F_eff
 
@@ -2010,8 +2077,8 @@ class JWHAlphaNonlinearDynamicsSolverStateSpace(NonlinearDynamicsSolverStateSpac
         Return actual Jacobian and residuum for the nonlinear JWH-alpha time integration scheme.
         '''
 
-        if self.mechanical_system.E_constr is None:
-            self.mechanical_system.E(x, t)
+
+        E = self.mechanical_system.E(x, t)
 
         dx_m = self.alpha_m*dx + (1 - self.alpha_m)*dx_old
         x_f = self.alpha_f*x + (1 - self.alpha_f)*x_old
@@ -2021,8 +2088,8 @@ class JWHAlphaNonlinearDynamicsSolverStateSpace(NonlinearDynamicsSolverStateSpac
 
         F_ext_f = self.mechanical_system.F_ext(x_f, t_f)
 
-        Jac = self.alpha_f*A_f - self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.E_constr
-        Res = F_f + F_ext_f - self.mechanical_system.E_constr@dx_m
+        Jac = self.alpha_f*A_f - self.alpha_m/(self.gamma*self.dt)*E
+        Res = F_f + F_ext_f - E@dx_m
 
         return Jac, Res, F_ext_f
 
@@ -2108,11 +2175,11 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         Return effective stiffness matrix for linear JWH-alpha time integration scheme.
         '''
 
-        self.mechanical_system.E()
-        self.mechanical_system.A_constr = self.mechanical_system.A()
+        E = self.mechanical_system.E()
+        A = self.mechanical_system.A()
 
-        K_eff = self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.E_constr \
-                - self.alpha_f*self.mechanical_system.A_constr
+        K_eff = self.alpha_m/(self.gamma*self.dt)*E \
+                - self.alpha_f*A
         return K_eff
 
     def effective_force(self, x_old, dx_old, t, t_old):
@@ -2120,13 +2187,15 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         Return actual effective force for linear JWH-alpha time integration scheme.
         '''
 
+        E = self.mechanical_system.E()
+        A = self.mechanical_system.A()
         t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
 
         F_ext_f = self.mechanical_system.F_ext(None, t_f)
 
-        F_eff = (self.alpha_m/(self.gamma*self.dt)*self.mechanical_system.E_constr \
-                 + (1 - self.alpha_f)*self.mechanical_system.A_constr)@x_old \
-                 + ((self.alpha_m - self.gamma)/self.gamma*self.mechanical_system.E_constr)@dx_old \
+        F_eff = (self.alpha_m/(self.gamma*self.dt)*E \
+                 + (1 - self.alpha_f)*A)@x_old \
+                 + ((self.alpha_m - self.gamma)/self.gamma*E)@dx_old \
                  + F_ext_f
         return F_eff
 

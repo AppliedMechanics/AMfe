@@ -54,7 +54,7 @@ phase options
 
 class PardisoWrapper(object):
     """Wrapper class for Intel MKL Pardiso solver. """
-    def __init__(self, A, mtype=11, iparm={}, verbose=False):
+    def __init__(self, A, mtype=11, iparm=None, verbose=False):
         '''
         Parameters
         ----------
@@ -170,25 +170,15 @@ class PardisoWrapper(object):
 
 
 
-        self.mtype = mtype
-        if mtype in [1, 3]:
-            msg = "mtype = 1/3 - structurally symmetric matrices not supported"
-            raise NotImplementedError(msg)
-        elif mtype in [2, -2, 4, -4, 6, 11, 13]:
-            pass
-        else:
-            msg = "Invalid mtype: mtype={}".format(mtype)
-            raise ValueError(msg)
+
             
 
         self.n = A.shape[0]
 
-        if mtype in [4, -4, 6, 13]:
-            # Complex matrix
-            self.dtype = np.complex128
-        elif mtype in [2, -2, 11]:
-            # Real matrix
-            self.dtype = np.float64
+        self.mtype = None
+        self.dtype = np.float64
+        self.set_mtype(mtype)
+
         self.ctypes_dtype = ctypeslib.ndpointer(self.dtype)
 
         if not isinstance(A, sp.csr_matrix):
@@ -198,10 +188,8 @@ class PardisoWrapper(object):
                 raise ValueError('A must be in csr-format or at least convertible to csr format')
 
         # If A is symmetric, store only the upper triangular portion 
-        if mtype in [2, -2, 4, -4, 6]:
+        if self.mtype in [2, -2, 4, -4, 6]:
             A = sp.triu(A, format='csr')
-        elif mtype in [11, 13]:
-            A = A.tocsr()
 
         if not A.has_sorted_indices:
             A.sort_indices()
@@ -240,9 +228,29 @@ class PardisoWrapper(object):
         self.iparm[23] = 1  # Use parallel factorization
         self.iparm[34] = 1  # Zero base indexing
 
-        # Set iparms
+        # Set passed iparms
+        if iparm is not None:
+            self.set_iparms(iparm)
+
+    def set_mtype(self, mtype):
+        if mtype in [1, 3]:
+            msg = "mtype = 1/3 - structurally symmetric matrices not supported"
+            raise NotImplementedError(msg)
+        elif mtype in [2, -2, 4, -4, 6, 11, 13]:
+            self.mtype = mtype
+            if mtype in [4, -4, 6, 13]:
+                # Complex matrix
+                self.dtype = np.complex128
+            elif mtype in [2, -2, 11]:
+                # Real matrix
+                self.dtype = np.float64
+        else:
+            msg = "Invalid mtype: mtype={}".format(mtype)
+            raise ValueError(msg)
+
+    def set_iparms(self, iparm):
         for key in iparm:
-            self.iparm[int(key)] = iparm[key]
+            self.iparm[key] = iparm[key]
 
     def clear(self):
         '''

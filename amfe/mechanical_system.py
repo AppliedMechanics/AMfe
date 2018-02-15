@@ -322,7 +322,7 @@ class MechanicalSystem():
               '{0:4.2f} seconds.'.format(t2 - t1))
         return
 
-    def M(self, u=None, t=0):
+    def M(self, u=None, t=0, force_update = False):
         '''
         Compute the Mass matrix of the dynamical system.
 
@@ -339,13 +339,14 @@ class MechanicalSystem():
             Mass matrix with applied constraints in sparse csr-format.
         '''
 
-        if u is not None:
-            u_unconstr = self.unconstrain_vec(u)
-        else:
-            u_unconstr = None
+        if self.M_constr is None or force_update:
+            if u is not None:
+                u_unconstr = self.unconstrain_vec(u)
+            else:
+                u_unconstr = None
 
-        M_unconstr = self.assembly_class.assemble_m(u_unconstr, t)
-        self.M_constr = self.constrain_matrix(M_unconstr)
+            M_unconstr = self.assembly_class.assemble_m(u_unconstr, t)
+            self.M_constr = self.constrain_matrix(M_unconstr)
         return self.M_constr
 
     def K(self, u=None, t=0):
@@ -373,7 +374,7 @@ class MechanicalSystem():
 
         return self.constrain_matrix(K_unconstr)
 
-    def D(self, u=None, t=0):
+    def D(self, u=None, t=0, force_update=False):
         '''
         Return the damping matrix of the mechanical system.
 
@@ -383,6 +384,8 @@ class MechanicalSystem():
             Displacement field in voigt notation.
         t : float, optional
             Time.
+        force_update : bool (default=False)
+            Flag to force update of D otherwise already calcuated D is returned
 
         Returns
         -------
@@ -390,8 +393,11 @@ class MechanicalSystem():
             Damping matrix with applied constraints in sparse csr-format.
         '''
 
-        if self.D_constr is None:
-            return self.K()*0
+        if self.D_constr is None or force_update:
+            if self.D_constr is None:
+                return self.K()*0
+            else:
+                return self.D_constr
         else:
             return self.D_constr
 
@@ -453,9 +459,7 @@ class MechanicalSystem():
             Damping coefficient for the stiffness matrix.
         '''
 
-        if self.M_constr is None:
-            self.M()
-        self.D_constr = alpha*self.M_constr + beta*self.K()
+        self.D_constr = alpha*self.M() + beta*self.K()
         return
 
     def write_timestep(self, t, u):
@@ -517,27 +521,29 @@ class MechanicalSystemStateSpace(MechanicalSystem):
         else:
             self.R_constr = regular_matrix
         self.x_red_output = []
-        self.R_constr = regular_matrix
         self.E_constr = None
 
-    def M(self, x=None, t=0):
-        if x is not None:
-            self.M_constr = MechanicalSystem.M(self, x[0:int(x.size/2)], t)
-        else:
-            self.M_constr = MechanicalSystem.M(self, None, t)
+    def M(self, x=None, t=0, force_update=False):
+        if self.M_constr is None or force_update:
+            if x is not None:
+                self.M_constr = MechanicalSystem.M(self, x[0:int(x.size/2)], t)
+            else:
+                self.M_constr = MechanicalSystem.M(self, None, t)
         return self.M_constr
 
-    def E(self, x=None, t=0):
-        if self.M_constr is None:
-            self.M(x, t)
-        self.E_constr = sp.sparse.bmat([[self.R_constr, None], [None, self.M_constr]])
+    def E(self, x=None, t=0, force_update=False):
+        if self.E_constr is None or force_update:
+            if self.M_constr is None:
+                self.M(x, t)
+            self.E_constr = sp.sparse.bmat([[self.R_constr, None], [None, self.M_constr]])
         return self.E_constr
 
-    def D(self, x=None, t=0):
-        if x is not None:
-            self.D_constr = MechanicalSystem.D(self, x[0:int(x.size/2)], t)
-        else:
-            self.D_constr = MechanicalSystem.D(self, None, t)
+    def D(self, x=None, t=0, force_update=False):
+        if self.D_constr is None or force_update:
+            if x is not None:
+                self.D_constr = MechanicalSystem.D(self, x[0:int(x.size/2)], t)
+            else:
+                self.D_constr = MechanicalSystem.D(self, None, t)
         return self.D_constr
 
     def K(self, x=None, t=0):
@@ -729,25 +735,21 @@ class ReducedSystem(MechanicalSystem):
 
         return f_int
 
-    def D(self, u=None, t=0):
-        if self.assembly_type == 'direct':
-            raise NotImplementedError('The direct method is note implemented yet for damping matrices')
-        elif self.assembly_type == 'indirect':
+    def D(self, u=None, t=0, force_update=False):
+        if self.D_constr is None or force_update:
+            if self.D_constr is None:
+                self.D_constr = self.V.T @ MechanicalSystem.K(self)*0 @ self.V
+        return self.D_constr
+
+    def M(self, u=None, t=0, force_update=False):
+        # Just a plain projection
+        # not so well but works...
+        if self.M_constr is None or force_update:
             if u is None:
                 u_full = None
             else:
                 u_full = self.V @ u
-            self.D_constr = self.V.T @ MechanicalSystem.D(self, u_full, t) @ self.V
-        else:
-            raise ValueError('The given assembly type for a reduced system '
-                             + 'is not valid.')
-
-        return self.D_constr
-
-    def M(self, u=None, t=0):
-        # Just a plain projection
-        # not so well but works...
-        self.M_constr = self.V.T @ MechanicalSystem.M(self, u, t) @ self.V
+            self.M_constr = self.V.T @ MechanicalSystem.M(self, u_full, t, force_update=True) @ self.V
         return self.M_constr
 
     def write_timestep(self, t, u):
@@ -835,16 +837,17 @@ class ReducedSystemStateSpace(MechanicalSystemStateSpace):
         self.W = left_basis
         self.x_red_output = []
 
-    def E(self, x=None, t=0):
-        if x is not None:
-            self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, self.V@x, \
+    def E(self, x=None, t=0, force_update=False):
+        if self.E_constr is None or force_update:
+            if x is not None:
+                self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, self.V@x, \
                                                                   t)@self.V
-        else:
-            self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, None, t)@self.V
+            else:
+                self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, None, t)@self.V
         return self.E_constr
 
-    def E_unreduced(self, x_unreduced=None, t=0):
-        return MechanicalSystemStateSpace.E(self, x_unreduced, t)
+    def E_unreduced(self, x_unreduced=None, t=0, force_update=False):
+        return MechanicalSystemStateSpace.E(self, x_unreduced, t, force_update)
 
     def A(self, x=None, t=0):
         if x is not None:
@@ -910,10 +913,7 @@ class ReducedSystemStateSpace(MechanicalSystemStateSpace):
         return
 
 
-def reduce_mechanical_system(
-        mechanical_system, V,
-        overwrite=False,
-        assembly='indirect'):
+def reduce_mechanical_system(mechanical_system, V, overwrite=False, assembly='indirect'):
     '''
     Reduce the given mechanical system with the linear basis V.
 
@@ -944,17 +944,15 @@ def reduce_mechanical_system(
     reduced_sys.V_unconstr = reduced_sys.dirichlet_class.unconstrain_vec(V)
     reduced_sys.u_red_output = []
     reduced_sys.M_constr = None
-    # reduce Rayleigh damping matrix
-    if reduced_sys.D_constr is not None:
-        reduced_sys.D_constr = V.T @ reduced_sys.D_constr @ V
     reduced_sys.assembly_type = assembly
+    reduced_sys.M(force_update=True)
+    # reduce Rayleigh damping matrix
+    if mechanical_system.D_constr is not None:
+        reduced_sys.D_constr = reduced_sys.V.T @ mechanical_system.D_constr @ reduced_sys.V
     return reduced_sys
 
 
-def convert_mechanical_system_to_state_space(
-        mechanical_system,
-        regular_matrix=None,
-        overwrite=False):
+def convert_mechanical_system_to_state_space(mechanical_system, regular_matrix=None, overwrite=False):
     if overwrite:
         sys = mechanical_system
     else:
@@ -965,14 +963,12 @@ def convert_mechanical_system_to_state_space(
         sys.R_constr = sys.K()
     else:
         sys.R_constr = regular_matrix
-    sys.E()
+    sys.E_constr = None
+    sys.E(force_update=True)
     return sys
 
 
-def reduce_mechanical_system_state_space(
-        mechanical_system_state_space, right_basis,
-        left_basis=None,
-        overwrite=False):
+def reduce_mechanical_system_state_space(mechanical_system_state_space, right_basis, left_basis=None, overwrite=False):
     if overwrite:
         red_sys = mechanical_system_state_space
     else:
@@ -1039,3 +1035,4 @@ def reduce_mechanical_system_state_space(
 #             force_amplitudes = ( (t2-t)*self.force_series[t1_idx]
 #                                + (t-t1)*self.force_series[t2_idx]) / (t2-t1)
 #         return self.force_basis @ force_amplitudes
+
