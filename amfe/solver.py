@@ -73,7 +73,11 @@ class NonlinearStaticsSolver(Solver):
 
     def __init__(self, mechanical_system, **options):
         self.mechanical_system = mechanical_system
-
+        # This option is necessary to compute the NSKTS
+        if 'f_ext' in options:
+            self.f_ext = options['f_ext']
+        else:
+            self.f_ext = mechanical_system.f_ext
         # read options
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
@@ -193,7 +197,7 @@ class NonlinearStaticsSolver(Solver):
 
             # Calculate residuum:
             K, f_int = self.mechanical_system.K_and_f(u, t)
-            f_ext = self.mechanical_system.f_ext(u, du, t)
+            f_ext = self.f_ext(u, du, t)
             res = -f_int + f_ext
 
             # calculate norms
@@ -226,7 +230,7 @@ class NonlinearStaticsSolver(Solver):
                 # update K, f_int and f_ext if not a simplified newton iteration
                 if (iteration % self.simplified_newton_iterations) is 0:
                     K, f_int = self.mechanical_system.K_and_f(u, t)
-                    f_ext = self.mechanical_system.f_ext(u, du, t)
+                    f_ext = self.f_ext(u, du, t)
                 # update residuum and norms
                 res = -f_int + f_ext
                 abs_f_ext = euclidean_norm_of_vector(f_ext)

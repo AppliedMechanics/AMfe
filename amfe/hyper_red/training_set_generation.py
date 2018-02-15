@@ -84,18 +84,16 @@ def compute_nskts(mechanical_system,
         '''
         def f_ext_monkeypatched(u, du, t):
             return F_rand * t
-        f_ext_tmp = mechanical_system.f_ext
-        mechanical_system.f_ext = f_ext_monkeypatched
 
         nlsolver = NonlinearStaticsSolver(mechanical_system,
                                           number_of_load_steps=no_of_force_increments,
                                           max_number_of_iterations=no_of_force_increments,
                                           verbose=verbose,
                                           convergence_abort=True,
-                                          save_solution=False)
+                                          save_solution=False,
+                                          f_ext=f_ext_monkeypatched)
         u_arr = nlsolver.solve()
         
-        mechanical_system.f_ext = f_ext_tmp
         return u_arr
 
     print('*'*80)
@@ -150,8 +148,14 @@ def compute_nskts(mechanical_system,
         res = compute_stochastic_displacements(mechanical_system, F_rand)
         u_list.append(res)
 
+    if len(u_list) > 1:
+        for number, u in enumerate(u_list):
+            if u.shape[0] == 0:
+                del u_list[number]
+        snapshot_arr = np.concatenate(u_list, axis=1)
+    else:
+        snapshot_arr = np.array(u_list)
 
-    snapshot_arr = np.concatenate(u_list, axis=1)
     time_2 = time.time()
     print('Finished computing nonlinear stochastic krylov training sets.')
     print('It took {0:2.2f} seconds to build the nskts.'.format(time_2 - time_1))
