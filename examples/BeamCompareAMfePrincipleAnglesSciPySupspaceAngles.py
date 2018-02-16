@@ -3,7 +3,7 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information.
 #
 """
-Example: Cantilever beam loaded at tip.
+Example: Comparison of POD bases for cantilever beam loaded at tip.
 """
 
 
@@ -11,7 +11,6 @@ Example: Cantilever beam loaded at tip.
 import amfe
 import numpy as np
 import scipy as sp
-import joblib as jl
 import matplotlib.pyplot as plt
 
 
@@ -26,8 +25,7 @@ system = amfe.MechanicalSystem()
 system.load_mesh_from_gmsh(input_file, 1, material)
 system.apply_dirichlet_boundaries(5, 'xy')
 ndof = system.dirichlet_class.no_of_constrained_dofs
-system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: 1.0)
-system.apply_rayleigh_damping(1e0, 1e-6)
+# system.apply_rayleigh_damping(1e0, 1e-6)
 
 
 # define simulation parameters
@@ -50,45 +48,40 @@ options = {
     'save_solution': True}
 
 
-# solve system
+# calculate POD basis V1
+system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: 1.0)
 solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
 solver.solve()
-
-
-# write output
+__, V1 = amfe.pod(mechanical_system=system, n=53)
 system.export_paraview(output_file + '_forV1')
-
-
-__, V1 = amfe.pod(mechanical_system=system, n=50)
-
-
 system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: -1.0)  # reset Neumann BCs
+
+
+# calculate POD basis V2
 system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(1, 0), time_func=lambda t: 1.0)
-
-
-# solve system
 solver.solve()
-
-
-# write output
+__, V2 = amfe.pod(mechanical_system=system, n=50)
 system.export_paraview(output_file + '_forV2')
 
 
-__, V2 = amfe.pod(mechanical_system=system, n=50)
-
-
-angles_amfe = amfe.principal_angles(V1=V1, V2=V2, cosine=False, principal_vectors=False)/np.pi*180
+# compute principle/subspace angles
+angles_amfe, F1, F2 = amfe.principal_angles(V1=V1, V2=V2, unit='deg', method='auto', principal_vectors=True)
 angles_scipy = np.sort(sp.linalg.subspace_angles(A=V1, B=V2))/np.pi*180
 
 
+# output results
+print(F1.shape)
+print(F2.shape)
+
 print(len(angles_amfe))
 print(len(angles_scipy))
-
 
 fig, ax = plt.subplots()
 ax.plot(angles_amfe, 'ro-', label='AMfe\'s principle_angles(...)')
 ax.plot(angles_scipy, 'b+-', label='SciPy.linalg\'s subspace_angles(...)')
 ax.grid(True)
 ax.legend()
+plt.xlabel('number - 1')
+plt.ylabel('angle (deg)')
 plt.show()
 

@@ -360,62 +360,92 @@ def compute_relative_error(red_file, ref_file, M=None):
     return err
 
 
-def principal_angles(V1, V2, cosine=True, principal_vectors=False):
+def principal_angles(V1, V2, unit='deg', method='auto', principal_vectors=False):
     '''
-    Return the cosine of the principal angles of the two bases V1 and V2.
+    Return the principal/subspace angles of span(V1) and span(V2) subspaces of R^n.
 
     Parameters
     ----------
-    V1 : ndarray
-        array denoting n-dimensional subspace spanned by V1 (Mxn)
-    V2 : ndarray
-        array denoting subspace 2. Dimension is (MxO)
-    cosine : bool, optional
-        flag stating, if the cosine of the angles is to be used
-    principal_vectors : bool, optional
-        Option flag for returning principal vectors. Default is False.
+    V1 : 2darray
+        Matrix spanning subspace 1. Dimensions n x r1.
+    V2 : 2darray
+        Matrix spanning subspace 2. Dimension n x r2.
+    unit : {'deg', 'rad', None}, optional
+        Unit in which angles are returned. Default is 'deg'.
+    method : {'auto', 'cos', 'sin'}, optional
+        Method used for computation of angles:
+             - 'cos' for large angles
+             - 'sin' for small angles
+             - 'auto' for all angles (combines both methods).
+        Default is 'auto'.
+    principal_vectors : boolean, optional
+        Flag for returning principal vectors. Default is False.
 
     Returns
     -------
-    sigma : ndarray
-        cosine of subspace angles
-    F1 : ndarray
-        array of principal vectors of subspace spanned by V1. The columns give
-        the principal vectors, i.e. F1[:,0] is the first principal vector
-        associated with theta[0] and so on. Only returned, if
-        ``principal_vectors=True``.
-    F2 : ndarray
-        array of principal vectors of subspace spanned by V2. Only returned if
-        ``principal_vectors=True``.
-
-    Notes
-    -----
-    Both matrices V1 and V2 have live in the same vector space, i.e. they have
-    to have the same number of rows.
-
-    Examples
-    --------
-    TODO
+    theta : 1darray
+        Vector with principle/subspace angles.
+    F1 : 2darray
+        Matrix with principal vectors of subspace span(V1). Columns give principal vectors, i.e. F1[:,0] is first
+        principal vector of span(V1) associated with principle angle theta[0] and so on. Only returned, if
+        principal_vectors=True.
+    F2 : 2darray
+        Matrix with principal vectors of subspace span(V2). Only returned, if principal_vectors=True.
 
     References
     ----------
-    ..  [1] G. H. Golub and C. F. Van Loan. Matrix computations, volume 3. JHU
-        Press, 2012.
-
+       [1]  G.H. Golub and C.F. Van Loan (2012): Matrix computations. Volume 3. JHU Press.
+       [2]  ...
+       [3]  ...
+       [4]  ...
     '''
-    Q1, __ = linalg.qr(V1, mode='economic')
-    Q2, __ = linalg.qr(V2, mode='economic')
-    U, sigma, V = linalg.svd(Q1.T @ Q2)
 
-    if not cosine:
-        sigma = np.arccos(sigma)
+    Q1, __ = linalg.qr(a=V1, mode='economic')
+    Q2, __ = linalg.qr(a=V2, mode='economic')
 
-    if principal_vectors is True:
-        F1 = Q1.dot(U)
-        F2 = Q2.dot(V.T)
-        return sigma, F1, F2
+    if method == 'auto':
+        sigma = linalg.svdvals(a=Q1.T@Q2)  # cosine
+        sigma[sigma > 1.0] = 1.0  # cosine
+        theta = np.arccos(sigma)  # rad
+
+        sigma_sin = linalg.svdvals(a=(np.identity(Q1.shape[0]) - Q1@Q1.T)@Q2)
+        sigma_sin = np.flipud(sigma_sin)
+        sigma_sin[sigma_sin > 1.0] = 1.0
+        theta_sin = np.arcsin(sigma_sin)  # in rad
+
+        index = theta < 0.7853981633974483
+        sigma[index] = sigma_sin[index]
+        theta[index] = theta_sin[index]
+    elif method == 'cos':
+        sigma = linalg.svdvals(a=Q1.T@Q2)
+        sigma[sigma > 1.0] = 1.0
+        theta = np.arccos(sigma)  # rad
+    elif method == 'sin':
+        sigma = linalg.svdvals(a=(np.identity(Q1.shape[0]) - Q1@Q1.T)@Q2)
+        sigma = np.flipud(sigma)
+        sigma[sigma > 1.0] = 1.0
+        theta = np.arcsin(sigma)  # rad
     else:
-        return sigma
+        raise ValueError('Invalid method. Chose either \'auto\', \'cos\' or \'sin\'.')
+
+    if unit == 'deg':
+        theta = np.rad2deg(theta)  # deg
+    elif unit == 'rad':
+        pass
+    elif unit is None:
+        theta = sigma
+        if method == 'auto':
+            print('Warning: Mixed cosine and sine values.')
+    else:
+        raise ValueError('Invalid unit. Chose either \'deg\', \'rad\' or None.')
+
+    if principal_vectors:
+        U, __, VT = linalg.svd(a=Q1.T@Q2)
+        F1 = Q1@U
+        F2 = Q2@VT.T
+        return theta, F1, F2
+    else:
+        return theta
 
 
 def eggtimer(fkt):
