@@ -34,3 +34,33 @@ class Observer(abc.ABC):
     @abc.abstractmethod
     def update(self):
         pass
+
+
+class MaterialObserver(Observer):
+    '''
+    Observer class that updates mechanical system if a material has been changed
+    
+    Attributes
+    ----------
+    mechanical_system: MechanicalSystem
+        An instance of mechanical system that is updated by the material observer
+    '''
+
+    def __init__(self, mechanical_system):
+        '''
+        Initializes a MaterialObserver for a mechanical system
+        
+        Parameters:
+        -----------
+        mechanical_sytem: MechanicalSystem
+            mechanical system object that is updated by the observer when it is called
+        '''
+        self.mechanical_system = mechanical_system
+
+    def update(self):
+        '''
+        Updates the mechanical system object with new material information
+        '''
+        self.mechanical_system.M(force_update=True)
+        self.mechanical_system.D(force_update=True)
+

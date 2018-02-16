@@ -14,9 +14,11 @@ strain tensor E. This computation is carried out in this module.
 """
 
 import numpy as np
+import abc
 
 
-__all__ = ['HyperelasticMaterial',
+__all__ = ['Material',
+           'HyperelasticMaterial',
            'KirchhoffMaterial',
            'LinearMaterial',
            'NeoHookean',
@@ -37,12 +39,31 @@ Python was not able to load the fast fortran material routines.
 # use_fortran = False
 
 
-class HyperelasticMaterial():
+class Material:
+    def __init__(self):
+        self._observers = list()
+
+    def add_observer(self, observer, verbose=True):
+        self._observers.append(observer)
+        if verbose:
+            print('Added observer to material')
+
+    def remove_observer(self, observer, verbose=True):
+        self._observers.remove(observer)
+        if verbose:
+            print('Removed observer from material')
+
+    def notify(self):
+        for observer in self._observers:
+            observer.update()
+
+
+class HyperelasticMaterial(Material):
     '''
     Base class for hyperelastic material.
     '''
     def __init__(self):
-        pass
+        super().__init__()
 
     def S_Sv_and_C(self, E):
         '''
@@ -139,11 +160,12 @@ class KirchhoffMaterial(HyperelasticMaterial):
         -------
         None
         '''
-        self.E_modulus = E
-        self.nu = nu
-        self.rho = rho
-        self.plane_stress = plane_stress
-        self.thickness = thickness
+        super().__init__()
+        self._E_modulus = E
+        self._nu = nu
+        self._rho = rho
+        self._plane_stress = plane_stress
+        self._thickness = thickness
         self._update_variables()
 
     def __repr__(self):
@@ -178,6 +200,55 @@ class KirchhoffMaterial(HyperelasticMaterial):
             self.C_SE_2d = np.array([[lam + 2*mu, lam, 0],
                                      [lam, lam + 2*mu, 0],
                                      [0, 0, mu]])
+
+    @property
+    def E_modulus(self):
+        return self._E_modulus
+
+    @E_modulus.setter
+    def E_modulus(self, E):
+        self._E_modulus = E
+        self._update_variables()
+        self.notify()
+    @property
+    def nu(self):
+        return self._nu
+
+    @nu.setter
+    def nu(self, nu):
+        self._nu = nu
+        self._update_variables()
+        self.notify()
+
+    @property
+    def rho(self):
+        return self._rho
+
+    @rho.setter
+    def rho(self, rho):
+        self._rho = rho
+        self._update_variables()
+        self.notify()
+
+    @property
+    def plane_stress(self):
+        return self._plane_stress
+
+    @plane_stress.setter
+    def plane_stress(self, plane_stress):
+        self._plane_stress = plane_stress
+        self._update_variables()
+        self.notify()
+
+    @property
+    def thickness(self):
+        return self._thickness
+
+    @thickness.setter
+    def thickness(self, thickness):
+        self._thickness = thickness
+        self._update_variables()
+        self.notify()
 
     def S_Sv_and_C(self, E):
         '''
@@ -231,11 +302,12 @@ class NeoHookean(HyperelasticMaterial):
         '''
 
         '''
-        self.mu = mu
-        self.kappa = kappa
-        self.rho = rho
-        self.thickness = thickness
-        self.plane_stress = plane_stress
+        super().__init__()
+        self._mu = mu
+        self._kappa = kappa
+        self._rho = rho
+        self._thickness = thickness
+        self._plane_stress = plane_stress
         if plane_stress:
             raise ValueError('Attention! plane stress is not supported yet \
 within the NeoHookean material!')
@@ -247,6 +319,55 @@ within the NeoHookean material!')
         return 'amfe.material.NeoHookeanMaterial(%f,%f,%f,%s,%f)'\
             % (self.mu, self.kappa, self.rho,
                str(self.plane_stress), self.thickness)
+
+    @property
+    def mu(self):
+        return self._mu
+
+    @property
+    def kappa(self):
+        return self._kappa
+
+    @property
+    def rho(self):
+        return self._rho
+
+    @property
+    def thickness(self):
+        return self._thickness
+
+    @property
+    def plane_stress(self):
+        return self._plane_stress
+
+    @mu.setter
+    def mu(self, mu):
+        self._mu = mu
+        self.notify()
+
+    @kappa.setter
+    def kappa(self, kappa):
+        self._kappa = kappa
+        self.notify()
+
+    @rho.setter
+    def rho(self, rho):
+        self._rho = rho
+        self.notify()
+
+    @thickness.setter
+    def thickness(self, thickness):
+        self._thickness = thickness
+        self.notify()
+
+    @plane_stress.setter
+    def plane_stress(self, plane_stress):
+        if plane_stress:
+            raise ValueError('Plane_stress not supportet yet for NeoHookean material')
+        else:
+            self._plane_stress = plane_stress
+            self.notify()
+
 
     def S_Sv_and_C(self, E):
         ''' '''
@@ -402,15 +523,75 @@ class MooneyRivlin(HyperelasticMaterial):
         None
 
         '''
-        self.A10 = A10
-        self.A01 = A01
-        self.kappa = kappa
-        self.rho = rho
-        self.thickness = thickness
-        self.plane_stress = plane_stress
+        super().__init__()
+        self._A10 = A10
+        self._A01 = A01
+        self._kappa = kappa
+        self._rho = rho
+        self._thickness = thickness
         if plane_stress:
             raise ValueError('Attention! plane stress is not supported yet \
             within the MooneyRivlin material!')
+        else:
+            self._plane_stress = plane_stress
+
+    @property
+    def A10(self):
+        return self._A10
+
+    @property
+    def A01(self):
+        return self._A01
+
+    @property
+    def kappa(self):
+        return self._kappa
+
+    @property
+    def rho(self):
+        return self._rho
+
+    @property
+    def thickness(self):
+        return self._thickness
+
+    @property
+    def plane_stress(self):
+        return self._plane_stress
+
+    @A10.setter
+    def A10(self, A10):
+        self._A10 = A10
+        self.notify()
+
+    @A01.setter
+    def A01(self, A01):
+        self._A01 = A01
+        self.notify()
+
+    @kappa.setter
+    def kappa(self, kappa):
+        self._kappa = kappa
+        self.notify()
+
+    @rho.setter
+    def rho(self, rho):
+        self._rho = rho
+        self.notify()
+
+    @thickness.setter
+    def thickness(self, thickness):
+        self._thickness = thickness
+        self.notify()
+
+    @plane_stress.setter
+    def plane_stress(self, plane_stress):
+        if plane_stress:
+            raise ValueError('Plane stress is not supported for Mooney Rivlin')
+        else:
+            self._plane_stress = plane_stress
+            self.notify()
+
 
     def __repr__(self):
         '''

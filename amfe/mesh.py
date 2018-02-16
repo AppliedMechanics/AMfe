@@ -1056,7 +1056,9 @@ class Mesh:
               'elements successfully added.')
         print('Total number of elements in mesh:', len(self.ele_obj))
         print('*************************************************************')
-
+        print('! Attention: If you have called load group to mesh() directly,\n'
+              'do not forget to add a material observer of your mechanical system to the new added materials,'
+              'if needed')
 
     def tie_mesh(self, master_key, slave_key, master_prop='phys_group',
                  slave_prop='phys_group', tying_type='fixed', robustness=4,

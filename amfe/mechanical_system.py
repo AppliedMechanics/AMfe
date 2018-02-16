@@ -18,6 +18,7 @@ import scipy as sp
 from .mesh import Mesh
 from .assembly import Assembly
 from .boundary import DirichletBoundary
+from .observers import MaterialObserver
 from .solver import *
 
 
@@ -101,6 +102,8 @@ class MechanicalSystem():
         self.D_constr = None
         self.no_of_dofs_per_node = None
 
+        # initializes observers:
+        self.material_observer = MaterialObserver(self)
         # external force to be overwritten by user-defined external forces
         # self._f_ext_unconstr = lambda t: np.zeros(self.mesh_class.no_of_dofs)
 
@@ -122,6 +125,8 @@ class MechanicalSystem():
 
         self.mesh_class.import_msh(msh_file, scale_factor=scale_factor)
         self.mesh_class.load_group_to_mesh(phys_group, material)
+        # Add material observer
+        material.add_observer(self.material_observer)
         self.no_of_dofs_per_node = self.mesh_class.no_of_dofs_per_node
 
         self.assembly_class.preallocate_csr()
