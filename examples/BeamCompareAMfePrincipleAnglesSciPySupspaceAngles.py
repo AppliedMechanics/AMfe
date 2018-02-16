@@ -31,7 +31,7 @@ ndof = system.dirichlet_class.no_of_constrained_dofs
 # define simulation parameters
 options = {
     't0': 0.0,
-    't_end': 0.4,
+    't_end': 0.1,
     'dt': 1.0e-3,
     'output_frequency': 1,
     'rho_inf': 0.95,
@@ -52,7 +52,7 @@ options = {
 system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: 1.0)
 solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
 solver.solve()
-__, V1 = amfe.pod(mechanical_system=system, n=53)
+__, V1 = amfe.pod(mechanical_system=system, n=50)
 system.export_paraview(output_file + '_forV1')
 system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lambda t: -1.0)  # reset Neumann BCs
 
@@ -60,25 +60,28 @@ system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(0, -1), time_func=lamb
 # calculate POD basis V2
 system.apply_neumann_boundaries(key=3, val=2.5e8, direct=(1, 0), time_func=lambda t: 1.0)
 solver.solve()
-__, V2 = amfe.pod(mechanical_system=system, n=50)
+__, V2 = amfe.pod(mechanical_system=system, n=53)
 system.export_paraview(output_file + '_forV2')
 
 
 # compute principle/subspace angles
-angles_amfe, F1, F2 = amfe.principal_angles(V1=V1, V2=V2, unit='deg', method='auto', principal_vectors=True)
+angles_amfe_s = amfe.principal_angles(V1=V1, V2=V2, unit='deg', method='sin', principal_vectors=False)
+angles_amfe_c = amfe.principal_angles(V1=V1, V2=V2, unit='deg', method='cos', principal_vectors=False)
+angles_amfe_a = amfe.principal_angles(V1=V1, V2=V2, unit='deg', method='auto', principal_vectors=False)
 angles_scipy = np.sort(sp.linalg.subspace_angles(A=V1, B=V2))/np.pi*180
 
 
 # output results
-print(F1.shape)
-print(F2.shape)
-
-print(len(angles_amfe))
-print(len(angles_scipy))
+print(angles_amfe_s.shape)
+print(angles_amfe_c.shape)
+print(angles_amfe_a.shape)
+print(angles_scipy.shape)
 
 fig, ax = plt.subplots()
-ax.plot(angles_amfe, 'ro-', label='AMfe\'s principle_angles(...)')
-ax.plot(angles_scipy, 'b+-', label='SciPy.linalg\'s subspace_angles(...)')
+ax.plot(angles_amfe_s, '-', label='AMfe\'s principle_angles(...) sin')
+ax.plot(angles_amfe_c, '-', label='AMfe\'s principle_angles(...) cos')
+ax.plot(angles_amfe_a, 'o-', label='AMfe\'s principle_angles(...) auto')
+ax.plot(angles_scipy, '+-', label='SciPy.linalg\'s subspace_angles(...)')
 ax.grid(True)
 ax.legend()
 plt.xlabel('number - 1')

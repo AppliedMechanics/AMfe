@@ -408,7 +408,10 @@ def principal_angles(V1, V2, unit='deg', method='auto', principal_vectors=False)
         sigma[sigma > 1.0] = 1.0  # cosine
         theta = np.arccos(sigma)  # rad
 
-        sigma_sin = linalg.svdvals(a=(np.identity(Q1.shape[0]) - Q1@Q1.T)@Q2)
+        if Q1.shape[1] >= Q2.shape[1]:
+            sigma_sin = linalg.svdvals(a=Q2 - Q1@Q1.T@Q2)
+        else:
+            sigma_sin = linalg.svdvals(a=Q1 - Q2@Q2.T@Q1)
         sigma_sin = np.flipud(sigma_sin)
         sigma_sin[sigma_sin > 1.0] = 1.0
         theta_sin = np.arcsin(sigma_sin)  # in rad
@@ -421,7 +424,10 @@ def principal_angles(V1, V2, unit='deg', method='auto', principal_vectors=False)
         sigma[sigma > 1.0] = 1.0
         theta = np.arccos(sigma)  # rad
     elif method == 'sin':
-        sigma = linalg.svdvals(a=(np.identity(Q1.shape[0]) - Q1@Q1.T)@Q2)
+        if Q1.shape[1] >= Q2.shape[1]:
+            sigma = linalg.svdvals(a=Q2 - Q1@Q1.T@Q2)
+        else:
+            sigma = linalg.svdvals(a=Q1 - Q2@Q2.T@Q1)
         sigma = np.flipud(sigma)
         sigma[sigma > 1.0] = 1.0
         theta = np.arcsin(sigma)  # rad
