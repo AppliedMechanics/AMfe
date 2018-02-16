@@ -420,17 +420,29 @@ def principal_angles(V1, V2, unit='deg', method='auto', principal_vectors=False)
         sigma[index] = sigma_sin[index]
         theta[index] = theta_sin[index]
     elif method == 'cos':
-        sigma = linalg.svdvals(a=Q1.T@Q2)
+        U, sigma, VT = linalg.svd(a=Q1.T@Q2)
         sigma[sigma > 1.0] = 1.0
         theta = np.arccos(sigma)  # rad
+        # if principal_vectors:
+        #     F1 = Q1@U
+        #     F2 = Q2@VT.T
     elif method == 'sin':
         if Q1.shape[1] >= Q2.shape[1]:
-            sigma = linalg.svdvals(a=Q2 - Q1@Q1.T@Q2)
+            U, sigma, VT = linalg.svd(a=Q2 - Q1@Q1.T@Q2)
         else:
-            sigma = linalg.svdvals(a=Q1 - Q2@Q2.T@Q1)
+            U, sigma, VT = linalg.svd(a=Q1 - Q2@Q2.T@Q1)
+        # U = np.fliplr(U)
         sigma = np.flipud(sigma)
+        # VT = np.flipud(VT)
         sigma[sigma > 1.0] = 1.0
         theta = np.arcsin(sigma)  # rad
+        # if principal_vectors:
+        #     if Q1.shape[1] >= Q2.shape[1]:
+        #         F2 = Q2@VT.T
+        #         F1 = Q1@Q1.T@F2@np.diag(1/np.sqrt(1 - sigma**2))
+        #     else:
+        #         F1 = Q1@VT.T
+        #         F2 = Q2@Q2.T@F1@np.diag(1/np.sqrt(1 - sigma**2))
     else:
         raise ValueError('Invalid method. Chose either \'auto\', \'cos\' or \'sin\'.')
 
@@ -446,9 +458,9 @@ def principal_angles(V1, V2, unit='deg', method='auto', principal_vectors=False)
         raise ValueError('Invalid unit. Chose either \'deg\', \'rad\' or None.')
 
     if principal_vectors:
-        U, __, VT = linalg.svd(a=Q1.T@Q2)
-        F1 = Q1@U
-        F2 = Q2@VT.T
+        U, __, VT = linalg.svd(a=Q1.T @ Q2)
+        F1 = Q1 @ U
+        F2 = Q2 @ VT.T
         return theta, F1, F2
     else:
         return theta
