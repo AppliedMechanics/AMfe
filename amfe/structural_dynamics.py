@@ -12,6 +12,7 @@ __all__ = ['modal_assurance',
            'mass_orth',
            'force_norm',
            'rayleigh_coefficients',
+           'give_mass_and_stiffness',
            ]
 
 def modal_assurance(U, V):
@@ -137,6 +138,29 @@ def force_norm(F, K, M, norm='euclidean'):
         output = np.sqrt(diag(u.T @ M @ u))
 
     return output
+
+
+def give_mass_and_stiffness(mechanical_system):
+    '''
+    Determine mass and stiffness matrix of a mechanical system.
+
+    Parameters
+    ----------
+    mechanical_system : MechanicalSystem
+        Instance of the class MechanicalSystem
+
+    Returns
+    -------
+    M : ndarray
+        Mass matrix of the mechanical system
+    K : ndarray
+        Stiffness matrix of the mechanical system
+
+    '''
+
+    K = mechanical_system.K()
+    M = mechanical_system.M()
+    return M, K
 
 
 def rayleigh_coefficients(zeta, omega_1, omega_2):

@@ -36,7 +36,9 @@ my_system.apply_neumann_boundaries(31, 1E12, (1, 0, 0), lambda t: t)
 
 
 # static solution
-amfe.solve_nonlinear_displacement(my_system)
+#amfe.solve_nonlinear_displacement(my_system)
+solver = amfe.NonlinearStaticsSolver(my_system, verbose=True)
+solver.solve()
 # amfe.solve_linear_displacement(my_system)
 
 my_system.export_paraview(output_file)

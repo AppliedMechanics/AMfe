@@ -6,7 +6,7 @@ import numpy as np
 import scipy as sp
 from scipy import linalg
 
-from .solver import solve_sparse, SpSolve
+from .solver import solve_sparse, PardisoSolver
 
 __all__ = ['krylov_subspace',
            'compute_modes_pardiso',
@@ -15,6 +15,7 @@ __all__ = ['krylov_subspace',
            'pod',
            'modal_derivatives',
            'static_derivatives',
+           'shifted_modal_derivatives',
            'augment_with_derivatives',
            'augment_with_ranked_derivatives',
            'ranking_of_weighting_matrix',
@@ -60,7 +61,7 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
     no_of_inputs = b.size//ndim
     f = b.copy()
     V = np.zeros((ndim, no_of_moments*no_of_inputs))
-    LU_object = SpSolve(K - omega**2 * M)
+    LU_object = PardisoSolver(K - omega**2 * M)
 
     for i in np.arange(no_of_moments):
         b_new = LU_object.solve(f)
@@ -127,7 +128,8 @@ def compute_modes_pardiso(mechanical_system, n=10, u_eq=None,
     k_diag = K.diagonal().sum()
 
     # factorizing
-    K_mat = SpSolve(K)
+    K_mat = PardisoSolver(K)
+    K_mat.factorize()
 
     # build up Krylov sequence
     n_rand = n
@@ -263,7 +265,7 @@ def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
     if `one_basis=True` is chosen:
 
     V : array
-        Basis constisting of static displacement modes and internal vibration
+        Basis consisting of static displacement modes and internal vibration
         modes
 
     if `one_basis=False` is chosen:
@@ -378,8 +380,7 @@ def modal_derivatives(V, omega, K_func, M, h=1.0, verbose=True,
     M : ndarray or sparse matrix
         Mass matrix of the system.
     h : float, optional
-        step width for finite difference scheme. Default value is 500 * machine
-        epsilon
+        step width for finite difference scheme. Default value is 1.0
     verbose : bool, optional
         flag for verbosity. Default value: True
     symmetric : bool, optional
@@ -399,9 +400,7 @@ def modal_derivatives(V, omega, K_func, M, h=1.0, verbose=True,
 
     See Also
     --------
-    static_correction_theta : modal derivative with mass neglection.
-    modal_derivative : modal derivative for only two vectors.
-
+    static_derivatives : modal derivative with mass neglection but much faster in computation.
     '''
     no_of_dofs = V.shape[0]
     no_of_modes = V.shape[1]
@@ -425,7 +424,7 @@ def modal_derivatives(V, omega, K_func, M, h=1.0, verbose=True,
         if verbose:
             print('Factorizing the dynamic stiffness matrix for eigenfrequency',
                   '{0:d} with {1:4.2f} rad/s.'.format(i, omega[i]) )
-        LU_object = SpSolve(K_dyn_i)
+        LU_object = PardisoSolver(K_dyn_i)
 
         for j in range(no_of_modes): # looping over the rows
             x_j = V[:,j]
@@ -501,7 +500,7 @@ def static_derivatives(V, K_func, M=None, omega=0, h=1.0,
         K_dyn = K - omega**2 * M
     else:
         K_dyn = K
-    LU_object = SpSolve(K_dyn)
+    LU_object = PardisoSolver(K_dyn)
     for i in range(no_of_modes):
         if verbose:
             print('Computing finite difference K-matrix')
@@ -530,7 +529,125 @@ def static_derivatives(V, K_func, M=None, omega=0, h=1.0,
     return Theta
 
 
-def augment_with_derivatives(V, theta, M=None, tol=1E-8, symm=True):
+def shifted_modal_derivatives(V, K_func, M, omega, h=1.0,
+                            verbose=True, symmetric=True,
+                            finite_diff='central'):
+    '''
+    Compute the shifted modal derivatives for derived the given basis eigenmodes V and their frequencies omega.
+
+    Parameters
+    ----------
+    V : ndarray
+        array containing the eigenmodes
+    K_func : function
+        function returning the tangential stiffness matrix for a given
+        displacement. Has to work like `K = K_func(u)`.
+    M : ndarray
+        mass matrix. Can be sparse or dense. If `None` is given, the mass of 0
+        is assumed. Default value is `None`.
+    omega : ndarray
+        frequencies of the modes
+    h : float, optional
+        step width for finite difference scheme. Default value is 500 * machine
+        epsilon
+    verbose : bool, optional
+        flag for verbosity. Default value: True
+    finite_diff : str {'central', 'forward', backward}
+        Method for finite difference scheme. 'central' computes the finite
+        difference based on a central difference scheme, 'forward' based on an
+        forward scheme etc. Note that the upwind scheme can cause severe
+        distortions of the static correction derivative.
+
+    Returns
+    -------
+    Theta : ndarray
+        three dimensional array of shifted modal derivatives,
+        shifted by -(w_i + w_j)*M. Theta[:,i,j]
+        contains the static derivative 1/2 * dx_i / dx_j. As the shifted
+        derivatives are symmetric, Theta[:,i,j] == Theta[:,j,i].
+    Theta_tilde : ndarray
+        three dimensional array of shifted modal derivatives,
+        shifted by -(w_i - w_j)*M. Theta[:,i,j]
+        contains the static derivative 1/2 * dx_i / dx_j. As the shifted
+        derivatives are symmetric, Theta[:,i,j] == Theta[:,j,i].
+
+    See Also
+    --------
+    modal_derivatives
+    static_derivatives
+
+    '''
+    no_of_dofs = V.shape[0]
+    no_of_modes = V.shape[1]
+    Theta = np.zeros((no_of_dofs, no_of_modes, no_of_modes))
+    Theta_tilde = np.zeros((no_of_dofs, no_of_modes, no_of_modes))
+
+    K = K_func(np.zeros(no_of_dofs))
+    solver = PardisoSolver(K, mtype='sid')
+
+    if verbose:
+        print('Compute Theta')
+    for i in range(no_of_modes):
+        for j in range(no_of_modes):
+            solver.set_A(K - ((omega[i]+omega[j])**2) * M)
+            if verbose:
+                print('Computing finite difference K-matrix')
+            if finite_diff == 'central':
+                dK_dx_i = (K_func(h*V[:,i]) - K_func(-h*V[:,i]))/(2*h)
+            elif finite_diff == 'forward':
+                dK_dx_i = (K_func(h*V[:,i]) - K)/h
+            elif finite_diff == 'backward':
+                dK_dx_i = (-K_func(-h*V[:,i]) + K)/h
+            else:
+                raise ValueError('Finite difference scheme is not valid.')
+            b = - dK_dx_i @ V[:,j]
+            if verbose:
+                print('Solving linear system #', i)
+            Theta[:,i,j] = solver.solve(b)
+            if verbose:
+                print('Done solving linear system #({}, {})'.format(i,j))
+    if verbose:
+        residual = np.linalg.norm(Theta - Theta.transpose(0,2,1)) / \
+                   np.linalg.norm(Theta)
+        print('The residual, i.e. the unsymmetric values, are', residual)
+    if symmetric:
+        # make Theta symmetric
+        Theta = 1/2*(Theta + Theta.transpose(0,2,1))
+
+    if verbose:
+        print('Compute Theta tilde')
+    for i in range(no_of_modes):
+        for j in range(no_of_modes):
+            solver.set_A(K - ((omega[i] - omega[j])**2) * M)
+            if verbose:
+                print('Computing finite difference K-matrix')
+            if finite_diff == 'central':
+                dK_dx_i = (K_func(h * V[:, i]) - K_func(-h * V[:, i])) / (2 * h)
+            elif finite_diff == 'forward':
+                dK_dx_i = (K_func(h * V[:, i]) - K) / h
+            elif finite_diff == 'backward':
+                dK_dx_i = (-K_func(-h * V[:, i]) + K) / h
+            else:
+                raise ValueError('Finite difference scheme is not valid.')
+            b = - dK_dx_i @ V[:, j]
+            if verbose:
+                print('Solving linear system #', i)
+            Theta_tilde[:, i, j] = solver.solve(b)
+            if verbose:
+                print('Done solving linear system #({}, {})'.format(i, j))
+    if verbose:
+        residual = np.linalg.norm(Theta_tilde - Theta_tilde.transpose(0, 2, 1)) / \
+                   np.linalg.norm(Theta_tilde)
+        print('The residual, i.e. the unsymmetric values, are', residual)
+    if symmetric:
+        # make Theta symmetric
+        Theta_tilde = 1 / 2 * (Theta_tilde + Theta_tilde.transpose(0, 2, 1))
+
+    return Theta, Theta_tilde
+
+
+
+def augment_with_derivatives(V=None, theta=None, M=None, tol=1E-8, symm=True, deflate=True):
     '''
     Make a linear basis containing the subspace spanned by V and theta by
     deflation.
@@ -541,10 +658,15 @@ def augment_with_derivatives(V, theta, M=None, tol=1E-8, symm=True):
         linear basis
     theta : ndarray
         third order tensor filled with the modal derivatices associated with V
+    M : ndarray, optional
+        Mass matrix. If mass matrix is passed, the reduction basis augmentation
+        will be M-normalized, otherwise it will just be normalized (2-norm)
     tol : float, optional
         Tolerance for the deflation via SVD. The omitted singular values are
         at least smaller than the largest one multiplied with tol.
         Default value: 1E-8.
+    symm : bool, optional
+        If set to true (default), theta will be assumed to be symmetric!
 
     Returns
     -------
@@ -552,11 +674,26 @@ def augment_with_derivatives(V, theta, M=None, tol=1E-8, symm=True):
         linear basis containing the subspace spanned by V and theta.
 
     '''
-    ndof, n = V.shape
+    if V is None:
+        ndof = theta.shape[0]
+        n = 0
+        l = theta.shape[1]
+        m = theta.shape[2]
+        if symm:
+            V_raw = np.zeros((ndof, n + l * (l + 1) // 2))
+        else:
+            V_raw = np.zeros((ndof, n + l * m))
+    else:
+        ndof, n = V.shape
+        l = theta.shape[1]
+        m = theta.shape[2]
+        if symm:
+            V_raw = np.zeros((ndof, n + l * (l + 1) // 2))
+        else:
+            V_raw = np.zeros((ndof, n + l * m))
+        V_raw[:, :n] = V[:, :]
     if symm:
-        V_raw = np.zeros((ndof, n*(n+3)//2))
-        V_raw[:,:n] = V[:,:]
-        for i in range(n):
+        for i in range(l):
             for j in range(i+1):
                 idx = n + i*(i+1)//2 + j
                 if M is None:
@@ -565,11 +702,9 @@ def augment_with_derivatives(V, theta, M=None, tol=1E-8, symm=True):
                     theta_norm = np.sqrt(theta[:,i,j].T @ M @ theta[:,i,j])
                 V_raw[:,idx] = theta[:,i,j] / theta_norm
     else:
-        V_raw = np.zeros((ndof, n*(n+1)))
-        V_raw[:,:n] = V[:,:]
-        for i in range(n):
-            for j in range(n):
-                idx = n*(i+1) + j
+        for i in range(l):
+            for j in range(m):
+                idx = n + m*i + j
                 if M is None:
                     theta_norm = np.sqrt(theta[:,i,j].T @ theta[:,i,j])
                 else:
@@ -577,9 +712,12 @@ def augment_with_derivatives(V, theta, M=None, tol=1E-8, symm=True):
                 V_raw[:,idx] = theta[:,i,j] / theta_norm
 
     # Deflation algorithm
-    U, s, V_svd = sp.linalg.svd(V_raw, full_matrices=False)
-    idx_defl = s > s[0]*tol
-    V_ret = U[:,idx_defl]
+    if deflate:
+        U, s, V_svd = sp.linalg.svd(V_raw, full_matrices=False)
+        idx_defl = s > s[0]*tol
+        V_ret = U[:,idx_defl]
+    else:
+        V_ret = V_raw
     return V_ret
 
 

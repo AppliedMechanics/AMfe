@@ -4,6 +4,21 @@ Training set generation
 '''
 
 import numpy as np
+import time
+import scipy as sp
+import multiprocessing as mp
+import copy
+
+from ..solver import PardisoSolver
+from ..solver import NonlinearStaticsSolver
+from ..structural_dynamics import force_norm
+from ..num_exp_toolbox import apply_async
+
+
+__all__ = ['compute_nskts',
+           'krylov_force_subspace',
+           'modal_force_subspace',
+          ]
 
 def compute_nskts(mechanical_system,
                   F_ext_max=None,
@@ -69,17 +84,16 @@ def compute_nskts(mechanical_system,
         '''
         def f_ext_monkeypatched(u, du, t):
             return F_rand * t
-        f_ext_tmp = mechanical_system.f_ext
-        mechanical_system.f_ext = f_ext_monkeypatched
 
-        u_arr = solve_nonlinear_displacement(mechanical_system,
-                                             no_of_load_steps=no_of_force_increments,
-                                             n_max_iter=no_of_force_increments,
-                                             verbose=verbose,
-                                             conv_abort=True,
-                                             save=False)
-
-        mechanical_system.f_ext = f_ext_tmp
+        nlsolver = NonlinearStaticsSolver(mechanical_system,
+                                          number_of_load_steps=no_of_force_increments,
+                                          max_number_of_iterations=no_of_force_increments,
+                                          verbose=verbose,
+                                          convergence_abort=True,
+                                          save_solution=False,
+                                          f_ext=f_ext_monkeypatched)
+        u_arr = nlsolver.solve()
+        
         return u_arr
 
     print('*'*80)
@@ -114,20 +128,34 @@ def compute_nskts(mechanical_system,
             [norm_of_forces for i in range(no_of_moments)]))
     standard_deviation *= load_factor
 
+# PARALLEL IMPLEMENTATION IS NOT WORKING ANYMORE
     # Do the parallel run
-    with mp.Pool(processes=no_of_procs) as pool:
-        results = []
-        for i in range(no_of_static_cases):
-            F_rand = F_basis @ np.random.normal(0, standard_deviation)
-            vals = [copy.deepcopy(mechanical_system), F_rand.copy()]
-            res = apply_async(pool, compute_stochastic_displacements, vals)
-            results.append(res)
-        u_list = []
-        for res in results:
-            u = res.get()
-            u_list.append(u)
+    # with mp.Pool(processes=no_of_procs) as pool:
+    #    results = []
+#        for i in range(no_of_static_cases):
+#            F_rand = F_basis @ np.random.normal(0, standard_deviation)
+#            vals = [copy.deepcopy(mechanical_system), F_rand.copy()]
+#            res = apply_async(pool, compute_stochastic_displacements, vals)
+#            results.append(res)
+#        u_list = []
+#        for res in results:
+#            u = res.get()
+#            u_list.append(u)
+# NON PARALLEL IMPLEMENTATION
+    u_list = []
+    for i in range(no_of_static_cases):
+        F_rand = F_basis @ np.random.normal(0, standard_deviation)
+        res = compute_stochastic_displacements(mechanical_system, F_rand)
+        u_list.append(res)
 
-    snapshot_arr = np.concatenate(u_list, axis=1)
+    if len(u_list) > 1:
+        for number, u in enumerate(u_list):
+            if u.shape[0] == 0:
+                del u_list[number]
+        snapshot_arr = np.concatenate(u_list, axis=1)
+    else:
+        snapshot_arr = np.array(u_list)
+
     time_2 = time.time()
     print('Finished computing nonlinear stochastic krylov training sets.')
     print('It took {0:2.2f} seconds to build the nskts.'.format(time_2 - time_1))
@@ -176,7 +204,7 @@ def krylov_force_subspace(M, K, b, omega=0, no_of_moments=3,
     no_of_inputs = b.size//ndim
     f = b.copy()
     V = np.zeros((ndim, no_of_moments*no_of_inputs))
-    LU_object = SpSolve(K - omega**2 * M)
+    LU_object = PardisoSolver(K - omega**2 * M)
     b_new = f
     for i in np.arange(no_of_moments):
         V[:,i*no_of_inputs:(i+1)*no_of_inputs] = b_new.reshape((-1, no_of_inputs))
@@ -224,7 +252,7 @@ def modal_force_subspace(M, K, no_of_modes=3, orth='euclidean'):
                                           maxiter=100)
     V = K @ Phi
 
-    LU_object = SpSolve(K)
+    LU_object = PardisoSolver(K)
 
     if orth == 'euclidean':
         V, _ = sp.linalg.qr(V, mode='economic')

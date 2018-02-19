@@ -14,3 +14,4 @@ Fundamentals
   mechanical_system
   solving
   postprocessing
+  reduced_basis

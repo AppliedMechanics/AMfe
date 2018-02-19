@@ -30,7 +30,9 @@ my_system.apply_neumann_boundaries(32, -1E10, 'normal',
 # my_system.export_paraview(paraview_output_file)
 
 #%%
-amfe.solve_nonlinear_displacement(my_system, no_of_load_steps=20)
+nlsolver = amfe.NonlinearStaticsSolver(my_system, number_of_load_steps=20)
+nlsolver.solve()
+
 my_system.export_paraview(paraview_output_file)
 
 #%%

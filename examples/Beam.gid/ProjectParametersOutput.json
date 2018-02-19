@@ -1,0 +1,152 @@
+{
+    "problem_data": {
+        "problem_name": "Beam",
+        "model_part_name": "Structure",
+        "domain_size": 2,
+        "parallel_type": "OpenMP",
+        "time_step": 0.001,
+        "start_time": 0.0,
+        "end_time": 0.4,
+        "echo_level": 1
+    },
+    "solver_settings": {
+        "solver_type": "Dynamic",
+        "echo_level": 1,
+        "analysis_type": "non_linear",
+        "time_integration_method": "implicit",
+        "scheme_type": "newmark",
+        "model_import_settings": {
+            "input_type": "mdpa",
+            "input_filename": "Beam"
+        },
+        "material_import_settings": {
+            "materials_filename": "StructuralMaterials.json"
+        },
+        "line_search": false,
+        "convergence_criterion": "and_criterion",
+        "displacement_relative_tolerance": 1e-9,
+        "displacement_absolute_tolerance": 1e-12,
+        "residual_relative_tolerance": 1e-9,
+        "residual_absolute_tolerance": 1e-12,
+        "max_iteration": 30,
+        "problem_domain_sub_model_part_list": [
+            "Parts_Solid"
+        ],
+        "processes_sub_model_part_list": [
+            "DISPLACEMENT_Dirichlet",
+            "LineLoad2D_Neumann"
+        ],
+        "rotation_dofs": false,
+        "buffer_size": 2,
+        "computing_model_part_name": "computing_domain",
+        "pressure_dofs": false,
+        "reform_dofs_at_each_step": false,
+        "compute_reactions": true,
+        "compute_contact_forces": false,
+        "block_builder": true,
+        "clear_storage": false,
+        "move_mesh_flag": true,
+        "multi_point_constraints_used": false,
+        "component_wise": false,
+        "linear_solver_settings": {
+            "solver_type": "SuperLUSolver",
+            "max_iteration": 500,
+            "tolerance": 1e-9,
+            "scaling": false,
+            "verbosity": 1
+        },
+        "bodies_list": []
+    },
+    "constraints_process_list": [
+        {
+            "python_module": "assign_vector_variable_process",
+            "kratos_module": "KratosMultiphysics",
+            "help": "This process fixes the selected components of a given vector variable",
+            "process_name": "AssignVectorVariableProcess",
+            "Parameters": {
+                "mesh_id": 0,
+                "model_part_name": "DISPLACEMENT_Dirichlet",
+                "variable_name": "DISPLACEMENT",
+                "constrained": [
+                    true,
+                    true,
+                    true
+                ],
+                "value": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "interval": [
+                    0.0,
+                    1e30
+                ],
+                "local_axes": {}
+            }
+        }
+    ],
+    "contact_process_list": [],
+    "loads_process_list": [
+        {
+            "python_module": "assign_vector_by_direction_to_condition_process",
+            "kratos_module": "KratosMultiphysics",
+            "help": "This process sets a vector variable value over a condition according to a given modulus an direction",
+            "check": "DirectorVectorNonZero direction",
+            "process_name": "AssignVectorByDirectionToConditionProcess",
+            "Parameters": {
+                "mesh_id": 0,
+                "model_part_name": "LineLoad2D_Neumann",
+                "variable_name": "LINE_LOAD",
+                "modulus": 250000000.0,
+                "direction": [
+                    0.0,
+                    -1.0,
+                    0.0
+                ],
+                "interval": [
+                    0.0,
+                    1e30
+                ],
+                "local_axes": {}
+            }
+        }
+    ],
+    "output_configuration": {
+        "result_file_configuration": {
+            "gidpost_flags": {
+                "GiDPostMode": "GiD_PostBinary",
+                "WriteDeformedMeshFlag": "WriteDeformed",
+                "WriteConditionsFlag": "WriteConditions",
+                "MultiFileFlag": "SingleFile"
+            },
+            "file_label": "step",
+            "output_control_type": "step",
+            "output_frequency": 1,
+            "body_output": true,
+            "node_output": false,
+            "skin_output": false,
+            "plane_output": [],
+            "nodal_results": [
+                "DISPLACEMENT",
+                "REACTION",
+                "VELOCITY",
+                "ACCELERATION"
+            ],
+            "gauss_point_results": [],
+            "nodal_nonhistorical_results": [],
+            "nodal_flags_results": [],
+            "additional_list_files": []
+        },
+        "point_data_configuration": []
+    },
+    "restart_options": {
+        "SaveRestart": false,
+        "RestartFrequency": 0,
+        "LoadRestart": false,
+        "Restart_Step": 0
+    },
+    "constraints_data": {
+        "incremental_load": false,
+        "incremental_displacement": false
+    }
+}

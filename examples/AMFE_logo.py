@@ -59,7 +59,9 @@ dt = 1E-2
 T = np.arange(0,4,dt)
 ndof = my_system.dirichlet_class.no_of_constrained_dofs
 q0 = dq0 = np.zeros(ndof)
-amfe.integrate_nonlinear_system(my_system, q0, dq0, T, dt, alpha=0.01)
+solver = amfe.NonlinearDynamicsSolver(my_system, initial_conditions={'q0': q0, 'dq0': dq0}, verbose=True, t_end=4, dt=dt)
+solver.solve()
+# old api: amfe.integrate_nonlinear_system(my_system, q0, dq0, T, dt, alpha=0.01)
 
 
 my_system.export_paraview(output_file)
