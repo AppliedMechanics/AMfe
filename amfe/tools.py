@@ -360,7 +360,7 @@ def compute_relative_error(red_file, ref_file, M=None):
     return err
 
 
-def principal_angles(V1, V2, unit='deg', method='auto', principal_vectors=False):
+def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
     '''
     Return the principal/subspace angles of span(V1) and span(V2) subspaces of R^n.
 
@@ -372,12 +372,12 @@ def principal_angles(V1, V2, unit='deg', method='auto', principal_vectors=False)
         Matrix spanning subspace 2. Dimension n x r2.
     unit : {'deg', 'rad', None}, optional
         Unit in which angles are returned. Default is 'deg'.
-    method : {'auto', 'cos', 'sin'}, optional
+    method : {None, 'cos', 'sin'}, optional
         Method used for computation of angles:
              - 'cos' for large angles
              - 'sin' for small angles
-             - 'auto' for all angles (combines both methods).
-        Default is 'auto'.
+             - None for all angles (combines both methods).
+        Default is None.
     principal_vectors : boolean, optional
         Flag for returning principal vectors. Default is False.
 
@@ -385,11 +385,11 @@ def principal_angles(V1, V2, unit='deg', method='auto', principal_vectors=False)
     -------
     theta : 1darray
         Vector with principle/subspace angles.
-    F1 : 2darray
+    F1 : 2darray, optional
         Matrix with principal vectors of subspace span(V1). Columns give principal vectors, i.e. F1[:,0] is first
         principal vector of span(V1) associated with principle angle theta[0] and so on. Only returned, if
         principal_vectors=True.
-    F2 : 2darray
+    F2 : 2darray, optional
         Matrix with principal vectors of subspace span(V2). Only returned, if principal_vectors=True.
 
     References
@@ -403,48 +403,63 @@ def principal_angles(V1, V2, unit='deg', method='auto', principal_vectors=False)
     Q1, __ = linalg.qr(a=V1, mode='economic')
     Q2, __ = linalg.qr(a=V2, mode='economic')
 
-    if method == 'auto':
-        sigma = linalg.svdvals(a=Q1.T@Q2)  # cosine
-        sigma[sigma > 1.0] = 1.0  # cosine
-        theta = np.arccos(sigma)  # rad
+    if method is None:
+        U, sigma, VT = linalg.svd(a=Q1.T @ Q2, full_matrices=False)  # cos
+        sigma[sigma > 1.0] = 1.0  # cos
+        theta = np.arccos(sigma)  # cos, rad
+        if principal_vectors:
+            F1 = Q1 @ U  # cos
+            F2 = Q2 @ VT.T  # cos
 
         if Q1.shape[1] >= Q2.shape[1]:
-            sigma_sin = linalg.svdvals(a=Q2 - Q1@Q1.T@Q2)
+            U_sin, sigma_sin, VT_sin = linalg.svd(a=Q2 - Q1@(Q1.T@Q2), full_matrices=False)
         else:
-            sigma_sin = linalg.svdvals(a=Q1 - Q2@Q2.T@Q1)
-        sigma_sin = np.flipud(sigma_sin)
+            U_sin, sigma_sin, VT_sin = linalg.svd(a=Q1 - Q2@(Q2.T@Q1), full_matrices=False)
+        U_sin = np.flip(m=U_sin, axis=1)
+        sigma_sin = np.flip(m=sigma_sin, axis=0)
+        VT_sin = np.flip(m=VT_sin, axis=0)
         sigma_sin[sigma_sin > 1.0] = 1.0
-        theta_sin = np.arcsin(sigma_sin)  # in rad
+        theta_sin = np.arcsin(sigma_sin)  # rad
+        if principal_vectors:
+            if Q1.shape[1] >= Q2.shape[1]:
+                F2_sin = Q2@VT_sin.T
+                F1_sin = Q1@(Q1.T@F2_sin)/np.sqrt(1 - sigma_sin**2)
+            else:
+                F1_sin = Q1@VT_sin.T
+                F2_sin = Q2@(Q2.T@F1_sin)/np.sqrt(1 - sigma_sin**2)
 
-        index = theta < 0.7853981633974483
+        index = theta < (np.pi/4)
         sigma[index] = sigma_sin[index]
         theta[index] = theta_sin[index]
+        if principal_vectors:
+            F1[:, index] = F1_sin[:, index]
+            F2[:, index] = F2_sin[:, index]
     elif method == 'cos':
-        U, sigma, VT = linalg.svd(a=Q1.T@Q2)
+        U, sigma, VT = linalg.svd(a=Q1.T@Q2, full_matrices=False)
         sigma[sigma > 1.0] = 1.0
         theta = np.arccos(sigma)  # rad
-        # if principal_vectors:
-        #     F1 = Q1@U
-        #     F2 = Q2@VT.T
+        if principal_vectors:
+            F1 = Q1@U
+            F2 = Q2@VT.T
     elif method == 'sin':
         if Q1.shape[1] >= Q2.shape[1]:
-            U, sigma, VT = linalg.svd(a=Q2 - Q1@Q1.T@Q2)
+            U, sigma, VT = linalg.svd(a=Q2 - Q1@(Q1.T@Q2), full_matrices=False)
         else:
-            U, sigma, VT = linalg.svd(a=Q1 - Q2@Q2.T@Q1)
-        # U = np.fliplr(U)
-        sigma = np.flipud(sigma)
-        # VT = np.flipud(VT)
+            U, sigma, VT = linalg.svd(a=Q1 - Q2@(Q2.T@Q1), full_matrices=False)
+        U = np.flip(m=U, axis=1)
+        sigma = np.flip(m=sigma, axis=0)
+        VT = np.flip(m=VT, axis=0)
         sigma[sigma > 1.0] = 1.0
         theta = np.arcsin(sigma)  # rad
-        # if principal_vectors:
-        #     if Q1.shape[1] >= Q2.shape[1]:
-        #         F2 = Q2@VT.T
-        #         F1 = Q1@Q1.T@F2@np.diag(1/np.sqrt(1 - sigma**2))
-        #     else:
-        #         F1 = Q1@VT.T
-        #         F2 = Q2@Q2.T@F1@np.diag(1/np.sqrt(1 - sigma**2))
+        if principal_vectors:
+            if Q1.shape[1] >= Q2.shape[1]:
+                F2 = Q2@VT.T
+                F1 = Q1@(Q1.T@F2)/np.sqrt(1 - sigma**2)
+            else:
+                F1 = Q1@VT.T
+                F2 = Q2@(Q2.T@F1)/np.sqrt(1 - sigma**2)
     else:
-        raise ValueError('Invalid method. Chose either \'auto\', \'cos\' or \'sin\'.')
+        raise ValueError('Invalid method. Chose either None, \'cos\' or \'sin\'.')
 
     if unit == 'deg':
         theta = np.rad2deg(theta)  # deg
@@ -458,9 +473,6 @@ def principal_angles(V1, V2, unit='deg', method='auto', principal_vectors=False)
         raise ValueError('Invalid unit. Chose either \'deg\', \'rad\' or None.')
 
     if principal_vectors:
-        U, __, VT = linalg.svd(a=Q1.T @ Q2)
-        F1 = Q1 @ U
-        F2 = Q2 @ VT.T
         return theta, F1, F2
     else:
         return theta
