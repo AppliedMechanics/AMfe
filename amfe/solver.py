@@ -833,6 +833,9 @@ class LinearDynamicsSolver(Solver):
 
     def __init__(self, mechanical_system, **options):
         self.mechanical_system = mechanical_system
+        self.M = self.mechanical_system.M()
+        self.D = self.mechanical_system.D()
+        self.K = self.mechanical_system.K()
 
         # read options
         if 'linear_solver' in options:
@@ -923,20 +926,15 @@ class LinearDynamicsSolver(Solver):
         else:
             v = np.empty((0, 0))
 
-        # evaluate initial acceleration and LU-decompose effective stiffness
-        K_eff = self.effective_stiffness()
-
-        M = self.mechanical_system.M()
-        D = self.mechanical_system.D()
-        K = self.mechanical_system.K()
-
-
-        self.linear_solver.set_A(M)
-        if D is not None:
-            ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - D@dq - K@q)
+        # evaluate initial acceleration
+        self.linear_solver.set_A(self.M)
+        if self.D is not None:
+            ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - self.D@dq - self.K@q)
         else:
-            ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - K @ q)
+            ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - self.K @ q)
 
+        # LU-decompose effective stiffness
+        K_eff = self.effective_stiffness()
         self.linear_solver.set_A(K_eff)
         if hasattr(self.linear_solver, 'factorize'):
             self.linear_solver.factorize()
@@ -1250,6 +1248,8 @@ class LinearDynamicsSolverStateSpace(Solver):
 
     def __init__(self, mechanical_system, **options):
         self.mechanical_system = mechanical_system
+        self.E = self.mechanical_system.E()
+        self.A = self.mechanical_system.A()
 
         # read options
         if 'linear_solver' in options:
@@ -1325,12 +1325,12 @@ class LinearDynamicsSolverStateSpace(Solver):
         t = self.t0
         x = self.initial_conditions['x0'].copy()
 
-        # evaluate initial derivative and LU-decompose effective stiffness
+        # evaluate initial derivative
+        self.linear_solver.set_A(self.E)
+        dx = self.linear_solver.solve(self.A@x + self.mechanical_system.F_ext(x, t))
+
+        # LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
-
-        self.linear_solver.set_A(self.mechanical_system.E())
-        dx = self.linear_solver.solve(self.mechanical_system.A()@x + self.mechanical_system.F_ext(x, t))
-
         self.linear_solver.set_A(K_eff)
         if hasattr(self.linear_solver, 'factorize'):
             self.linear_solver.factorize()
@@ -1843,17 +1843,13 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         scheme.
         '''
 
-        M = self.mechanical_system.M()
-        D = self.mechanical_system.D()
-        K = self.mechanical_system.K()
-
-        if D is None:  # TODO: D ist nie None!
-            K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)* M \
-                    + (1 - self.alpha_f)*K
+        if self.D is None:
+            K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)*self.M \
+                    + (1 - self.alpha_f)*self.K
         else:
-            K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)*M \
-                    + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
-                    + (1 - self.alpha_f)*K
+            K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)*self.M \
+                    + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.D \
+                    + (1 - self.alpha_f)*self.K
         return K_eff
 
     def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
@@ -1861,28 +1857,23 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return actual effective force for linear generalized-alpha time integration scheme.
         '''
 
-        M = self.mechanical_system.M()
-        D = self.mechanical_system.D()
-        K = self.mechanical_system.K()  # TODO: K wird jedesmal neue assembliert!
-
-
         t_f = (1 - self.alpha_f)*t + self.alpha_f*t_old
 
         f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
 
-        if D is None:
-            F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*M - self.alpha_f*K)@q_old \
-                    + (1 - self.alpha_m)/(self.beta*self.dt)*M@dq_old \
-                    - (0.5*(self.alpha_m - 1) + self.beta)/self.beta*M @ ddq_old \
+        if self.D is None:
+            F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*self.M - self.alpha_f*self.K)@q_old \
+                    + (1 - self.alpha_m)/(self.beta*self.dt)*self.M@dq_old \
+                    - (0.5*(self.alpha_m - 1) + self.beta)/self.beta*self.M @ ddq_old \
                     + f_ext_f
         else:
-            F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*M \
-                      + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
-                      - self.alpha_f*K)@q_old \
-                    + ((1 - self.alpha_m)/(self.beta*self.dt)*M \
-                       - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta*D)@dq_old \
-                    + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta*M \
-                       - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta*D)@ddq_old \
+            F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*self.M \
+                      + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.D \
+                      - self.alpha_f*self.K)@q_old \
+                    + ((1 - self.alpha_m)/(self.beta*self.dt)*self.M \
+                       - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta*self.D)@dq_old \
+                    + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta*self.M \
+                       - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta*self.D)@ddq_old \
                     + f_ext_f
         return F_eff
 
@@ -1969,16 +1960,12 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return effective stiffness matrix for linear JWH-alpha time integration scheme.
         '''
 
-        M = self.mechanical_system.M()
-        D = self.mechanical_system.D()
-        K = self.mechanical_system.K()
-
-        if D is None:  # TODO: D ist nie None!
-            K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M + self.alpha_f*K
+        if self.D is None:
+            K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M + self.alpha_f*self.K
         else:
-            K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M \
-                    + self.alpha_m/(self.gamma*self.dt)*D \
-                    + self.alpha_f*K
+            K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M \
+                    + self.alpha_m/(self.gamma*self.dt)*self.D \
+                    + self.alpha_f*self.K
         return K_eff
 
     def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
@@ -1986,27 +1973,23 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return actual effective force for linear JWH-alpha time integration scheme.
         '''
 
-        M = self.mechanical_system.M()
-        D = self.mechanical_system.D()
-        K = self.mechanical_system.K()  # TODO: K wird jedesmal neu assembliert!
-
         t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
 
         f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
 
-        if D is None:
-            F_eff = (-(1 - self.alpha_f)*K + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M)@q_old \
-                    - (self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*M)@dq_old \
-                    + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*M)@v_old \
-                    + (-(self.gamma - self.alpha_m)/self.gamma*M)@ddq_old \
+        if self.D is None:
+            F_eff = (-(1 - self.alpha_f)*self.K + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M)@q_old \
+                    - (self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*self.M)@dq_old \
+                    + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*self.M)@v_old \
+                    + (-(self.gamma - self.alpha_m)/self.gamma*self.M)@ddq_old \
                     + f_ext_f
         else:
-            F_eff = (-(1 - self.alpha_f)*K + self.alpha_m/(self.gamma*self.dt)*D \
-                     + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M)@q_old \
-                    + (-(self.gamma - self.alpha_m)/self.gamma*D \
-                       - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*M)@dq_old \
-                    + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*M)@v_old \
-                    + (-(self.gamma - self.alpha_m)/self.gamma*M)@ddq_old \
+            F_eff = (-(1 - self.alpha_f)*self.K + self.alpha_m/(self.gamma*self.dt)*self.D \
+                     + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M)@q_old \
+                    + (-(self.gamma - self.alpha_m)/self.gamma*self.D \
+                       - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*self.M)@dq_old \
+                    + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*self.M)@v_old \
+                    + (-(self.gamma - self.alpha_m)/self.gamma*self.M)@ddq_old \
                     + f_ext_f
         return F_eff
 
@@ -2201,10 +2184,7 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         Return effective stiffness matrix for linear JWH-alpha time integration scheme.
         '''
 
-        E = self.mechanical_system.E()
-        A = self.mechanical_system.A()
-
-        K_eff = self.alpha_m/(self.gamma*self.dt)*E - self.alpha_f*A
+        K_eff = self.alpha_m/(self.gamma*self.dt)*self.E - self.alpha_f*self.A
         return K_eff
 
     def effective_force(self, x_old, dx_old, t, t_old):
@@ -2212,15 +2192,12 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         Return actual effective force for linear JWH-alpha time integration scheme.
         '''
 
-        E = self.mechanical_system.E()
-        A = self.mechanical_system.A()  # TODO: K wird in A jedesmal neu assembliert!
-
         t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
 
         F_ext_f = self.mechanical_system.F_ext(None, t_f)
 
-        F_eff = (self.alpha_m/(self.gamma*self.dt)*E + (1 - self.alpha_f)*A)@x_old \
-                + ((self.alpha_m - self.gamma)/self.gamma*E)@dx_old \
+        F_eff = (self.alpha_m/(self.gamma*self.dt)*self.E + (1 - self.alpha_f)*self.A)@x_old \
+                + ((self.alpha_m - self.gamma)/self.gamma*self.E)@dx_old \
                 + F_ext_f
         return F_eff
 
