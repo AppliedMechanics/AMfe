@@ -9,21 +9,24 @@ A collection of tools which to not fit to one topic of the other modules.
 Some tools here might be experimental.
 """
 
-__all__ = ['node2total',
-           'total2node',
-           'read_hbmat',
-           'append_interactively',
-           'matshow_3d',
-           'amfe_dir',
-           'h5_read_u',
-           'test',
-           'reorder_sparse_matrix',
-           'eggtimer',
-           'compute_relative_error',
-           'principal_angles',
-           'query_yes_no',
-           'resulting_force',
-           ]
+
+__all__ = [
+    'node2total',
+    'total2node',
+    'read_hbmat',
+    'append_interactively',
+    'matshow_3d',
+    'amfe_dir',
+    'h5_read_u',
+    'test',
+    'reorder_sparse_matrix',
+    'eggtimer',
+    'compute_relative_error',
+    'principal_angles',
+    'query_yes_no',
+    'resulting_force',
+    'compare_signals'
+]
 
 import os
 import numpy as np
@@ -654,4 +657,47 @@ def resulting_force(mechanical_system, force_vec, ref_point=None):
     f_res[:3] = f_ext_mat.sum(axis=0)
 
     return f_res
+
+
+def compare_signals(x1, t1, x2, t2=None, method='norm', **kwargs):
+    '''
+    Compare signal x2(t2) [slave] with signal x1(t1) [master] using the specified method.
+
+    Parameters
+    ----------
+    x1 : 1darray
+        One-dimensional input array containing samples of signal 1 [master].
+    t1 : 1darray
+        One-dimensional input array containing time samples corresponding to x1 [master].
+    x2 : 1darray
+        One-dimensional input array containing samples of signal 2 [slave].
+    t2 : 1darray, optional
+        One-dimensional input array containing time samples corresponding to x2 [slave]. Default None. If not specified
+        t2 = t1 is used. If specified and t2 != t1, x2 is interpolated at time samples t1.
+    method : {'norm', 'angles', 'mac'}
+        Method comparison is based on:
+            - 'norm': Norm of deviation between signals normalized w.r.t. x1, ||x2 - x1||/||x1||. Order of signal norm
+                (ord) has to be specified in **kwargs.
+            - 'angles': Principle angles between SVDs of signals. Number of used directions (num) has to be specified
+                in **kwargs.
+            - 'mac': Modal assurance criterion between SVDs of signals. Number of used directions (num) has to be
+                specified in **kwargs.
+    '''
+
+    if method == 'norm':
+        master = x1
+        t = t1
+        if t2 is None:
+            slave = x2
+        elif np.allclose(a=x1, b=x2, rtol=0.0, atol=1e-12):
+            slave = x2
+        else:
+            slave = np.interp(x=t1, xp=t2, fp=x2, left=np.NaN, right=np.NaN)
+        raise ValueError('Not fully implemented yet. You may do so.')
+    elif method == 'angles':
+        raise ValueError('Not implemented yet. You may do so.')
+    elif method == 'mac':
+        raise ValueError('Not implemented yet. You may do so.')
+    else:
+        raise ValueError('Invalid method. Chose either \'norm\', \'angles\' or \'mac\'.')
 
