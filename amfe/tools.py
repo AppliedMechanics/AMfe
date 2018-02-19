@@ -400,7 +400,7 @@ def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
        [3]  A.V. Knyazev and M.E. Argentati (2002): Principle angles between subspaces in an A-based scalar product:
             algorithms and perturbation estimates. SIAM Journal on Scientific Computing 23(6) 2009--2041.
             DOI: 10.1137/S1064827500377332.
-       [4]  G.H. Golub and C.F. Van Loan (2012): Matrix computations. Volume 4. JHU Press.
+       [4]  G.H. Golub and C.F. Van Loan (2013): Matrix computations. Volume 4. JHU Press.
        [5]  J.B. Rutzmoser, F.M. Gruber and D.J. Rixen (2015): A comparison on model order reduction techniques for
             geometrically nonlinear systems based on a modal derivative approach using subspace angles. 11th
             International Conference on Engineering Vibration, Ljubljana, Slovenia.
