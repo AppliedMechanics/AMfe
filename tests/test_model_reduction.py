@@ -45,7 +45,7 @@ def test_principal_angles():
     A = np.random.rand(n_dim, n_vec)
     B = np.random.rand(n_dim, n_vec)
 
-    gamma, F1, F2 = principal_angles(A, B, principal_vectors=True)
+    gamma, F1, F2 = principal_angles(V1=A, V2=B, unit='deg', method=None, principal_vectors=True)
 
     # test orthogonality of F1
     np.testing.assert_almost_equal(F1[:,:n_overlap].T @ F1[:,:n_overlap],
