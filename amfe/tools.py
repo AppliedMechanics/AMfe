@@ -646,3 +646,4 @@ def resulting_force(mechanical_system, force_vec, ref_point=None):
     f_res[:3] = f_ext_mat.sum(axis=0)
 
     return f_res
+
