@@ -394,10 +394,16 @@ def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
 
     References
     ----------
-       [1]  G.H. Golub and C.F. Van Loan (2012): Matrix computations. Volume 3. JHU Press.
-       [2]  ...
-       [3]  ...
-       [4]  ...
+       [1]  A.Bjorck, G.H. Golub (1973): Numerical methods for computing angles between linear subspaces. Mathematics
+            of Computation 27(123) 579--594. DOI: 10.2307/2005662.
+       [2]  G.H. Golub and C.F. Van Loan (1996): Matrix computations. Volume 3. JHU Press.
+       [3]  A.V. Knyazev and M.E. Argentati (2002): Principle angles between subspaces in an A-based scalar product:
+            algorithms and perturbation estimates. SIAM Journal on Scientific Computing 23(6) 2009--2041.
+            DOI: 10.1137/S1064827500377332.
+       [4]  G.H. Golub and C.F. Van Loan (2012): Matrix computations. Volume 4. JHU Press.
+       [5]  J.B. Rutzmoser, F.M. Gruber and D.J. Rixen (2015): A comparison on model order reduction techniques for
+            geometrically nonlinear systems based on a modal derivative approach using subspace angles. 11th
+            International Conference on Engineering Vibration, Ljubljana, Slovenia.
     '''
 
     Q1, __ = linalg.qr(a=V1, mode='economic')
@@ -418,7 +424,7 @@ def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
         U_sin = np.flip(m=U_sin, axis=1)
         sigma_sin = np.flip(m=sigma_sin, axis=0)
         VT_sin = np.flip(m=VT_sin, axis=0)
-        sigma_sin[sigma_sin > 1.0] = 1.0
+        sigma_sin[sigma_sin > (1.0 - 1.0e-16)] = (1.0 - 1.0e-16)
         theta_sin = np.arcsin(sigma_sin)  # rad
         if principal_vectors:
             if Q1.shape[1] >= Q2.shape[1]:
