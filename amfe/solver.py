@@ -833,6 +833,9 @@ class LinearDynamicsSolver(Solver):
 
     def __init__(self, mechanical_system, **options):
         self.mechanical_system = mechanical_system
+        self.M = self.mechanical_system.M()
+        self.D = self.mechanical_system.D()
+        self.K = self.mechanical_system.K()
 
         # read options
         if 'linear_solver' in options:
@@ -924,9 +927,6 @@ class LinearDynamicsSolver(Solver):
             v = np.empty((0, 0))
 
         # evaluate initial acceleration
-        self.M = self.mechanical_system.M()
-        self.D = self.mechanical_system.D()
-        self.K = self.mechanical_system.K()
         self.linear_solver.set_A(self.M)
         if self.D is not None:
             ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - self.D@dq - self.K@q)
@@ -1248,6 +1248,8 @@ class LinearDynamicsSolverStateSpace(Solver):
 
     def __init__(self, mechanical_system, **options):
         self.mechanical_system = mechanical_system
+        self.E = self.mechanical_system.E()
+        self.A = self.mechanical_system.A()
 
         # read options
         if 'linear_solver' in options:
@@ -1324,8 +1326,6 @@ class LinearDynamicsSolverStateSpace(Solver):
         x = self.initial_conditions['x0'].copy()
 
         # evaluate initial derivative
-        self.E = self.mechanical_system.E()
-        self.A = self.mechanical_system.A()
         self.linear_solver.set_A(self.E)
         dx = self.linear_solver.solve(self.A@x + self.mechanical_system.F_ext(x, t))
 
