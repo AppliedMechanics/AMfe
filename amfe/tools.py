@@ -360,62 +360,136 @@ def compute_relative_error(red_file, ref_file, M=None):
     return err
 
 
-def principal_angles(V1, V2, cosine=True, principal_vectors=False):
+def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
     '''
-    Return the cosine of the principal angles of the two bases V1 and V2.
+    Return the principal/subspace angles of span(V1) and span(V2) subspaces of R^n.
 
     Parameters
     ----------
-    V1 : ndarray
-        array denoting n-dimensional subspace spanned by V1 (Mxn)
-    V2 : ndarray
-        array denoting subspace 2. Dimension is (MxO)
-    cosine : bool, optional
-        flag stating, if the cosine of the angles is to be used
-    principal_vectors : bool, optional
-        Option flag for returning principal vectors. Default is False.
+    V1 : 2darray
+        Matrix spanning subspace 1. Dimensions n x r1.
+    V2 : 2darray
+        Matrix spanning subspace 2. Dimension n x r2.
+    unit : {'deg', 'rad', None}, optional
+        Unit in which angles are returned. Default is 'deg'.
+    method : {None, 'cos', 'sin'}, optional
+        Method used for computation of angles:
+             - 'cos' for large angles
+             - 'sin' for small angles
+             - None for all angles (combines both methods).
+        Default is None.
+    principal_vectors : boolean, optional
+        Flag for returning principal vectors. Default is False.
 
     Returns
     -------
-    sigma : ndarray
-        cosine of subspace angles
-    F1 : ndarray
-        array of principal vectors of subspace spanned by V1. The columns give
-        the principal vectors, i.e. F1[:,0] is the first principal vector
-        associated with theta[0] and so on. Only returned, if
-        ``principal_vectors=True``.
-    F2 : ndarray
-        array of principal vectors of subspace spanned by V2. Only returned if
-        ``principal_vectors=True``.
-
-    Notes
-    -----
-    Both matrices V1 and V2 have live in the same vector space, i.e. they have
-    to have the same number of rows.
-
-    Examples
-    --------
-    TODO
+    theta : 1darray
+        Vector with principle/subspace angles.
+    F1 : 2darray, optional
+        Matrix with principal vectors of subspace span(V1). Columns give principal vectors, i.e. F1[:,0] is first
+        principal vector of span(V1) associated with principle angle theta[0] and so on. Only returned, if
+        principal_vectors=True.
+    F2 : 2darray, optional
+        Matrix with principal vectors of subspace span(V2). Only returned, if principal_vectors=True.
 
     References
     ----------
-    ..  [1] G. H. Golub and C. F. Van Loan. Matrix computations, volume 3. JHU
-        Press, 2012.
-
+       [1]  A.Bjorck, G.H. Golub (1973): Numerical methods for computing angles between linear subspaces. Mathematics
+            of Computation 27(123) 579--594. DOI: 10.2307/2005662.
+       [2]  G.H. Golub and C.F. Van Loan (1996): Matrix computations. Volume 3. JHU Press.
+       [3]  A.V. Knyazev and M.E. Argentati (2002): Principle angles between subspaces in an A-based scalar product:
+            algorithms and perturbation estimates. SIAM Journal on Scientific Computing 23(6) 2009--2041.
+            DOI: 10.1137/S1064827500377332.
+       [4]  G.H. Golub and C.F. Van Loan (2013): Matrix computations. Volume 4. JHU Press.
+       [5]  J.B. Rutzmoser, F.M. Gruber and D.J. Rixen (2015): A comparison on model order reduction techniques for
+            geometrically nonlinear systems based on a modal derivative approach using subspace angles. 11th
+            International Conference on Engineering Vibration, Ljubljana, Slovenia.
     '''
-    Q1, __ = linalg.qr(V1, mode='economic')
-    Q2, __ = linalg.qr(V2, mode='economic')
-    U, sigma, V = linalg.svd(Q1.T @ Q2)
 
-    if not cosine:
-        sigma = np.arccos(sigma)
+    Q1, __ = linalg.qr(a=V1, mode='economic')
+    Q2, __ = linalg.qr(a=V2, mode='economic')
 
-    if principal_vectors is True:
-        F1 = Q1.dot(U)
-        F2 = Q2.dot(V.T)
-        return sigma, F1, F2
+    if method is None:
+        U, sigma, VT = linalg.svd(a=Q1.T @ Q2, full_matrices=False)  # cos
+        sigma[sigma > 1.0] = 1.0  # cos
+        theta = np.arccos(sigma)  # cos, rad
+        if principal_vectors:
+            F1 = Q1 @ U  # cos
+            F2 = Q2 @ VT.T  # cos
+
+        if Q1.shape[1] >= Q2.shape[1]:
+            U_sin, sigma_sin, VT_sin = linalg.svd(a=Q2 - Q1@(Q1.T@Q2), full_matrices=False)
+        else:
+            U_sin, sigma_sin, VT_sin = linalg.svd(a=Q1 - Q2@(Q2.T@Q1), full_matrices=False)
+        # TODO: Change flipup(...) and fliplr(...) back to new function flip(..., axis=0/1) after updating test server
+        # TODO: U_sin = np.flip(m=U_sin, axis=1)
+        U_sin = np.fliplr(m=U_sin)
+        # TODO: sigma_sin = np.flip(m=sigma_sin, axis=0)
+        sigma_sin = np.flipud(m=sigma_sin)
+        # TODO: VT_sin = np.flip(m=VT_sin, axis=0)
+        VT_sin = np.flipud(m=VT_sin)
+        sigma_sin[sigma_sin > (1.0 - 1.0e-16)] = (1.0 - 1.0e-16)
+        theta_sin = np.arcsin(sigma_sin)  # rad
+        if principal_vectors:
+            if Q1.shape[1] >= Q2.shape[1]:
+                F2_sin = Q2@VT_sin.T
+                F1_sin = Q1@(Q1.T@F2_sin)/np.sqrt(1 - sigma_sin**2)
+            else:
+                F1_sin = Q1@VT_sin.T
+                F2_sin = Q2@(Q2.T@F1_sin)/np.sqrt(1 - sigma_sin**2)
+
+        index = theta < (np.pi/4)
+        sigma[index] = sigma_sin[index]
+        theta[index] = theta_sin[index]
+        if principal_vectors:
+            F1[:, index] = F1_sin[:, index]
+            F2[:, index] = F2_sin[:, index]
+    elif method == 'cos':
+        U, sigma, VT = linalg.svd(a=Q1.T@Q2, full_matrices=False)
+        sigma[sigma > 1.0] = 1.0
+        theta = np.arccos(sigma)  # rad
+        if principal_vectors:
+            F1 = Q1@U
+            F2 = Q2@VT.T
+    elif method == 'sin':
+        if Q1.shape[1] >= Q2.shape[1]:
+            U, sigma, VT = linalg.svd(a=Q2 - Q1@(Q1.T@Q2), full_matrices=False)
+        else:
+            U, sigma, VT = linalg.svd(a=Q1 - Q2@(Q2.T@Q1), full_matrices=False)
+        # TODO: Change flipup(...) and fliplr(...) back to new function flip(..., axis=0/1) after updating test server
+        # TODO: U = np.flip(m=U, axis=1)
+        U = np.fliplr(m=U)
+        # TODO: sigma = np.flip(m=sigma, axis=0)
+        sigma = np.flipud(m=sigma)
+        # TODO: VT = np.flip(m=VT, axis=0)
+        VT = np.flipud(m=VT)
+        sigma[sigma > 1.0] = 1.0
+        theta = np.arcsin(sigma)  # rad
+        if principal_vectors:
+            if Q1.shape[1] >= Q2.shape[1]:
+                F2 = Q2@VT.T
+                F1 = Q1@(Q1.T@F2)/np.sqrt(1 - sigma**2)
+            else:
+                F1 = Q1@VT.T
+                F2 = Q2@(Q2.T@F1)/np.sqrt(1 - sigma**2)
     else:
-        return sigma
+        raise ValueError('Invalid method. Chose either None, \'cos\' or \'sin\'.')
+
+    if unit == 'deg':
+        theta = np.rad2deg(theta)  # deg
+    elif unit == 'rad':
+        pass
+    elif unit is None:
+        theta = sigma
+        if method == 'auto':
+            print('Warning: Mixed cosine and sine values.')
+    else:
+        raise ValueError('Invalid unit. Chose either \'deg\', \'rad\' or None.')
+
+    if principal_vectors:
+        return theta, F1, F2
+    else:
+        return theta
 
 
 def eggtimer(fkt):
@@ -580,3 +654,4 @@ def resulting_force(mechanical_system, force_vec, ref_point=None):
     f_res[:3] = f_ext_mat.sum(axis=0)
 
     return f_res
+
