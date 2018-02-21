@@ -421,7 +421,7 @@ def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
             U_sin, sigma_sin, VT_sin = linalg.svd(a=Q2 - Q1@(Q1.T@Q2), full_matrices=False)
         else:
             U_sin, sigma_sin, VT_sin = linalg.svd(a=Q1 - Q2@(Q2.T@Q1), full_matrices=False)
-        # TODO: Change flipup(...) and fliplr(...) to new function flip(..., axis=0/1) after updating test server
+        # TODO: Change flipup(...) and fliplr(...) back to new function flip(..., axis=0/1) after updating test server
         # TODO: U_sin = np.flip(m=U_sin, axis=1)
         U_sin = np.fliplr(m=U_sin)
         # TODO: sigma_sin = np.flip(m=sigma_sin, axis=0)
