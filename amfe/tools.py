@@ -456,9 +456,13 @@ def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
             U, sigma, VT = linalg.svd(a=Q2 - Q1@(Q1.T@Q2), full_matrices=False)
         else:
             U, sigma, VT = linalg.svd(a=Q1 - Q2@(Q2.T@Q1), full_matrices=False)
-        U = np.flip(m=U, axis=1)
-        sigma = np.flip(m=sigma, axis=0)
-        VT = np.flip(m=VT, axis=0)
+        # TODO: Change flipup(...) and fliplr(...) back to new function flip(..., axis=0/1) after updating test server
+        # TODO: U = np.flip(m=U, axis=1)
+        U = np.fliplr(m=U)
+        # TODO: sigma = np.flip(m=sigma, axis=0)
+        sigma = np.flipud(m=sigma)
+        # TODO: VT = np.flip(m=VT, axis=0)
+        VT = np.flipud(m=VT)
         sigma[sigma > 1.0] = 1.0
         theta = np.arcsin(sigma)  # rad
         if principal_vectors:
