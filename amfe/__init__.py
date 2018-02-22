@@ -23,6 +23,7 @@ from .element import *
 from .material import *
 from .mechanical_system import *
 from .mesh import *
+from .observers import *
 from .solver import *
 from .tools import *
 
