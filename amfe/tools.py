@@ -41,6 +41,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+from .linalg import *
+
 
 def node2total(node_index, coordinate_index, ndof_node=2):
     '''
@@ -654,41 +656,62 @@ def resulting_force(mechanical_system, force_vec, ref_point=None):
     return f_res
 
 
-def compare_signals(x1, t1, x2, t2=None, method='norm', **kwargs):
+def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
     '''
     Compare signal x2(t2) [slave] with signal x1(t1) [master] using the specified method.
 
     Parameters
     ----------
-    x1 : 1darray
-        One-dimensional input array containing samples of signal 1 [master].
+    x1 : ndarray
+        1D or 2D input array containing samples of signal 1 [master] along specified axis.
     t1 : 1darray
-        One-dimensional input array containing time samples corresponding to x1 [master].
-    x2 : 1darray
-        One-dimensional input array containing samples of signal 2 [slave].
+        Input array containing time samples corresponding to x1 [master].
+    x2 : ndarray
+        1D or 2D input array containing samples of signal 2 [slave] along specified axis.
     t2 : 1darray, optional
-        One-dimensional input array containing time samples corresponding to x2 [slave]. Default None. If not specified
-        t2 = t1 is used. If specified and t2 != t1, x2 is interpolated at time samples t1.
+        Input array containing time samples corresponding to x2 [slave]. Default None. If not specified t2 = t1 is
+        used. If specified and t2 != t1, x2 is interpolated based on quadratic splines at time samples t1.
     method : {'norm', 'angles', 'mac'}
-        Method comparison is based on:
-            - 'norm': Norm of deviation between signals normalized w.r.t. x1, ||x2 - x1||/||x1||. Order of signal norm
-                (ord) has to be specified in **kwargs.
+        Method on which comparison is based:
+            - 'norm': Vector norm (v) of signal norm (s) of deviation x2 - x1 normalized w.r.t. x1,
+                ||(||x2 - x1||_s/||x1||_s)||_v. Order of signal norm (ord_s) and order of vector norm (ord_v) have to
+                be specified in **kwargs. ord_v can additionally be None, then vector of signal norms
+                ||x2 - x1||_s/||x1||_s is returned. Defaults are ord_s = 2 and ord_v = None.
             - 'angles': Principle angles between SVDs of signals. Number of used directions (num) has to be specified
                 in **kwargs.
             - 'mac': Modal assurance criterion between SVDs of signals. Number of used directions (num) has to be
                 specified in **kwargs.
+
+    Returns
+    -------
+    comp : 1darray or float
+        Resulting 1D array of the comparison if methods 'mac', 'angles' or 'norm' with ord_v = None are chosen.
+        Resulting float if 'norm' with ord_v != None is chosen.
     '''
 
     if method == 'norm':
-        master = x1
-        t = t1
-        if t2 is None:
-            slave = x2
-        elif np.allclose(a=x1, b=x2, rtol=0.0, atol=1e-12):
-            slave = x2
+        # read kwargs
+        if 'ord_s' in kwargs:
+            ord_s = kwargs['ord_s']
         else:
-            slave = np.interp(x=t1, xp=t2, fp=x2, left=np.NaN, right=np.NaN)
-        raise ValueError('Not fully implemented yet. You may do so.')
+            print('Attention: No signal norm order was given, setting ord_s = 2.')
+            ord_s = 2
+
+        if 'ord_v' in kwargs:
+            ord_v = kwargs['ord_v']
+        else:
+            print('Attention: No vector norm order was given, setting ord_v = None.')
+            ord_v = None
+
+        if (t2 is not None) and (not np.allclose(a=t1, b=t2, rtol=0.0, atol=1e-12)):
+            x2 = (sp.interpolate.interp1d(x=t2, y=x2, kind='quadratic', axis=axis, copy=False, bounds_error=True,
+                                                fill_value=None, assume_sorted=True))(t1)
+
+        norm = signal_norm(x=x2 - x1, t=t1, dt=None, ord=ord_s, axis=axis)
+        norm /= signal_norm(x=x1, t=t1, dt=None, ord=ord_s, axis=axis)
+        if ord_v is not None:
+            norm = vector_norm(x=norm, ord=ord_v, axis=0, keepdims=False)
+        return norm
     elif method == 'angles':
         raise ValueError('Not implemented yet. You may do so.')
     elif method == 'mac':
