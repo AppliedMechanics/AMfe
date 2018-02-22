@@ -371,9 +371,12 @@ class Mesh:
     Attributes
     ----------
     nodes : ndarray
-        Array of x-y-z coordinates of the nodes. Dimension is
+        Array of x-y-z coordinates of the nodes when importet. Dimension is
         (no_of_nodes, no_of_dofs_per_node).
-        If no_of_dofs_per_node: z-direction is dropped!
+        If no_of_dofs_per_node=2: z-direction is dropped!
+        Caution! Currently this property describes the node-coordinates of the
+        first reference configuration where no mesh morphing techniques have been
+        applied.
     connectivity : list
         List of nodes indices belonging to one element.
     constraint_list: ndarray
