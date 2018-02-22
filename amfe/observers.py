@@ -12,7 +12,8 @@ are related to the caller.
 
 import abc
 
-__all__ = [
+__all__ = ['MaterialObserver',
+           'NodesObserver'
           ]
 
 
@@ -52,7 +53,36 @@ class MaterialObserver(Observer):
         
         Parameters:
         -----------
-        mechanical_sytem: MechanicalSystem
+        mechanical_system: MechanicalSystem
+            mechanical system object that is updated by the observer when it is called
+        '''
+        self.mechanical_system = mechanical_system
+
+    def update(self):
+        '''
+        Updates the mechanical system object with new material information
+        '''
+        self.mechanical_system.M(force_update=True)
+        self.mechanical_system.D(force_update=True)
+
+
+class NodesObserver(Observer):
+    '''
+    Observer class that updates mechanical system if nodes-coordinates have been changed
+
+    Attributes
+    ----------
+    mechanical_system: MechanicalSystem
+        An instance of mechanical system that is updated by the material observer
+    '''
+
+    def __init__(self, mechanical_system):
+        '''
+        Initializes a NodesObserver for a mechanical system
+
+        Parameters:
+        -----------
+        mechanical_system: MechanicalSystem
             mechanical system object that is updated by the observer when it is called
         '''
         self.mechanical_system = mechanical_system
