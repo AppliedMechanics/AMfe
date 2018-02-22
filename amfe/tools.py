@@ -41,6 +41,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+from .structural_dynamics import *
 from .linalg import *
 
 
@@ -677,10 +678,10 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
                 ||(||x2 - x1||_s/||x1||_s)||_v. Order of signal norm (ord_s) and order of vector norm (ord_v) have to
                 be specified in **kwargs. ord_v can additionally be None, then vector of signal norms
                 ||x2 - x1||_s/||x1||_s is returned. Defaults are ord_s = 2 and ord_v = None.
-            - 'angles': Principle angles between SVDs of signals. Number of used directions (num) has to be specified
-                in **kwargs.
+            - 'angles': Principle angles between SVDs of signals. Number of used modes (num) and unit for angles (unit)
+                have to be specified in **kwargs. Defaults are num = 13 and unit = 'deg'.
             - 'mac': Modal assurance criterion between SVDs of signals. Number of used directions (num) has to be
-                specified in **kwargs.
+                specified in **kwargs. Default is num = 13.
 
     Returns
     -------
@@ -713,9 +714,39 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
             norm = vector_norm(x=norm, ord=ord_v, axis=0, keepdims=False)
         return norm
     elif method == 'angles':
-        raise ValueError('Not implemented yet. You may do so.')
+        # read kwargs
+        if 'num' in kwargs:
+            num = kwargs['num']
+        else:
+            print('Attention: No number of modes was given, setting num = 13.')
+            num = 13
+
+        if 'unit' in kwargs:
+            unit = kwargs['unit']
+        else:
+            print('Attention: No unit was given, setting unit = \'deg\'.')
+            unit = 'deg'
+
+        if axis == 0:
+            x1 = x1.T
+            x2 = x2.T
+        U1, __, __ = linalg.svd(a=x1, full_matrices=False)
+        U2, __, __ = linalg.svd(a=x2, full_matrices=False)
+        return principal_angles(V1=U1[:, num], V2=U2[:, num], unit=unit, method=None, principal_vectors=False)
     elif method == 'mac':
-        raise ValueError('Not implemented yet. You may do so.')
+        # read kwargs
+        if 'num' in kwargs:
+            num = kwargs['num']
+        else:
+            print('Attention: No number of modes was given, setting num = 13.')
+            num = 13
+
+        if axis == 0:
+            x1 = x1.T
+            x2 = x2.T
+        U1, __, __ = linalg.svd(a=x1, full_matrices=False)
+        U2, __, __ = linalg.svd(a=x2, full_matrices=False)
+        return modal_assurance(U=U1[:, num], V=U2[:, num])
     else:
-        raise ValueError('Invalid method. Chose either \'norm\', \'angles\' or \'mac\'.')
+        raise ValueError('Invalid method. Chose either \'norm\', \'angles\' or \'mac\' with appropriate **kwargs.')
 
