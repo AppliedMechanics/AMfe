@@ -196,6 +196,15 @@ class Assembly():
         for observer in self._observers:
             observer.update()
 
+    @property
+    def nodes_voigt(self):
+        return self.nodes_voigt
+
+    @nodes_voigt.setter
+    def nodes_voigt(self, nodes_voigt):
+        self.nodes_voigt = nodes_voigt
+        self.notify()
+
     def preallocate_csr(self):
         '''
         Compute the sparsity pattern of the assembled matrices and store an
