@@ -177,7 +177,7 @@ class Assembly():
         self.neumann_indices = []
         self.C_csr = sp.sparse.csr_matrix([[]])
         self.C_csr_hyper = None
-        self.nodes_voigt = sp.array([])
+        self._nodes_voigt = sp.array([])
         self.elements_on_node = None
         self.C_deim = None
         self._observers = list()
@@ -185,12 +185,12 @@ class Assembly():
     def add_observer(self, observer, verbose=True):
         self._observers.append(observer)
         if verbose:
-            print('Added observer to material')
+            print('Added observer to assembly')
 
     def remove_observer(self, observer, verbose=True):
         self._observers.remove(observer)
         if verbose:
-            print('Removed observer from material')
+            print('Removed observer from assembly')
 
     def notify(self):
         for observer in self._observers:
