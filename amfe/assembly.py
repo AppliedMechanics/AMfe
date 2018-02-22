@@ -198,11 +198,11 @@ class Assembly():
 
     @property
     def nodes_voigt(self):
-        return self.nodes_voigt
+        return self._nodes_voigt
 
     @nodes_voigt.setter
     def nodes_voigt(self, nodes_voigt):
-        self.nodes_voigt = nodes_voigt
+        self._nodes_voigt = nodes_voigt
         self.notify()
 
     def preallocate_csr(self):
