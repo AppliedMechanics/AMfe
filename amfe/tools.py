@@ -33,6 +33,7 @@ import os
 import numpy as np
 import scipy as sp
 from scipy import linalg
+from scipy import interpolate
 import time
 import subprocess
 import sys
@@ -484,7 +485,7 @@ def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
         pass
     elif unit is None:
         theta = sigma
-        if method == 'auto':
+        if method is None:
             print('Warning: Mixed cosine and sine values.')
     else:
         raise ValueError('Invalid unit. Chose either \'deg\', \'rad\' or None.')
@@ -670,25 +671,32 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
     x2 : ndarray
         1D or 2D input array containing samples of signal 2 [slave] along specified axis.
     t2 : 1darray, optional
-        Input array containing time samples corresponding to x2 [slave]. Default None. If not specified t2 = t1 is
-        used. If specified and t2 != t1, x2 is interpolated based on quadratic splines at time samples t1.
-    method : {'norm', 'angles', 'mac'}
+        Input array containing time samples corresponding to x2 [slave]. Default None. If not specified (None) t2 = t1
+        is used. If specified x2 is linearly interpolated at time samples t1.
+    method : {'norm', 'angle', 'mac'}
         Method on which comparison is based:
             - 'norm': Vector norm (v) of signal norm (s) of deviation x2 - x1 normalized w.r.t. x1,
                 ||(||x2 - x1||_s/||x1||_s)||_v. Order of signal norm (ord_s) and order of vector norm (ord_v) have to
                 be specified in **kwargs. ord_v can additionally be None, then vector of signal norms
                 ||x2 - x1||_s/||x1||_s is returned. Defaults are ord_s = 2 and ord_v = None.
-            - 'angles': Principle angles between SVDs of signals. Number of used modes (num) and unit for angles (unit)
-                have to be specified in **kwargs. Defaults are num = 13 and unit = 'deg'.
-            - 'mac': Modal assurance criterion between SVDs of signals. Number of used directions (num) has to be
-                specified in **kwargs. Default is num = 13.
+            - 'angle': Principle angles between SVDs of signals. Number of considered modes (num <= #dofs) and unit for
+                angles (unit) have to be specified in **kwargs. Defaults are num = 13 and unit = 'deg'.
+            - 'mac': Modal assurance criterion between SVDs of signals. Number of considered directions (num <= #dofs)
+                has to be specified in **kwargs. Default is num = #dofs.
 
     Returns
     -------
-    comp : 1darray or float
-        Resulting 1D array of the comparison if methods 'mac', 'angles' or 'norm' with ord_v = None are chosen.
-        Resulting float if 'norm' with ord_v != None is chosen.
+    result : float, 1darray, 1darrays or 2darrays
+        Result(s) of the comparison:
+            - 'norm': Float with norm if ord_v = None and 1darray with norms if ord_v != None.
+            - 'angle': Four 1darrays with angles and and singular values.
+            - 'mac': Two 2darrays of mac-values and two 1darrays with singular values.
     '''
+
+    # make time samples fit
+    if t2 is not None:
+        x2 = (interpolate.interp1d(x=t2, y=x2, kind='linear', axis=axis, copy=False, bounds_error=True,
+                                   fill_value=None, assume_sorted=True))(t1)
 
     if method == 'norm':
         # read kwargs
@@ -704,21 +712,18 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
             print('Attention: No vector norm order was given, setting ord_v = None.')
             ord_v = None
 
-        if (t2 is not None) and (not np.allclose(a=t1, b=t2, rtol=0.0, atol=1e-12)):
-            x2 = (sp.interpolate.interp1d(x=t2, y=x2, kind='quadratic', axis=axis, copy=False, bounds_error=True,
-                                                fill_value=None, assume_sorted=True))(t1)
-
-        norm = signal_norm(x=x2 - x1, t=t1, dt=None, ord=ord_s, axis=axis)
+        # calculate norm(s)
+        norm = signal_norm(x=(x2 - x1), t=t1, dt=None, ord=ord_s, axis=axis)
         norm /= signal_norm(x=x1, t=t1, dt=None, ord=ord_s, axis=axis)
         if ord_v is not None:
             norm = vector_norm(x=norm, ord=ord_v, axis=0, keepdims=False)
         return norm
-    elif method == 'angles':
+    elif method == 'angle':
         # read kwargs
         if 'num' in kwargs:
             num = kwargs['num']
         else:
-            print('Attention: No number of modes was given, setting num = 13.')
+            print('Attention: No number of considered modes was given, setting num = 13.')
             num = 13
 
         if 'unit' in kwargs:
@@ -730,23 +735,27 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
         if axis == 0:
             x1 = x1.T
             x2 = x2.T
-        U1, __, __ = linalg.svd(a=x1, full_matrices=False)
-        U2, __, __ = linalg.svd(a=x2, full_matrices=False)
-        return principal_angles(V1=U1[:, num], V2=U2[:, num], unit=unit, method=None, principal_vectors=False)
+        U1, sigma1, V1T = linalg.svd(a=x1, full_matrices=False)
+        U2, sigma2, V2T = linalg.svd(a=x2, full_matrices=False)
+        return principal_angles(V1=U1[:, 0:num], V2=U2[:, 0:num], unit=unit, method=None, principal_vectors=False), \
+               principal_angles(V1=V1T.T[:, 0:num], V2=V2T.T[:, 0:num], unit=unit, method=None, principal_vectors=False), \
+               sigma1, sigma2
     elif method == 'mac':
         # read kwargs
         if 'num' in kwargs:
             num = kwargs['num']
         else:
-            print('Attention: No number of modes was given, setting num = 13.')
-            num = 13
+            print('Attention: No number of considered modes was given, setting num = #dofs.')
+            num = None
 
         if axis == 0:
             x1 = x1.T
             x2 = x2.T
-        U1, __, __ = linalg.svd(a=x1, full_matrices=False)
-        U2, __, __ = linalg.svd(a=x2, full_matrices=False)
-        return modal_assurance(U=U1[:, num], V=U2[:, num])
+        U1, sigma1, V1T = linalg.svd(a=x1, full_matrices=False)
+        U2, sigma2, V2T = linalg.svd(a=x2, full_matrices=False)
+        return modal_assurance(U=U1[:, 0:num], V=U2[:, 0:num]), \
+               modal_assurance(U=V1T.T[:, 0:num], V=V2T.T[:, 0:num]), \
+               sigma1, sigma2
     else:
-        raise ValueError('Invalid method. Chose either \'norm\', \'angles\' or \'mac\' with appropriate **kwargs.')
+        raise ValueError('Invalid method. Chose either \'norm\', \'angle\' or \'mac\' with appropriate **kwargs.')
 
