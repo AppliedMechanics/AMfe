@@ -689,7 +689,7 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
     result : float, 1darray, 1darrays or 2darrays
         Result(s) of the comparison:
             - 'norm': Float with norm if ord_v = None and 1darray with norms if ord_v != None.
-            - 'angle': Four 1darrays with angles and and singular values.
+            - 'angle': Four 1darrays with angles and singular values.
             - 'mac': Two 2darrays of mac-values and two 1darrays with singular values.
     '''
 
