@@ -966,7 +966,7 @@ def reduce_mechanical_system_state_space(mechanical_system_state_space, right_ba
     if left_basis is None:
         red_sys.W = right_basis.copy()
     else:
-        red_sys.W = left_basis.sopy()
+        red_sys.W = left_basis.copy()
     red_sys.x_red_output = []
     red_sys.E_constr = None
     return red_sys
