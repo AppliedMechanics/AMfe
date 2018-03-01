@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 
 # define input file
-input_file = amfe.amfe_dir('meshes/gmsh/beam/Beam10x1Quad4.msh')
+input_file = amfe.amfe_dir('meshes/gmsh/beam/Beam10x1Quad8.msh')
 
 
 # FOM
@@ -44,12 +44,12 @@ options = {
     'save_solution': True}
 solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
 solver.solve()
-x1 = np.array(np.delete(system.u_output, [0, 1, 6, 7], 1)).T
+x1 = system.constrain_vec(np.array(system.u_output).T)
 t1 = np.array(system.T_output)
 
 
 # ROM
-r = 2
+r = 10
 __, V = amfe.pod(mechanical_system=system, n=r)
 system = amfe.reduce_mechanical_system(mechanical_system=system, V=V, overwrite=True)
 
@@ -58,7 +58,7 @@ options['initial_conditions']['q0'] = np.zeros(r)
 options['initial_conditions']['dq0'] = np.zeros(r)
 solver = amfe.GeneralizedAlphaNonlinearDynamicsSolver(mechanical_system=system, **options)
 solver.solve()
-x2 = np.array(np.delete(system.u_output, [0, 1, 6, 7], 1)).T
+x2 = system.constrain_vec(np.array(system.u_output).T)
 t2 = np.array(system.T_output)
 
 
@@ -72,28 +72,19 @@ plt.legend()
 plt.show()
 
 
-print(amfe.compare_signals(x1=x1, t1=t1, x2=x2, t2=t2, method='norm', axis=1, ord_v=np.inf, ord_s=np.inf))
-angles1, angles2, __, __ = amfe.compare_signals(x1=x1, t1=t1, x2=x2, t2=t2, method='angle', axis=1, num=7, unit='deg')
-mac1, mac2, s1, s2 = amfe.compare_signals(x1=x1, t1=t1, x2=x2, t2=t2, method='mac', axis=1)
+print(amfe.compare_signals(x1=x1, t1=t1, x2=x2, t2=t2, method='norm', axis=1, ord_v=None, ord_s=np.inf))
+angles1, __, __ = amfe.compare_signals(x1=x1, t1=t1, x2=x2, t2=t2, method='angle', axis=1, num=7, unit='deg')
+mac1, s1, s2 = amfe.compare_signals(x1=x1, t1=t1, x2=x2, t2=t2, method='mac', axis=1)
 ccor, acor = amfe.compare_signals(x1=x1, t1=t1, x2=x2, t2=t2, method='correlation', axis=1)
 
 plt.figure(figsize=(16, 9), dpi=120)
-plt.plot(angles1, label='U')
-plt.plot(angles2, label='V')
-plt.legend()
+plt.plot(angles1)
 plt.grid()
 plt.show()
 
 plt.figure(figsize=(16, 9), dpi=120)
-plt.pcolor(mac1, label='U')
+plt.pcolor(mac1)
 plt.colorbar()
-plt.legend()
-plt.show()
-
-plt.figure(figsize=(16, 9), dpi=120)
-plt.pcolor(mac2, label='V')
-plt.colorbar()
-plt.legend()
 plt.show()
 
 plt.figure(figsize=(16, 9), dpi=120)
