@@ -673,7 +673,7 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
     t2 : 1darray, optional
         Input array containing time samples corresponding to x2 [slave]. Default None. If not specified (None) t2 = t1
         is used. If specified x2 is linearly interpolated at time samples t1.
-    method : {'norm', 'angle', 'mac'}
+    method : {'norm', 'angle', 'mac', 'correlation'}
         Method on which comparison is based:
             - 'norm': Vector norm (v) of signal norm (s) of deviation x2 - x1 normalized w.r.t. x1,
                 ||(||x2 - x1||_s/||x1||_s)||_v. Order of signal norm (ord_s) and order of vector norm (ord_v) have to
@@ -683,14 +683,17 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
                 angles (unit) have to be specified in **kwargs. Defaults are num = 13 and unit = 'deg'.
             - 'mac': Modal assurance criterion between SVDs of signals. Number of considered directions (num <= #dofs)
                 has to be specified in **kwargs. Default is num = #dofs.
+            - 'correlation' : Cross-correlation between signals (based on numpy's correlate function with option
+                'full') normalized w.r.t. value of auto-correlation of x1 at full overlap.
 
     Returns
     -------
-    result : float, 1darray, 1darrays or 2darrays
+    result : float, 1darray(s) or 2darrays
         Result(s) of the comparison:
-            - 'norm': Float with norm if ord_v = None and 1darray with norms if ord_v != None.
-            - 'angle': Four 1darrays with angles and singular values.
-            - 'mac': Two 2darrays of mac-values and two 1darrays with singular values.
+            - 'norm': Float/1darray with norm(s).
+            - 'angle': 1darray with principle angles and 2x 1darrays with singular values of x1 and x2.
+            - 'mac': 2darray with mac values and 2x 1darrays with singular values of x1 and x2.
+            - 'correlation' : 2darray with cross-correlation and 2darray with auto-correlation of x1.
     '''
 
     # make time samples fit
@@ -718,6 +721,7 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
         if ord_v is not None:
             norm = vector_norm(x=norm, ord=ord_v, axis=0, keepdims=False)
         return norm
+
     elif method == 'angle':
         # read kwargs
         if 'num' in kwargs:
@@ -735,11 +739,11 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
         if axis == 0:
             x1 = x1.T
             x2 = x2.T
-        U1, sigma1, V1T = linalg.svd(a=x1, full_matrices=False)
-        U2, sigma2, V2T = linalg.svd(a=x2, full_matrices=False)
+        U1, sigma1, __ = linalg.svd(a=x1, full_matrices=False)
+        U2, sigma2, __ = linalg.svd(a=x2, full_matrices=False)
         return principal_angles(V1=U1[:, 0:num], V2=U2[:, 0:num], unit=unit, method=None, principal_vectors=False), \
-               principal_angles(V1=V1T.T[:, 0:num], V2=V2T.T[:, 0:num], unit=unit, method=None, principal_vectors=False), \
                sigma1, sigma2
+
     elif method == 'mac':
         # read kwargs
         if 'num' in kwargs:
@@ -751,11 +755,22 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
         if axis == 0:
             x1 = x1.T
             x2 = x2.T
-        U1, sigma1, V1T = linalg.svd(a=x1, full_matrices=False)
-        U2, sigma2, V2T = linalg.svd(a=x2, full_matrices=False)
-        return modal_assurance(U=U1[:, 0:num], V=U2[:, 0:num]), \
-               modal_assurance(U=V1T.T[:, 0:num], V=V2T.T[:, 0:num]), \
-               sigma1, sigma2
+        U1, sigma1, __ = linalg.svd(a=x1, full_matrices=False)
+        U2, sigma2, __ = linalg.svd(a=x2, full_matrices=False)
+        return modal_assurance(U=U1[:, 0:num], V=U2[:, 0:num]), sigma1, sigma2
+
+    elif method == 'correlation':
+        if axis == 0:
+            x1 = x1.T
+            x2 = x2.T
+        ccor = np.zeros((x1.shape[0], 2*x1.shape[1] - 1))
+        acor = np.zeros((x1.shape[0], 2*x1.shape[1] - 1))
+        for i in np.arange(0, x1.shape[0]):
+            normalization = np.sum(x1[i, :]**2)
+            ccor[i, :] = np.correlate(a=x1[i, :], v=x2[i, :], mode='full')/normalization
+            acor[i, :] = np.correlate(a=x1[i, :], v=x1[i, :], mode='full')/normalization
+        return ccor, acor
     else:
-        raise ValueError('Invalid method. Chose either \'norm\', \'angle\' or \'mac\' with appropriate **kwargs.')
+        raise ValueError('Invalid method. Chose either \'norm\', \'angle\', \'mac\' or \'correlation\' with ' \
+                         + 'appropriate **kwargs.')
 
