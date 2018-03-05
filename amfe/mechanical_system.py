@@ -14,6 +14,7 @@ import copy
 import h5py
 import numpy as np
 import scipy as sp
+from scipy import sparse
 
 from .mesh import Mesh
 from .assembly import Assembly
@@ -388,7 +389,7 @@ class MechanicalSystem():
 
         if self.D_constr is None or force_update:
             if self.D_constr is None:
-                return self.K()*0  # TODO: Besser sparse 0 mit Dimensionen von K, da K*0 tatsächliche 0-Einträge hat!
+                return sp.sparse.csc_matrix(self.M().shape)
             else:
                 return self.D_constr
         else:
