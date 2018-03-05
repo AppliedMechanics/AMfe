@@ -543,24 +543,24 @@ class MechanicalSystemStateSpace(MechanicalSystem):
     def M(self, x=None, t=0, force_update=False):
         if self.M_constr is None or force_update:
             if x is not None:
-                self.M_constr = MechanicalSystem.M(self, x[0:int(x.size/2)], t)
+                self.M_constr = MechanicalSystem.M(self, x[0:int(x.size/2)], t, force_update)
             else:
-                self.M_constr = MechanicalSystem.M(self, None, t)
+                self.M_constr = MechanicalSystem.M(self, None, t, force_update)
         return self.M_constr
 
     def E(self, x=None, t=0, force_update=False):
         if self.E_constr is None or force_update:
-            if self.M_constr is None:
-                self.M(x, t)
+            if self.M_constr is None or force_update:
+                self.M(x, t, force_update)
             self.E_constr = sp.sparse.bmat([[self.R_constr, None], [None, self.M_constr]])
         return self.E_constr
 
     def D(self, x=None, t=0, force_update=False):
         if self.D_constr is None or force_update:
             if x is not None:
-                self.D_constr = MechanicalSystem.D(self, x[0:int(x.size/2)], t)
+                self.D_constr = MechanicalSystem.D(self, x[0:int(x.size/2)], t, force_update)
             else:
-                self.D_constr = MechanicalSystem.D(self, None, t)
+                self.D_constr = MechanicalSystem.D(self, None, t, force_update)
         return self.D_constr
 
     def K(self, x=None, t=0):
@@ -752,15 +752,17 @@ class ReducedSystem(MechanicalSystem):
 
         return f_int
 
+    # TODO: Remove workaround for update of damping matrix self.D_constr >>>
     def D(self, u=None, t=0, force_update=False):
         if self.D_constr is None or force_update:
-            if self.D_constr is None:
-                self.D_constr = self.V.T @ MechanicalSystem.K(self)*0 @ self.V
+            if self.rayleigh_damping:
+                self.D_constr = self.rayleigh_damping_alpha*self.M() + self.rayleigh_damping_beta*self.K()
+            else:
+                self.D_constr = sp.sparse.csc_matrix(self.M().shape)
         return self.D_constr
+    # TODO: <<< Remove workaround for update of damping matrix self.D_constr
 
     def M(self, u=None, t=0, force_update=False):
-        # Just a plain projection
-        # not so well but works...
         if self.M_constr is None or force_update:
             if u is None:
                 u_full = None
@@ -857,10 +859,9 @@ class ReducedSystemStateSpace(MechanicalSystemStateSpace):
     def E(self, x=None, t=0, force_update=False):
         if self.E_constr is None or force_update:
             if x is not None:
-                self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, self.V@x, \
-                                                                  t)@self.V
+                self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, self.V@x, t, force_update)@self.V
             else:
-                self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, None, t)@self.V
+                self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, None, t, force_update)@self.V
         return self.E_constr
 
     def E_unreduced(self, x_unreduced=None, t=0, force_update=False):
@@ -960,12 +961,9 @@ def reduce_mechanical_system(mechanical_system, V, overwrite=False, assembly='in
     reduced_sys.V = V.copy()
     reduced_sys.V_unconstr = reduced_sys.dirichlet_class.unconstrain_vec(V)
     reduced_sys.u_red_output = []
-    reduced_sys.M_constr = None
     reduced_sys.assembly_type = assembly
     reduced_sys.M(force_update=True)
-    # reduce Rayleigh damping matrix
-    if mechanical_system.D_constr is not None:
-        reduced_sys.D_constr = reduced_sys.V.T @ mechanical_system.D_constr @ reduced_sys.V
+    reduced_sys.D(force_update=True)
     return reduced_sys
 
 

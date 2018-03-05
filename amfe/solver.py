@@ -928,10 +928,7 @@ class LinearDynamicsSolver(Solver):
 
         # evaluate initial acceleration
         self.linear_solver.set_A(self.M)
-        if self.D is not None:
-            ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - self.D@dq - self.K@q)
-        else:
-            ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - self.K @ q)
+        ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - self.D@dq - self.K@q)
 
         # LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
@@ -1534,22 +1531,15 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         dq_f = (1 - self.alpha_f)*dq + self.alpha_f*dq_old
         t_f = (1 - self.alpha_f)*t + self.alpha_f*t_old
 
-        K_f, f_f = self.mechanical_system.K_and_f(q_f, t_f)
-
-        f_ext_f = self.mechanical_system.f_ext(q_f, dq_f, t_f)
-
         M = self.mechanical_system.M()
         D = self.mechanical_system.D()
-        if D is None:
-            Jac = -(1 - self.alpha_m)/(self.beta*self.dt**2)*M - (1 - self.alpha_f)*K_f
-            res = f_ext_f - M@ddq_m - f_f
-        else:
-            Jac = -(1 - self.alpha_m)/(self.beta*self.dt**2)*M \
-                  - (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
-                  - (1 - self.alpha_f)*K_f
+        K_f, f_f = self.mechanical_system.K_and_f(q_f, t_f)
+        f_ext_f = self.mechanical_system.f_ext(q_f, dq_f, t_f)
 
-            res = f_ext_f - M@ddq_m \
-                  - D@dq_f - f_f
+        Jac = -(1 - self.alpha_m)/(self.beta*self.dt**2)*M \
+              - (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
+              - (1 - self.alpha_f)*K_f
+        res = f_ext_f - M@ddq_m - D@dq_f - f_f
         return Jac, res, f_ext_f
 
     def correct(self, q, dq, v, ddq, delta_q):
@@ -1661,22 +1651,15 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         v_f = self.alpha_f*v + (1 - self.alpha_f)*v_old
         t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
 
-        K_f, f_f = self.mechanical_system.K_and_f(q_f, t_f)
-
-        f_ext_f = self.mechanical_system.f_ext(q_f, v_f, t_f)
-
         D = self.mechanical_system.D()
         M = self.mechanical_system.M()
+        K_f, f_f = self.mechanical_system.K_and_f(q_f, t_f)
+        f_ext_f = self.mechanical_system.f_ext(q_f, v_f, t_f)
 
-        if D is None:
-            Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M \
-                  - self.alpha_f*K_f
-            res = f_ext_f - M@ddq_m - f_f
-        else:
-            Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M \
-                  - self.alpha_m/(self.gamma*self.dt)*D \
-                  - self.alpha_f*K_f
-            res = f_ext_f - M@ddq_m - D@v_f - f_f
+        Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M \
+              - self.alpha_m/(self.gamma*self.dt)*D \
+              - self.alpha_f*K_f
+        res = f_ext_f - M@ddq_m - D@v_f - f_f
         return Jac, res, f_ext_f
 
     def correct(self, q, dq, v, ddq, delta_q):
@@ -1843,13 +1826,9 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         scheme.
         '''
 
-        if self.D is None:
-            K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)*self.M \
-                    + (1 - self.alpha_f)*self.K
-        else:
-            K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)*self.M \
-                    + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.D \
-                    + (1 - self.alpha_f)*self.K
+        K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)*self.M \
+                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.D \
+                + (1 - self.alpha_f)*self.K
         return K_eff
 
     def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
@@ -1861,20 +1840,14 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
         f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
 
-        if self.D is None:
-            F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*self.M - self.alpha_f*self.K)@q_old \
-                    + (1 - self.alpha_m)/(self.beta*self.dt)*self.M@dq_old \
-                    - (0.5*(self.alpha_m - 1) + self.beta)/self.beta*self.M @ ddq_old \
-                    + f_ext_f
-        else:
-            F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*self.M \
-                      + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.D \
-                      - self.alpha_f*self.K)@q_old \
-                    + ((1 - self.alpha_m)/(self.beta*self.dt)*self.M \
-                       - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta*self.D)@dq_old \
-                    + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta*self.M \
-                       - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta*self.D)@ddq_old \
-                    + f_ext_f
+        F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*self.M \
+                  + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.D \
+                  - self.alpha_f*self.K)@q_old \
+                + ((1 - self.alpha_m)/(self.beta*self.dt)*self.M \
+                   - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta*self.D)@dq_old \
+                + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta*self.M \
+                   - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta*self.D)@ddq_old \
+                + f_ext_f
         return F_eff
 
     def update(self, q, q_old, dq_old, v_old, ddq_old):
@@ -1960,12 +1933,9 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return effective stiffness matrix for linear JWH-alpha time integration scheme.
         '''
 
-        if self.D is None:
-            K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M + self.alpha_f*self.K
-        else:
-            K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M \
-                    + self.alpha_m/(self.gamma*self.dt)*self.D \
-                    + self.alpha_f*self.K
+        K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M \
+                + self.alpha_m/(self.gamma*self.dt)*self.D \
+                + self.alpha_f*self.K
         return K_eff
 
     def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
@@ -1977,20 +1947,13 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
         f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
 
-        if self.D is None:
-            F_eff = (-(1 - self.alpha_f)*self.K + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M)@q_old \
-                    - (self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*self.M)@dq_old \
-                    + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*self.M)@v_old \
-                    + (-(self.gamma - self.alpha_m)/self.gamma*self.M)@ddq_old \
-                    + f_ext_f
-        else:
-            F_eff = (-(1 - self.alpha_f)*self.K + self.alpha_m/(self.gamma*self.dt)*self.D \
-                     + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M)@q_old \
-                    + (-(self.gamma - self.alpha_m)/self.gamma*self.D \
-                       - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*self.M)@dq_old \
-                    + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*self.M)@v_old \
-                    + (-(self.gamma - self.alpha_m)/self.gamma*self.M)@ddq_old \
-                    + f_ext_f
+        F_eff = (-(1 - self.alpha_f)*self.K + self.alpha_m/(self.gamma*self.dt)*self.D \
+                 + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M)@q_old \
+                + (-(self.gamma - self.alpha_m)/self.gamma*self.D \
+                   - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*self.M)@dq_old \
+                + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*self.M)@v_old \
+                + (-(self.gamma - self.alpha_m)/self.gamma*self.M)@ddq_old \
+                + f_ext_f
         return F_eff
 
     def update(self, q, q_old, dq_old, v_old, ddq_old):
@@ -2094,12 +2057,10 @@ class JWHAlphaNonlinearDynamicsSolverStateSpace(NonlinearDynamicsSolverStateSpac
         t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
 
         A_f, F_f = self.mechanical_system.A_and_F(x_f, t_f)
-
         F_ext_f = self.mechanical_system.F_ext(x_f, t_f)
 
         Jac = self.alpha_f*A_f - self.alpha_m/(self.gamma*self.dt)*E
         Res = F_f + F_ext_f - E@dx_m
-
         return Jac, Res, F_ext_f
 
     def correct(self, x, dx, delta_x):
