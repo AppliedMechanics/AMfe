@@ -1,16 +1,16 @@
-# Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
-# Universitaet Muenchen.
+# Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische Universitaet Muenchen.
 #
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
 """
-Mesh module of amfe. It handles the mesh from import, defining the dofs for the
-boundary conditions and the export.
+Mesh module of amfe. It handles the mesh from import, defining the dofs for the boundary conditions and the export.
 """
 
-__all__ = ['Mesh',
-           'create_xdmf_from_hdf5',
-          ]
+
+__all__ = [
+    'Mesh',
+    'create_xdmf_from_hdf5'
+]
 
 import os
 import copy
@@ -371,9 +371,12 @@ class Mesh:
     Attributes
     ----------
     nodes : ndarray
-        Array of x-y-z coordinates of the nodes. Dimension is
+        Array of x-y-z coordinates of the nodes when imported. Dimension is
         (no_of_nodes, no_of_dofs_per_node).
-        If no_of_dofs_per_node: z-direction is dropped!
+        If no_of_dofs_per_node=2: z-direction is dropped!
+        Caution! Currently this property describes the node-coordinates of the
+        first reference configuration where no mesh morphing techniques have been
+        applied.
     connectivity : list
         List of nodes indices belonging to one element.
     constraint_list: ndarray

@@ -133,6 +133,10 @@ class Assembly():
     ----------
     C_csr : scipy.sparse.csr.csr_matrix
         Matrix containing the sparsity pattern of the problem
+    C_csr_hyper : scipy.sparse.csr.csr_matrix
+        Matrix containing the sparsity pattern of the ECSW-hyperreduced problem
+    C_csr_deim : scipy.sparse.csr.csr_matrix
+        Matrix containing the sparsity pattern of the DEIM-hyperreduced problem
     element_indices : list
         Ragged list containing the global indices for the local variables
         of an element. The entry [i,j] gives the index in the global vector
@@ -148,6 +152,9 @@ class Assembly():
     elements_on_node : np.ndarray
         array containing the number of adjacent elements per node. Is necessary
         for stress recovery.
+    observers : list
+        list with objects of class Observer, observers that observe changes of the
+        assembly object
 
     '''
     def __init__(self, mesh):
@@ -170,9 +177,33 @@ class Assembly():
         self.neumann_indices = []
         self.C_csr = sp.sparse.csr_matrix([[]])
         self.C_csr_hyper = None
-        self.nodes_voigt = sp.array([])
+        self._nodes_voigt = sp.array([])
         self.elements_on_node = None
         self.C_deim = None
+        self._observers = list()
+
+    def add_observer(self, observer, verbose=True):
+        self._observers.append(observer)
+        if verbose:
+            print('Added observer to assembly')
+
+    def remove_observer(self, observer, verbose=True):
+        self._observers.remove(observer)
+        if verbose:
+            print('Removed observer from assembly')
+
+    def notify(self):
+        for observer in self._observers:
+            observer.update()
+
+    @property
+    def nodes_voigt(self):
+        return self._nodes_voigt
+
+    @nodes_voigt.setter
+    def nodes_voigt(self, nodes_voigt):
+        self._nodes_voigt = nodes_voigt
+        self.notify()
 
     def preallocate_csr(self):
         '''
