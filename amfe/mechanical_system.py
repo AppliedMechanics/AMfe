@@ -90,9 +90,8 @@ class MechanicalSystem():
         self.assembly_class = Assembly(self.mesh_class)
         self.dirichlet_class = DirichletBoundary(np.nan)
 
-        #  initialize and add observers
+        #  initialize observers
         self.material_observer = MaterialObserver(self)
-        self.nodes_observer = NodesObserver(self)
 
         # make syntax a little bit leaner
         # !Christian Meyer: ! careful: This prohibits to easily change dirichlet_class instance, because old instance
@@ -134,10 +133,6 @@ class MechanicalSystem():
         self.no_of_dofs_per_node = self.mesh_class.no_of_dofs_per_node
 
         self.assembly_class.preallocate_csr()
-
-        # Add nodes observer
-        self.assembly_class.add_observer(self.nodes_observer)
-
         self.dirichlet_class.no_of_unconstrained_dofs = self.mesh_class.no_of_dofs
         self.dirichlet_class.update()
 

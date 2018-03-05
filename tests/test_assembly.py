@@ -78,7 +78,7 @@ class AssemblyTest(unittest.TestCase):
         M_mod = my_system_mod.M()
         K_mod, f_mod = my_system_mod.K_and_f()
 
-        # my_system_mod.assembly_class.add_observer(amfe.NodesObserver(mechanical_system=my_system_mod))
+        my_system_mod.assembly_class.add_observer(amfe.NodesObserver(mechanical_system=my_system_mod))
         my_system_mod.assembly_class.nodes_voigt = my_system_ref.assembly_class.nodes_voigt
         M_mod = my_system_mod.M()
         K_mod, f_mod = my_system_mod.K_and_f()
