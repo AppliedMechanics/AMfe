@@ -18,7 +18,7 @@ import scipy as sp
 from .mesh import Mesh
 from .assembly import Assembly
 from .boundary import DirichletBoundary
-from .observers import MaterialObserver
+from .observers import MaterialObserver, NodesObserver
 from .solver import *
 
 
@@ -85,10 +85,14 @@ class MechanicalSystem():
         self.strain = None
         self.iteration_info = np.array([])
 
-        # instantiate the important classes needed for the system:
+        # instantiate the important classes needed for the system
         self.mesh_class = Mesh()
         self.assembly_class = Assembly(self.mesh_class)
         self.dirichlet_class = DirichletBoundary(np.nan)
+
+        #  initialize and add observers
+        self.material_observer = MaterialObserver(self)
+        self.nodes_observer = NodesObserver(self)
 
         # make syntax a little bit leaner
         # !Christian Meyer: ! careful: This prohibits to easily change dirichlet_class instance, because old instance
@@ -102,8 +106,6 @@ class MechanicalSystem():
         self.D_constr = None
         self.no_of_dofs_per_node = None
 
-        # initializes observers:
-        self.material_observer = MaterialObserver(self)
         # external force to be overwritten by user-defined external forces
         # self._f_ext_unconstr = lambda t: np.zeros(self.mesh_class.no_of_dofs)
 
@@ -125,11 +127,17 @@ class MechanicalSystem():
 
         self.mesh_class.import_msh(msh_file, scale_factor=scale_factor)
         self.mesh_class.load_group_to_mesh(phys_group, material)
+
         # Add material observer
         material.add_observer(self.material_observer)
+
         self.no_of_dofs_per_node = self.mesh_class.no_of_dofs_per_node
 
         self.assembly_class.preallocate_csr()
+
+        # Add nodes observer
+        self.assembly_class.add_observer(self.nodes_observer)
+
         self.dirichlet_class.no_of_unconstrained_dofs = self.mesh_class.no_of_dofs
         self.dirichlet_class.update()
 

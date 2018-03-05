@@ -32,8 +32,7 @@ class AssemblyTest(unittest.TestCase):
             assert_array_equal(A.data[a], b)
 
     def test_nodes_observer(self):
-        # This test tests if the nodes observer updates the nodes properties right
-        # if nodes_voigt have changed
+        # This test tests if the nodes observer updates the nodes properties right if nodes_voigt have changed
         my_material = amfe.KirchhoffMaterial()
         my_system_ref = amfe.MechanicalSystem()
         my_system_ref.mesh_class.nodes = np.array([[0., 0.],
@@ -79,7 +78,7 @@ class AssemblyTest(unittest.TestCase):
         M_mod = my_system_mod.M()
         K_mod, f_mod = my_system_mod.K_and_f()
 
-        my_system_mod.assembly_class.add_observer(amfe.NodesObserver(mechanical_system=my_system_mod))
+        # my_system_mod.assembly_class.add_observer(amfe.NodesObserver(mechanical_system=my_system_mod))
         my_system_mod.assembly_class.nodes_voigt = my_system_ref.assembly_class.nodes_voigt
         M_mod = my_system_mod.M()
         K_mod, f_mod = my_system_mod.K_and_f()
