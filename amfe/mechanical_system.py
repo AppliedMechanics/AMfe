@@ -389,8 +389,12 @@ class MechanicalSystem():
 
         if self.D_constr is None or force_update:
             if self.D_constr is None:
+                # TODO: csc_matrix or csr_matrix?
                 return sp.sparse.csc_matrix(self.M().shape)
             else:
+                # TODO: Find solution to e.g. update Rayleigh damping matrix.
+                print('Caution: No update scheme for damping matrix implemented yet. Option force_update = True '
+                      + 'ineffective. Old D returned instead.')
                 return self.D_constr
         else:
             return self.D_constr
