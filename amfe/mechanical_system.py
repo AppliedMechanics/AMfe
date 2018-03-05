@@ -103,7 +103,12 @@ class MechanicalSystem():
 
         # initializations to be overwritten by loading functions
         self.M_constr = None
+        # TODO: Remove workaround for update of damping matrix self.D_constr >>>
+        self.rayleigh_damping = False
+        self.rayleigh_damping_alpha = None
+        self.rayleigh_damping_beta = None
         self.D_constr = None
+        # TODO: <<< Remove workaround for update of damping matrix self.D_constr
         self.no_of_dofs_per_node = None
 
         # external force to be overwritten by user-defined external forces
@@ -318,7 +323,7 @@ class MechanicalSystem():
 
     def M(self, u=None, t=0, force_update = False):
         '''
-        Compute the Mass matrix of the dynamical system.
+        Compute and return the mass matrix of the mechanical system.
 
         Parameters
         ----------
@@ -326,11 +331,13 @@ class MechanicalSystem():
             Array of the displacement.
         t : float
             Time.
+        force_update : bool
+            Flag to force update of M otherwise already calculated M is returned. Default is False.
 
         Returns
         -------
         M : sp.sparse.sparse_matrix
-            Mass matrix with applied constraints in sparse csr-format.
+            Mass matrix with applied constraints in sparse CSC format.
         '''
 
         if self.M_constr is None or force_update:
@@ -345,7 +352,7 @@ class MechanicalSystem():
 
     def K(self, u=None, t=0):
         '''
-        Compute the stiffness matrix of the mechanical system.
+        Compute and return the stiffness matrix of the mechanical system.
 
         Parameters
         ----------
@@ -357,20 +364,21 @@ class MechanicalSystem():
         Returns
         -------
         K : sp.sparse.sparse_matrix
-            Stiffness matrix with applied constraints in sparse csr-format.
+            Stiffness matrix with applied constraints in sparse CSC format.
         '''
 
         if u is None:
             u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
 
-        K_unconstr = \
-            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)[0]
-
+        K_unconstr = self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)[0]
         return self.constrain_matrix(K_unconstr)
 
+    # TODO: Remove workaround for update of damping matrix self.D_constr >>>
     def D(self, u=None, t=0, force_update=False):
         '''
-        Return the damping matrix of the mechanical system.
+        Compute and return the damping matrix of the mechanical system. At the moment either no damping
+        (rayleigh_damping = False) or simple Rayleigh damping applied to the system linearized around zero
+        displacement (rayleigh_damping = True) are possible.
 
         Parameters
         ----------
@@ -378,26 +386,52 @@ class MechanicalSystem():
             Displacement field in voigt notation.
         t : float, optional
             Time.
-        force_update : bool (default=False)
-            Flag to force update of D otherwise already calculated D is returned
+        force_update : bool
+            Flag to force update of D otherwise already calculated D is returned. Default is False.
 
         Returns
         -------
-        D : sp.sparse.sparse_matrix
+        D : scipy.sparse.sparse_matrix
             Damping matrix with applied constraints in sparse csr-format.
         '''
 
         if self.D_constr is None or force_update:
-            if self.D_constr is None:
-                # TODO: csc_matrix or csr_matrix?
-                return sp.sparse.csc_matrix(self.M().shape)
+            if self.rayleigh_damping:
+                self.D_constr = self.rayleigh_damping_alpha*self.M() + self.rayleigh_damping_beta*self.K()
             else:
-                # TODO: Find solution to e.g. update Rayleigh damping matrix.
-                print('Caution: No update scheme for damping matrix implemented yet. Option force_update = True '
-                      + 'ineffective. Old D returned instead.')
-                return self.D_constr
-        else:
-            return self.D_constr
+                self.D_constr = sp.sparse.csc_matrix(self.M().shape)
+        return self.D_constr
+
+    def apply_no_damping(self):
+        '''
+        Apply NO damping to the system, i.e. (re)set damping matrix to D = 0.
+        '''
+
+        self.rayleigh_damping = False
+        self.rayleigh_damping_alpha = None
+        self.rayleigh_damping_beta = None
+        self.D(force_update=True)
+        return
+
+    def apply_rayleigh_damping(self, alpha, beta):
+        '''
+        Apply Rayleigh damping to the system, i.e. set damping matrix to D = alpha*M + beta*K(0). Thus, it is Rayleigh
+        Damping applied to the system linearized around zero displacement.
+
+        Parameters
+        ----------
+        alpha : float
+            Damping coefficient w.r.t. the mass matrix.
+        beta : float
+            Damping coefficient w.r.t. the stiffness matrix.
+        '''
+
+        self.rayleigh_damping = True
+        self.rayleigh_damping_alpha = alpha
+        self.rayleigh_damping_beta = beta
+        self.D(force_update=True)
+        return
+    # TODO: <<< Remove workaround for update of damping matrix self.D_constr
 
     def f_int(self, u, t=0):
         '''
@@ -443,21 +477,6 @@ class MechanicalSystem():
         K = self.constrain_matrix(K_unconstr)
         f = self.constrain_vec(f_unconstr)
         return K, f
-
-    def apply_rayleigh_damping(self, alpha, beta):
-        '''
-        Apply Rayleigh damping to the system. The damping matrix D is defined as D = alpha*M + beta*K(0). Thus, it is
-        Rayleigh Damping applied to the linearized system around zero deformation.
-
-        Parameters
-        ----------
-        alpha : float
-            Damping coefficient for the mass matrix.
-        beta : float
-            Damping coefficient for the stiffness matrix.
-        '''
-
-        self.D_constr = alpha*self.M() + beta*self.K()
         return
 
     def write_timestep(self, t, u):
