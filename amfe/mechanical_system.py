@@ -866,9 +866,9 @@ class ReducedSystemStateSpace(MechanicalSystemStateSpace):
 
     def A(self, x=None, t=0):
         if x is not None:
-            A = self.W.T@MechanicalSystemStateSpace.A(self, self.V@x, t)@self.V
+            A = self.W.T @ MechanicalSystemStateSpace.A(self, self.V @ x, t) @ self.V
         else:
-            A = self.W.T@MechanicalSystemStateSpace.A(self, None, t)@self.V
+            A = self.W.T @ MechanicalSystemStateSpace.A(self, None, t) @ self.V
         return A
 
     def A_unreduced(self, x_unreduced=None, t=0):
