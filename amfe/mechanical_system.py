@@ -7,7 +7,6 @@ Module handling the whole mechanical system, no matter if it's a finite element 
 or a multibody system.
 """
 
-
 import time
 import os
 import copy
@@ -21,7 +20,6 @@ from .assembly import Assembly
 from .boundary import DirichletBoundary
 from .observers import MaterialObserver, NodesObserver
 from .solver import *
-
 
 __all__ = [
     'MechanicalSystem',
@@ -297,20 +295,20 @@ class MechanicalSystem():
         print('Start exporting mesh for paraview to:\n    ', filename)
 
         if self.stress_recovery and len(self.S_output) > 0 \
-           and len(self.E_output) > 0:
+                and len(self.E_output) > 0:
             no_of_timesteps = len(self.T_output)
             S_array = np.array(self.S_output).reshape((no_of_timesteps, -1))
             E_array = np.array(self.E_output).reshape((no_of_timesteps, -1))
-            S_export = (S_array.T, {'ParaView':True,
-                                  'Name':'stress',
-                                  'AttributeType':'Tensor6',
-                                  'Center':'Node',
-                                  'NoOfComponents':6})
-            E_export = (E_array.T, {'ParaView':True,
-                                  'Name':'strain',
-                                  'AttributeType':'Tensor6',
-                                  'Center':'Node',
-                                  'NoOfComponents':6})
+            S_export = (S_array.T, {'ParaView': True,
+                                    'Name': 'stress',
+                                    'AttributeType': 'Tensor6',
+                                    'Center': 'Node',
+                                    'NoOfComponents': 6})
+            E_export = (E_array.T, {'ParaView': True,
+                                    'Name': 'strain',
+                                    'AttributeType': 'Tensor6',
+                                    'Center': 'Node',
+                                    'NoOfComponents': 6})
             field_list.append(S_export)
             field_list.append(E_export)
 
@@ -321,7 +319,7 @@ class MechanicalSystem():
               '{0:4.2f} seconds.'.format(t2 - t1))
         return
 
-    def M(self, u=None, t=0, force_update = False):
+    def M(self, u=None, t=0, force_update=False):
         '''
         Compute and return the mass matrix of the mechanical system.
 
@@ -398,7 +396,7 @@ class MechanicalSystem():
 
         if self.D_constr is None or force_update:
             if self.rayleigh_damping:
-                self.D_constr = self.rayleigh_damping_alpha*self.M() + self.rayleigh_damping_beta*self.K()
+                self.D_constr = self.rayleigh_damping_alpha * self.M() + self.rayleigh_damping_beta * self.K()
             else:
                 self.D_constr = sp.sparse.csc_matrix(self.M().shape)
         return self.D_constr
@@ -432,14 +430,14 @@ class MechanicalSystem():
         self.rayleigh_damping_beta = beta
         self.D(force_update=True)
         return
+
     # TODO: <<< Remove workaround for update of damping matrix self.D_constr
 
     def f_int(self, u, t=0):
         '''
         Return the elastic restoring force of the system.
         '''
-        f_unconstr = \
-            self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)[1]
+        f_unconstr = self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)[1]
         return self.constrain_vec(f_unconstr)
 
     def _f_ext_unconstr(self, u, t):
@@ -449,8 +447,7 @@ class MechanicalSystem():
         global external force, e.g. gravity, should be applied.
         '''
 
-        f_unconstr = \
-            self.assembly_class.assemble_k_and_f_neumann(self.unconstrain_vec(u), t)[1]
+        f_unconstr = self.assembly_class.assemble_k_and_f_neumann(self.unconstrain_vec(u), t)[1]
         return f_unconstr
 
     def f_ext(self, u=None, du=None, t=0):
@@ -469,12 +466,11 @@ class MechanicalSystem():
 
         if u is None:
             u = np.zeros(self.dirichlet_class.no_of_constrained_dofs)
-        if self.stress_recovery: # make sure, that current stress / strain is exported
-            K_unconstr, f_unconstr, self.stress, self.strain = \
-                self.assembly_class.assemble_k_f_S_E(self.unconstrain_vec(u), t)
+        if self.stress_recovery:  # make sure, that current stress / strain is exported
+            K_unconstr, f_unconstr, self.stress, self.strain = self.assembly_class.assemble_k_f_S_E(
+                self.unconstrain_vec(u), t)
         else:
-            K_unconstr, f_unconstr = \
-                self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)
+            K_unconstr, f_unconstr = self.assembly_class.assemble_k_and_f(self.unconstrain_vec(u), t)
         K = self.constrain_matrix(K_unconstr)
         f = self.constrain_vec(f_unconstr)
         return K, f
@@ -492,8 +488,8 @@ class MechanicalSystem():
             # catch the case when no stress was computed, for instance in time
             # integration
             if self.stress is None and self.strain is None:
-                self.stress = np.zeros((self.mesh_class.no_of_nodes,6))
-                self.strain = np.zeros((self.mesh_class.no_of_nodes,6))
+                self.stress = np.zeros((self.mesh_class.no_of_nodes, 6))
+                self.strain = np.zeros((self.mesh_class.no_of_nodes, 6))
             self.S_output.append(self.stress.copy())
             self.E_output.append(self.strain.copy())
 
@@ -544,7 +540,7 @@ class MechanicalSystemStateSpace(MechanicalSystem):
     def M(self, x=None, t=0, force_update=False):
         if self.M_constr is None or force_update:
             if x is not None:
-                self.M_constr = MechanicalSystem.M(self, x[0:int(x.size/2)], t, force_update)
+                self.M_constr = MechanicalSystem.M(self, x[0:int(x.size / 2)], t, force_update)
             else:
                 self.M_constr = MechanicalSystem.M(self, None, t, force_update)
         return self.M_constr
@@ -559,14 +555,14 @@ class MechanicalSystemStateSpace(MechanicalSystem):
     def D(self, x=None, t=0, force_update=False):
         if self.D_constr is None or force_update:
             if x is not None:
-                self.D_constr = MechanicalSystem.D(self, x[0:int(x.size/2)], t, force_update)
+                self.D_constr = MechanicalSystem.D(self, x[0:int(x.size / 2)], t, force_update)
             else:
                 self.D_constr = MechanicalSystem.D(self, None, t, force_update)
         return self.D_constr
 
     def K(self, x=None, t=0):
         if x is not None:
-            K = MechanicalSystem.K(self, x[0:int(x.size/2)], t)
+            K = MechanicalSystem.K(self, x[0:int(x.size / 2)], t)
         else:
             K = MechanicalSystem.K(self, None, t)
         return K
@@ -580,62 +576,59 @@ class MechanicalSystemStateSpace(MechanicalSystem):
 
     def f_int(self, x=None, t=0):
         if x is None:
-            x = np.zeros(2*self.dirichlet_class.no_of_constrained_dofs)
-        f_int = MechanicalSystem.f_int(self, x[0:int(x.size/2)], t)
+            x = np.zeros(2 * self.dirichlet_class.no_of_constrained_dofs)
+        f_int = MechanicalSystem.f_int(self, x[0:int(x.size / 2)], t)
         return f_int
 
     def F_int(self, x=None, t=0):
         if x is None:
-            x = np.zeros(2*self.dirichlet_class.no_of_constrained_dofs)
+            x = np.zeros(2 * self.dirichlet_class.no_of_constrained_dofs)
         if self.D_constr is None:
-            F_int = np.concatenate((self.R_constr@x[int(x.size/2):],
-                                    -self.f_int(x, t)), axis=0)
+            F_int = np.concatenate((self.R_constr @ x[int(x.size / 2):], -self.f_int(x, t)), axis=0)
         else:
-            F_int = np.concatenate((self.R_constr@x[int(x.size/2):],
-                                    -self.D_constr@x[int(x.size/2):]
-                                     - self.f_int(x, t)), axis=0)
+            F_int = np.concatenate((self.R_constr @ x[int(x.size / 2):], -self.D_constr @ x[int(x.size / 2):]
+                                    - self.f_int(x, t)), axis=0)
         return F_int
 
     def f_ext(self, x, t):
         if x is None:
             f_ext = MechanicalSystem.f_ext(self, None, None, t)
         else:
-            f_ext = MechanicalSystem.f_ext(self, x[0:int(x.size/2)],
-                                           x[int(x.size/2):], t)
+            f_ext = MechanicalSystem.f_ext(self, x[0:int(x.size / 2)], x[int(x.size / 2):], t)
         return f_ext
 
     def F_ext(self, x, t):
-        F_ext = np.concatenate((np.zeros(self.dirichlet_class.no_of_constrained_dofs),
-                                self.f_ext(x, t)), axis=0)
+        F_ext = np.concatenate((np.zeros(self.dirichlet_class.no_of_constrained_dofs), self.f_ext(x, t)), axis=0)
         return F_ext
 
     def K_and_f(self, x=None, t=0):
         if x is not None:
-            K, f_int = MechanicalSystem.K_and_f(self, x[0:int(x.size/2)], t)
+            K, f_int = MechanicalSystem.K_and_f(self, x[0:int(x.size / 2)], t)
         else:
             K, f_int = MechanicalSystem.K_and_f(self, None, t)
         return K, f_int
 
     def A_and_F(self, x=None, t=0):
         if x is None:
-            x = np.zeros(2*self.dirichlet_class.no_of_constrained_dofs)
+            x = np.zeros(2 * self.dirichlet_class.no_of_constrained_dofs)
         K, f_int = self.K_and_f(x, t)
         if self.D_constr is None:
             A = sp.sparse.bmat([[None, self.R_constr], [-K, None]])
-            F_int = np.concatenate((self.R_constr@x[int(x.size/2):], -f_int), axis=0)
+            F_int = np.concatenate((self.R_constr @ x[int(x.size / 2):], -f_int), axis=0)
         else:
             A = sp.sparse.bmat([[None, self.R_constr], [-K, -self.D_constr]])
-            F_int = np.concatenate((self.R_constr@x[int(x.size/2):], -self.D_constr@x[int(x.size/2):] - f_int), axis=0)
+            F_int = np.concatenate((self.R_constr @ x[int(x.size / 2):], -self.D_constr @ x[int(x.size / 2):] - f_int),
+                                   axis=0)
         return A, F_int
 
     def write_timestep(self, t, x):
-        MechanicalSystem.write_timestep(self, t, x[0:int(x.size/2)])
+        MechanicalSystem.write_timestep(self, t, x[0:int(x.size / 2)])
         self.x_output.append(x.copy())
         return
 
     def export_paraview(self, filename, field_list=None):
         x_export = np.array(self.x_output).T
-        x_dict = {'ParaView':'False', 'Name':'x'}
+        x_dict = {'ParaView': 'False', 'Name': 'x'}
         if field_list is None:
             new_field_list = []
         else:
@@ -705,11 +698,9 @@ class ReducedSystem(MechanicalSystem):
             u = np.zeros(self.V.shape[1])
         if self.assembly_type == 'direct':
             # this is really slow! So this is why the assembly is done diretly
-            K, f_int = self.assembly_class.assemble_k_and_f_red(self.V_unconstr,
-                                                                u, t)
+            K, f_int = self.assembly_class.assemble_k_and_f_red(self.V_unconstr, u, t)
         elif self.assembly_type == 'indirect':
-            K_raw, f_raw = self.assembly_class.assemble_k_and_f(self.V_unconstr @ u,
-                                                                t)
+            K_raw, f_raw = self.assembly_class.assemble_k_and_f(self.V_unconstr @ u, t)
             K = self.V_unconstr.T @ K_raw @ self.V_unconstr
             f_int = self.V_unconstr.T @ f_raw
         else:
@@ -722,11 +713,9 @@ class ReducedSystem(MechanicalSystem):
 
         if self.assembly_type == 'direct':
             # this is really slow! So this is why the assembly is done diretly
-            K, f_int = self.assembly_class.assemble_k_and_f_red(self.V_unconstr,
-                                                                u, t)
+            K, f_int = self.assembly_class.assemble_k_and_f_red(self.V_unconstr, u, t)
         elif self.assembly_type == 'indirect':
-            K_raw, f_raw = self.assembly_class.assemble_k_and_f(self.V_unconstr @ u,
-                                                                t)
+            K_raw, f_raw = self.assembly_class.assemble_k_and_f(self.V_unconstr @ u, t)
             K = self.V_unconstr.T @ K_raw @ self.V_unconstr
         else:
             raise ValueError('The given assembly type for a reduced system is not valid.')
@@ -739,11 +728,9 @@ class ReducedSystem(MechanicalSystem):
 
         if self.assembly_type == 'direct':
             # this is really slow! So this is why the assembly is done diretly
-            K, f_int = self.assembly_class.assemble_k_and_f_red(self.V_unconstr,
-                                                                u, t)
+            K, f_int = self.assembly_class.assemble_k_and_f_red(self.V_unconstr, u, t)
         elif self.assembly_type == 'indirect':
-            K_raw, f_raw = self.assembly_class.assemble_k_and_f(self.V_unconstr @ u,
-                                                                t)
+            K_raw, f_raw = self.assembly_class.assemble_k_and_f(self.V_unconstr @ u, t)
             f_int = self.V_unconstr.T @ f_raw
         else:
             raise ValueError('The given assembly type for a reduced system is not valid.')
@@ -753,10 +740,11 @@ class ReducedSystem(MechanicalSystem):
     def D(self, u=None, t=0, force_update=False):
         if self.D_constr is None or force_update:
             if self.rayleigh_damping:
-                self.D_constr = self.rayleigh_damping_alpha*self.M() + self.rayleigh_damping_beta*self.K()
+                self.D_constr = self.rayleigh_damping_alpha * self.M() + self.rayleigh_damping_beta * self.K()
             else:
                 self.D_constr = sp.sparse.csc_matrix(self.M().shape)
         return self.D_constr
+
     # TODO: <<< Remove workaround for update of damping matrix self.D_constr
 
     def M(self, u=None, t=0, force_update=False):
@@ -823,7 +811,7 @@ class ReducedSystem(MechanicalSystem):
         '''
 
         u_red_export = np.array(self.u_red_output).T
-        u_red_dict = {'ParaView':'False', 'Name':'q_red'}
+        u_red_dict = {'ParaView': 'False', 'Name': 'q_red'}
 
         if field_list is None:
             new_field_list = []
@@ -856,9 +844,9 @@ class ReducedSystemStateSpace(MechanicalSystemStateSpace):
     def E(self, x=None, t=0, force_update=False):
         if self.E_constr is None or force_update:
             if x is not None:
-                self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, self.V@x, t, force_update)@self.V
+                self.E_constr = self.W.T @ MechanicalSystemStateSpace.E(self, self.V @ x, t, force_update) @ self.V
             else:
-                self.E_constr = self.W.T@MechanicalSystemStateSpace.E(self, None, t, force_update)@self.V
+                self.E_constr = self.W.T @ MechanicalSystemStateSpace.E(self, None, t, force_update) @ self.V
         return self.E_constr
 
     def E_unreduced(self, x_unreduced=None, t=0, force_update=False):
@@ -876,9 +864,9 @@ class ReducedSystemStateSpace(MechanicalSystemStateSpace):
 
     def F_int(self, x=None, t=0):
         if x is not None:
-            F_int = self.W.T@MechanicalSystemStateSpace.F_int(self, self.V@x, t)
+            F_int = self.W.T @ MechanicalSystemStateSpace.F_int(self, self.V @ x, t)
         else:
-            F_int = self.W.T@MechanicalSystemStateSpace.F_int(self, None, t)
+            F_int = self.W.T @ MechanicalSystemStateSpace.F_int(self, None, t)
         return F_int
 
     def F_int_unreduced(self, x_unreduced=None, t=0):
@@ -886,9 +874,9 @@ class ReducedSystemStateSpace(MechanicalSystemStateSpace):
 
     def F_ext(self, x, t):
         if x is not None:
-            F_ext = self.W.T@MechanicalSystemStateSpace.F_ext(self, self.V@x, t)
+            F_ext = self.W.T @ MechanicalSystemStateSpace.F_ext(self, self.V @ x, t)
         else:
-            F_ext = self.W.T@MechanicalSystemStateSpace.F_ext(self, None, t)
+            F_ext = self.W.T @ MechanicalSystemStateSpace.F_ext(self, None, t)
         return F_ext
 
     def F_ext_unreduced(self, x_unreduced, t):
@@ -896,24 +884,24 @@ class ReducedSystemStateSpace(MechanicalSystemStateSpace):
 
     def A_and_F(self, x=None, t=0):
         if x is not None:
-            A_, F_int_ = MechanicalSystemStateSpace.A_and_F(self, self.V@x, t)
+            A_, F_int_ = MechanicalSystemStateSpace.A_and_F(self, self.V @ x, t)
         else:
             A_, F_int_ = MechanicalSystemStateSpace.A_and_F(self, None, t)
-        A = self.W.T@A_@self.V
-        F_int = self.W.T@F_int_
+        A = self.W.T @ A_ @ self.V
+        F_int = self.W.T @ F_int_
         return A, F_int
 
     def A_and_F_unreduced(self, x_unreduced=None, t=0):
         return MechanicalSystemStateSpace.A_and_F(self, x_unreduced, t)
 
     def write_timestep(self, t, x):
-        MechanicalSystemStateSpace.write_timestep(self, t, self.V@x)
+        MechanicalSystemStateSpace.write_timestep(self, t, self.V @ x)
         self.x_red_output.append(x.copy())
         return
 
     def export_paraview(self, filename, field_list=None):
         x_red_export = np.array(self.x_red_output).T
-        x_red_dict = {'ParaView':'False', 'Name':'x_red'}
+        x_red_dict = {'ParaView': 'False', 'Name': 'x_red'}
         if field_list is None:
             new_field_list = []
         else:
@@ -996,7 +984,6 @@ def reduce_mechanical_system_state_space(mechanical_system_state_space, right_ba
     red_sys.E(force_update=True)
     return red_sys
 
-
 # This class is not integrated in AMfe yet.
 # It should apply linear combinations of external forces
 # f_ext = B(x) * F(t)
@@ -1048,4 +1035,3 @@ def reduce_mechanical_system_state_space(mechanical_system_state_space, right_ba
 #             force_amplitudes = ( (t2-t)*self.force_series[t1_idx]
 #                                + (t-t1)*self.force_series[t2_idx]) / (t2-t1)
 #         return self.force_basis @ force_amplitudes
-

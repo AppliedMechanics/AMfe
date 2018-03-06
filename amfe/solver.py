@@ -6,7 +6,6 @@
 Module that contains solvers for solving systems in AMfe.
 """
 
-
 import scipy as sp
 import numpy as np
 import abc
@@ -14,7 +13,6 @@ import time
 
 from .mechanical_system import *
 from .linalg import *
-
 
 __all__ = [
     # 'choose_solver',
@@ -31,7 +29,6 @@ __all__ = [
     'JWHAlphaLinearDynamicsSolverStateSpace',
     'ConstrainedNonlinearDynamicsSolver'
 ]
-
 
 abort_statement = '''
 ###################################################
@@ -189,7 +186,7 @@ class NonlinearStaticsSolver(Solver):
             # write initial state
             self.mechanical_system.write_timestep(0.0, u)
         u_output = []
-        stepwidth = 1/self.number_of_load_steps
+        stepwidth = 1 / self.number_of_load_steps
 
         # load step loop: pseudo time t goes from 0 + stepwidth to 1
         for t in np.arange(stepwidth, 1.0 + stepwidth, stepwidth):
@@ -203,7 +200,7 @@ class NonlinearStaticsSolver(Solver):
 
             # Newton iteration loop
             iteration = 0
-            while abs_res > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
+            while abs_res > self.relative_tolerance * abs_f_ext + self.absolute_tolerance:
 
                 iteration += 1
 
@@ -223,7 +220,7 @@ class NonlinearStaticsSolver(Solver):
                 delta_u = self.linear_solver.solve(res)
 
                 # correct displacement
-                u += delta_u*self.newton_damping
+                u += delta_u * self.newton_damping
 
                 # update K, f_int and f_ext if not a simplified newton iteration
                 if (iteration % self.simplified_newton_iterations) is 0:
@@ -235,7 +232,7 @@ class NonlinearStaticsSolver(Solver):
                 abs_res = vector_norm(res, 2)
 
                 if self.write_iterations:
-                    self.mechanical_system.write_timestep(t + iteration*0.000001, u)
+                    self.mechanical_system.write_timestep(t + iteration * 0.000001, u)
 
                 if self.track_iterations:
                     self.iteration_info.append((t, iteration, abs_res))
@@ -310,7 +307,7 @@ class LinearStaticsSolver(Solver):
         f_ext = self.mechanical_system.f_ext(u=None, du=None, t=self.t)
 
         # write initial state
-        self.mechanical_system.write_timestep(0.0, 0.0*f_ext)
+        self.mechanical_system.write_timestep(0.0, 0.0 * f_ext)
 
         print('Solving linear static problem...')
         self.linear_solver.set_A(K)
@@ -536,7 +533,7 @@ class NonlinearDynamicsSolver(Solver):
 
             # Newton-Raphson iteration loop
             iteration = 0
-            while res_abs > self.relative_tolerance*abs_f_ext + self.absolute_tolerance:
+            while res_abs > self.relative_tolerance * abs_f_ext + self.absolute_tolerance:
 
                 iteration += 1
 
@@ -563,7 +560,7 @@ class NonlinearDynamicsSolver(Solver):
                 res_abs = vector_norm(res, 2)
 
                 if self.write_iterations:
-                    t_write = t + self.dt/1000000*iteration
+                    t_write = t + self.dt / 1000000 * iteration
                     self.mechanical_system.write_timestep(t_write, q.copy())
 
                 if self.track_iterations:
@@ -689,7 +686,7 @@ class NonlinearDynamicsSolver(Solver):
 
             dt_iteration = 0
             sum_newton_iterations = 0
-            while abs_local_dt_err > relative_dt_tolerance*max_q:
+            while abs_local_dt_err > relative_dt_tolerance * max_q:
 
                 dt_iteration += 1
 
@@ -748,7 +745,7 @@ class NonlinearDynamicsSolver(Solver):
                     res_abs = vector_norm(res, 2)
 
                     if self.write_iterations:
-                        t_write = t + dt_min/1000000*sum_newton_iterations
+                        t_write = t + dt_min / 1000000 * sum_newton_iterations
                         self.mechanical_system.write_timestep(t_write, q.copy())
 
                     if self.track_iterations:
@@ -774,11 +771,11 @@ class NonlinearDynamicsSolver(Solver):
                     no_newton_convergence = False
                 else:  # evaluate local temporal discretization error and update time step accordingly
                     abs_local_dt_err = self.estimate_local_time_discretization_error(ddq, ddq_old)
-                    kappa = np.cbrt(relative_dt_tolerance*max_q/abs_local_dt_err)
+                    kappa = np.cbrt(relative_dt_tolerance * max_q / abs_local_dt_err)
                     dt_new = min(dt_max, max(min(change_factor_max,
-                                                 max(change_factor_min, safety_factor*kappa))*self.dt, dt_min))
+                                                 max(change_factor_min, safety_factor * kappa)) * self.dt, dt_min))
                     if (dt_new > self.dt) and (len(self.dt_info) > 1):
-                        self.dt = trust_value*dt_new + (1 - trust_value)*self.dt_info[-1]
+                        self.dt = trust_value * dt_new + (1 - trust_value) * self.dt_info[-1]
                     else:
                         self.dt = dt_new
 
@@ -862,7 +859,7 @@ class LinearDynamicsSolver(Solver):
         else:
             print('Attention: No initial velocity was given, setting dq0 = 0.')
             dq0 = np.zeros(self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
-        self.initial_conditions = {'q0':q0, 'dq0':dq0}
+        self.initial_conditions = {'q0': q0, 'dq0': dq0}
 
         if 't0' in options:
             self.t0 = options['t0']
@@ -928,7 +925,7 @@ class LinearDynamicsSolver(Solver):
 
         # evaluate initial acceleration
         self.linear_solver.set_A(self.M)
-        ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - self.D@dq - self.K@q)
+        ddq = self.linear_solver.solve(self.mechanical_system.f_ext(q, dq, t) - self.D @ dq - self.K @ q)
 
         # LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
@@ -1038,7 +1035,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
             #     raise ValueError('Error: Dimension of x0 is not valid for state-space system.')
         else:
             print('Attention: No initial state was given, setting x0 = 0.')
-            x0 = np.zeros(2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
+            x0 = np.zeros(2 * self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'x0': x0}
 
         if 't0' in options:
@@ -1125,7 +1122,6 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         Solves the nonlinear dynamic problem of the state-space system.
         '''
 
-
         # start time measurement
         t_clock_start = time.time()
 
@@ -1162,7 +1158,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
 
             # Newton-Raphson iteration loop
             iteration = 0
-            while Res_abs > self.relative_tolerance*abs_F_ext + self.absolute_tolerance:
+            while Res_abs > self.relative_tolerance * abs_F_ext + self.absolute_tolerance:
 
                 iteration += 1
 
@@ -1190,7 +1186,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
                 Res_abs = vector_norm(Res, 2)
 
                 if self.write_iterations:
-                    t_write = t + self.dt/1000000*iteration
+                    t_write = t + self.dt / 1000000 * iteration
                     self.mechanical_system.write_timestep(t_write, x.copy())
 
                 if self.track_iterations:
@@ -1263,7 +1259,7 @@ class LinearDynamicsSolverStateSpace(Solver):
             #     raise ValueError('Error: Dimension of x0 is not valid for state-space system.')
         else:
             print('Attention: No initial state was given, setting x0 = 0.')
-            x0 = np.zeros(2*self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
+            x0 = np.zeros(2 * self.mechanical_system.dirichlet_class.no_of_constrained_dofs)
         self.initial_conditions = {'x0': x0}
 
         if 't0' in options:
@@ -1324,7 +1320,7 @@ class LinearDynamicsSolverStateSpace(Solver):
 
         # evaluate initial derivative
         self.linear_solver.set_A(self.E)
-        dx = self.linear_solver.solve(self.A@x + self.mechanical_system.F_ext(x, t))
+        dx = self.linear_solver.solve(self.A @ x + self.mechanical_system.F_ext(x, t))
 
         # LU-decompose effective stiffness
         K_eff = self.effective_stiffness()
@@ -1418,9 +1414,9 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
             self.rho_inf = 0.9
 
         # set parameters
-        self.alpha_m = (2*self.rho_inf - 1)/(self.rho_inf + 1)
-        self.alpha_f = self.rho_inf/(self.rho_inf + 1)
-        self.beta = 0.25*(1 - self.alpha_m + self.alpha_f)**2
+        self.alpha_m = (2 * self.rho_inf - 1) / (self.rho_inf + 1)
+        self.alpha_f = self.rho_inf / (self.rho_inf + 1)
+        self.beta = 0.25 * (1 - self.alpha_m + self.alpha_f) ** 2
         self.gamma = 0.5 - self.alpha_m + self.alpha_f
         return
 
@@ -1436,9 +1432,9 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         '''
 
         self.rho_inf = rho_inf
-        self.alpha_m = (rho_inf - 1)/(rho_inf + 1)
+        self.alpha_m = (rho_inf - 1) / (rho_inf + 1)
         self.alpha_f = 0.0
-        self.beta = 0.25*(1 - self.alpha_m)**2
+        self.beta = 0.25 * (1 - self.alpha_m) ** 2
         self.gamma = 0.5 - self.alpha_m
         return
 
@@ -1455,8 +1451,8 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 
         self.rho_inf = rho_inf
         self.alpha_m = 0.0
-        self.alpha_f = (1 - rho_inf)/(1 + rho_inf)
-        self.beta = 0.25*(1 + self.alpha_f)**2
+        self.alpha_f = (1 - rho_inf) / (1 + rho_inf)
+        self.beta = 0.25 * (1 + self.alpha_f) ** 2
         self.gamma = 0.5 + self.alpha_f
         return
 
@@ -1515,8 +1511,8 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         Predict variables for the nonlinear generalized-alpha time integration scheme.
         '''
 
-        q += self.dt*dq + self.dt**2*(0.5 - self.beta)*ddq
-        dq += self.dt*(1 - self.gamma)*ddq
+        q += self.dt * dq + self.dt ** 2 * (0.5 - self.beta) * ddq
+        dq += self.dt * (1 - self.gamma) * ddq
         ddq *= 0
         return q, dq, v, ddq
 
@@ -1525,21 +1521,19 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         Return actual Jacobian and residuum for the nonlinear generalized-alpha time integration scheme.
         '''
 
-
-        ddq_m = (1 - self.alpha_m)*ddq + self.alpha_m*ddq_old
-        q_f = (1 - self.alpha_f)*q + self.alpha_f*q_old
-        dq_f = (1 - self.alpha_f)*dq + self.alpha_f*dq_old
-        t_f = (1 - self.alpha_f)*t + self.alpha_f*t_old
+        ddq_m = (1 - self.alpha_m) * ddq + self.alpha_m * ddq_old
+        q_f = (1 - self.alpha_f) * q + self.alpha_f * q_old
+        dq_f = (1 - self.alpha_f) * dq + self.alpha_f * dq_old
+        t_f = (1 - self.alpha_f) * t + self.alpha_f * t_old
 
         M = self.mechanical_system.M()
         D = self.mechanical_system.D()
         K_f, f_f = self.mechanical_system.K_and_f(q_f, t_f)
         f_ext_f = self.mechanical_system.f_ext(q_f, dq_f, t_f)
 
-        Jac = -(1 - self.alpha_m)/(self.beta*self.dt**2)*M \
-              - (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*D \
-              - (1 - self.alpha_f)*K_f
-        res = f_ext_f - M@ddq_m - D@dq_f - f_f
+        Jac = -(1 - self.alpha_m) / (self.beta * self.dt ** 2) * M - (1 - self.alpha_f) * self.gamma / (
+                self.beta * self.dt) * D - (1 - self.alpha_f) * K_f
+        res = f_ext_f - M @ ddq_m - D @ dq_f - f_f
         return Jac, res, f_ext_f
 
     def correct(self, q, dq, v, ddq, delta_q):
@@ -1548,8 +1542,8 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         '''
 
         q += delta_q
-        dq += self.gamma/(self.beta*self.dt)*delta_q
-        ddq += 1/(self.beta*self.dt**2)*delta_q
+        dq += self.gamma / (self.beta * self.dt) * delta_q
+        ddq += 1 / (self.beta * self.dt ** 2) * delta_q
         return q, dq, v, ddq
 
     def estimate_local_time_discretization_error(self, ddq, ddq_old):
@@ -1558,7 +1552,7 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         integration scheme.
         '''
 
-        abs_local_dt_err = (self.beta - 1/6)*self.dt**2*vector_norm(ddq - ddq_old, 2)/np.sqrt(ddq.size)
+        abs_local_dt_err = (self.beta - 1 / 6) * self.dt ** 2 * vector_norm(ddq - ddq_old, 2) / np.sqrt(ddq.size)
         return abs_local_dt_err
 
 
@@ -1602,8 +1596,8 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
             self.rho_inf = 0.9
 
         # set parameters
-        self.alpha_m = (3 - self.rho_inf)/(2*(1 + self.rho_inf))
-        self.alpha_f = 1/(1 + self.rho_inf)
+        self.alpha_m = (3 - self.rho_inf) / (2 * (1 + self.rho_inf))
+        self.alpha_f = 1 / (1 + self.rho_inf)
         self.gamma = 0.5 + self.alpha_m - self.alpha_f
         return
 
@@ -1634,11 +1628,11 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         Predict variables for the nonlinear JWH-alpha time integration scheme.
         '''
 
-        q += self.dt*(self.alpha_m - self.gamma)/self.alpha_m*dq \
-             + self.dt*self.gamma/self.alpha_m*v \
-             + self.alpha_f*self.dt**2*self.gamma*(1 - self.gamma)/self.alpha_m*ddq
-        dq += 1/self.alpha_m*(v - dq) + self.alpha_f*self.dt*(1 - self.gamma)/self.alpha_m*ddq
-        v += self.dt*(1 - self.gamma)*ddq
+        q += self.dt * (
+                self.alpha_m - self.gamma) / self.alpha_m * dq + self.dt * self.gamma / self.alpha_m * v + self.alpha_f * self.dt ** 2 * self.gamma * (
+                     1 - self.gamma) / self.alpha_m * ddq
+        dq += 1 / self.alpha_m * (v - dq) + self.alpha_f * self.dt * (1 - self.gamma) / self.alpha_m * ddq
+        v += self.dt * (1 - self.gamma) * ddq
         ddq *= 0
         return q, dq, v, ddq
 
@@ -1646,20 +1640,19 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         '''
         Return actual Jacobian and residuum for the nonlinear JWH-alpha time integration scheme.
         '''
-        ddq_m = self.alpha_m*ddq + (1 - self.alpha_m)*ddq_old
-        q_f = self.alpha_f*q + (1 - self.alpha_f)*q_old
-        v_f = self.alpha_f*v + (1 - self.alpha_f)*v_old
-        t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
+        ddq_m = self.alpha_m * ddq + (1 - self.alpha_m) * ddq_old
+        q_f = self.alpha_f * q + (1 - self.alpha_f) * q_old
+        v_f = self.alpha_f * v + (1 - self.alpha_f) * v_old
+        t_f = self.alpha_f * t + (1 - self.alpha_f) * t_old
 
         D = self.mechanical_system.D()
         M = self.mechanical_system.M()
         K_f, f_f = self.mechanical_system.K_and_f(q_f, t_f)
         f_ext_f = self.mechanical_system.f_ext(q_f, v_f, t_f)
 
-        Jac = -self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*M \
-              - self.alpha_m/(self.gamma*self.dt)*D \
-              - self.alpha_f*K_f
-        res = f_ext_f - M@ddq_m - D@v_f - f_f
+        Jac = -self.alpha_m ** 2 / (self.alpha_f * self.gamma ** 2 * self.dt ** 2) * M - self.alpha_m / (
+                self.gamma * self.dt) * D - self.alpha_f * K_f
+        res = f_ext_f - M @ ddq_m - D @ v_f - f_f
         return Jac, res, f_ext_f
 
     def correct(self, q, dq, v, ddq, delta_q):
@@ -1668,9 +1661,9 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         '''
 
         q += delta_q
-        dq += 1/(self.gamma*self.dt)*delta_q
-        v += self.alpha_m/(self.alpha_f*self.gamma*self.dt)*delta_q
-        ddq += self.alpha_m/(self.alpha_f*self.gamma**2*self.dt**2)*delta_q
+        dq += 1 / (self.gamma * self.dt) * delta_q
+        v += self.alpha_m / (self.alpha_f * self.gamma * self.dt) * delta_q
+        ddq += self.alpha_m / (self.alpha_f * self.gamma ** 2 * self.dt ** 2) * delta_q
         return q, dq, v, ddq
 
     def estimate_local_time_discretization_error(self, ddq, ddq_old):
@@ -1746,9 +1739,9 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         '''
 
         self.rho_inf = rho_inf
-        self.alpha_m = (rho_inf - 1)/(rho_inf + 1)
+        self.alpha_m = (rho_inf - 1) / (rho_inf + 1)
         self.alpha_f = 0.0
-        self.beta = 0.25*(1 - self.alpha_m)**2
+        self.beta = 0.25 * (1 - self.alpha_m) ** 2
         self.gamma = 0.5 - self.alpha_m
         return
 
@@ -1765,8 +1758,8 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
 
         self.rho_inf = rho_inf
         self.alpha_m = 0.0
-        self.alpha_f = (1 - rho_inf)/(1 + rho_inf)
-        self.beta = 0.25*(1 + self.alpha_f)**2
+        self.alpha_f = (1 - rho_inf) / (1 + rho_inf)
+        self.beta = 0.25 * (1 + self.alpha_f) ** 2
         self.gamma = 0.5 + self.alpha_f
         return
 
@@ -1826,9 +1819,8 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         scheme.
         '''
 
-        K_eff = (1 - self.alpha_m)/(self.beta*self.dt**2)*self.M \
-                + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.D \
-                + (1 - self.alpha_f)*self.K
+        K_eff = (1 - self.alpha_m) / (self.beta * self.dt ** 2) * self.M + (1 - self.alpha_f) * self.gamma / (
+                self.beta * self.dt) * self.D + (1 - self.alpha_f) * self.K
         return K_eff
 
     def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
@@ -1836,18 +1828,16 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return actual effective force for linear generalized-alpha time integration scheme.
         '''
 
-        t_f = (1 - self.alpha_f)*t + self.alpha_f*t_old
+        t_f = (1 - self.alpha_f) * t + self.alpha_f * t_old
 
         f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
 
-        F_eff = ((1 - self.alpha_m)/(self.beta*self.dt**2)*self.M \
-                  + (1 - self.alpha_f)*self.gamma/(self.beta*self.dt)*self.D \
-                  - self.alpha_f*self.K)@q_old \
-                + ((1 - self.alpha_m)/(self.beta*self.dt)*self.M \
-                   - (self.gamma*(self.alpha_f - 1) + self.beta)/self.beta*self.D)@dq_old \
-                + (-(0.5*(self.alpha_m - 1) + self.beta)/self.beta*self.M \
-                   - (1 - self.alpha_f)*(self.beta - 0.5*self.gamma)*self.dt/self.beta*self.D)@ddq_old \
-                + f_ext_f
+        F_eff = ((1 - self.alpha_m) / (self.beta * self.dt ** 2) * self.M + (1 - self.alpha_f) * self.gamma / (
+                self.beta * self.dt) * self.D - self.alpha_f * self.K) @ q_old + (
+                        (1 - self.alpha_m) / (self.beta * self.dt) * self.M - (
+                        self.gamma * (self.alpha_f - 1) + self.beta) / self.beta * self.D) @ dq_old + (
+                        -(0.5 * (self.alpha_m - 1) + self.beta) / self.beta * self.M - (1 - self.alpha_f) * (
+                        self.beta - 0.5 * self.gamma) * self.dt / self.beta * self.D) @ ddq_old + f_ext_f
         return F_eff
 
     def update(self, q, q_old, dq_old, v_old, ddq_old):
@@ -1855,9 +1845,10 @@ class GeneralizedAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return actual velocity and acceleration for linear generalized-alpha time integration scheme.
         '''
 
-        ddq = 1/(self.beta*self.dt**2)*(q - q_old) - 1/(self.beta*self.dt)*dq_old - (0.5 - self.beta)/self.beta*ddq_old
-        v = np.empty((0,0))
-        dq = dq_old + self.dt*((1 - self.gamma)*ddq_old + self.gamma*ddq)
+        ddq = 1 / (self.beta * self.dt ** 2) * (q - q_old) - 1 / (self.beta * self.dt) * dq_old - (
+                0.5 - self.beta) / self.beta * ddq_old
+        v = np.empty((0, 0))
+        dq = dq_old + self.dt * ((1 - self.gamma) * ddq_old + self.gamma * ddq)
         return dq, v, ddq
 
 
@@ -1933,9 +1924,8 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return effective stiffness matrix for linear JWH-alpha time integration scheme.
         '''
 
-        K_eff = self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M \
-                + self.alpha_m/(self.gamma*self.dt)*self.D \
-                + self.alpha_f*self.K
+        K_eff = self.alpha_m ** 2 / (self.alpha_f * self.gamma ** 2 * self.dt ** 2) * self.M + self.alpha_m / (
+                self.gamma * self.dt) * self.D + self.alpha_f * self.K
         return K_eff
 
     def effective_force(self, q_old, dq_old, v_old, ddq_old, t, t_old):
@@ -1943,17 +1933,17 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return actual effective force for linear JWH-alpha time integration scheme.
         '''
 
-        t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
+        t_f = self.alpha_f * t + (1 - self.alpha_f) * t_old
 
         f_ext_f = self.mechanical_system.f_ext(None, None, t_f)
 
-        F_eff = (-(1 - self.alpha_f)*self.K + self.alpha_m/(self.gamma*self.dt)*self.D \
-                 + self.alpha_m**2/(self.alpha_f*self.gamma**2*self.dt**2)*self.M)@q_old \
-                + (-(self.gamma - self.alpha_m)/self.gamma*self.D \
-                   - self.alpha_m*(self.gamma - self.alpha_m)/(self.alpha_f*self.gamma**2*self.dt)*self.M)@dq_old \
-                + (self.alpha_m/(self.alpha_f*self.gamma*self.dt)*self.M)@v_old \
-                + (-(self.gamma - self.alpha_m)/self.gamma*self.M)@ddq_old \
-                + f_ext_f
+        F_eff = (-(1 - self.alpha_f) * self.K + self.alpha_m / (self.gamma * self.dt) * self.D + self.alpha_m ** 2 / (
+                self.alpha_f * self.gamma ** 2 * self.dt ** 2) * self.M) @ q_old + (
+                        -(self.gamma - self.alpha_m) / self.gamma * self.D - self.alpha_m * (
+                        self.gamma - self.alpha_m) / (
+                                self.alpha_f * self.gamma ** 2 * self.dt) * self.M) @ dq_old + (
+                        self.alpha_m / (self.alpha_f * self.gamma * self.dt) * self.M) @ v_old + (
+                        -(self.gamma - self.alpha_m) / self.gamma * self.M) @ ddq_old + f_ext_f
         return F_eff
 
     def update(self, q, q_old, dq_old, v_old, ddq_old):
@@ -1961,10 +1951,10 @@ class JWHAlphaLinearDynamicsSolver(LinearDynamicsSolver):
         Return actual velocity and acceleration for linear JWH-alpha time integration scheme.
         '''
 
-        dq = 1/(self.gamma*self.dt)*(q - q_old) + (self.gamma - 1)/self.gamma*dq_old
-        v = self.alpha_m/self.alpha_f*dq + (1 - self.alpha_m)/self.alpha_f*dq_old \
-            + (self.alpha_f - 1)/self.alpha_f*v_old
-        ddq = 1/(self.gamma*self.dt)*(v - v_old) + (self.gamma - 1)/self.gamma*ddq_old
+        dq = 1 / (self.gamma * self.dt) * (q - q_old) + (self.gamma - 1) / self.gamma * dq_old
+        v = self.alpha_m / self.alpha_f * dq + (1 - self.alpha_m) / self.alpha_f * dq_old + (
+                self.alpha_f - 1) / self.alpha_f * v_old
+        ddq = 1 / (self.gamma * self.dt) * (v - v_old) + (self.gamma - 1) / self.gamma * ddq_old
         return dq, v, ddq
 
 
@@ -2008,8 +1998,8 @@ class JWHAlphaNonlinearDynamicsSolverStateSpace(NonlinearDynamicsSolverStateSpac
             self.rho_inf = 0.9
 
         # set parameters
-        self.alpha_m = (3 - self.rho_inf)/(2*(1 + self.rho_inf))
-        self.alpha_f = 1/(1 + self.rho_inf)
+        self.alpha_m = (3 - self.rho_inf) / (2 * (1 + self.rho_inf))
+        self.alpha_f = 1 / (1 + self.rho_inf)
         self.gamma = 0.5 + self.alpha_m - self.alpha_f
         return
 
@@ -2040,7 +2030,7 @@ class JWHAlphaNonlinearDynamicsSolverStateSpace(NonlinearDynamicsSolverStateSpac
         Predict variables for the nonlinear JWH-alpha time integration scheme.
         '''
 
-        x += self.dt*(1 - self.gamma)*dx
+        x += self.dt * (1 - self.gamma) * dx
         dx *= 0
         return x, dx
 
@@ -2049,16 +2039,16 @@ class JWHAlphaNonlinearDynamicsSolverStateSpace(NonlinearDynamicsSolverStateSpac
         Return actual Jacobian and residuum for the nonlinear JWH-alpha time integration scheme.
         '''
 
-        dx_m = self.alpha_m*dx + (1 - self.alpha_m)*dx_old
-        x_f = self.alpha_f*x + (1 - self.alpha_f)*x_old
-        t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
+        dx_m = self.alpha_m * dx + (1 - self.alpha_m) * dx_old
+        x_f = self.alpha_f * x + (1 - self.alpha_f) * x_old
+        t_f = self.alpha_f * t + (1 - self.alpha_f) * t_old
 
         E = self.mechanical_system.E(x, t)
         A_f, F_f = self.mechanical_system.A_and_F(x_f, t_f)
         F_ext_f = self.mechanical_system.F_ext(x_f, t_f)
 
-        Jac = self.alpha_f*A_f - self.alpha_m/(self.gamma*self.dt)*E
-        Res = F_f + F_ext_f - E@dx_m
+        Jac = self.alpha_f * A_f - self.alpha_m / (self.gamma * self.dt) * E
+        Res = F_f + F_ext_f - E @ dx_m
         return Jac, Res, F_ext_f
 
     def correct(self, x, dx, delta_x):
@@ -2067,7 +2057,7 @@ class JWHAlphaNonlinearDynamicsSolverStateSpace(NonlinearDynamicsSolverStateSpac
         '''
 
         x += delta_x
-        dx += 1/(self.gamma*self.dt)*delta_x
+        dx += 1 / (self.gamma * self.dt) * delta_x
         return x, dx
 
 
@@ -2143,7 +2133,7 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         Return effective stiffness matrix for linear JWH-alpha time integration scheme.
         '''
 
-        K_eff = self.alpha_m/(self.gamma*self.dt)*self.E - self.alpha_f*self.A
+        K_eff = self.alpha_m / (self.gamma * self.dt) * self.E - self.alpha_f * self.A
         return K_eff
 
     def effective_force(self, x_old, dx_old, t, t_old):
@@ -2151,13 +2141,12 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         Return actual effective force for linear JWH-alpha time integration scheme.
         '''
 
-        t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
+        t_f = self.alpha_f * t + (1 - self.alpha_f) * t_old
 
         F_ext_f = self.mechanical_system.F_ext(None, t_f)
 
-        F_eff = (self.alpha_m/(self.gamma*self.dt)*self.E + (1 - self.alpha_f)*self.A)@x_old \
-                + ((self.alpha_m - self.gamma)/self.gamma*self.E)@dx_old \
-                + F_ext_f
+        F_eff = (self.alpha_m / (self.gamma * self.dt) * self.E + (1 - self.alpha_f) * self.A) @ x_old + (
+                (self.alpha_m - self.gamma) / self.gamma * self.E) @ dx_old + F_ext_f
         return F_eff
 
     def update(self, x, x_old, dx_old):
@@ -2165,13 +2154,12 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         Return actual derivative for linear JWH-alpha time integration scheme.
         '''
 
-        dx = 1/(self.gamma*self.dt)*(x - x_old) + (self.gamma - 1)/self.gamma*dx_old
+        dx = 1 / (self.gamma * self.dt) * (x - x_old) + (self.gamma - 1) / self.gamma * dx_old
         return dx
 
 
 class ConstrainedNonlinearDynamicsSolver(NonlinearDynamicsSolver):
     pass
-
 
 # This could be a dictionary for a convenient mapping of scheme names (strings) to their solver classes
 # solvers_available = {'NonlinearStatics' : NonlinearStaticsSolver,
@@ -2188,4 +2176,3 @@ class ConstrainedNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 #
 #     solver = solvers_available[solvertype](**options)
 #     return solver
-
