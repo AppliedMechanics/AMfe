@@ -75,8 +75,8 @@ class MechanicalSystem():
         ----------
         stress_recovery : bool, optional
             Flag, for setting stress recovery option. Default is False.
-
         '''
+
         self.stress_recovery = stress_recovery
         self.T_output = []
         self.u_output = []
@@ -378,7 +378,8 @@ class MechanicalSystem():
         '''
         Compute and return the damping matrix of the mechanical system. At the moment either no damping
         (rayleigh_damping = False) or simple Rayleigh damping applied to the system linearized around zero
-        displacement (rayleigh_damping = True) are possible.
+        displacement (rayleigh_damping = True) are possible. They are set via the functions apply_no_damping() and
+        apply_rayleigh_damping(alpha, beta).
 
         Parameters
         ----------
@@ -392,7 +393,7 @@ class MechanicalSystem():
         Returns
         -------
         D : scipy.sparse.sparse_matrix
-            Damping matrix with applied constraints in sparse csr-format.
+            Damping matrix with applied constraints in sparse CSC format.
         '''
 
         if self.D_constr is None or force_update:
@@ -415,8 +416,8 @@ class MechanicalSystem():
 
     def apply_rayleigh_damping(self, alpha, beta):
         '''
-        Apply Rayleigh damping to the system, i.e. set damping matrix to D = alpha*M + beta*K(0). Thus, it is Rayleigh
-        Damping applied to the system linearized around zero displacement.
+        Apply Rayleigh damping to the system, i.e. set damping matrix to D = alpha*M + beta*K(0). This is simple
+        Rayleigh damping with regard to the system linearized around zero displacement.
 
         Parameters
         ----------
@@ -712,8 +713,7 @@ class ReducedSystem(MechanicalSystem):
             K = self.V_unconstr.T @ K_raw @ self.V_unconstr
             f_int = self.V_unconstr.T @ f_raw
         else:
-            raise ValueError('The given assembly type for a reduced system '
-                             + 'is not valid.')
+            raise ValueError('The given assembly type for a reduced system is not valid.')
         return K, f_int
 
     def K(self, u=None, t=0):
@@ -729,8 +729,7 @@ class ReducedSystem(MechanicalSystem):
                                                                 t)
             K = self.V_unconstr.T @ K_raw @ self.V_unconstr
         else:
-            raise ValueError('The given assembly type for a reduced system '
-                             + 'is not valid.')
+            raise ValueError('The given assembly type for a reduced system is not valid.')
         return K
 
     def f_ext(self, u=None, du=None, t=0):
@@ -747,9 +746,7 @@ class ReducedSystem(MechanicalSystem):
                                                                 t)
             f_int = self.V_unconstr.T @ f_raw
         else:
-            raise ValueError('The given assembly type for a reduced system '
-                             + 'is not valid.')
-
+            raise ValueError('The given assembly type for a reduced system is not valid.')
         return f_int
 
     # TODO: Remove workaround for update of damping matrix self.D_constr >>>
@@ -996,6 +993,7 @@ def reduce_mechanical_system_state_space(mechanical_system_state_space, right_ba
         red_sys.W = left_basis.copy()
     red_sys.x_red_output = []
     red_sys.E_constr = None
+    red_sys.E(force_update=True)
     return red_sys
 
 

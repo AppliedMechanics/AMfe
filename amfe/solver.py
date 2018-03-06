@@ -74,12 +74,12 @@ class NonlinearStaticsSolver(Solver):
 
     def __init__(self, mechanical_system, **options):
         self.mechanical_system = mechanical_system
-        # This option is necessary to compute the NSKTS
-        if 'f_ext' in options:
+        # read options
+        if 'f_ext' in options:  # This option is necessary to compute the NSKTS
             self.f_ext = options['f_ext']
         else:
             self.f_ext = mechanical_system.f_ext
-        # read options
+
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
         else:
@@ -2049,13 +2049,11 @@ class JWHAlphaNonlinearDynamicsSolverStateSpace(NonlinearDynamicsSolverStateSpac
         Return actual Jacobian and residuum for the nonlinear JWH-alpha time integration scheme.
         '''
 
-
-        E = self.mechanical_system.E(x, t)
-
         dx_m = self.alpha_m*dx + (1 - self.alpha_m)*dx_old
         x_f = self.alpha_f*x + (1 - self.alpha_f)*x_old
         t_f = self.alpha_f*t + (1 - self.alpha_f)*t_old
 
+        E = self.mechanical_system.E(x, t)
         A_f, F_f = self.mechanical_system.A_and_F(x_f, t_f)
         F_ext_f = self.mechanical_system.F_ext(x_f, t_f)
 
@@ -2182,8 +2180,8 @@ class ConstrainedNonlinearDynamicsSolver(NonlinearDynamicsSolver):
 #                      'NonlinearJWHAlpha' : JWHAlphaNonlinearDynamicsSolver,
 #                      'LinearGeneralizedAlpha' : GeneralizedAlphaLinearDynamicsSolver,
 #                      'LinearJWHAlpha' : JWHAlphaLinearDynamicsSolver}
-
-
+#
+#
 # def choose_solver(mechanical_system, **options):
 #     if type(mechanical_system) == MechanicalSystem:
 #         solvertype = options['solvertype']
