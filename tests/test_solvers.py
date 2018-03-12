@@ -16,7 +16,7 @@ import amfe
 def read_grf(file):
     times = list()
     displacements = list()
-    with open(file,'r') as fp:
+    with open(file, 'r') as fp:
         for line in fp.readlines():
             if not line.startswith('#'):
                 matchobject = re.search(r'([0-9eE.\-]*)\s([0-9eE.\-]*)', line)
@@ -41,29 +41,30 @@ class SolversTest(unittest.TestCase):
         self.system.load_mesh_from_gmsh(self.input_file, 1, self.material)
         self.system.apply_dirichlet_boundaries(5, 'xy')
         ndof = self.system.dirichlet_class.no_of_constrained_dofs
-        # system.apply_rayleigh_damping(1e0, 1e-5)
+        self.system.apply_rayleigh_damping(1e0, 1e-5)  # set damping and ...
+        self.system.apply_no_damping()  # ... reset damping for testing
         self.options = {
-    'number_of_load_steps': 10,
-    'newton_damping': 1.0,
-    'simplified_newton_iterations': 1,
-    't': 1.0,
-    't0': 0.0,
-    't_end': 0.4,
-    'dt': 5e-4,
-    'dt_output': 5e-4,
-    'rho_inf': 0.95,
-    'initial_conditions': {
-        'x0': np.zeros(2*ndof),
-        'q0': np.zeros(ndof),
-        'dq0': np.zeros(ndof)},
-    'relative_tolerance': 1.0E-6,
-    'absolute_tolerance': 1.0E-9,
-    'verbose': True,
-    'max_number_of_iterations': 99,
-    'convergence_abort': True,
-    'write_iterations': False,
-    'track_number_of_iterations': False,
-    'save_solution': True}
+            'number_of_load_steps': 10,
+            'newton_damping': 1.0,
+            'simplified_newton_iterations': 1,
+            't': 1.0,
+            't0': 0.0,
+            't_end': 0.4,
+            'dt': 5e-4,
+            'dt_output': 5e-4,
+            'rho_inf': 0.95,
+            'initial_conditions': {
+                'x0': np.zeros(2 * ndof),
+                'q0': np.zeros(ndof),
+                'dq0': np.zeros(ndof)},
+            'relative_tolerance': 1.0E-6,
+            'absolute_tolerance': 1.0E-9,
+            'verbose': True,
+            'max_number_of_iterations': 99,
+            'convergence_abort': True,
+            'write_iterations': False,
+            'track_number_of_iterations': False,
+            'save_solution': True}
         rho_inf = 0.95
         alpha = 0.0005
 
