@@ -7,6 +7,8 @@ import scipy as sp
 from scipy import linalg
 
 from .solver import solve_sparse, PardisoSolver
+from .linalg.norms import m_normalize
+from .linalg.orth import m_orthogonalize
 
 __all__ = ['krylov_subspace',
            'compute_modes_pardiso',
@@ -19,6 +21,9 @@ __all__ = ['krylov_subspace',
            'augment_with_derivatives',
            'augment_with_ranked_derivatives',
            'ranking_of_weighting_matrix',
+           'ifpks',
+           'ifpks_modified',
+           'update_modes',
            ]
 
 
@@ -237,7 +242,6 @@ def vibration_modes(mechanical_system, n=10, save=False):
             mechanical_system.write_timestep(om, V[:, i])
 
     return omega, V
-
 
 
 def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
@@ -791,3 +795,187 @@ def ranking_of_weighting_matrix(W, symm=True):
         for i, val in enumerate(ranking_list):
             ranking[i,:] = val // m, val % m
     return ranking
+
+
+def update_modes(mechanical_system, V_old, K_old_solver, r=2, tol=1e-6, verbose=False, modified_ifpks=True):
+    """
+    Shortcut to update modes with Inverse Free Preconditioned Krylov Subspace Method
+     
+    Parameters
+    ----------
+    mechanical_system : amfe.MechanicalSystem
+        MechanicalSystem of which the modes shall be computed
+    V_old : numpy.ndarray
+        Matrix with old eigenmodes as column vectors
+    K_old_solver : amfe.solver.LinearSolver
+        Solver instance with decomposed matrix for using as preconditioner
+    r : int
+        Number of Krylov search directions
+    tol : float
+        desired tolerance for the squared eigenfrequency omega**2
+    verbose : bool
+        Flag if verbose version shall be used
+    modified_ifpks : bool (default: True)
+        Flag if modified version of ifpks shall be used (recommended)
+        
+    Returns
+    -------
+    omega : list
+        list with new omega values
+    X : numpy.ndarray
+        matrix with eigenmodes as column vectors
+    """
+    if modified_ifpks:
+        rho, V = ifpks_modified(mechanical_system.K(), mechanical_system.M(), K_old_solver, V_old, r, tol,
+                                verbose=verbose)
+    else:
+        rho, V = ifpks(mechanical_system.K(), mechanical_system.M(), K_old_solver, V_old, r, tol,
+                                verbose=verbose)
+    return np.sqrt(rho), V
+
+
+def ifpks(K, M, P, X_0, r=2, tol=1e-6, verbose=False, m_orth=m_orthogonalize):
+    """
+    Inverse Free Preconditioned Krylov Subspace Method according to [Voormeeren2013]_
+    
+    This method can be helpful to update Modes if some parameters of the model have changed slightly
+    
+    Parameters
+    ----------
+    K : sparse_matrix
+        Stiffness matrix of the current problem
+    M : sparse_matrix
+        Mass matrix of the current problem
+    P : amfe.solver.LinearSolver
+        Solver instance with factorized matrix (e.g. Stiffness matrix of old problem) as preconditioner
+    X_0 : numpy.ndarray
+        Matrix with Eigenmodes of the old/reference problem
+    r : int
+        number of Krylov search directions
+    tol : float
+        desired tolerance for the squared eigenfrequency omega**2
+    verbose : bool
+        Flag if verbose version shall be used
+    m_orth : function
+        Pointer to orthogonalization scheme
+    
+    Returns
+    -------
+    rho : list
+        list with new omega**2 values
+    X : numpy.ndarray
+        matrix with eigenmodes as column vectors
+    
+    References
+    ----------
+    .. [Voormeeren2013] Sven Voormeeren, Daniel Rixen,
+       "Updating component reduction bases of static and vibration modes using preconditioned iterative techniques",
+       Computer Methods in Applied Mechanics and Engineering, Volume 253, 2013, Pages 39-59.
+ 
+    """
+    X = X_0
+    no_of_modes = X.shape[1]
+    X = m_normalize(X, M)
+    Zm = np.zeros((X.shape[0], X.shape[1]*(r+1)))
+    rho = list()
+    k=0
+    rho.append(np.diag( X.T @ K @X ))
+    if verbose:
+        print('IFPKS Iteration No. {}, rho: {}'.format(k, rho[k]))
+    while k==0 or np.linalg.norm(rho[k] - rho[k-1]) > tol*np.linalg.norm(rho[k]):
+        # Generate Krylov Subspace
+        rho.append(np.Inf)
+        # Zm[:,0:no_of_modes] = m_orth(X, M)
+        # stattdessen:
+        Zm[:,0:no_of_modes] = X
+        # no_of_orth = no_of_modes
+        for j in np.arange(r):
+            Zm[:,no_of_modes*(j+1):no_of_modes*(j+2)] = P.solve(K @ Zm[:,no_of_modes*(j):no_of_modes*(j+1)] - M @ Zm[:, no_of_modes*(j):no_of_modes*(j+1)] * rho[k])
+            Zm[:,:no_of_modes*(j+2)] = m_orth(Zm[:,:no_of_modes*(j+2)], M)
+        Kr = Zm.T @ K @ Zm
+        lam, V = sp.linalg.eigh(Kr)
+        V = m_normalize(V[:,:no_of_modes])
+        X = Zm @ V
+        X = m_normalize(X,M)
+        rho[k+1] = np.diag(X.T @ K @ X)
+        k = k+1
+        print('IFPKS Iteration No. {}, rho: {}'.format(k, rho[k]))
+    return rho[-1], X
+
+
+def ifpks_modified(K, M, P, X_0, r=2, tol=1e-6, verbose=False):
+    """
+    Modified Inverse Free Preconditioned Krylov Subspace Method
+
+    This method can be helpful to update Modes if some parameters of the model have changed slightly
+    It is slightly modified compared to [Voormeeren2013]_.
+    Instead M-orthogonalize all Krylov vectors, a Orthogonalization and truncation using an SVD is used instead.
+    This is more stable as the Krylov vectors can be almost linear dependent.
+    Additionally a M-orthogonalization would slow down the algorithm significantly.
+    
+    Parameters
+    ----------
+    K : sparse_matrix
+        Stiffness matrix of the current problem
+    M : sparse_matrix
+        Mass matrix of the current problem
+    P : amfe.solver.LinearSolver
+        Solver instance with factorized matrix (e.g. Stiffness matrix of old problem) as preconditioner
+    X_0 : numpy.ndarray
+        Matrix with Eigenmodes of the old/reference problem
+    r : int
+        number of Krylov search directions
+    tol : float
+        desired tolerance for the squared eigenfrequency omega**2
+    verbose : bool
+        Flag if verbose version shall be used
+    m_orth : function
+        Pointer to orthogonalization scheme
+
+    Returns
+    -------
+    rho : list
+        list with new omega**2 values
+    X : numpy.ndarray
+        matrix with eigenmodes as column vectors
+
+    References
+    ----------
+    .. [Voormeeren2013] Sven Voormeeren, Daniel Rixen,
+       "Updating component reduction bases of static and vibration modes using preconditioned iterative techniques",
+       Computer Methods in Applied Mechanics and Engineering, Volume 253, 2013, Pages 39-59.
+
+    """
+    X = X_0
+    no_of_modes = X.shape[1]
+    X = m_normalize(X, M)
+    Zm = np.zeros((X.shape[0], X.shape[1]*(r+1)))
+    rho = list()
+    k=0
+    rho.append(np.diag( X.T @ K @X ))
+    if verbose:
+        print('IFPKS Iteration No. {}, rho: {}'.format(k, rho[k]))
+    while k==0 or np.linalg.norm(rho[k] - rho[k-1]) > tol*np.linalg.norm(rho[k]):
+        # Generate Krylov Subspace
+        rho.append(np.Inf)
+        # Zm[:,0:no_of_modes] = m_orth(X, M)
+        # stattdessen:
+        Zm[:,0:no_of_modes] = X
+        # no_of_orth = no_of_modes
+        for j in np.arange(r):
+            Zm[:,no_of_modes*(j+1):no_of_modes*(j+2)] = P.solve(K @ Zm[:,no_of_modes*(j):no_of_modes*(j+1)] - M @ Zm[:, no_of_modes*(j):no_of_modes*(j+1)] * rho[k])
+            Zm[:, :no_of_modes * (j + 2)] = m_normalize(Zm[:, :no_of_modes * (j + 2)], M)
+            # Facebook svd
+            # Zm[:,:no_of_modes*(j+2)],s,_ = pca(Zm[:,:no_of_modes*(j+2)],no_of_modes*(j+2), raw=True)
+            # Scipy svd
+            Zm[:, :no_of_modes * (j + 2)], s, _ = sp.linalg.svd(Zm[:, :no_of_modes * (j + 2)], full_matrices=False)
+        Kr = Zm[:,s>1e-8].T @ K @ Zm[:,s>1e-8]
+        Mr = Zm[:,s>1e-8].T @ M @ Zm[:,s>1e-8]
+        lam, V = sp.linalg.eigh(Kr,Mr)
+        X = Zm[:,s>1e-8] @ V
+        X = m_normalize(X[:,:no_of_modes],M)
+        rho[k+1] = np.diag(X.T @ K @ X)
+        k = k+1
+        print('IFPKS Iteration No. {}, rho: {}'.format(k, rho[k]))
+    return rho[-1], X
+

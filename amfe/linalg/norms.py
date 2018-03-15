@@ -13,6 +13,7 @@ import scipy as sp
 
 
 __all__ = [
+    'm_normalize',
     'vector_norm',
     'matrix_norm',
     'signal_norm',
@@ -25,6 +26,36 @@ vector_norm = np.linalg.norm
 
 # shortcut for matrix norm to numpy.linalg's norm
 matrix_norm = np.linalg.norm
+
+
+def m_normalize(X, M):
+    """
+    Returns M-normalized vectors X
+    
+    Parameters
+    ----------
+    X : numpy.ndarray
+        Matrix with column vectors to M-normalize
+    M : numpy.ndarray
+        Matrix for normalization x.T @ M @ x = 1 
+    
+    Returns
+    -------
+    Xn : numpy.ndarray
+        Returns M-normalized vectors
+    """
+    if M is not None:
+        if X.ndim == 1:
+            n = np.sqrt(X.T@M@X)
+        else:
+            n = np.sqrt(np.diag(X.T@M@X))
+    else:
+        if X.ndim == 1:
+            n = np.sqrt(X.T@X)
+        else:
+            n = np.sqrt(np.diag(X.T@X))
+    return X/n
+
 
 def signal_norm(x, t=None, dt=1.0, ord=2, axis=-1):
     """
