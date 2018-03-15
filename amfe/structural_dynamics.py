@@ -47,8 +47,8 @@ def modal_assurance(U, V):
 
     '''
     nominator =  (U.T @ V)**2
-    diag_u_squared = np.einsum('ij, ij->j', U, U)
-    diag_v_squared = np.einsum('ij, ij->j', V, V)
+    diag_u_squared = np.einsum('ij, ij -> j', U, U)
+    diag_v_squared = np.einsum('ij, ij -> j', V, V)
     denominator = np.outer(diag_u_squared, diag_v_squared)
     return nominator / denominator
 

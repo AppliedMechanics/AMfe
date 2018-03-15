@@ -9,26 +9,31 @@ A collection of tools which to not fit to one topic of the other modules.
 Some tools here might be experimental.
 """
 
-__all__ = ['node2total',
-           'total2node',
-           'read_hbmat',
-           'append_interactively',
-           'matshow_3d',
-           'amfe_dir',
-           'h5_read_u',
-           'test',
-           'reorder_sparse_matrix',
-           'eggtimer',
-           'compute_relative_error',
-           'principal_angles',
-           'query_yes_no',
-           'resulting_force',
-           ]
+
+__all__ = [
+    'node2total',
+    'total2node',
+    'read_hbmat',
+    'append_interactively',
+    'matshow_3d',
+    'amfe_dir',
+    'h5_read_u',
+    'test',
+    'reorder_sparse_matrix',
+    'eggtimer',
+    'compute_relative_error',
+    'principal_angles',
+    'query_yes_no',
+    'resulting_force',
+    'compare_signals'
+]
+
 
 import os
 import numpy as np
 import scipy as sp
 from scipy import linalg
+from scipy import interpolate
 import time
 import subprocess
 import sys
@@ -37,10 +42,13 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+from .structural_dynamics import *
+from .linalg import *
+
+
 def node2total(node_index, coordinate_index, ndof_node=2):
     '''
-    Converts the node index and the corresponding coordinate index to the index
-    of the total dof.
+    Converts the node index and the corresponding coordinate index to the index of the total dof.
 
     Parameters
     ----------
@@ -55,16 +63,16 @@ def node2total(node_index, coordinate_index, ndof_node=2):
     -------
     total_index : int
         Index of the total dof
-
     '''
+
     if coordinate_index >= ndof_node:
         raise ValueError('coordinate index is greater than dof per node.')
     return node_index*ndof_node + coordinate_index
 
+
 def total2node(total_index, ndof_node=2):
     '''
-    Converts the total index in the global dofs to the coordinate index and the
-    index fo the coordinate.
+    Converts the total index in the global dofs to the coordinate index and the index fo the coordinate.
 
     Parameters
     ----------
@@ -79,8 +87,8 @@ def total2node(total_index, ndof_node=2):
         Index of the node as shown in tools like paraview
     coordinate_index : int
         Index of the coordinate; 0 if it's x, 1 if it's y etc.
-
     '''
+
     return total_index // ndof_node, total_index % ndof_node
 
 
@@ -100,22 +108,20 @@ def read_hbmat(filename):
 
     Notes
     ----_
-    Information on the Harwell Boeing format:
-    http://people.sc.fsu.edu/~jburkardt/data/hb/hb.html
+    Information on the Harwell Boeing format: http://people.sc.fsu.edu/~jburkardt/data/hb/hb.html
 
-    When the hbmat file is exported as an ASCII-file, the truncation of the
-    numerical values can cause issues, for example
+    When the hbmat file is exported as an ASCII-file, the truncation of the numerical values can cause issues, for
+    example
 
     - eigenvalues change
     - zero eigenvalues vanish
     - stiffness matrix becomes indefinite
     - etc.
 
-    Thus do not trust matrices which are imported with this method. The method
-    is correct, but the truncation error in the hbmat file of the floating
-    point digits might cause some issues.
-
+    Thus do not trust matrices which are imported with this method. The method is correct, but the truncation error in
+    the hbmat file of the floating point digits might cause some issues.
     '''
+
     with open(filename, 'r') as infile:
         matrix_data = infile.read().splitlines()
 
@@ -160,9 +166,8 @@ def append_interactively(filename):
     '''
     Open an input dialog for interactively appending a string to a filename.
 
-    This filename function should make it easy to save output files from
-    numerical experiments containing a time stamp with an additonal tag
-    requested at time of saving.
+    This filename function should make it easy to save output files from numerical experiments containing a time stamp
+    with an additonal tag requested at time of saving.
 
     Parameters
     ----------
@@ -172,9 +177,9 @@ def append_interactively(filename):
     Returns
     -------
     filename : string
-        filename path with additional stuff, maybe added for convenience or
-        better understanding
+        filename path with additional stuff, maybe added for convenience or better understanding
     '''
+
     print('The filename is:', filename)
     raw = input('You can now add a string to the output file name:\n')
 
@@ -185,10 +190,10 @@ def append_interactively(filename):
 
     return filename + string
 
+
 def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
     '''
-    Show a matrix as bar-plot using matplotlib.bar3d plotting tools similar to
-    `pyplot.matshow`.
+    Show a matrix as bar-plot using matplotlib.bar3d plotting tools similar to `pyplot.matshow`.
 
     Parameters
     ----------
@@ -209,8 +214,8 @@ def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
     See Also
     --------
     matplotlib.pyplot.matshow
-
     '''
+
     xdim, ydim = A.shape
     fig = plt.figure()
     ax = Axes3D(fig)
@@ -226,10 +231,11 @@ def matshow_3d(A, thickness=0.8, cmap=mpl.cm.plasma, alpha=1.0):
     # fig.colorbar(barplot)
     return barplot
 
+
 def reorder_sparse_matrix(A):
     '''
-    Reorder the sparse matrix A such that the bandwidth of the matrix is
-    minimized using the Cuthill–McKee (RCM) algorithm.
+    Reorder the sparse matrix A such that the bandwidth of the matrix is minimized using the Cuthill–McKee (RCM)
+    algorithm.
 
     Parameters
     ----------
@@ -245,18 +251,17 @@ def reorder_sparse_matrix(A):
 
     References
     ----------
-    E. Cuthill and J. McKee, "Reducing the Bandwidth of Sparse Symmetric Matrices",
-    ACM '69 Proceedings of the 1969 24th national conference, (1969).
-
+    E. Cuthill and J. McKee, "Reducing the Bandwidth of Sparse Symmetric Matrices", ACM '69 Proceedings of the 1969
+    24th national conference, (1969).
     '''
+
     perm = sp.sparse.csgraph.reverse_cuthill_mckee(A, symmetric_mode=True)
     return A[perm,:][:,perm], perm
 
 
 def amfe_dir(filename=''):
     '''
-    Return the absolute path of the filename given relative to the amfe
-    directory.
+    Return the absolute path of the filename given relative to the amfe directory.
 
     Parameters
     ----------
@@ -266,10 +271,9 @@ def amfe_dir(filename=''):
     Returns
     -------
     dir : string
-        string of the filename inside the AMFE-directory. Default value is '',
-        so the AMFE-directory is returned.
-
+        string of the filename inside the AMFE-directory. Default value is '', so the AMFE-directory is returned.
     '''
+
     amfe_abs_path = os.path.dirname(os.path.dirname(__file__))
     return os.path.join(amfe_abs_path, filename.lstrip('/'))
 
@@ -286,16 +290,15 @@ def h5_read_u(h5filename):
     Returns
     -------
     u_constr : ndarray
-        Displacement time series of the dofs with constraints implied.
-        Shape is (ndof_constr, no_of_timesteps), i.e. u_constr[:,0] is the
-        first timestep.
+        Displacement time series of the dofs with constraints implied. Shape is (ndof_constr, no_of_timesteps), i.e.
+        u_constr[:,0] is the first timestep.
     u_unconstr : ndarray
-        Displacement time series of the dofs without constraints. I.e. the
-        dofs are as in the mesh file. Shape is (ndof_unconstr, no_of_timesteps).
+        Displacement time series of the dofs without constraints. I.e. the dofs are as in the mesh file. Shape is
+        (ndof_unconstr, no_of_timesteps).
     T : ndarray
         Time. Shape is (no_of_timesteps,).
-
     '''
+
     with h5py.File(h5filename, 'r') as f:
         u_full = f['time_vals/Displacement'][:]
         T = f['time'][:]
@@ -315,6 +318,7 @@ def h5_read_u(h5filename):
         mask[2::3] = False
         u_full = u_full[mask, :]
     return bmat.T @ u_full, u_full, T
+
 
 def compute_relative_error(red_file, ref_file, M=None):
     r'''
@@ -341,8 +345,8 @@ def compute_relative_error(red_file, ref_file, M=None):
     .. math::
         ER = \frac{\sqrt{\sum\limits_{t\in T} \Delta u(t)^T M \Delta u(t)}}{
                    \sqrt{\sum\limits_{t\in T} u_{ref}(t)^T M u_{ref}(t)}}
-
     '''
+
     u_red, _, T_red = h5_read_u(red_file)
     u_ref, _, T_ref = h5_read_u(ref_file)
     if len(T_red) < len(T_ref): # The time integration has aborted
@@ -481,7 +485,7 @@ def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
         pass
     elif unit is None:
         theta = sigma
-        if method == 'auto':
+        if method is None:
             print('Warning: Mixed cosine and sine values.')
     else:
         raise ValueError('Invalid unit. Chose either \'deg\', \'rad\' or None.')
@@ -494,11 +498,9 @@ def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
 
 def eggtimer(fkt):
     '''
-    Egg timer for functions which reminds via speech, when the function has
-    terminated.
+    Egg timer for functions which reminds via speech, when the function has terminated.
 
-    The intention of this function is, that the user gets reminded, when longer
-    simulations are over.
+    The intention of this function is, that the user gets reminded, when longer simulations are over.
 
     Parameters
     ----------
@@ -508,8 +510,7 @@ def eggtimer(fkt):
     Returns
     -------
     fkt : function
-        function decorated with eggtimer. It reminds you via speech, when the
-        function has terminated.
+        function decorated with eggtimer. It reminds you via speech, when the function has terminated.
 
     Examples
     --------
@@ -534,8 +535,8 @@ def eggtimer(fkt):
     ...
     >>> square(6)
     36
-
     '''
+
     def fkt_wrapper(*args, **kwargs):
         t1 = time.time()
         return_vals = fkt(*args, **kwargs)
@@ -562,6 +563,7 @@ def test(*args, **kwargs):
     '''
     Run all tests for AMfe.
     '''
+
     import nose
     nose.main(*args, **kwargs)
 
@@ -616,15 +618,15 @@ def resulting_force(mechanical_system, force_vec, ref_point=None):
     force_vec : array
         constrained force vector
     ref_point : array-like, shape: (ndim), optional
-        reference point to which the resulting moment is computed. Default value
-        is None, meaning that the reference point is at the origin
+        reference point to which the resulting moment is computed. Default value is None, meaning that the reference
+        point is at the origin
 
     Returns
     -------
     resulting_force_and_moment : array, shape(6)
         resulting force and moment vector with (F_x, F_y, F_z, M_x, M_y, M_z)
-
     '''
+
     nodes = mechanical_system.mesh_class.nodes
     no_of_nodes, ndim = nodes.shape
     f_ext = mechanical_system.unconstrain_vec(force_vec)
@@ -654,4 +656,121 @@ def resulting_force(mechanical_system, force_vec, ref_point=None):
     f_res[:3] = f_ext_mat.sum(axis=0)
 
     return f_res
+
+
+def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
+    '''
+    Compare signal x2(t2) [slave] with signal x1(t1) [master] using the specified method.
+
+    Parameters
+    ----------
+    x1 : ndarray
+        1D or 2D input array containing samples of signal 1 [master] along specified axis.
+    t1 : 1darray
+        Input array containing time samples corresponding to x1 [master].
+    x2 : ndarray
+        1D or 2D input array containing samples of signal 2 [slave] along specified axis.
+    t2 : 1darray, optional
+        Input array containing time samples corresponding to x2 [slave]. Default None. If not specified (None) t2 = t1
+        is used. If specified x2 is linearly interpolated at time samples t1.
+    method : {'norm', 'angle', 'mac', 'correlation'}
+        Method on which comparison is based:
+            - 'norm': Vector norm (v) of signal norm (s) of deviation x2 - x1 normalized w.r.t. x1,
+                ||(||x2 - x1||_s/||x1||_s)||_v. Order of signal norm (ord_s) and order of vector norm (ord_v) have to
+                be specified in **kwargs. ord_v can additionally be None, then vector of signal norms
+                ||x2 - x1||_s/||x1||_s is returned. Defaults are ord_s = 2 and ord_v = None.
+            - 'angle': Principle angles between SVDs of signals. Number of considered modes (num <= #dofs) and unit for
+                angles (unit) have to be specified in **kwargs. Defaults are num = 13 and unit = 'deg'.
+            - 'mac': Modal assurance criterion between SVDs of signals. Number of considered directions (num <= #dofs)
+                has to be specified in **kwargs. Default is num = #dofs.
+            - 'correlation' : Cross-correlation between signals (based on numpy's correlate function with option
+                'full') normalized w.r.t. value of auto-correlation of x1 at full overlap.
+
+    Returns
+    -------
+    result : float, 1darray(s) or 2darrays
+        Result(s) of the comparison:
+            - 'norm': Float/1darray with norm(s).
+            - 'angle': 1darray with principle angles and 2x 1darrays with singular values of x1 and x2.
+            - 'mac': 2darray with mac values and 2x 1darrays with singular values of x1 and x2.
+            - 'correlation' : 2darray with cross-correlation and 2darray with auto-correlation of x1.
+    '''
+
+    # make time samples fit
+    if t2 is not None:
+        x2 = (interpolate.interp1d(x=t2, y=x2, kind='linear', axis=axis, copy=False, bounds_error=True,
+                                   fill_value=None, assume_sorted=True))(t1)
+
+    if method == 'norm':
+        # read kwargs
+        if 'ord_s' in kwargs:
+            ord_s = kwargs['ord_s']
+        else:
+            print('Attention: No signal norm order was given, setting ord_s = 2.')
+            ord_s = 2
+
+        if 'ord_v' in kwargs:
+            ord_v = kwargs['ord_v']
+        else:
+            print('Attention: No vector norm order was given, setting ord_v = None.')
+            ord_v = None
+
+        # calculate norm(s)
+        norm = signal_norm(x=(x2 - x1), t=t1, dt=None, ord=ord_s, axis=axis)
+        norm /= signal_norm(x=x1, t=t1, dt=None, ord=ord_s, axis=axis)
+        if ord_v is not None:
+            norm = vector_norm(x=norm, ord=ord_v, axis=0, keepdims=False)
+        return norm
+
+    elif method == 'angle':
+        # read kwargs
+        if 'num' in kwargs:
+            num = kwargs['num']
+        else:
+            print('Attention: No number of considered modes was given, setting num = 13.')
+            num = 13
+
+        if 'unit' in kwargs:
+            unit = kwargs['unit']
+        else:
+            print('Attention: No unit was given, setting unit = \'deg\'.')
+            unit = 'deg'
+
+        if axis == 0:
+            x1 = x1.T
+            x2 = x2.T
+        U1, sigma1, __ = linalg.svd(a=x1, full_matrices=False)
+        U2, sigma2, __ = linalg.svd(a=x2, full_matrices=False)
+        return principal_angles(V1=U1[:, 0:num], V2=U2[:, 0:num], unit=unit, method=None, principal_vectors=False), \
+               sigma1, sigma2
+
+    elif method == 'mac':
+        # read kwargs
+        if 'num' in kwargs:
+            num = kwargs['num']
+        else:
+            print('Attention: No number of considered modes was given, setting num = #dofs.')
+            num = None
+
+        if axis == 0:
+            x1 = x1.T
+            x2 = x2.T
+        U1, sigma1, __ = linalg.svd(a=x1, full_matrices=False)
+        U2, sigma2, __ = linalg.svd(a=x2, full_matrices=False)
+        return modal_assurance(U=U1[:, 0:num], V=U2[:, 0:num]), sigma1, sigma2
+
+    elif method == 'correlation':
+        if axis == 0:
+            x1 = x1.T
+            x2 = x2.T
+        ccor = np.zeros((x1.shape[0], 2*x1.shape[1] - 1))
+        acor = np.zeros((x1.shape[0], 2*x1.shape[1] - 1))
+        for i in np.arange(0, x1.shape[0]):
+            normalization = np.sum(x1[i, :]**2)
+            ccor[i, :] = np.correlate(a=x1[i, :], v=x2[i, :], mode='full')/normalization
+            acor[i, :] = np.correlate(a=x1[i, :], v=x1[i, :], mode='full')/normalization
+        return ccor, acor
+    else:
+        raise ValueError('Invalid method. Chose either \'norm\', \'angle\', \'mac\' or \'correlation\' with ' \
+                         + 'appropriate **kwargs.')
 
