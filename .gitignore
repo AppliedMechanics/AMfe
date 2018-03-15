@@ -10,6 +10,9 @@
 *.pvd
 *~
 
+# ignore mesh files because they can be large
+*.msh
+
 # saved numpy-arrays
 *.npy
 *.pdf
@@ -22,6 +25,7 @@ build/
 dist/
 private/
 amfe.egg-info/
+experiments/
 experiments/paper_icoev
 .idea/
 .spyproject/
