@@ -5,6 +5,7 @@ Reduced basis methods...
 import numpy as np
 import scipy as sp
 from scipy import linalg
+from scipy.sparse.linalg import LinearOperator
 
 from .solver import solve_sparse, PardisoSolver
 from .linalg.norms import m_normalize
@@ -979,3 +980,84 @@ def ifpks_modified(K, M, P, X_0, r=2, tol=1e-6, verbose=False):
         print('IFPKS Iteration No. {}, rho: {}'.format(k, rho[k]))
     return rho[-1], X
 
+
+def update_static_derivatives(V, K_func, K_old_solver, Theta_0, M=None, omega=0.0, h=1.0, verbose=False, symmetric=True,
+                              finite_diff='central'):
+    '''
+    Update the static correction derivatives for the given basis V.
+
+    Optionally, a frequency shift can be performed.
+
+    Parameters
+    ----------
+    V : ndarray
+        array containing the linear basis
+    K_func : function
+        function returning the tangential stiffness matrix for a given
+        displacement. Has to work like `K = K_func(u)`.
+    K_old_solver : amfe.solver.LinearSolver
+        LinearSolver instance with decomposed K matrix of reference problem, used as preconditioner
+    M : ndarray, optional
+        mass matrix. Can be sparse or dense. If `None` is given, the mass of 0
+        is assumed. Default value is `None`.
+    omega : float, optional
+        shift frequency. Default value is 0.
+    h : float, optional
+        step width for finite difference scheme. Default value is 500 * machine
+        epsilon
+    verbose : bool, optional
+        flag for verbosity. Default value: True
+    finite_diff : str {'central', 'forward', backward}
+        Method for finite difference scheme. 'central' computes the finite
+        difference based on a central difference scheme, 'forward' based on an
+        forward scheme etc. Note that the upwind scheme can cause severe
+        distortions of the static correction derivative.
+
+    Returns
+    -------
+    Theta : ndarray
+        three dimensional array of static corrections derivatives. Theta[:,i,j]
+        contains the static derivative 1/2 * dx_i / dx_j. As the static
+        derivatives are symmetric, Theta[:,i,j] == Theta[:,j,i].
+
+    See Also
+    --------
+    modal_derivative_theta
+    static_correction_derivative
+
+    '''
+    P = LinearOperator(K_old_solver.shape,matvec=K_old_solver.solve)
+    no_of_dofs = V.shape[0]
+    no_of_modes = V.shape[1]
+    Theta = np.zeros((no_of_dofs, no_of_modes, no_of_modes))
+    K = K_func(np.zeros(no_of_dofs))
+    if (omega > 0) and (M != None):
+        K_dyn = K - omega**2 * M
+    else:
+        K_dyn = K
+    for i in range(no_of_modes):
+        if verbose:
+            print('Computing finite difference K-matrix')
+        if finite_diff == 'central':
+            dK_dx_i = (K_func(h*V[:,i]) - K_func(-h*V[:,i]))/(2*h)
+        elif finite_diff == 'forward':
+            dK_dx_i = (K_func(h*V[:,i]) - K)/h
+        elif finite_diff == 'backward':
+            dK_dx_i = (-K_func(-h*V[:,i]) + K)/h
+        else:
+            raise ValueError('Finite difference scheme is not valid.')
+        b = - dK_dx_i @ V
+        if verbose:
+            print('Solving linear system #', i)
+        for j in range(b.shape[1]):
+            Theta[:,j,i] = sp.sparse.linalg.cg(K_dyn, b[:,j], x0=Theta_0[:,j,i], M=P)[0]
+        if verbose:
+            print('Done solving linear system #', i)
+    if verbose:
+        residual = np.linalg.norm(Theta - Theta.transpose(0,2,1)) / \
+                   np.linalg.norm(Theta)
+        print('The residual, i.e. the unsymmetric values, are', residual)
+    if symmetric:
+        # make Theta symmetric
+        Theta = 1/2*(Theta + Theta.transpose(0,2,1))
+    return Theta
