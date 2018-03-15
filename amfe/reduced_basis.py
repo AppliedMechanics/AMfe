@@ -1022,8 +1022,7 @@ def update_static_derivatives(V, K_func, K_old_solver, Theta_0, M=None, omega=0.
 
     See Also
     --------
-    modal_derivative_theta
-    static_correction_derivative
+    static_derivatives
 
     '''
     P = LinearOperator(K_old_solver.shape,matvec=K_old_solver.solve)
