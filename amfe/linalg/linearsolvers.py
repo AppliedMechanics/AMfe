@@ -84,6 +84,7 @@ class ScipySparseSolver(LinearSolver):
         self.verbose = False
         self.permc_spec = 'COLAMD'
         self.use_umfpack = False
+        self.shape = A.shape
 
         if issparse(A):
             self.A = A
