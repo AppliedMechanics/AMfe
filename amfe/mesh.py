@@ -43,7 +43,7 @@ from .element import Tet4, \
     Prism6
 
 
-
+from .constraint import *
 from .mesh_tying import master_slave_constraint
 
 # Element mapping is described here. If a new element is implemented, the
@@ -441,6 +441,32 @@ class Mesh:
         self.no_of_elements = 0
         self.el_df = pd.DataFrame()
         self.node_idx = 0
+
+        # Constraint class dictionary with all available constraints
+        self.constraints_class_dict = {
+            'FixedDistance': FixedDistanceConstraint,
+            'FixedDistanceToPoint': FixedDistanceConstraint,
+            'Dirichlet': DirichletConstraint,
+            'FixedDistanceToLine': FixedDistanceToLineConstraint,
+            'NodesCollinear': NodesCollinear2DConstraint,
+            'StraightLine': NodesCollinear2DConstraint,
+            'FixedDistanceToPlane': FixedDistanceToPlaneConstraint,
+            'NodesCoplanar': NodesCoplanarConstraint,
+        }
+
+        self.constraints_funct_dict = {
+            'FixedDistance': self.fixed_distance_dofs,
+            'Dirichlet': self.dirichlet_constraint_dofs,
+            'FixedDistanceToPoint': self.fixed_distance_to_point_dofs,
+            'FixedDistanceToLine': self.fixed_distance_to_line_dofs,
+            'NodesCollinear': self.nodes_collinear_2D_dofs,
+            'StraightLine': self.set_straight_line,
+            'FixedDistanceToPlane': self.fixed_distance_to_plane_dofs,
+            'NodesCoplanar': self.nodes_coplanar_dofs,
+        }
+
+        self.constraints_list = list()
+        self.constraints_dofs_related = list()
 
         # Element Class dictionary with all available elements
         # This dictionary is only needed for load_group_to_mesh()-method
@@ -1367,7 +1393,6 @@ class Mesh:
               '\nNumer of deflated nodes:', len(mask) - np.count_nonzero(mask))
         print('**************************************************************')
 
-
     def save_mesh_xdmf(self, filename, field_list=None, bmat=None, u=None, timesteps=None):
         '''
         Save the mesh in hdf5 and xdmf file format.
@@ -1511,3 +1536,299 @@ class Mesh:
         # Create the xdmf from the hdf5 file
         create_xdmf_from_hdf5(filename + '.hdf5')
         return
+
+    def create_constraint(self, constraint_name, key1, key2=False, coord='xyz',
+                          mesh_prop1='phys_group',
+                          mesh_prop2='phys_group'):
+        """ 
+        Function to create the constraints by getting the related dofs and 
+        extending the lists with the constraints.
+
+        """
+
+        dofs_list = self.constraints_funct_dict[constraint_name](
+            constraint_name, key1, key2, coord, mesh_prop1, mesh_prop2)
+
+        # extend the two lists for each object of this list
+        if len(dofs_list) != 0:
+            constraint = self.constraints_class_dict[constraint_name]()
+            for dof_array in dofs_list:
+                self.constraints_list.append(constraint)
+                self.constraints_dofs_related.append(np.array(dof_array))
+        else:
+            print("There was a problem creating the dofs for your constraint.",
+                  "No constraint was created.")
+
+    def dirichlet_constraint_dofs(self, constraint_name, key1, key2=False,
+                                  coord='xyz', mesh_prop1='phys_group',
+                                  mesh_prop2='phys_group'):
+
+        dofs_dirichlet = self.get_dofs_1(key1, coord, mesh_prop1)
+
+        return dofs_dirichlet.reshape(-1, 1)
+
+    def fixed_distance_dofs(self, constraint_name, key1, key2=False,
+                            coord='xyz', mesh_prop1='phys_group',
+                            mesh_prop2='phys_group'):
+
+        dofs_1, dofs_2 = self.set_fixed_distance(key1, key2, coord,
+                                                 mesh_prop1, mesh_prop2)
+
+        smaller = np.minimum(len(dofs_1.T), len(dofs_2.T))
+
+        return np.hstack((dofs_1.T[:smaller, :], dofs_2.T[:smaller, :]))
+
+    def fixed_distance_to_point_dofs(self, constraint_name, key1, key2=False,
+                                     coord='xyz', mesh_prop1='phys_group',
+                                     mesh_prop2='phys_group'):
+
+        dofs_1, dofs_2 = self.set_fixed_distance(key1, key2, coord,
+                                                 mesh_prop1, mesh_prop2)
+
+        if dofs_1.T.shape == (1, 2) or dofs_1.T.shape == (1, 3):
+
+            dofs_1_new = np.zeros_like(dofs_2.T)
+            dofs_1_new += dofs_1.T
+
+            return np.hstack((dofs_1_new, dofs_2.T))
+
+        elif dofs_2.T.shape == (1, 2) or dofs_2.T.shape == (1, 3):
+
+            dofs_2_new = np.zeros_like(dofs_1.T)
+            dofs_2_new += dofs_2.T
+
+            return np.hstack((dofs_1.T, dofs_2_new))
+        else:
+            print("At least one of the given keys must be a point for this",
+                  "constraint. Please correct the key and try again")
+            return
+
+    def fixed_distance_to_line_dofs(self, constraint_name, key1, key2=False,
+                                    coord='xyz', mesh_prop1='phys_group',
+                                    mesh_prop2='phys_group'):
+
+        dofs_1, dofs_2 = self.set_fixed_distance(key1, key2, coord,
+                                                 mesh_prop1, mesh_prop2)
+
+        dofs_fixed_dis = np.zeros((len(dofs_2.T), 3 * dofs_2.T.shape[1]))
+        for i, dof_2 in enumerate(dofs_2.T):
+            dofs_fixed_dis[i] = np.vstack((dofs_1.T[:2, :], dof_2)).reshape(1, -1)
+
+        return np.array(dofs_fixed_dis, dtype=int)
+
+    def nodes_collinear_2D_dofs(self, constraint_name, key1, key2=False,
+                                coord='xyz', mesh_prop1='phys_group',
+                                mesh_prop2='phys_group'):
+
+        dofs_1, dofs_2 = self.set_fixed_distance(key1, key2, coord,
+                                                 mesh_prop1, mesh_prop2)
+
+        if dofs_1.T.shape == (1, 2):
+            return np.vstack((dofs_2.T, dofs_1.T)).reshape(1, -1)
+
+        elif dofs_1.T.shape == (1, 3):
+            c_dofs1 = np.vstack(dofs_2.T[:, :2], dofs_1.T[:, :2]).reshape(1, -1)
+            c_dofs2 = np.vstack(dofs_2.T[:, (0, 2)], dofs_1.T[:, (0, 2)]).reshape(1, -1)
+            return np.vstack((c_dofs1, c_dofs2))
+
+        elif dofs_2.T.shape == (1, 2):
+            return np.vstack((dofs_1.T, dofs_2.T)).reshape(1, -1)
+
+        elif dofs_2.T.shape == (1, 3):
+            c_dofs1 = np.vstack(dofs_1.T[:, :2], dofs_2.T[:, :2]).reshape(1, -1)
+            c_dofs2 = np.vstack(dofs_1.T[:, (0, 2)], dofs_2.T[:, (0, 2)]).reshape(1, -1)
+            return np.vstack((c_dofs1, c_dofs2))
+
+        else:
+            print("At least one of the given keys must be a point for this",
+                  "constraint to work properly. Please correct the key and",
+                  "try again.")
+            return np.array([])
+
+    def set_straight_line(self, constraint_name, key1, key2=False,
+                          coord='xyz', mesh_prop1='phys_group',
+                          mesh_prop2='phys_group'):
+
+        dofs_line = self.get_dofs_1(key1, coord, mesh_prop1)
+
+        if dofs_line.T.shape[1] == 2:
+            dofs_ret_2D = np.zeros((len(dofs_line.T) - 2, 6))
+            for i in range(2, len(dofs_line.T)):
+                dofs_ret_2D[i - 2] = dofs_line.T[i - 2:i + 1, :].reshape(-1)
+            return np.array(dofs_ret_2D, dtype=int)
+
+        elif dofs_line.T.shape[1] == 3:
+            dofs_ret_3D = np.zeros((2 * (len(dofs_line.T) - 2), 6))
+            for i in range(2, len(dofs_line.T)):
+                dofs_ret_3D[2 * i - 4] = dofs_line.T[i - 2:i + 1, :2].reshape(-1)
+                dofs_ret_3D[2 * i - 3] = dofs_line.T[i - 2:i + 1, 1:3].reshape(-1)
+            return np.array(dofs_ret_3D, dtype=int)
+
+        else:
+            print("Too many degrees of freedom were given for the straight line.")
+            return np.array([])
+
+    def fixed_distance_to_plane_dofs(self, constraint_name, key1, key2=False,
+                                     coord='xyz', mesh_prop1='phys_group',
+                                     mesh_prop2='phys_group'):
+
+        dofs_1, dofs_2 = self.set_fixed_distance(key1, key2, coord,
+                                                 mesh_prop1, mesh_prop2)
+
+        if dofs_1.T.shape == (1, 2) or dofs_1.T.shape == (1, 3):
+            return np.vstack((dofs_2.T[:3, :], dofs_1.T)).reshape(1, -1)
+
+        elif dofs_2.T.shape == (1, 2) or dofs_2.T.shape == (1, 3):
+            return np.vstack((dofs_1.T[:3, :], dofs_2.T)).reshape(1, -1)
+
+        else:
+            print("At least one of the given keys must be a point for this",
+                  "constraint to work properly. Please correct the key and",
+                  "try again.")
+            return np.array([])
+
+    def nodes_coplanar_dofs(self, constraint_name, key1, key2=False,
+                            coord='xyz', mesh_prop1='phys_group',
+                            mesh_prop2='phys_group'):
+
+        dofs_1, dofs_2 = self.set_fixed_distance(key1, key2, coord,
+                                                 mesh_prop1, mesh_prop2)
+
+        if dofs_1.T.shape == (1, 2) or dofs_1.T.shape == (1, 3):
+            return np.vstack((dofs_2.T[:3, :], dofs_1.T)).reshape(1, -1)
+
+        elif dofs_2.T.shape == (1, 2) or dofs_2.T.shape == (1, 3):
+            return np.vstack((dofs_1.T[:3, :], dofs_2.T)).reshape(1, -1)
+
+        else:
+            print("At least one of the given keys must be a point for this",
+                  "constraint to work properly. Please correct the key and",
+                  "try again.")
+            return np.array([])
+
+    def get_dofs_1(self, key1, coord='xyz', mesh_prop1='phys_group'):
+        '''
+        This function will receive one key and return the dofs associated with
+        this key as a matrix with each column being the dofs of a 
+        specific node from this key.
+        rows: dof direction (x,y,z)
+        columns: nodes
+        '''
+        # asking for a group to be chosen, when no valid group is given
+        df = self.el_df
+        while key1 not in pd.unique(df[mesh_prop1]):
+            self.mesh_information(mesh_prop1)
+            print('\nNo valid', mesh_prop1, 'is given for key 1.\n(Given',
+                  mesh_prop1, 'is', key1, ')')
+            key1 = int(input('Please choose a ' + mesh_prop1 +
+                             ' to be chosen for the constraint: '))
+
+        # make a pandas dataframe just for the desired elements of key 1
+        elements_df1 = df[df[mesh_prop1] == key1]
+        # pick the nodes, make them unique and remove NaNs
+        all_nodes1 = elements_df1.iloc[:, self.node_idx:]
+        unique_nodes = np.unique(all_nodes1.values.reshape(-1))
+        unique_nodes = unique_nodes[np.isfinite(unique_nodes)]
+
+        # build the dofs_constraint1, a list containing the dofs related to
+        # key1 so that it contains each coordenate (x,y,z) in a different line
+        dofs_constraint1 = []
+        if 'x' in coord:
+            dofs_constraint1.extend(unique_nodes * self.no_of_dofs_per_node)
+        if 'y' in coord:
+            dofs_y = []
+            dofs_y.extend(unique_nodes * self.no_of_dofs_per_node + 1)
+            if len(dofs_constraint1) is not 0:
+                dofs_constraint1 = np.vstack((dofs_constraint1, dofs_y))
+            else:
+                dofs_constraint1 = dofs_y
+        if 'z' in coord and self.no_of_dofs_per_node > 2:
+            dofs_z = []
+            dofs_z.extend(unique_nodes * self.no_of_dofs_per_node + 2)
+            if len(dofs_constraint1) is not 0:
+                dofs_constraint1 = np.vstack((dofs_constraint1, dofs_z))
+            else:
+                dofs_constraint1 = dofs_z
+
+        return np.array(dofs_constraint1, dtype=int)
+
+    def set_fixed_distance(self, key1, key2, coord='xyz',
+                           mesh_prop1='phys_group',
+                           mesh_prop2='phys_group'):
+        '''
+        This function will receive two keys and return the dofs associated with
+        each of those keys as a matrix with each column being the dofs of a 
+        specific node from this key.
+        '''
+        # asking for a group to be chosen, when no valid group is given
+        df = self.el_df
+        while key1 not in pd.unique(df[mesh_prop1]):
+            self.mesh_information(mesh_prop1)
+            print('\nNo valid', mesh_prop1, 'is given for key 1.\n(Given',
+                  mesh_prop1, 'is', key1, ')')
+            key1 = int(input('Please choose a ' + mesh_prop1 +
+                             ' to be chosen for the constraint: '))
+
+        while key2 not in pd.unique(df[mesh_prop2]):
+            self.mesh_information(mesh_prop2)
+            print('\nNo valid', mesh_prop2, 'is given for key 2.\n(Given',
+                  mesh_prop2, 'is', key2, ')')
+            key2 = int(input('Please choose a ' + mesh_prop2 +
+                             ' to be chosen for the constraint: '))
+
+        # make a pandas dataframe just for the desired elements of key 1
+        elements_df1 = df[df[mesh_prop1] == key1]
+        # pick the nodes, make them unique and remove NaNs
+        all_nodes1 = elements_df1.iloc[:, self.node_idx:]
+        unique_nodes = np.unique(all_nodes1.values.reshape(-1))
+        unique_nodes = unique_nodes[np.isfinite(unique_nodes)]
+
+        # build the dofs_constraint1, a list containing the dofs related to
+        # key1 so that it contains each coordenate (x,y,z) in a different line
+        dofs_constraint1 = []
+        if 'x' in coord:
+            dofs_constraint1.extend(unique_nodes * self.no_of_dofs_per_node)
+        if 'y' in coord:
+            dofs_y = []
+            dofs_y.extend(unique_nodes * self.no_of_dofs_per_node + 1)
+            if len(dofs_constraint1) is not 0:
+                dofs_constraint1 = np.vstack((dofs_constraint1, dofs_y))
+            else:
+                dofs_constraint1 = dofs_y
+        if 'z' in coord and self.no_of_dofs_per_node > 2:
+            dofs_z = []
+            dofs_z.extend(unique_nodes * self.no_of_dofs_per_node + 2)
+            if len(dofs_constraint1) is not 0:
+                dofs_constraint1 = np.vstack((dofs_constraint1, dofs_z))
+            else:
+                dofs_constraint1 = dofs_z
+
+        dofs_constraint1 = np.array(dofs_constraint1, dtype=int)
+
+        # do the same for key2
+        elements_df2 = df[df[mesh_prop2] == key2]
+        all_nodes2 = elements_df2.iloc[:, self.node_idx:]
+        unique_nodes = np.unique(all_nodes2.values.reshape(-1))
+        unique_nodes = unique_nodes[np.isfinite(unique_nodes)]
+
+        dofs_constraint2 = []
+        if 'x' in coord:
+            dofs_constraint2.extend(unique_nodes * self.no_of_dofs_per_node)
+        if 'y' in coord:
+            dofs_y = []
+            dofs_y.extend(unique_nodes * self.no_of_dofs_per_node + 1)
+            if len(dofs_constraint1) is not 0:
+                dofs_constraint2 = np.vstack((dofs_constraint2, dofs_y))
+            else:
+                dofs_constraint2 = dofs_y
+        if 'z' in coord and self.no_of_dofs_per_node > 2:
+            dofs_z = []
+            dofs_z.extend(unique_nodes * self.no_of_dofs_per_node + 2)
+            if len(dofs_constraint1) is not 0:
+                dofs_constraint2 = np.vstack((dofs_constraint2, dofs_z))
+            else:
+                dofs_constraint2 = dofs_z
+
+        dofs_constraint2 = np.array(dofs_constraint2, dtype=int)
+
+        return dofs_constraint1, dofs_constraint2
