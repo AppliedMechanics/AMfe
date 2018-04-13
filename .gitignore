@@ -22,7 +22,7 @@ build/
 dist/
 private/
 amfe.egg-info/
-experiments/paper_icoev
+experiments/
 .idea/
 .spyproject/
 
@@ -30,3 +30,7 @@ experiments/paper_icoev
 amfe/fortran/f90_elementmodule.c
 .project
 MANIFEST
+
+*.msh
+*.geo
+*.hdf5
