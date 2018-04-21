@@ -941,6 +941,15 @@ class ConstrainedMechanicalSystem(MechanicalSystem):
     def M(self, u=None, t=0):
         '''
         Compute the extended mass matrix of the dynamical system.
+
+        This method computes:
+
+            -           -
+            |  M  |  0  |
+        M = |-----+-----|
+            |  0  |  0  |
+            -           -
+
         '''
 
         ndof = self.dirichlet_class.no_of_constrained_dofs
@@ -960,6 +969,14 @@ class ConstrainedMechanicalSystem(MechanicalSystem):
     def K(self, u=None, t=0):
         '''
         Compute the extended stiffness matrix of the mechanical system
+
+        This method computes:
+            -                                -
+            | K  +  s p B^T B   |   s B^T    |
+        K = |-------------------+------------|
+            |       s B         |     0      |
+            -                                -
+
 
         Parameters
         ----------
@@ -991,7 +1008,18 @@ class ConstrainedMechanicalSystem(MechanicalSystem):
         return K_extended
 
     def f_int(self, u, t=0, dt=1):
-        '''Return the extended elastic restoring force of the system '''
+        '''
+        Return the extended elastic restoring force of the system
+
+
+        This method returns:
+
+        -                                   -
+        |f_int + s B^T ( lambda + p C(u) )  |
+        |  s C(u)                           |
+        -                                   -
+
+        '''
         ndof = self.dirichlet_class.no_of_constrained_dofs
         ndof_const = self.number_of_constraints
 
@@ -1008,6 +1036,18 @@ class ConstrainedMechanicalSystem(MechanicalSystem):
         return f_int_extended
 
     def f_ext(self, u, du, t):
+        '''
+        Return the extended external force of the system
+
+
+        This method returns:
+
+        -       -
+        |f_ext  |
+        | sC(u) |
+        -       -
+
+        '''
         ndof = self.dirichlet_class.no_of_constrained_dofs
         ndof_const = self.number_of_constraints
 
@@ -1022,6 +1062,12 @@ class ConstrainedMechanicalSystem(MechanicalSystem):
         return f_ext_extended
 
     def K_and_f(self, u=None, t=0, dt=1):
+        '''
+        Returns tangential stiffness K and f_int of constrained system
+
+        This system returns the K and f_int according to the methods K  and f_int
+        See documentation there
+        '''
         ndof = self.dirichlet_class.no_of_constrained_dofs
         ndof_const = self.number_of_constraints
         # pass a right sized u for the original K_and_f function
