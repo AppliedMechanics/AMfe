@@ -24,6 +24,7 @@ from .mesh import *
 from .observers import *
 from .solver import *
 from .tools import *
+from .constraint import *
 
 # Linalg submodule
 from .linalg import *

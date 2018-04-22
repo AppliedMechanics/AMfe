@@ -15,7 +15,9 @@ substituted by fortran routines, as they allow for a huge speedup.
 
 """
 
-__all__ = ['Assembly']
+__all__ = ['Assembly',
+           'AssemblyConstraint',
+           ]
 
 import time
 
@@ -121,8 +123,6 @@ if use_fortran:
     ###########################################################################
     get_index_of_csr_data = amfe.f90_assembly.get_index_of_csr_data
     fill_csr_matrix = amfe.f90_assembly.fill_csr_matrix
-
-
 
 class Assembly():
     '''
@@ -836,3 +836,196 @@ class Assembly():
         self.C_deim = sp.sparse.csr_matrix((data, (row, col)),
                                            shape=(no_of_dofs, dofs_unassembled))
         return self.C_deim
+
+
+##### Constrained Mechanical System ###########################################
+
+class AssemblyConstraint(Assembly):
+    '''
+    Class for the assembly of constraints.
+
+    Attributes
+    ----------
+    B_csr : scipy.sparse.csr.csr_matrix
+        Matrix containing the sparsity pattern of the constraints
+
+    '''
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+
+        self.B_csr = sp.sparse.csr_matrix([[]])
+
+    def preallocate_B_csr(self):
+        '''
+        Precompute the values and allocate the matrices for efficient assembly.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+
+
+        Notes
+        -----
+        This preallocation routine can take some time.
+
+        '''
+        print('Preallocating the Jacobian matrix of constraints')
+        t1 = time.clock()
+        # computation of all necessary variables:
+
+        # create B_csr with the number of unconstrained dofs and multiply
+        # it like a vector to get the constrained B: B.dot(B_constraints.T)
+        #        constraints_list = self.mesh.constraints_list
+        constraints_dofs_related = self.mesh.constraints_dofs_related
+        no_of_dofs = self.mesh.no_of_dofs
+        ndof_const = len(constraints_dofs_related)
+
+        # find out the number of nonzero entries in B
+        nonzero_in_B = 0
+        for dofs in constraints_dofs_related:
+            nonzero_in_B += len(dofs)
+        # preallocate the CSR-matrix
+        row_global = np.zeros(nonzero_in_B, dtype=int)
+        col_global = row_global.copy()
+
+        vals_global = np.zeros_like(col_global, dtype=bool)
+
+        # build csr_matrix((data, (row_ind, col_ind)), [shape=(M, N)])
+        # where data, row_ind and col_ind satisfy the relationship
+        # a[row_ind[k], col_ind[k]] = data[k].
+        i = 0
+        for j, constraint_dofs in enumerate(constraints_dofs_related):
+            for dof in constraint_dofs:
+                row_global[i] = j
+                col_global[i] = dof
+                i += 1
+
+        self.B_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
+                                          shape=(ndof_const, no_of_dofs), dtype=float)
+        t2 = time.clock()
+        print('Done preallocating the Jacobian matrix of constraints with',
+              ndof_const, 'constraints', 'and', no_of_dofs, 'dofs.')
+        print('Time taken for preallocation:', t2 - t1, 'seconds.')
+
+    def assemble_B(self, u, t):
+        '''
+        Assembles the jacobian of the constraints vector for the given mesh
+        and element and constraint.
+
+        Parameters
+        -----------
+        u : ndarray
+            nodal displacement of the nodes in Voigt-notation
+        t : float
+            time
+
+        Returns
+        --------
+        B_csr : ndarray
+            unconstrained jacobian matrix of the constraints in sparse matrix
+            csr-format.
+
+        Examples
+        ---------
+        TODO
+        '''
+        if u is None:
+            u = np.zeros_like(self.nodes_voigt)
+
+        B_csr = self.B_csr.copy()
+
+        constraints_list = self.mesh.constraints_list
+        constraints_dofs_related = self.mesh.constraints_dofs_related
+
+        for i, constraint in enumerate(constraints_list):
+            X_local = self.nodes_voigt[constraints_dofs_related[i]]
+            u_local = u[constraints_dofs_related[i]]
+
+            # This small b vector refers ONLY to the nonzero entries in B for a
+            # specific constraint. E.g. for Dirichlet BC it is always [1].
+            # For this to work it is important that constraint_dofs_related
+            # already has the correct DOFs that will be constrained.
+            b = constraint.vector_b(X_local, u_local, t)
+
+            fill_B_csr_matrix(B_csr.indptr, B_csr.indices, B_csr.data, b, i,
+                              constraints_dofs_related[i])
+
+        return B_csr
+
+    def assemble_C(self, u, t):
+        '''
+        Assembles the constraints vector for the given mesh, element and
+        constraints.
+
+        Parameters
+        -----------
+        u : ndarray
+            nodal displacement of the nodes in Voigt-notation
+        du: ndarray
+            nodal velocities of the nodes in Voigt-notation
+        t : float
+            time
+
+        Returns
+        --------
+        C : ndarray
+            array of constraint equations
+
+        Examples
+        ---------
+        TODO
+        '''
+        if u is None:
+            u = np.zeros_like(self.nodes_voigt)
+
+        constraints_list = self.mesh.constraints_list
+        constraints_dofs_related = self.mesh.constraints_dofs_related
+        ndof_const = len(constraints_list)
+        C = np.zeros((ndof_const))
+
+        for i, constraint in enumerate(constraints_list):
+            X_local = self.nodes_voigt[constraints_dofs_related[i]]
+            u_local = u[constraints_dofs_related[i]]
+            # build C for each constraint, displacement and X.
+            C[i] += constraint.c_equation(X_local, u_local, t=t)
+        return C
+
+
+def fill_B_csr_matrix(indptr, indices, vals, b, i, b_indices):
+    '''
+    Fill the values of b into the vals-array of a sparse CSR Matrix given the
+    b_indices array.
+
+    Parameters
+    ----------
+
+    indptr : ndarray
+        indptr-array of a preallocated CSR-Matrix
+    indices : ndarray
+        indices-array of a preallocated CSR-Matrix
+    vals : ndarray
+        vals-array of a preallocated CSR-Marix
+    b : ndarray
+        'small' line array which values will be distributed into the CSR-Matrix
+    i : int
+        represents the line of B_csr that will be filled
+    b_indices : ndarray
+        indices for the colums which b represents inside B_csr
+
+    Returns
+    -------
+
+    None
+
+    '''
+
+    ndof_l = b.shape[0]
+    for j in range(ndof_l):
+        l = get_index_of_csr_data(i, b_indices[j], indptr, indices)
+        vals[l] += b[j]
+    return
