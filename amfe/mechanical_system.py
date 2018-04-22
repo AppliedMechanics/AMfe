@@ -916,7 +916,7 @@ class ConstrainedMechanicalSystem(MechanicalSystem):
     '''
 
     def __init__(self, *args, **kwargs):
-        super().__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # properties for constraints
         self.number_of_constraints = 0
