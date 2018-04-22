@@ -19,7 +19,6 @@ from .mesh import Mesh
 from .assembly import Assembly, AssemblyConstraint
 from .boundary import DirichletBoundary
 from .observers import MaterialObserver, NodesObserver
-from .solver import *
 
 __all__ = [
     'MechanicalSystem',
