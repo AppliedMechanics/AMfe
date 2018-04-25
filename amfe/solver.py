@@ -85,7 +85,7 @@ class NonlinearStaticsSolver(Solver):
                 self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
             else:
                 print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-                self.linear_solver = PardisoSolver(A=None, mtype='spd')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid')
         if 'number_of_load_steps' in options:
             self.number_of_load_steps = options['number_of_load_steps']
         else:
@@ -285,7 +285,7 @@ class LinearStaticsSolver(Solver):
                 self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
             else:
                 print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-                self.linear_solver = PardisoSolver(A=None, mtype='spd')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid')
 
         if 't' in options:
             self.t = options['t']
@@ -387,7 +387,7 @@ class NonlinearDynamicsSolver(Solver):
                 self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
             else:
                 print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-                self.linear_solver = PardisoSolver(A=None, mtype='spd')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid')
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
@@ -857,7 +857,7 @@ class LinearDynamicsSolver(Solver):
                 self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
             else:
                 print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-                self.linear_solver = PardisoSolver(A=None, mtype='spd')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid')
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
