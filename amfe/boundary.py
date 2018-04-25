@@ -37,7 +37,7 @@ class DirichletBoundary():
         number of constrained dofs
 
     '''
-    def __init__(self, no_of_unconstrained_dofs=np.nan):
+    def __init__(self, no_of_unconstrained_dofs=0):
         '''
         Parameters
         ----------

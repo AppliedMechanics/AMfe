@@ -19,7 +19,6 @@ from .mesh import Mesh
 from .assembly import Assembly, AssemblyConstraint
 from .boundary import DirichletBoundary
 from .observers import MaterialObserver, NodesObserver
-from .solver import *
 
 __all__ = [
     'MechanicalSystem',
@@ -88,7 +87,7 @@ class MechanicalSystem():
         # instantiate the important classes needed for the system
         self.mesh_class = Mesh()
         self.assembly_class = Assembly(self.mesh_class)
-        self.dirichlet_class = DirichletBoundary(np.nan)
+        self.dirichlet_class = DirichletBoundary()
 
         #  initialize observers
         self.material_observer = MaterialObserver(self)

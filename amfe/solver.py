@@ -11,7 +11,7 @@ import numpy as np
 import abc
 import time
 
-from .mechanical_system import *
+from .mechanical_system import ConstrainedMechanicalSystem
 from .linalg import *
 
 __all__ = [
@@ -27,7 +27,6 @@ __all__ = [
     'JWHAlphaLinearDynamicsSolver',
     'JWHAlphaNonlinearDynamicsSolverStateSpace',
     'JWHAlphaLinearDynamicsSolverStateSpace',
-    'ConstrainedNonlinearDynamicsSolver'
 ]
 
 abort_statement = '''
@@ -80,9 +79,13 @@ class NonlinearStaticsSolver(Solver):
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
         else:
-            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-            self.linear_solver = PardisoSolver(A=None, mtype='spd')
-
+            if isinstance(mechanical_system, ConstrainedMechanicalSystem):
+                print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver() with'
+                      'options for saddle point problems.')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
+            else:
+                print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid')
         if 'number_of_load_steps' in options:
             self.number_of_load_steps = options['number_of_load_steps']
         else:
@@ -276,8 +279,13 @@ class LinearStaticsSolver(Solver):
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
         else:
-            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-            self.linear_solver = PardisoSolver(A=None, mtype='spd')
+            if isinstance(mechanical_system,ConstrainedMechanicalSystem):
+                print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver() with'
+                      'options for saddle point problems.')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
+            else:
+                print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid')
 
         if 't' in options:
             self.t = options['t']
@@ -373,8 +381,13 @@ class NonlinearDynamicsSolver(Solver):
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
         else:
-            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-            self.linear_solver = PardisoSolver(A=None, mtype='sid')
+            if isinstance(mechanical_system,ConstrainedMechanicalSystem):
+                print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver() with'
+                      'options for saddle point problems.')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
+            else:
+                print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid')
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
@@ -838,8 +851,13 @@ class LinearDynamicsSolver(Solver):
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
         else:
-            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-            self.linear_solver = PardisoSolver(A=None, mtype='spd')
+            if isinstance(mechanical_system,ConstrainedMechanicalSystem):
+                print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver() with'
+                      'options for saddle point problems.')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
+            else:
+                print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+                self.linear_solver = PardisoSolver(A=None, mtype='sid')
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
@@ -1024,6 +1042,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
         else:
+            # TODO: What is a good choice for constrained systems in state space?
             print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
             self.linear_solver = PardisoSolver(A=None, mtype='nonsym')
 
@@ -1248,6 +1267,7 @@ class LinearDynamicsSolverStateSpace(Solver):
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
         else:
+            # TODO: What is a good choice for constrained state space systems?
             print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
             self.linear_solver = PardisoSolver(A=None, mtype='nonsym')
 
@@ -2157,9 +2177,6 @@ class JWHAlphaLinearDynamicsSolverStateSpace(LinearDynamicsSolverStateSpace):
         dx = 1 / (self.gamma * self.dt) * (x - x_old) + (self.gamma - 1) / self.gamma * dx_old
         return dx
 
-
-class ConstrainedNonlinearDynamicsSolver(NonlinearDynamicsSolver):
-    pass
 
 # This could be a dictionary for a convenient mapping of scheme names (strings) to their solver classes
 # solvers_available = {'NonlinearStatics' : NonlinearStaticsSolver,
