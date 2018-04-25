@@ -87,7 +87,7 @@ class MechanicalSystem():
         # instantiate the important classes needed for the system
         self.mesh_class = Mesh()
         self.assembly_class = Assembly(self.mesh_class)
-        self.dirichlet_class = DirichletBoundary(np.nan)
+        self.dirichlet_class = DirichletBoundary()
 
         #  initialize observers
         self.material_observer = MaterialObserver(self)
