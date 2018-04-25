@@ -387,7 +387,7 @@ class NonlinearDynamicsSolver(Solver):
                 self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
             else:
                 print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-                self.linear_solver = PardisoSolver(A=None, mtype='sid')
+                self.linear_solver = PardisoSolver(A=None, mtype='spd')
 
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
