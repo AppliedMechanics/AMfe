@@ -418,7 +418,7 @@ class Mesh:
         the nodes of the element start.
     '''
 
-    def __init__(self):
+    def __init__(self, dimension=3):
         '''
         Parameters
         ----------
@@ -428,7 +428,7 @@ class Mesh:
         -------
         None
         '''
-        self.nodes = np.array([])
+        self.nodes = np.empty((0,dimension),dtype=float)
         self.connectivity = []
         self.ele_obj = []
         self.neumann_connectivity = []
@@ -438,7 +438,7 @@ class Mesh:
         self.constraint_list = []  # experimental; Introduced for nastran meshes
         # the displacements; They are stored as a list of numpy-arrays with
         # shape (ndof, no_of_dofs_per_node):
-        self.no_of_dofs_per_node = 0
+        self.no_of_dofs_per_node = dimension
         self.no_of_dofs = 0
         self.no_of_nodes = 0
         self.no_of_elements = 0
