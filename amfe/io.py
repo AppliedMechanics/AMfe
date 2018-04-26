@@ -57,17 +57,20 @@ class MeshConverter():
     def __init__(self, *args, **kwargs):
         pass
 
-    def buildNode(self,x,y,z):
+    def build_node(self,x,y,z):
         pass
 
-    def buildElement(self,type,nodes):
+    def build_element(self,type,nodes):
         pass
 
-    def buildPhysicalGroup(self,type,id,entities):
+    def build_physical_group(self,type,id,entities):
         pass
 
-    def buildElementType(self,type):
+    def build_element_type(self,type):
         pass
 
-    def buildMaterial(self,material):
+    def build_material(self,material):
+        pass
+
+    def build_partition(self,partition):
         pass
