@@ -5,7 +5,7 @@ Test for testing io module
 
 import unittest
 import numpy as np
-from numpy.testing import assert_allclose, assert_almost_equal
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 
 import amfe
 
