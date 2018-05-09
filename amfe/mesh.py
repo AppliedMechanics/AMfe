@@ -377,8 +377,10 @@ class Mesh:
         Caution! Currently this property describes the node-coordinates of the
         first reference configuration where no mesh morphing techniques have been
         applied.
+    nodeid2rowid : dict
+        Dictionary with key = node-id: value = row id in self.nodes array for getting nodes coordinates X 
     connectivity : list
-        List of nodes indices belonging to one element.
+        List of node-rowindices of self.nodes belonging to one element.
     constraint_list: ndarray
         Experimental: contains constraints imported from nastran-files via
         import_bdf()
@@ -429,6 +431,7 @@ class Mesh:
         None
         '''
         self.nodes = np.empty((0,dimension),dtype=float)
+        self.nodeid2rowidx = dict([])
         self.connectivity = []
         self.ele_obj = []
         self.neumann_connectivity = []
@@ -1063,11 +1066,17 @@ class Mesh:
 
         # add the nodes of the chosen group
         connectivity = [np.nan for i in range(len(elements_df))]
-        for i, ele in enumerate(elements_df.values):
-            no_of_nodes = amfe2no_of_nodes[elements_df.el_type.iloc[i]]
-            connectivity[i] = np.array(ele[self.node_idx :
+        if not self.nodeid2rowidx:
+            # Old implementation before new Readers
+            for i, ele in enumerate(elements_df.values):
+                no_of_nodes = amfe2no_of_nodes[elements_df.el_type.iloc[i]]
+                connectivity[i] = np.array(ele[self.node_idx :
                                            self.node_idx + no_of_nodes],
                                        dtype=int)
+        else:
+            for i, ele in enumerate(elements_df[['el_type','nodes']].values):
+                no_of_nodes = amfe2no_of_nodes[ele[0]]
+                connectivity[i] = np.array([self.nodeid2rowidx[nodeid] for nodeid in ele[1]], dtype=int)
 
         self.connectivity.extend(connectivity)
 

@@ -193,14 +193,15 @@ class AmfeMeshConverter(MeshConverter):
     '''
 
     # mapping from reader-nodeid to amfe-nodeid
-    nodeids = dict()
+    nodeid2rowidx = dict()
 
     def __init__(self):
         self._mesh = Mesh()
         self._mesh.el_df.rename(copy=False, inplace=True,
                   columns={0: 'idx',
                            1: 'el_type',
-                           3: 'phys_group'
+                           3: 'phys_group',
+                           4: 'active'
                            })
 
     def build_mesh_dimension(self,dim):
@@ -211,16 +212,17 @@ class AmfeMeshConverter(MeshConverter):
         print('ID: {}, X: {}, Y: {}, Z: {}'.format(id,x,y,z))
         amfeid = self._mesh.nodes.shape[0]
         self._mesh.nodes = np.append(self._mesh.nodes, np.array([x,y,z], dtype=float, ndmin=2),axis=0)
-        self.nodeids.update({id: amfeid})
+        self.nodeid2rowidx.update({id: amfeid})
 
     def build_element(self,id,type,nodes):
         print('ID: {}, Type: {}, Nodes: {}'.format(id,type,nodes))
-        num_of_nodes = len(nodes)
-        temp = {str(i): nodes[i] for i in range(num_of_nodes)}
-        ele = {'idx': id, 'el_type': type, 'phys_group': 0}
-        ele.update(temp)
+        #num_of_nodes = len(nodes)
+        #temp = {str(i): nodes[i] for i in range(num_of_nodes)}
+        ele = {'idx': id, 'el_type': type, 'phys_group': 0, 'active': False, 'nodes': [np.array(nodes,dtype=np.int64)]}
+        #ele.update(temp)
         df = pd.DataFrame(ele, index=[id])
         self._mesh.el_df = self._mesh.el_df.append(df)
 
     def return_mesh(self):
+        self._mesh.nodeid2rowidx = self.nodeid2rowidx
         return self._mesh
