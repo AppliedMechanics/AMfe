@@ -25,7 +25,10 @@ class IOTest(unittest.TestCase):
                                     [1.05296566e+00, 1.04992142e+00, 5.77563650e-03],
                                     [2.04236782e+00, 4.27825670e-02, 2.47727800e-03],
                                     [2.04234766e+00, 1.04345626e+00, 2.57235000e-03]])
-        el_df_reference = {'0': {1: 5, 2: 4, 3: 4, 4: 1}, '1': {1: 6, 2: 3, 3: 2, 4: 2}, '2': {1: 4, 2: 2, 3: 5, 4: 3}, 'el_type': {1: 'Tri3', 2: 'Tri3', 3: 'Tri3', 4: 'Tri3'}, 'idx': {1: 1, 2: 2, 3: 3, 4: 4}, 'phys_group': {1: 0, 2: 0, 3: 0, 4: 0}}
+        el_df_reference = {'active': {1: False, 2: False, 3: False, 4: False}, 'el_type': {1: 'Tri3', 2: 'Tri3', 3: 'Tri3', 4: 'Tri3'},
+         'idx': {1: 1, 2: 2, 3: 3, 4: 4},
+         'nodes': {1: np.array([5, 6, 4]), 2: np.array([4, 3, 2]), 3: np.array([4, 2, 5]), 4: np.array([1, 2, 3])},
+         'phys_group': {1: 0, 2: 0, 3: 0, 4: 0}}
 
         # Define input file path
         file = amfe.amfe_dir('tests/meshes/gid_4_tets_v2.msh')
@@ -39,6 +42,6 @@ class IOTest(unittest.TestCase):
         assert_equal(mesh.no_of_dofs_per_node, 3)
 
 if __name__ == '__main__':
-    st = SolversTest()
+    st = IOTest()
     st.setUp()
-    st.test_generalized_alpha_nonlinear_dynamics_solver()
+    st.test_gidascii_to_amfemesh()
