@@ -11,12 +11,12 @@ It handles input output operations for AMfe
 import abc
 import re
 import numpy as np
+import pandas as pd
 
 from amfe import Mesh
 
 __all__ = [
     'GidAsciiMeshReader',
-    'GidBinaryMeshReader',
     'AmfeMeshConverter',
 ]
 
@@ -31,6 +31,7 @@ class MeshReader(abc.ABC):
     - Read line by line a stream (or file)
     - Call MeshConverter function for each line
     
+    PLEASE FOLLOW THE BUILDER PATTERN!
     '''
 
     @abc.abstractmethod
@@ -85,10 +86,10 @@ class GidAsciiMeshReader(MeshReader):
         with open(self._filename, 'r') as infile:
             line = next(infile)
             pattern = "dimension (\d) ElemType\s([A-Za-z0-9]*)\sNnode\s(\d)"
-            m = re.search(pattern, line)
-            dimension = int(m.group(1)) # dimension (nodes have two or three coordinates)
-            eleshape = m.group(2) # elementtype
-            nnodes = int(m.group(3)) # number of nodes per element
+            match = re.search(pattern, line)
+            dimension = int(match.group(1)) # dimension (nodes have two or three coordinates)
+            eleshape = match.group(2) # elementtype
+            nnodes = int(match.group(3)) # number of nodes per element
 
             self.builder.build_mesh_dimension(dimension)
             try:
@@ -133,11 +134,13 @@ class GidAsciiMeshReader(MeshReader):
                             self.builder.build_element(eleid, eletype, nodes)
                 else:
                     print(line)
+        # Finished build, return mesh
+        return self.builder.return_mesh()
 
 
 class MeshConverter():
     '''
-    Abstract super class for all MeshConverters.
+    Super class for all MeshConverters.
     '''
 
     def __init__(self, *args, **kwargs):
@@ -150,6 +153,22 @@ class MeshConverter():
         pass
 
     def build_physical_group(self,type,id,entities):
+        pass
+
+    def build_node_group(self, name, nodeids):
+        '''
+        
+        Parameters
+        ----------
+        name: string
+            name identifying the node group
+        nodeids: list
+            list with node ids
+
+        Returns
+        -------
+
+        '''
         pass
 
     def build_element_type(self,type):
@@ -174,10 +193,15 @@ class AmfeMeshConverter(MeshConverter):
     '''
 
     # mapping from reader-nodeid to amfe-nodeid
-    localmapping = dict()
+    nodeids = dict()
 
     def __init__(self):
         self._mesh = Mesh()
+        self._mesh.el_df.rename(copy=False, inplace=True,
+                  columns={0: 'idx',
+                           1: 'el_type',
+                           3: 'phys_group'
+                           })
 
     def build_mesh_dimension(self,dim):
         self._mesh.no_of_dofs_per_node = dim
@@ -187,10 +211,16 @@ class AmfeMeshConverter(MeshConverter):
         print('ID: {}, X: {}, Y: {}, Z: {}'.format(id,x,y,z))
         amfeid = self._mesh.nodes.shape[0]
         self._mesh.nodes = np.append(self._mesh.nodes, np.array([x,y,z], dtype=float, ndmin=2),axis=0)
-        self.localmapping.update({id: amfeid})
+        self.nodeids.update({id: amfeid})
 
     def build_element(self,id,type,nodes):
         print('ID: {}, Type: {}, Nodes: {}'.format(id,type,nodes))
+        num_of_nodes = len(nodes)
+        temp = {str(i): nodes[i] for i in range(num_of_nodes)}
+        ele = {'idx': id, 'el_type': type, 'phys_group': 0}
+        ele.update(temp)
+        df = pd.DataFrame(ele, index=[id])
+        self._mesh.el_df = self._mesh.el_df.append(df)
 
     def return_mesh(self):
         return self._mesh
