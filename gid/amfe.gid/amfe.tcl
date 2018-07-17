@@ -151,8 +151,6 @@ proc AMfe::WriteAMfeMesh { filename } {
     }
     GiD_File fprintf $fp {%s} "\n    \]"
     GiD_File fprintf $fp {%s} \}
-    W "Entitites of groups"
-    W [GiD_EntitiesGroups get left all_mesh]
     GiD_File fclose $fp
 }
 
