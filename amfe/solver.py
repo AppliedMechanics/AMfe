@@ -376,7 +376,7 @@ class NonlinearDynamicsSolver(Solver):
 
     def __init__(self, mechanical_system, **options):
         self.mechanical_system = mechanical_system
-
+        self.dt_info = list()
         # read options
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
@@ -697,11 +697,11 @@ class NonlinearDynamicsSolver(Solver):
             max_f_ext_old = max_f_ext
 
             # time step adaption loop
-            dt_iter = 0
-            sum_res_iter = 0
-            abs_dt_err = 1.e16
-            hit_dt_min = False
-            no_res_conv = False
+            dt_iter = 0  # number of time-step adaptations
+            sum_res_iter = 0  # residual iterations cummulated over all timestep adaptions
+            abs_dt_err = 1.e16  # local error through timestep discretization
+            hit_dt_min = False  # flag for checking if minimal dt used
+            no_res_conv = False  # flag for checking if residual convergence failed
             while abs_dt_err > (rel_dt_err_tol * max_q + abs_dt_err_tol):
                 dt_iter += 1
 
@@ -792,10 +792,8 @@ class NonlinearDynamicsSolver(Solver):
                     abs_dt_err = self.estimate_local_time_discretization_error(ddq, ddq_old)
                     kappa = np.cbrt((rel_dt_err_tol * max_q + abs_dt_err_tol) / abs_dt_err)
                     kappa *= safety_fac
-                    if kappa < mod_fac_min:
-                        kappa = mod_fac_min
-                    elif kappa > mod_fac_max:
-                        kappa = mod_fac_max
+                    # bound kappa by mod_fac_min and mod_fac_max
+                    kappa = np.clip(kappa, mod_fac_min, mod_fac_max)
                     self.dt *= kappa
                     if self.dt <= dt_min:
                         # catch failing dt convergence wrt. hitting dt_min
@@ -1705,7 +1703,7 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         integration scheme.
         '''
 
-        raise ValueError('Error: Adaptive time stepping is not yet implemented for time integration with the '
+        raise NotImplementedError('Error: Adaptive time stepping is not yet implemented for time integration with the '
                          + 'JWH-alpha scheme. Use the generalized-alpha scheme instead.')
         return
 
