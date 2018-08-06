@@ -376,7 +376,7 @@ class NonlinearDynamicsSolver(Solver):
 
     def __init__(self, mechanical_system, **options):
         self.mechanical_system = mechanical_system
-
+        self.dt_info = list()
         # read options
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
@@ -608,46 +608,46 @@ class NonlinearDynamicsSolver(Solver):
         print('Time for solving nonlinear dynamic problem: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
         return
 
-    def solve_with_adaptive_time_step(self, dt_start, dt_min, dt_max, change_factor_min, change_factor_max,
-                                      safety_factor, failing_newton_convergence_factor, trust_value,
-                                      relative_dt_tolerance, max_dt_iterations, failing_dt_convergence_abort=True):
+    def solve_with_adaptive_time_stepping(self, dt_init=1.e-4, dt_min=1.e-12, dt_max=1.e0, mod_fac_min=.1,
+                                          mod_fac_max=10., safety_fac=.95, fail_res_conv_fac=.5, trust_val=.1,
+                                          rel_dt_err_tol=1.e-6, abs_dt_err_tol=0., max_dt_iter=13,
+                                          fail_dt_conv_abort=True):
         '''
-        Solves the nonlinear dynamic problem of the mechanical system with adaptive time step.
+        Solves the nonlinear dynamic problem of the mechanical system with adaptive time stepping.
 
         Parameters
         ----------
-        dt_start : float
-            Starting time step size.
-        dt_min : float
-            Minimal time step size, i.e. lower bound.
-        dt_max : float
-            Maximal time step size, i.e. upper bound.
-        change_factor_min : float
-            Minimal change factor for time step size, i.e. lower bound. 0 < change_factor_min <= 1 required.
-            0.1 <= change_factor_min <= 0.5 recommended.
-        change_factor_max : float
-            Maximal change factor for time step size, i.e. upper bound. 1 <= change_factor_max < infinity required.
-            1.5 <= change_factor_max <= 5 recommended.
-        safety_factor : float
-            Safty factor for time step size change. 0 < safty_factor < 1 required. 0.8 <= safty_factor < 0.95
-            recommended.
-        failing_newton_convergence_factor : float
-            Change factor for time step size for failing Newton-Raphson convergence.
-            0 < failing_newton_convergence_factor < 1 required. 0.5 <= failing_newton_convergence_factor <= 0.8
-            recommended.
-        trust_value : float
+        dt_init : float, optional
+            Initial time step size. Default 1.e-4.
+        dt_min : float, optional
+            Minimal time step size, i.e. lower bound. Default 1.e-12.
+        dt_max : float, optional
+            Maximal time step size, i.e. upper bound. Default 1.e0.
+        mod_fac_min : float, optional
+            Minimal modification factor for time step size, i.e. lower bound. 0 < mod_fac_min <= 1 required.
+            0.1 <= mod_fac_min <= 0.5 recommended. Default .1.
+        mod_fac_max : float, optional
+            Maximal modification factor for time step size, i.e. upper bound. 1 <= mod_fac_max < infinity required.
+            1.5 <= mod_fac_max <= 5 recommended. Default 10..
+        safety_fac : float, optional
+            Safty factor for time step size modification. 0 < safty_factor < 1 required. 0.8 <= safty_factor < 0.95
+            recommended. Default .95.
+        fail_res_conv_fac : float, optional
+            Modification factor for time step size for failing residual Newton-Raphson convergence.
+            0 < fail_res_conv_fac < 1 required. 0.5 <= fail_res_conv_fac <= 0.8 recommended. Default .5.
+        trust_val : float, optional
             Trust value for new time step size, i.e. parameter for PT1 low-pass filtering in case of increasing time
-            step sizes (dt_new_used = trust_value*dt_new_calculated + (1 - trust_value)*dt_old). 0 < trust_value <= 1
-            required. 0 < trust_value << 1 recommended.
-        relative_dt_tolerance : float
-            Tolerance for relative local time discretization error. absolute local time discretization error =
-            relative_dt_tolerance*maximal displacement so far.
-        max_dt_iterations : int
-            Maximal number of time step size adaption iterations per time step.
-        failing_dt_convergence_abort : Boolean
-            If True abort simulation, otherwise proceed with last result to next time step, when exceeding maximal
-            number of time step size adaption iterations. Default failing_dt_convergence_abort = True.
-
+            step sizes (dt_new_used = trust_val*dt_new_calculated + (1 - trust_val)*dt_old). 0 < trust_val <= 1
+            required. 0 < trust_val << 1 recommended. Default .1.
+        rel_dt_err_tol : float, optional
+            Relative tolerance for relative local time discretization error. Default 1.e-6.
+        abs_dt_err_tol : float, optional
+            Absolute tolerance for relative local time discretization error. Default 0..
+        max_dt_iter : int, optional
+            Maximal number of time step size adaption iterations per time step. Default 13.
+        fail_dt_conv_abort : Boolean, optional
+            If True abort simulation, otherwise proceed with last result to next time step when exceeding maximal
+            number of time step size adaption iterations. Default True.
 
         References
         ----------
@@ -662,136 +662,156 @@ class NonlinearDynamicsSolver(Solver):
         t_clock_start = time.time()
 
         # initialize variables and set parameters
-        self.mechanical_system.clear_timesteps()
-        self.iteration_info = []
         t = self.t0
-        self.dt = dt_start
+        self.dt = dt_init
+        self.dt_info = [dt_init]
         q = self.initial_conditions['q0'].copy()
+        max_q = vector_norm(q, 2)
         dq = self.initial_conditions['dq0'].copy()
         if self.use_additional_variable_v:
             v = self.initial_conditions['dq0'].copy()
         else:
             v = np.empty((0, 0))
-        ddq = np.zeros_like(q)
-        max_q = 0.0
-        f_ext = np.zeros_like(q)
-        abs_f_ext = self.absolute_tolerance
-        self.dt_info = [dt_start]
-
-        # write output of initial conditions
+        f_ext = self.mechanical_system.f_ext(q, dq, t)
+        self.linear_solver.set_A(self.mechanical_system.M(q, t))
+        max_f_ext = self.absolute_tolerance
+        ddq = self.linear_solver.solve(f_ext - self.mechanical_system.D(q, t) @ dq - self.mechanical_system.f_int(q, t))
+        self.iteration_info = [(t, 0, 0, 0)]
         self.mechanical_system.write_timestep(t, q.copy())
 
         # time step loop
+        time_step = 0
         output_index = 0
         while t < self.t_end:
+            time_step += 1
+            output_index += 1
 
             # save old variables
             q_old = q.copy()
             dq_old = dq.copy()
             v_old = v.copy()
             ddq_old = ddq.copy()
-            f_ext_old = f_ext.copy()
             t_old = t
+            dt_old = self.dt
+            max_q_old = max_q
+            max_f_ext_old = max_f_ext
 
-            output_index += 1
-            abs_local_dt_err = 1.0e16
-            no_newton_convergence = False
+            # time step adaption loop
+            dt_iter = 0  # number of time-step adaptations
+            sum_res_iter = 0  # residual iterations cummulated over all timestep adaptions
+            abs_dt_err = 1.e16  # local error through timestep discretization
+            hit_dt_min = False  # flag for checking if minimal dt used
+            no_res_conv = False  # flag for checking if residual convergence failed
+            while abs_dt_err > (rel_dt_err_tol * max_q + abs_dt_err_tol):
+                dt_iter += 1
 
-            dt_iteration = 0
-            sum_newton_iterations = 0
-            while abs_local_dt_err > relative_dt_tolerance * max_q:
-
-                dt_iteration += 1
-
-                # catch failing dt convergence
-                if dt_iteration > max_dt_iterations:
-                    dt_iteration -= 1
-                    if failing_dt_convergence_abort:
+                # catch failing dt convergence wrt. max iterations
+                if dt_iter > max_dt_iter:
+                    dt_iter -= 1
+                    if fail_dt_conv_abort:
                         print(abort_statement)
                         t_clock_end = time.time()
-                        print('Time for solving nonlinear dynamic problem: {0:6.3f} seconds.' \
+                        print('Time for solving nonlinear dynamic problem {0:6.3f} seconds.'
                               .format(t_clock_end - t_clock_start))
                         return
                     break
-
-                # update max displacement
-                max_q = max(max_q, np.max(q))
 
                 # reset variables
                 q = q_old.copy()
                 dq = dq_old.copy()
                 v = v_old.copy()
                 ddq = ddq_old.copy()
-                f_ext = f_ext_old.copy()
                 t = t_old
 
                 # predict new variables
                 t += self.dt
+                if t > self.t_end:
+                    t = self.t_end
+                    self.dt = self.t_end - t_old
                 q, dq, v, ddq = self.predict(q, dq, v, ddq)
+                max_q = max(max_q_old, vector_norm(q, 2))
 
+                # do first residual evaluation
                 Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                res_abs = vector_norm(res, 2)
-                abs_f_ext = max(abs_f_ext, vector_norm(f_ext, 2))
+                abs_res = vector_norm(res, 2)
+                max_f_ext = max(max_f_ext_old, vector_norm(f_ext, 2))
 
-                # Newton-Raphson iteration loop
-                newton_iteration = 0
-                while res_abs > self.relative_tolerance * abs_f_ext + self.absolute_tolerance:
+                # Residual Newton-Raphson iteration loop
+                res_iter = 0
+                while abs_res > (self.relative_tolerance * max_f_ext + self.absolute_tolerance):
+                    res_iter += 1
+                    sum_res_iter += 1
 
-                    newton_iteration += 1
-                    sum_newton_iterations += 1
-
-                    # catch failing Newton-Raphson convergence
-                    if newton_iteration > self.max_number_of_iterations:
-                        newton_iteration -= 1
-                        no_newton_convergence = True
+                    # catch failing residual Newton-Raphson convergence
+                    if res_iter > self.max_number_of_iterations:
+                        res_iter -= 1
+                        no_res_conv = True
                         break
 
-                    # solve for displacement correction
+                    # correct state variables
                     self.linear_solver.set_A(Jac)
                     delta_q = -self.linear_solver.solve(res)
-
-                    # correct variables
                     q, dq, v, ddq = self.correct(q, dq, v, ddq, delta_q)
 
-                    # update system quantities
+                    # do next residual evaluation
                     Jac, res, f_ext = self.newton_raphson(q, dq, v, ddq, t, q_old, dq_old, v_old, ddq_old, t_old)
-                    res_abs = vector_norm(res, 2)
+                    abs_res = vector_norm(res, 2)
+                    max_f_ext = max(max_f_ext_old, vector_norm(f_ext, 2))
 
                     if self.write_iterations:
-                        t_write = t + dt_min / 1000000 * sum_newton_iterations
+                        t_write = t + dt_min / 1000 * sum_res_iter
                         self.mechanical_system.write_timestep(t_write, q.copy())
 
                     if self.track_iterations:
-                        self.iteration_info.append((t, dt_iteration, newton_iteration, res_abs))
+                        self.iteration_info.append((t, dt_iter, res_iter, abs_res))
 
                     if self.verbose:
                         if sp.sparse.issparse(Jac):
                             cond_nr = 0.0
                         else:
                             cond_nr = np.linalg.cond(Jac)
-                        print('Time step iter.: ' \
-                              + '{0:3d}, Newton-Raphson iter.: {1:3d}, residual: {2:6.3E}, condition: {3:6.3E}.' \
-                              .format(dt_iteration, newton_iteration, res_abs, cond_nr))
+                        print('        res iter {0:d}, res {1:.3e}, cond {2:.3e}.'.format(res_iter, abs_res, cond_nr))
+                # end residual Newton-Raphson iteration loop
 
-                    # end of Newton-Raphson iteration loop
-
-                # update time step
-                if no_newton_convergence:  # reduce time step to defined percentage
-                    self.dt *= failing_newton_convergence_factor
-                    if self.dt < dt_min:
+                # update time step size
+                if no_res_conv:
+                    # catch failing dt convergence w.r.t. hitting dt_min
+                    if hit_dt_min:
+                        print(abort_statement)
+                        t_clock_end = time.time()
+                        print('Time for solving nonlinear dynamic problem {0:.3f} seconds.'
+                              .format(t_clock_end - t_clock_start))
+                        return
+                    abs_dt_err = 1.e16
+                    self.dt *= fail_res_conv_fac
+                    if self.dt <= dt_min:
                         self.dt = dt_min
-                    abs_local_dt_err = 1.0e16
-                    no_newton_convergence = False
-                else:  # evaluate local temporal discretization error and update time step accordingly
-                    abs_local_dt_err = self.estimate_local_time_discretization_error(ddq, ddq_old)
-                    kappa = np.cbrt(relative_dt_tolerance * max_q / abs_local_dt_err)
-                    dt_new = min(dt_max, max(min(change_factor_max,
-                                                 max(change_factor_min, safety_factor * kappa)) * self.dt, dt_min))
-                    if (dt_new > self.dt) and (len(self.dt_info) > 1):
-                        self.dt = trust_value * dt_new + (1 - trust_value) * self.dt_info[-1]
-                    else:
-                        self.dt = dt_new
+                        hit_dt_min = True
+                    no_res_conv = False
+                else:
+                    abs_dt_err = self.estimate_local_time_discretization_error(ddq, ddq_old)
+                    kappa = np.cbrt((rel_dt_err_tol * max_q + abs_dt_err_tol) / abs_dt_err)
+                    kappa *= safety_fac
+                    # bound kappa by mod_fac_min and mod_fac_max
+                    kappa = np.clip(kappa, mod_fac_min, mod_fac_max)
+                    self.dt *= kappa
+                    if self.dt <= dt_min:
+                        # catch failing dt convergence wrt. hitting dt_min
+                        if hit_dt_min and (self.dt < dt_min):
+                            print(abort_statement)
+                            t_clock_end = time.time()
+                            print('Time for solving nonlinear dynamic problem {0:.3f} seconds.'
+                                  .format(t_clock_end - t_clock_start))
+                            return
+                        self.dt = dt_min
+                        hit_dt_min = True
+                    elif self.dt > dt_max:
+                        self.dt = dt_max
+                    if (self.dt > dt_old) and (time_step > 1):
+                        self.dt = trust_val * self.dt + (1 - trust_val) * dt_old
 
+                if self.verbose:
+                    print('    dt iter {0:d}, abs_dt_err {1:.3e}, dt {2:.3e}.'.format(dt_iter, abs_dt_err, self.dt))
             # end time step adaption loop
 
             # write output
@@ -802,22 +822,14 @@ class NonlinearDynamicsSolver(Solver):
             # track final time step size
             self.dt_info.append(self.dt)
 
-            print('Time: {0:3.6f}, time step iter.s: {1:3d}, Newton-Raphson iter.s: {2:3d}, NR-residual: {3:6.3E}.' \
-                  .format(t, dt_iteration, sum_newton_iterations, res_abs))
-
-            # end of time step loop
+            print('t {0:.9f}, dt iter {1:d}, sum_res iter {2:d}.\n'.format(t, dt_iter, sum_res_iter))
+        # end time step loop
 
         self.linear_solver.clear()
 
-        # track final time step size
-        self.dt_info = np.array(self.dt_info)
-
-        # save iteration info
-        self.iteration_info = np.array(self.iteration_info)
-
         # end time measurement
         t_clock_end = time.time()
-        print('Time for solving nonlinear dynamic problem: {0:6.3f} seconds.'.format(t_clock_end - t_clock_start))
+        print('Time for solving nonlinear dynamic problem {0:.3f} seconds.'.format(t_clock_end - t_clock_start))
         return
 
     def estimate_local_time_discretization_error(self, ddq, ddq_old):
@@ -1571,9 +1583,8 @@ class GeneralizedAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         Returns an estimate for the absolute local time discretization error for the nonlinear generalized-alpha time
         integration scheme.
         '''
-
-        abs_local_dt_err = (self.beta - 1 / 6) * self.dt ** 2 * vector_norm(ddq - ddq_old, 2) / np.sqrt(ddq.size)
-        return abs_local_dt_err
+        abs_dt_err = vector_norm((self.beta - 1. / 6.) * self.dt ** 2 * (ddq - ddq_old), 2) / np.sqrt(ddq.size)
+        return abs_dt_err
 
 
 class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
@@ -1692,7 +1703,7 @@ class JWHAlphaNonlinearDynamicsSolver(NonlinearDynamicsSolver):
         integration scheme.
         '''
 
-        raise ValueError('Error: Adaptive time stepping is not yet implemented for time integration with the '
+        raise NotImplementedError('Error: Adaptive time stepping is not yet implemented for time integration with the '
                          + 'JWH-alpha scheme. Use the generalized-alpha scheme instead.')
         return
 
