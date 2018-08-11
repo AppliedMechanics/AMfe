@@ -112,17 +112,16 @@ proc AMfe::WriteAMfeMesh { filename } {
     }
     GiD_File fprintf $fp {%s} "\n  \],"
     GiD_File fprintf $fp {  %s} \"groups\":
-    GiD_File fprintf -nonewline $fp {    %s} \[
+    GiD_File fprintf -nonewline $fp {    %s} \{
     set group_names [GiD_Groups list]
     set groupindex 0
     foreach group $group_names {
         if {$groupindex == 0} {
-            GiD_File fprintf $fp {%s} "\n      \{"
+            GiD_File fprintf $fp {%s} "\n      \"$group\": \{"
         } else {
-            GiD_File fprintf $fp {%s} ",\n      \{"
+            GiD_File fprintf $fp {%s} ",\n      \"$group\": \{"
         }
         incr groupindex
-        GiD_File fprintf $fp {        %s %s%s%s} \"name\": \" $group \",
         set nodes [lindex [GiD_EntitiesGroups get $group all_mesh] 0]
         set elements [lindex [GiD_EntitiesGroups get $group all_mesh] 1]
         GiD_File fprintf -nonewline $fp {        %s %s} \"nodes\": \[
@@ -149,7 +148,7 @@ proc AMfe::WriteAMfeMesh { filename } {
         GiD_File fprintf $fp {%s} \]
         GiD_File fprintf -nonewline $fp {      %s} \}
     }
-    GiD_File fprintf $fp {%s} "\n    \]"
+    GiD_File fprintf $fp {%s} "\n    \}"
     GiD_File fprintf $fp {%s} \}
     GiD_File fclose $fp
 }
