@@ -13,7 +13,7 @@ Open gid and choose Data -> Problem type -> amfe.
 Generate your mesh.
 If you want to export physical groups to AMfe, create so called "groups" in your GiD preprocessor.
 You can find groups as a tab next to the Layers.
-When you have finished, choose Files -> Export -> Calculation file..
+When you have finished, choose Files -> Export -> Calculation file.
 Choose a filename and click on ok.
 Afterwards you can import the resulting file in AMfe.
 
