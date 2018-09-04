@@ -158,7 +158,7 @@ class GidAsciiMeshReader(MeshReader):
 
 class GidJsonMeshReader(MeshReader):
     '''
-    Reads Json-Ascii-Files created by GID AMfe Extension
+    Reads json-ascii-files created by the GiD-AMfe-extension.
     '''
 
     # Eletypes dict:
@@ -196,16 +196,17 @@ class GidJsonMeshReader(MeshReader):
 
     def parse(self, verbose=False):
         """
-        Parse the GidJsonFile to the object specified by the builder (MeshConverter object)
+        Parse the GiD-json-file to the object specified by the builder (MeshConverter object).
         
         Parameters
         ----------
-        verbose
+        verbose : bool
 
         Returns
         -------
-        Object
+        object
         """
+
         with open(self._filename, 'r') as infile:
             json_tree = json.load(infile)
 
@@ -221,29 +222,30 @@ class GidJsonMeshReader(MeshReader):
             self.builder.build_no_of_nodes(no_of_nodes)
             self.builder.build_no_of_elements(no_of_elements)
 
-            print("Import Nodes...")
+            print("Import nodes...")
             for counter, node in enumerate(json_tree['nodes']):
                 self.builder.build_node(node['id'], node['coords'][0], node['coords'][1], node['coords'][2])
-                print("\rImport Node No. {} / {}".format(counter, no_of_nodes), end='')
+                print("\rImport node no. {} / {}".format(counter, no_of_nodes), end='')
 
             print("\n...finished")
-            print("Import Elements")
+            print("Import elements")
             for ele_type in json_tree['elements']:
                 current_amfe_eletype = self.eletypes[(ele_type['ele_type'], json_tree['quadratic'])]
-                print("    Import Eletype {} ...".format(current_amfe_eletype))
+                print("    Import eletype {} ...".format(current_amfe_eletype))
                 for counter, element in enumerate(ele_type['elements']):
                     eleid = element['id']
                     nodes = element['connectivity'][:-1]
                     self.builder.build_element(eleid, current_amfe_eletype, nodes)
-                    print("\rImport Element No. {} / {}".format(counter, no_of_elements), end='')
+                    print("\rImport element No. {} / {}".format(counter, no_of_elements), end='')
                 print("\n    ...finished")
             print("\n...finished")
 
-            print("Import Groups...")
+            print("Import groups...")
             for group in json_tree['groups']:
                 self.builder.build_group(group, nodeids=json_tree['groups'][group]['nodes'],
                                          elementids=json_tree['groups'][group]['elements'])
             print("...finished")
+
         # Finished build, return mesh
         return self.builder.return_mesh()
 
