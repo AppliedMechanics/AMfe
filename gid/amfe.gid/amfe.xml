@@ -1,0 +1,14 @@
+<Infoproblemtype version="0.1">
+    <Program>
+        <Name>amfe</Name>
+        <Version>0.1</Version>
+        <MinimumGIDVersion>13.0</MinimumGIDVersion>
+        <CustomLibAutomatic>1</CustomLibAutomatic>
+        <CustomLibNativeGroups>1</CustomLibNativeGroups>
+        <ImageFileBrowser>favicon.png</ImageFileBrowser>
+        <ShortDescription>AMfe Gid Module</ShortDescription>
+        <Description>Genereates Input Files for AMfe</Description>
+        <ValidatePassword></ValidatePassword>
+        <MsgcatRoot>resources/msgs</MsgcatRoot>
+    </Program>
+</Infoproblemtype>
