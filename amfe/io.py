@@ -16,6 +16,8 @@ import os
 from amfe import Mesh
 
 __all__ = [
+    'MeshReader',
+    'MeshConverter',
     'GidAsciiMeshReader',
 ]
 
@@ -125,35 +127,31 @@ class GidAsciiMeshReader(MeshReader):
             # Coordinates
             for line in infile:
                 if line.strip() == 'Coordinates':
-                    if verbose:
-                        print('Section Coordinates found')
-                        for line in infile:
-                            try:
-                                nodeid = int(line[0:5])
-                                x = float(line[5:21])
-                                y = float(line[21:37])
-                                z = float(line[37:53])
-                            except ValueError:
-                                if line.strip() == "End Coordinates":
-                                    break
-                                else:
-                                    raise
-                            self.builder.build_node(nodeid, x, y, z)
+                    for line in infile:
+                        try:
+                            nodeid = int(line[0:5])
+                            x = float(line[5:21])
+                            y = float(line[21:37])
+                            z = float(line[37:53])
+                        except ValueError:
+                            if line.strip() == "End Coordinates":
+                                break
+                            else:
+                                raise
+                        self.builder.build_node(nodeid, x, y, z)
 
                 elif line.strip() == 'Elements':
-                    if verbose:
-                        print('Section Elements found')
-                        for line in infile:
-                            try:
-                                element = [int(e) for e in line.split()]
-                                eleid = element[0]
-                                nodes = element[1:]
-                            except ValueError:
-                                if line.strip() == "End Elements":
-                                    break
-                                else:
-                                    raise
-                            self.builder.build_element(eleid, eletype, nodes)
+                    for line in infile:
+                        try:
+                            element = [int(e) for e in line.split()]
+                            eleid = element[0]
+                            nodes = element[1:]
+                        except ValueError:
+                            if line.strip() == "End Elements":
+                                break
+                            else:
+                                raise
+                        self.builder.build_element(eleid, eletype, nodes)
                 else:
                     print(line)
         # Finished build, return mesh
