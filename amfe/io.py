@@ -10,20 +10,19 @@ It handles input output operations for AMfe
 
 import abc
 import re
-import numpy as np
 import os
-
-from amfe import Mesh
+import json
 
 __all__ = [
     'MeshReader',
     'MeshConverter',
     'GidAsciiMeshReader',
+    'GidJsonMeshReader',
 ]
 
 
 def check_dir(*filenames):
-    '''
+    """
     Check if paths exists; if not, the given paths will be created.
 
     Parameters
@@ -34,7 +33,7 @@ def check_dir(*filenames):
     Returns
     -------
     None
-    '''
+    """
     for filename in filenames:  # loop on files
         dir_name = os.path.dirname(filename)
         # check if directory does not exist; then create directory
@@ -44,7 +43,7 @@ def check_dir(*filenames):
 
 
 class MeshReader(abc.ABC):
-    '''
+    """
     Abstract super class for all MeshReaders.
 
     The tasks of the MeshReaders are:
@@ -54,7 +53,7 @@ class MeshReader(abc.ABC):
     - Call MeshConverter function for each line
 
     PLEASE FOLLOW THE BUILDER PATTERN!
-    '''
+    """
 
     @abc.abstractmethod
     def __init__(self, *args, **kwargs):
@@ -77,9 +76,9 @@ class MeshReader(abc.ABC):
 
 
 class GidAsciiMeshReader(MeshReader):
-    '''
+    """
     Reads GID-Ascii-Files
-    '''
+    """
 
     eletypes = {
         ('Linear', 2): 'straight_line',
@@ -119,11 +118,10 @@ class GidAsciiMeshReader(MeshReader):
                 eletype = self.eletypes[(eleshape, nnodes)]
             except Exception:
                 print('Eletype ({},{})  cannot be found in eletypes dictionary, it is not implemented in AMfe'.format(
-                    eletype, nnodes))
-            if eletype is None:
-                raise ValueError('Element ({},{}) is not implemented in AMfe'.format(eletype, nnodes))
-            if verbose:
-                print('Eletype {} identified'.format(eletype))
+                    eleshape, nnodes))
+                return
+            if eleshape is None:
+                raise ValueError('Element ({},{}) is not implemented in AMfe'.format(eleshape, nnodes))
             # Coordinates
             for line in infile:
                 if line.strip() == 'Coordinates':
@@ -154,6 +152,87 @@ class GidAsciiMeshReader(MeshReader):
                         self.builder.build_element(eleid, eletype, nodes)
                 else:
                     print(line)
+        # Finished build, return mesh
+        return self.builder.return_mesh()
+
+
+class GidJsonMeshReader(MeshReader):
+    '''
+    Reads Json-Ascii-Files created by GID AMfe Extension
+    '''
+
+    # Eletypes dict:
+    # {('shape', 0/1 (=non-quadratic/quadratic)): 'AMfe-name'}
+    eletypes = {
+        ('Line', 0): 'straight_line',
+        ('Line', 1): 'quadratic_line',
+        ('Triangle', 0): 'Tri3',
+        ('Triangle', 1): 'Tri6',
+        ('Triangle', 2): 'Tri10',
+        ('Quadrilateral', 0): 'Quad4',
+        ('Quadrilateral', 1): 'Quad8',
+        ('Tetrahedra', 0): 'Tet4',
+        ('Tetrahedra', 1): 'Tet10',
+        ('Hexahedra', 0): 'Hexa8',
+        ('Hexahedra', 1): 'Hexa20',
+        ('Prism', 0): 'Prism6',
+        ('Prism', 1): None,
+        ('Pyramid', 0): None,
+        ('Pyramid', 1): None,
+        ('Point', 0): 'point',
+        ('Point', 1): 'point',
+        ('Sphere', 0): None,
+        ('Sphere', 1): None,
+        ('Circle', 0): None,
+        ('Circle', 1): None
+    }
+
+    eletypes_3d = {'Tetrahedra', 'Hexahedra', 'Prism', 'Pyramid'}
+
+    def __init__(self, filename=None, builder=None):
+        super().__init__()
+        self._filename = filename
+        self._builder = builder
+
+    def parse(self, verbose=False):
+        with open(self._filename, 'r') as infile:
+            json_tree = json.load(infile)
+
+            dimflag = set([ele_type['ele_type'] for ele_type in json_tree['elements']]).intersection(self.eletypes_3d)
+            if not dimflag:
+                self.builder.build_mesh_dimension(2)
+            else:
+                self.builder.build_mesh_dimension(3)
+
+            no_of_nodes = json_tree['no_of_nodes']
+            no_of_elements = json_tree['no_of_elements']
+
+            self.builder.build_no_of_nodes(no_of_nodes)
+            self.builder.build_no_of_elements(no_of_elements)
+
+            print("Import Nodes...")
+            for counter, node in enumerate(json_tree['nodes']):
+                self.builder.build_node(node['id'], node['coords'][0], node['coords'][1], node['coords'][2])
+                print("\rImport Node No. {} / {}".format(counter, no_of_nodes), end='')
+
+            print("\n...finished")
+            print("Import Elements")
+            for ele_type in json_tree['elements']:
+                current_amfe_eletype = self.eletypes[(ele_type['ele_type'], json_tree['quadratic'])]
+                print("    Import Eletype {} ...".format(current_amfe_eletype))
+                for counter, element in enumerate(ele_type['elements']):
+                    eleid = element['id']
+                    nodes = element['connectivity'][:-1]
+                    self.builder.build_element(eleid, current_amfe_eletype, nodes)
+                    print("\rImport Element No. {} / {}".format(counter, no_of_elements), end='')
+                print("\n    ...finished")
+            print("\n...finished")
+
+            print("Import Groups...")
+            for group in json_tree['groups']:
+                self.builder.build_group(group, nodeids=json_tree['groups'][group]['nodes'],
+                                         elementids=json_tree['groups'][group]['elements'])
+            print("...finished")
         # Finished build, return mesh
         return self.builder.return_mesh()
 
