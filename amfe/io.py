@@ -1,64 +1,66 @@
-# Copyright (c) 2018, Lehrstuhl fuer Angewandte Mechanik, Technische Universitaet Muenchen.
+# Copyright (c) 2018, Lehrstuhl für Angewandte Mechanik, Technische Universität München.
 #
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
-"""
-io module of AMfe
 
-It handles input output operations for AMfe
+"""
+I/O module of AMfe.
+
+It handles input/output operations for AMfe.
 """
 
 import abc
 import re
-import numpy as np
 import os
-
-from amfe import Mesh
 
 __all__ = [
     'MeshReader',
     'MeshConverter',
-    'GidAsciiMeshReader',
+    'GidAsciiMeshReader'
 ]
 
 
 def check_dir(*filenames):
     '''
-    Check if paths exists; if not, the given paths will be created.
+    Check if path(s) exist; if not, given path(s) will be created.
 
     Parameters
     ----------
-    *filenames : string or list of strings
-        string containing a path.
+    *filenames : str or list of str
+        String or list of strings containing path(s).
 
     Returns
     -------
     None
     '''
-    for filename in filenames:  # loop on files
+
+    for filename in filenames:  # loop over files
         dir_name = os.path.dirname(filename)
-        # check if directory does not exist; then create directory
+        # check whether directory does exist
         if not os.path.exists(dir_name) or dir_name == '':
-            os.makedirs(os.path.dirname(filename))  # then create directory
-            print("Created directory: " + os.path.dirname(filename))
+            os.makedirs(os.path.dirname(filename))  # if not, then create directory
+            print('Created directory \'' + os.path.dirname(filename) + '\'.')
+    return
 
 
 class MeshReader(abc.ABC):
     '''
     Abstract super class for all MeshReaders.
 
-    The tasks of the MeshReaders are:
-    ---------------------------------
+    Tasks of the MeshReaders:
+    -------------------------
+    - Read line by line a stream (or file).
+    - Call MeshConverter function for each line.
 
-    - Read line by line a stream (or file)
-    - Call MeshConverter function for each line
-
+    Notes:
+    -----
     PLEASE FOLLOW THE BUILDER PATTERN!
     '''
 
     @abc.abstractmethod
     def __init__(self, *args, **kwargs):
         self._builder = None
+        return
 
     @abc.abstractmethod
     def parse(self):
@@ -73,12 +75,13 @@ class MeshReader(abc.ABC):
         if isinstance(builder, MeshConverter):
             self._builder = builder
         else:
-            raise ValueError('No valid builder given.')
+            raise ValueError('Invalid builder given.')
+        return
 
 
 class GidAsciiMeshReader(MeshReader):
     '''
-    Reads GID-Ascii-Files
+    Reads GiD-Ascii-files.
     '''
 
     eletypes = {
@@ -104,13 +107,14 @@ class GidAsciiMeshReader(MeshReader):
         super().__init__()
         self._filename = filename
         self.builder = builder
+        return
 
     def parse(self, verbose=False):
         with open(self._filename, 'r') as infile:
             line = next(infile)
-            pattern = "dimension (\d) ElemType\s([A-Za-z0-9]*)\sNnode\s(\d)"
+            pattern = 'dimension (\d) ElemType\s([A-Za-z0-9]*)\sNnode\s(\d)'
             match = re.search(pattern, line)
-            dimension = int(match.group(1))  # dimension (nodes have two or three coordinates)
+            dimension = int(match.group(1))  # dimension (nodes have 2 or 3 coordinates)
             eleshape = match.group(2)  # elementtype
             nnodes = int(match.group(3))  # number of nodes per element
 
@@ -118,12 +122,13 @@ class GidAsciiMeshReader(MeshReader):
             try:
                 eletype = self.eletypes[(eleshape, nnodes)]
             except Exception:
-                print('Eletype ({},{})  cannot be found in eletypes dictionary, it is not implemented in AMfe'.format(
-                    eletype, nnodes))
+                print('Eletype ({},{}) cannot be found in eletypes dictionary, it is not implemented in AMfe.'
+                      .format( eletype, nnodes))
             if eletype is None:
-                raise ValueError('Element ({},{}) is not implemented in AMfe'.format(eletype, nnodes))
+                raise ValueError('Element ({},{}) is not implemented in AMfe.'.format(eletype, nnodes))
             if verbose:
-                print('Eletype {} identified'.format(eletype))
+                print('Eletype {} identified.'.format(eletype))
+
             # Coordinates
             for line in infile:
                 if line.strip() == 'Coordinates':
@@ -154,6 +159,7 @@ class GidAsciiMeshReader(MeshReader):
                         self.builder.build_element(eleid, eletype, nodes)
                 else:
                     print(line)
+
         # Finished build, return mesh
         return self.builder.return_mesh()
 
@@ -183,16 +189,16 @@ class MeshConverter:
 
         Parameters
         ----------
-        name: string
-            name identifying the node group
+        name: str
+            Name identifying the node group.
         nodeids: list
-            list with node ids
+            List with node ids.
         elementids: list
-            list with element ids
+            List with element ids.
 
         Returns
         -------
-
+        None
         '''
         pass
 
