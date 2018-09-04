@@ -195,6 +195,17 @@ class GidJsonMeshReader(MeshReader):
         self._builder = builder
 
     def parse(self, verbose=False):
+        """
+        Parse the GidJsonFile to the object specified by the builder (MeshConverter object)
+        
+        Parameters
+        ----------
+        verbose
+
+        Returns
+        -------
+        Object
+        """
         with open(self._filename, 'r') as infile:
             json_tree = json.load(infile)
 
