@@ -1,12 +1,12 @@
-# Copyright (c) 2018, Lehrstuhl fuer Angewandte Mechanik, Technische Universitaet Muenchen.
+# Copyright (c) 2018, Lehrstuhl für Angewandte Mechanik, Technische Universität München.
 #
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
-"""
-Mesh module of amfe.
 
-This Module provides a mesh class that handles the mesh information:
-Nodes, Mesh-Topology, Elementshapes, Groups, Ids
+"""
+Mesh module of AMfe.
+
+This module provides a mesh class that handles the mesh information: nodes, mesh topology, element shapes, groups, ids.
 """
 
 
@@ -14,19 +14,18 @@ import numpy as np
 import _pickle as pickle
 
 __all__ = [
-    'Mesh',
+    'Mesh'
 ]
 
-# Describe Element shapes, that can be used in Amfe
-# 2D Volume Elements:
+# Describe Element shapes, that can be used in AMfe
+# 2D volume elements:
 element_2d_set = {'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8', }
-# 3D Volume Elements:
+# 3D volume elements:
 element_3d_set = {'Tet4', 'Tet10', 'Hexa8', 'Hexa20', 'Prism6'}
-# 2D Boundary Elements
+# 2D boundary elements
 boundary_2d_set = {'straight_line', 'quadratic_line'}
-# 3D Boundary Elements
-boundary_3d_set = {'straight_line', 'quadratic_line',
-                   'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8'}
+# 3D boundary elements
+boundary_3d_set = {'straight_line', 'quadratic_line', 'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8'}
 
 
 class Mesh:
@@ -55,6 +54,19 @@ class Mesh:
         0 = connectivity list, 1 = boundary_connectivity list, idx = idx of element in this list
     groups : list
         List of groups containing ids (not row indices!)
+
+    Notes
+    -----
+    GETTER CLASSES NAMING CONVENTION
+    We use the following naming convention for function names:
+      get_<node|element><id|idx>[s]_by_<group|id|idx>[s]
+               |            |     |     |        |      - Plural if signature accepts list of entities
+               |            |     |     |        - Describe which entity is passed group, id or row index
+               |            |     |     - 'by' keyword
+               |            |      - plural s if list or single entity is returned
+               |            - describes weather ids or row indices are returned
+                - describes weather nodes or elements are returned
+    --------------------------------
     """
     def __init__(self, dimension=3):
         """
@@ -174,18 +186,7 @@ class Mesh:
         """
         with open(filename, 'wb') as infile:
             pickle.dump(self, infile)
-
-    # -- GETTER CLASSES NAMING CONVENTION --
-    # The following classes are 'getter' classes.
-    # We use the following naming convention for function names:
-    #   get_<node|element><id|idx>[s]_by_<group|id|idx>[s]
-    #            |            |     |     |        |      - Plural if signature accepts list of entities
-    #            |            |     |     |        - Describe which entity is passed group, id or row index
-    #            |            |     |     - 'by' keyword
-    #            |            |      - plural s if list or single entity is returned
-    #            |            - describes weather ids or row indices are returned
-    #             - describes weather nodes or elements are returned
-    # ---------------------------------------
+        return
 
     def get_elementidxs_by_group(self, group):
         """
@@ -251,7 +252,9 @@ class Mesh:
         uniquenodes = set(nodeidxs)
         for ar in nodes:
             uniquenodes = uniquenodes.union(set(ar))
-        return np.array(list(uniquenodes), dtype=np.int)
+        uniquenodes = list(uniquenodes)
+        uniquenodes.sort()
+        return np.array(uniquenodes, dtype=np.int)
 
     def get_nodeidxs_by_groups(self, groups):
         """
@@ -271,7 +274,7 @@ class Mesh:
         elementids = []
         for group in groups:
             if group == -1:
-                return [i for i in range(0, self.no_of_nodes)]
+                return np.arange(self.no_of_nodes, dtype=np.int)
             if self.groups[group]['elements'] is not None:
                 elementids.extend(self.groups[group]['elements'])
             if self.groups[group]['nodes'] is not None:
@@ -283,7 +286,9 @@ class Mesh:
         uniquenodes = set(nodeidxs)
         for ar in nodes:
             uniquenodes = uniquenodes.union(set(ar))
-        return np.array(list(uniquenodes), dtype=np.int)
+        uniquenodes = list(uniquenodes)
+        uniquenodes.sort()
+        return np.array(uniquenodes, dtype=np.int)
 
     def get_ele_shapes_by_idxs(self, elementidxes):
         """
@@ -311,4 +316,4 @@ class Mesh:
         nodeidxs : list
             returns all nodeidxs
         """
-        return np.array([i for i in range(0, self.no_of_nodes)], dtype=np.int)
+        return np.arange(self.no_of_nodes, dtype=np.int)
