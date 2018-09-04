@@ -11,7 +11,6 @@ This module provides a mesh class that handles the mesh information: nodes, mesh
 
 
 import numpy as np
-import _pickle as pickle
 
 __all__ = [
     'Mesh'
@@ -59,14 +58,13 @@ class Mesh:
     -----
     GETTER CLASSES NAMING CONVENTION
     We use the following naming convention for function names:
-      get_<node|element><id|idx>[s]_by_<group|id|idx>[s]
-               |            |     |     |        |      - Plural if signature accepts list of entities
-               |            |     |     |        - Describe which entity is passed group, id or row index
-               |            |     |     - 'by' keyword
-               |            |      - plural s if list or single entity is returned
+      get_<node|element><ids|idxs>_by_<groups|ids|idxs>
+               |            |     |        |
+               |            |     |        - Describe which entity is passed groups, ids or row indices
+               |            |     - 'by' keyword
                |            - describes weather ids or row indices are returned
                 - describes weather nodes or elements are returned
-    --------------------------------
+
     """
     def __init__(self, dimension=3):
         """
@@ -168,43 +166,6 @@ class Mesh:
         """
         return self.nodes.reshape(-1)
 
-    def save(self, filename):
-        """
-        Shortcut for saving a mesh in a pickle file.
-
-        Warning! This shortcut is not intended for long term savings for meshes.
-        Use an exporter from IO Module instead.
-
-        Parameters
-        ----------
-        filename : str
-            Filename where the mesh should be saved
-
-        Returns
-        -------
-            None
-        """
-        with open(filename, 'wb') as infile:
-            pickle.dump(self, infile)
-        return
-
-    def get_elementidxs_by_group(self, group):
-        """
-        Returns elementindices of the ele_shape/boundary_shape property belonging to group
-
-        Parameters
-        ----------
-        group : string
-            groupname
-
-        Returns
-        -------
-        elementidxes : list
-            returns list of tuples (0/1, idx), where 0 = volume element, 1 = boundary element
-        """
-        elementids = self.groups[group]['elements']
-        return [self.eleid2idx[elementid] for elementid in elementids]
-
     def get_elementidxs_by_groups(self, groups):
         """
         Returns elementindices of the ele_shape/boundary_shape property belonging to groups
@@ -223,39 +184,6 @@ class Mesh:
             elementids.extend(self.groups[group]['elements'])
         return [self.eleid2idx[elementid] for elementid in elementids]
 
-    def get_nodeidxs_by_group(self, group):
-        """
-        Returns nodeindices of the nodes property belonging to a group
-
-        Parameters
-        ----------
-        group : string or -1
-            If a string is passed, the parameter is considered as groupname
-            If -1 is passed it returns all nodes
-
-        Returns
-        -------
-            nodeidxs : ndarray
-        list of row indices of nodes selected by group
-
-        """
-        nodeids = []
-        elementids = []
-        if self.groups[group]['elements'] is not None:
-            elementids = self.groups[group]['elements']
-        if self.groups[group]['nodes'] is not None:
-            nodeids = self.groups[group]['nodes']
-        nodeidxs = [self.nodeid2idx[nodeid] for nodeid in nodeids]
-        eledict = {0: self.connectivity, 1: self.boundary_connectivity}
-        nodes = [eledict[ele_tuple[0]][ele_tuple[1]] for ele_tuple in
-                 [self.eleid2idx[elementid] for elementid in elementids]]
-        uniquenodes = set(nodeidxs)
-        for ar in nodes:
-            uniquenodes = uniquenodes.union(set(ar))
-        uniquenodes = list(uniquenodes)
-        uniquenodes.sort()
-        return np.array(uniquenodes, dtype=np.int)
-
     def get_nodeidxs_by_groups(self, groups):
         """
         Returns nodeindieces of the nodes property belonging to a group
@@ -273,8 +201,6 @@ class Mesh:
         nodeids = []
         elementids = []
         for group in groups:
-            if group == -1:
-                return np.arange(self.no_of_nodes, dtype=np.int)
             if self.groups[group]['elements'] is not None:
                 elementids.extend(self.groups[group]['elements'])
             if self.groups[group]['nodes'] is not None:
@@ -287,7 +213,6 @@ class Mesh:
         for ar in nodes:
             uniquenodes = uniquenodes.union(set(ar))
         uniquenodes = list(uniquenodes)
-        uniquenodes.sort()
         return np.array(uniquenodes, dtype=np.int)
 
     def get_ele_shapes_by_idxs(self, elementidxes):

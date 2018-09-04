@@ -49,7 +49,7 @@ class TestMesh(TestCase):
         assert_equal(self.testmesh.nodes_voigt, desired)
 
     def test_get_elementidxs_by_group(self):
-        actual = self.testmesh.get_elementidxs_by_group('right')
+        actual = self.testmesh.get_elementidxs_by_groups(['right'])
         desired = [(0, 0), (0, 1)]
         self.assertEqual(actual, desired)
 
@@ -59,10 +59,10 @@ class TestMesh(TestCase):
         self.assertEqual(actual, desired)
 
     def test_get_nodeidxs_by_group(self):
-        actual = self.testmesh.get_nodeidxs_by_group('left')
+        actual = self.testmesh.get_nodeidxs_by_groups(['left'])
         desired = np.array([0, 1, 2, 3], dtype=np.int)
         assert_equal(actual, desired)
-        actual = set(self.testmesh.get_nodeidxs_by_group('right_boundary'))
+        actual = set(self.testmesh.get_nodeidxs_by_groups(['right_boundary']))
         desired = set(np.array([4, 5, 0, 1]))
         assert_equal(actual, desired)
 
