@@ -416,9 +416,9 @@ class GmshAsciiMeshReader(MeshReader):
         # Build groups
         for group in groupentities:
             if group in groupnames:
-                self.builder.build_group(groupnames[group], elementids=groupentities[group])
+                self.builder.build_group(groupnames[group], [], groupentities[group])
             else:
-                self.builder.build_group(group, elementids=groupentities[group])
+                self.builder.build_group(group, [], groupentities[group])
 
         self.builder.build_mesh_dimension(self._dimension)
 
@@ -445,7 +445,7 @@ class MeshConverter:
     def build_element(self, id, type, nodes):
         pass
 
-    def build_group(self, name, nodeids=None, elementids=None):
+    def build_group(self, name, nodeids, elementids):
         '''
 
         Parameters
