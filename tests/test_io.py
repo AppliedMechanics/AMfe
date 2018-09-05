@@ -7,11 +7,8 @@ from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal
 
-<<<<<<< HEAD
-from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, MeshConverter, AmfeMeshConverter
-=======
-from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, MeshConverter
->>>>>>> 53-write-gmsh-ascii-mesh-reader
+from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, MeshConverter, AmfeMeshConverter
+
 from amfe import amfe_dir
 
 
@@ -156,7 +153,6 @@ class IOTest(TestCase):
         self.assertEqual(mesh._no_of_nodes, 15)
         self.assertEqual(mesh._no_of_elements, 10)
 
-<<<<<<< HEAD
     def test_dummy_to_amfe(self):
         # Desired nodes
         nodes_input = [(1, 1.345600000e-02, 3.561675700e-02, 0.000000000e+00),
@@ -249,7 +245,7 @@ class IOTest(TestCase):
         for group in groups_input:
             groups_desired.update({group[0]: {'nodes': group[1], 'elements': group[2]}})
         self.assertEqual(mesh.groups, groups_desired)
-=======
+
     def test_gmshascii_to_dummy(self):
         # Desired nodes
         nodes_desired = [(1, 0.0, 0.0, 0.0),
@@ -297,4 +293,4 @@ class IOTest(TestCase):
         self.assertEqual(mesh._groups, groups_desired)
         self.assertEqual(mesh._no_of_nodes, 8)
         self.assertEqual(mesh._no_of_elements, 10)
->>>>>>> 53-write-gmsh-ascii-mesh-reader
+
