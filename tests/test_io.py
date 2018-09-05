@@ -5,7 +5,7 @@ Tests for testing io module
 
 from unittest import TestCase
 
-from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, MeshConverter
+from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, MeshConverter
 from amfe import amfe_dir
 
 
@@ -149,3 +149,25 @@ class IOTest(TestCase):
         self.assertEqual(mesh._groups, groups_desired)
         self.assertEqual(mesh._no_of_nodes, 15)
         self.assertEqual(mesh._no_of_elements, 10)
+
+    def test_gmshascii_to_dummy(self):
+        # Desired nodes
+        nodes_desired = [(1, 0.0, 0.0, 0.0),
+                         (2, 2.0, 2.0, 0.0),
+                         (3, 2.0, 1.0, 0.0),
+                         (4, 0.0, 1.0, 0.0),
+                         (5, 0.999999999997388, 0.0, 0.0),
+                         (6, 1.000000000004118, 1.0, 0.0),
+                         (7, 0.5000000000003766, 0.5, 0.0),
+                         (8, 1.500000000000857, 0.5, 0.0)]
+
+        # Desired elements
+        # (internal name of Triangle Nnode 3 is 'Tri3')
+        elements_desired = [(1, 'straight_line', [2, 3]),
+                            (2, 'straight_line', [4, 3, 2])]
+
+        # Define input file path
+        file = amfe_dir('tests/meshes/gmsh_ascii_8_tets.msh')
+        # Define Reader Object, initialized with AmfeMeshConverter
+        reader = GmshAsciiMeshReader(file, DummyMeshConverter())
+        mesh = reader.parse()
