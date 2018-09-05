@@ -26,6 +26,7 @@ dist/
 private/
 amfe.egg-info/
 experiments/
+meshes/gid/
 experiments/paper_icoev
 .idea/
 .spyproject/

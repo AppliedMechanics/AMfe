@@ -1,47 +1,151 @@
 # -*- coding: utf-8 -*-
-'''
-Test for testing io module
-'''
+"""
+Tests for testing io module
+"""
 
-import unittest
-import numpy as np
-from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+from unittest import TestCase
 
-import amfe
+from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, MeshConverter
+from amfe import amfe_dir
 
 
-class IOTest(unittest.TestCase):
+class DummyMeshConverter(MeshConverter):
+    def __init__(self):
+        super().__init__()
+        self._no_of_elements = None
+        self._no_of_nodes = None
+        self._nodes = []
+        self._elements = []
+        self._groups = []
+        self._materials = []
+        self._partitions = []
+        self._dimension = None
+        self._mesh = None
+
+    def build_no_of_nodes(self, no):
+        self._no_of_nodes = no
+
+    def build_no_of_elements(self, no):
+        self._no_of_elements = no
+
+    def build_node(self, nodeid, x, y, z):
+        self._nodes.append((nodeid, x, y, z))
+
+    def build_element(self, eleid, etype, nodes):
+        self._elements.append((eleid, etype, nodes))
+
+    def build_group(self, name, nodeids=None, elementids=None):
+        self._groups.append((name, nodeids, elementids))
+
+    def build_material(self, material):
+        self._groups.append(material)
+
+    def build_partition(self, partition):
+        self._partitions.append(partition)
+
+    def build_mesh_dimension(self, dim):
+        self._dimension = dim
+
+    def return_mesh(self):
+        return self
+
+
+class IOTest(TestCase):
     def setUp(self):
         pass
 
     def tearDown(self):
         pass
 
-    def test_gidascii_to_amfemesh(self):
-        # Reference for nodes
-        nodes_reference = np.array([[1.34560000e-02, 3.56167570e-02, 0.00000000e+00],
-                                    [1.02791191e+00, 3.91996620e-02, 1.23863900e-03],
-                                    [6.35836584e-02, 1.05638658e+00, 8.97892300e-03],
-                                    [1.05296566e+00, 1.04992142e+00, 5.77563650e-03],
-                                    [2.04236782e+00, 4.27825670e-02, 2.47727800e-03],
-                                    [2.04234766e+00, 1.04345626e+00, 2.57235000e-03]])
-        el_df_reference = {'active': {1: False, 2: False, 3: False, 4: False}, 'el_type': {1: 'Tri3', 2: 'Tri3', 3: 'Tri3', 4: 'Tri3'},
-         'idx': {1: 1, 2: 2, 3: 3, 4: 4},
-         'nodes': {1: np.array([5, 6, 4]), 2: np.array([4, 3, 2]), 3: np.array([4, 2, 5]), 4: np.array([1, 2, 3])},
-         'phys_group': {1: 0, 2: 0, 3: 0, 4: 0}}
+    def test_gidascii_to_dummy(self):
+        # Desired nodes
+        nodes_desired = [(1, 1.34560000e-02, 3.56167570e-02, 0.00000000e+00),
+                         (2, 1.02791191e+00, 3.91996620e-02, 1.23863900e-03),
+                         (3, 6.35836584e-02, 1.05638658e+00, 8.97892300e-03),
+                         (4, 1.05296566e+00, 1.04992142e+00, 5.77563650e-03),
+                         (5, 2.04236782e+00, 4.27825670e-02, 2.47727800e-03),
+                         (6, 2.04234766e+00, 1.04345626e+00, 2.57235000e-03)]
+        # Desired elements
+        # (internal name of Triangle Nnode 3 is 'Tri3')
+        elements_desired = [(1, 'Tri3', [5, 6, 4]),
+                            (2, 'Tri3', [4, 3, 2]),
+                            (3, 'Tri3', [4, 2, 5]),
+                            (4, 'Tri3', [1, 2, 3])]
+        dimension_desired = 3
+
+        # -------------------------------------------------------
+        # OTHER INFORMATION NOT AVAILABLE FROM ASCII MESH
+        # THEREFORE ONLY nodes, elements and dimension is tested
+        # -------------------------------------------------------
 
         # Define input file path
-        file = amfe.amfe_dir('tests/meshes/gid_4_tets_v2.msh')
+        file = amfe_dir('tests/meshes/gid_ascii_4_tets.msh')
         # Define Reader Object, initialized with AmfeMeshConverter
-        reader = amfe.io.GidAsciiMeshReader(file, amfe.io.AmfeMeshConverter())
-        reader.parse(verbose=True)
+        reader = GidAsciiMeshReader(file, DummyMeshConverter())
+        # Parse mesh
+        mesh = reader.parse()
+        # Check nodes
+        for i, node in enumerate(nodes_desired):
+            self.assertAlmostEqual(mesh._nodes[i], node)
+        # Check elements
+        for i, element in enumerate(elements_desired):
+            self.assertEqual(mesh._elements[i], element)
+        # Check mesh dimension
+        self.assertEqual(mesh._dimension, dimension_desired)
 
-        mesh = reader.builder.return_mesh()
-        assert_allclose(mesh.nodes, nodes_reference, rtol=1e-12, atol=0.00)
-        assert_equal(mesh.el_df.to_dict(), el_df_reference)
-        assert_equal(mesh.no_of_dofs_per_node, 3)
-
-if __name__ == '__main__':
-    st = IOTest()
-    st.setUp()
-    st.test_gidascii_to_amfemesh()
+    def test_gidjson_to_dummy(self):
+        # Desired nodes
+        nodes_desired = [(1, 1.345600000e-02, 3.561675700e-02, 0.000000000e+00),
+                         (2, 5.206839561e-01, 3.740820950e-02, 6.193195000e-04),
+                         (3, 3.851982918e-02, 5.460016703e-01, 4.489461500e-03),
+                         (4, 5.457667372e-01, 5.477935420e-01, 6.984401105e-04),
+                         (5, 1.027911912e+00, 3.919966200e-02, 1.238639000e-03),
+                         (6, 6.358365836e-02, 1.056386584e+00, 8.978923000e-03),
+                         (7, 1.040469476e+00, 5.445628213e-01, 1.301993398e-03),
+                         (8, 5.582746582e-01, 1.053154002e+00, 7.377279750e-03),
+                         (9, 1.052965658e+00, 1.049921420e+00, 5.775636500e-03),
+                         (10, 1.535139868e+00, 4.099111450e-02, 1.857958500e-03),
+                         (11, 1.547697432e+00, 5.463542738e-01, 1.921312898e-03),
+                         (12, 1.547656658e+00, 1.046688838e+00, 4.173993250e-03),
+                         (13, 2.042367825e+00, 4.278256700e-02, 2.477278000e-03),
+                         (14, 2.042357741e+00, 5.431194119e-01, 2.524814000e-03),
+                         (15, 2.042347658e+00, 1.043456257e+00, 2.572350000e-03)]
+        # Desired elements
+        # (internal name of Triangle Nnode 3 is 'Tri3')
+        elements_desired = [(1, 'Tri6', [13, 15, 9, 14, 12, 11]),
+                            (2, 'Tri6', [9, 6, 5, 8, 4, 7]),
+                            (3, 'Tri6', [9, 5, 13, 7, 10, 11]),
+                            (4, 'Tri6', [1, 5, 6, 2, 4, 3]),
+                            (5, 'quadratic_line', [5, 13, 10]),
+                            (6, 'quadratic_line', [1, 5, 2]),
+                            (7, 'quadratic_line', [6, 1, 3]),
+                            (8, 'quadratic_line', [9, 6, 8]),
+                            (9, 'quadratic_line', [13, 15, 14]),
+                            (10, 'quadratic_line', [15, 9, 12])
+                            ]
+        dimension_desired = 2
+        groups_desired = [
+            ('left', [], [2, 4]),
+            ('right', [], [1, 3]),
+            ('left_boundary', [], [7]),
+            ('right_boundary', [], [9]),
+            ('top_boundary', [], [8, 10]),
+            ('left_dirichlet', [1, 3, 6], [])
+        ]
+        # Define input file path
+        file = amfe_dir('tests/meshes/gid_json_4_tets.json')
+        # Define Reader Object, initialized with AmfeMeshConverter
+        reader = GidJsonMeshReader(file, DummyMeshConverter())
+        # Parse mesh
+        mesh = reader.parse()
+        # Check nodes
+        for i, node in enumerate(nodes_desired):
+            self.assertAlmostEqual(mesh._nodes[i], node)
+        # Check elements
+        for i, element in enumerate(elements_desired):
+            self.assertEqual(mesh._elements[mesh._elements.index(element)], element)
+        # Check mesh dimension
+        self.assertEqual(mesh._dimension, dimension_desired)
+        self.assertEqual(mesh._groups, groups_desired)
+        self.assertEqual(mesh._no_of_nodes, 15)
+        self.assertEqual(mesh._no_of_elements, 10)
