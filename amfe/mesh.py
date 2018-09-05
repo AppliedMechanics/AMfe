@@ -154,6 +154,25 @@ class Mesh:
         """
         return self._dimension
 
+    @dimension.setter
+    def dimension(self,dim):
+        """
+        Sets the dimension of the mesh
+
+        Attention: The dimension should not be modified except you know what you are doing.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension of the mesh
+
+        Returns
+        -------
+        None
+
+        """
+        self._dimension = dim
+
     @property
     def nodes_voigt(self):
         """
