@@ -7,7 +7,11 @@ from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal
 
+<<<<<<< HEAD
 from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, MeshConverter, AmfeMeshConverter
+=======
+from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, MeshConverter
+>>>>>>> 53-write-gmsh-ascii-mesh-reader
 from amfe import amfe_dir
 
 
@@ -152,6 +156,7 @@ class IOTest(TestCase):
         self.assertEqual(mesh._no_of_nodes, 15)
         self.assertEqual(mesh._no_of_elements, 10)
 
+<<<<<<< HEAD
     def test_dummy_to_amfe(self):
         # Desired nodes
         nodes_input = [(1, 1.345600000e-02, 3.561675700e-02, 0.000000000e+00),
@@ -244,3 +249,52 @@ class IOTest(TestCase):
         for group in groups_input:
             groups_desired.update({group[0]: {'nodes': group[1], 'elements': group[2]}})
         self.assertEqual(mesh.groups, groups_desired)
+=======
+    def test_gmshascii_to_dummy(self):
+        # Desired nodes
+        nodes_desired = [(1, 0.0, 0.0, 0.0),
+                         (2, 2.0, 0.0, 0.0),
+                         (3, 2.0, 1.0, 0.0),
+                         (4, 0.0, 1.0, 0.0),
+                         (5, 0.999999999997388, 0.0, 0.0),
+                         (6, 1.000000000004118, 1.0, 0.0),
+                         (7, 0.5000000000003766, 0.5, 0.0),
+                         (8, 1.500000000000857, 0.5, 0.0)]
+
+        # Desired elements
+        # (internal name of Triangle Nnode 3 is 'Tri3')
+        elements_desired = [(1, 'straight_line', [2, 3]),
+                            (2, 'straight_line', [4, 1]),
+                            (3, 'Tri3', [8, 6, 5]),
+                            (4, 'Tri3', [5, 6, 7]),
+                            (5, 'Tri3', [4, 7, 6]),
+                            (6, 'Tri3', [2, 8, 5]),
+                            (7, 'Tri3', [2, 3, 8]),
+                            (8, 'Tri3', [1, 7, 4]),
+                            (9, 'Tri3', [1, 5, 7]),
+                            (10, 'Tri3', [3, 6, 8])]
+
+        dimension_desired = 2
+        groups_desired = [('right_boundary', [], [1]),
+                          ('left_boundary', [], [2]),
+                          ('volume', [], [3, 4, 5, 6, 7, 8, 9, 10])]
+
+        # Define input file path
+        file = amfe_dir('tests/meshes/gmsh_ascii_8_tets.msh')
+        # Define Reader Object, initialized with AmfeMeshConverter
+        reader = GmshAsciiMeshReader(file, DummyMeshConverter())
+        # Parse dummy mesh
+        mesh = reader.parse()
+
+        # Check nodes
+        for i, node in enumerate(nodes_desired):
+            self.assertAlmostEqual(mesh._nodes[i], node)
+        # Check elements
+        for i, element in enumerate(elements_desired):
+            self.assertEqual(mesh._elements[mesh._elements.index(element)], element)
+        # Check mesh dimension
+        self.assertEqual(mesh._dimension, dimension_desired)
+        self.assertEqual(mesh._groups, groups_desired)
+        self.assertEqual(mesh._no_of_nodes, 8)
+        self.assertEqual(mesh._no_of_elements, 10)
+>>>>>>> 53-write-gmsh-ascii-mesh-reader
