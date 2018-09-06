@@ -54,6 +54,7 @@ class AssemblyTest(TestCase):
         class DummyObserver:
             def __init__(self, number):
                 self._number = number
+                return
 
             @property
             def number(self):
@@ -62,9 +63,11 @@ class AssemblyTest(TestCase):
             @number.setter
             def number(self, no):
                 self._number = no
+                return
 
             def update(self, obj):
                 self._number = -1
+                return
 
         dummy1 = DummyObserver(1)
         dummy2 = DummyObserver(2)
