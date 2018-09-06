@@ -10,6 +10,11 @@ Tools for handling csr matrices for assembly
 
 """
 
+__all__ = [
+    'get_index_of_csr_data',
+    'fill_csr_matrix'
+]
+
 
 # Trying to import the fortran routines
 use_fortran = False
@@ -71,7 +76,7 @@ def get_index_of_csr_data(i, j, indptr, indices):
 def fill_csr_matrix(indptr, indices, vals, K, k_indices):
     """
     Fill the values of K into the vals-array of a sparse CSR Matrix given the
-    k_indices array.
+    k_indices array. The values of K are added to the current values (typically for assembly processes)
 
     Parameters
     ----------
