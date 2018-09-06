@@ -433,29 +433,30 @@ class GmshAsciiMeshReader(MeshReader):
 
 class AmfeMeshObjMeshReader(MeshReader):
     """
-    Reader for Amfe mesh objects
-
+    Reader for AMfe mesh objects.
     """
 
-    def __init__(self, meshobj, builder):
+    def __init__(self, meshobj=None, builder=None):
         super().__init__()
         self._builder = builder
         self._meshobj = meshobj
+        return
 
     def parse(self):
-        nodeid2idx = self._meshobj.nodeid2idx
         # build dimension
         self._builder.build_mesh_dimension(self._meshobj.dimension)
         self._builder.build_no_of_nodes(self._meshobj.no_of_nodes)
         self._builder.build_no_of_elements(self._meshobj.no_of_elements + self._meshobj.no_of_boundary_elements)
         # build nodes
-        for nodeid in nodeid2idx:
-            if self._meshobj.dimension == 2:
+        nodeid2idx = self._meshobj.nodeid2idx
+        if self._meshobj.dimension == 2:
+            for nodeid in nodeid2idx:
                 self._builder.build_node(nodeid,
                                          self._meshobj.nodes[nodeid2idx[nodeid], 0],
                                          self._meshobj.nodes[nodeid2idx[nodeid], 1],
                                          0.0)
-            else:
+        else:
+            for nodeid in nodeid2idx:
                 self._builder.build_node(nodeid,
                                          self._meshobj.nodes[nodeid2idx[nodeid], 0],
                                          self._meshobj.nodes[nodeid2idx[nodeid], 1],
