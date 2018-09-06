@@ -9,7 +9,8 @@ import _pickle as pickle
 from numpy.testing import assert_allclose, assert_array_equal
 
 from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, AmfeMeshObjMeshReader, \
-                    MeshConverter, AmfeMeshConverter
+                    AmfeMeshConverter
+from amfe.io.mesh_converter import MeshConverter
 
 from amfe import amfe_dir
 
