@@ -16,4 +16,21 @@ __all__ = [
 
 
 class Assembly:
-    pass
+    """
+    Assembly base class providing observer utilities
+    """
+    def __init__(self):
+        self._observers = list()
+
+    def add_observer(self, observer):
+        self._observers.append(observer)
+
+    def remove_observer(self, observer):
+        self._observers.remove(observer)
+
+    def notify(self):
+        for observer in self._observers:
+            observer.update(self)
+
+    def update(self, obj):
+        pass
