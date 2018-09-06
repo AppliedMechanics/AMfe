@@ -30,6 +30,7 @@ def read_grf(file):
     return data
 
 
+@unittest.skip("temporarily disabled")
 class SolversTest(unittest.TestCase):
     def setUp(self):
         # define input-file and prefix for output

@@ -9,7 +9,7 @@ import scipy as sp
 import multiprocessing as mp
 import copy
 
-from ..solver import PardisoSolver
+from ..linalg.linearsolvers import PardisoSolver
 from ..solver import NonlinearStaticsSolver
 from ..structural_dynamics import force_norm
 from ..num_exp_toolbox import apply_async
