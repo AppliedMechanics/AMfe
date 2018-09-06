@@ -7,6 +7,8 @@ from numpy.random import randint
 import numpy as np
 from scipy import rand
 from numpy.testing import assert_array_equal
+
+from amfe.assembly.assembly import Assembly
 from amfe.assembly.tools import get_index_of_csr_data, fill_csr_matrix
 
 
@@ -47,3 +49,35 @@ class AssemblyTest(TestCase):
         fill_csr_matrix(A_actual.indptr, A_actual.indices, A_actual.data, K, k_indices)
 
         assert_array_equal(A_actual.A, A_desired.A)
+
+    def test_base_class(self):
+        class DummyObserver:
+            def __init__(self, number):
+                self._number = number
+
+            @property
+            def number(self):
+                return self._number
+
+            @number.setter
+            def number(self, no):
+                self._number = no
+
+            def update(self, obj):
+                self._number = -1
+
+        dummy1 = DummyObserver(1)
+        dummy2 = DummyObserver(2)
+        assembly = Assembly()
+        assembly.add_observer(dummy1)
+        assembly.add_observer(dummy2)
+        assembly.notify()
+        self.assertEqual(dummy1.number, -1)
+        self.assertEqual(dummy2.number, -1)
+
+        dummy1.number = 1
+        dummy2.number = 1
+        assembly.remove_observer(dummy1)
+        assembly.notify()
+        self.assertEqual(dummy1.number, 1)
+        self.assertEqual(dummy2.number, -1)
