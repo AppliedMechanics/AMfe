@@ -17,6 +17,7 @@ __all__ = [
 
 # Trying to import the fortran routines
 use_fortran = False
+
 try:
     import amfe.f90_assembly
     use_fortran = True

@@ -15,4 +15,26 @@ __all__ = [
 
 
 class Assembly:
-    pass
+    """
+    Super class for all assemblies providing observer utilities.
+    """
+
+    def __init__(self):
+        self._observers = list()
+        return
+
+    def add_observer(self, observer):
+        self._observers.append(observer)
+        return
+
+    def remove_observer(self, observer):
+        self._observers.remove(observer)
+        return
+
+    def notify(self):
+        for observer in self._observers:
+            observer.update(self)
+        return
+
+    def update(self, obj):
+        pass
