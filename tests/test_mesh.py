@@ -80,3 +80,11 @@ class TestMesh(TestCase):
         actual = self.testmesh.get_nodeidxs_by_all()
         desired = np.array([0, 1, 2, 3, 4, 5], dtype=np.int)
         assert_equal(actual, desired)
+
+    def test_get_nodeids_by_nodeidxs(self):
+        actual = self.testmesh.get_nodeids_by_nodeidxs([3, 5, 2])
+        desired = [4, 6, 3]
+        assert_equal(actual, desired)
+        actual = self.testmesh.get_nodeids_by_nodeidxs([3])
+        desired = [4]
+        assert_equal(actual, desired)

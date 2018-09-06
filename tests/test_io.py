@@ -5,9 +5,11 @@ Tests for testing io module
 
 from unittest import TestCase
 import numpy as np
+import _pickle as pickle
 from numpy.testing import assert_allclose, assert_array_equal
 
-from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, MeshConverter, AmfeMeshConverter
+from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, AmfeMeshObjMeshReader, \
+                    MeshConverter, AmfeMeshConverter
 
 from amfe import amfe_dir
 
@@ -113,8 +115,6 @@ class IOTest(TestCase):
                          (13, 2.042367825e+00, 4.278256700e-02, 2.477278000e-03),
                          (14, 2.042357741e+00, 5.431194119e-01, 2.524814000e-03),
                          (15, 2.042347658e+00, 1.043456257e+00, 2.572350000e-03)]
-        # Desired elements
-        # (internal name of Triangle Nnode 3 is 'Tri3')
         elements_desired = [(1, 'Tri6', [13, 15, 9, 14, 12, 11]),
                             (2, 'Tri6', [9, 6, 5, 8, 4, 7]),
                             (3, 'Tri6', [9, 5, 13, 7, 10, 11]),
@@ -294,3 +294,58 @@ class IOTest(TestCase):
         self.assertEqual(mesh._no_of_nodes, 8)
         self.assertEqual(mesh._no_of_elements, 10)
 
+    def test_amfemeshobj_to_dummy(self):
+        # Desired nodes
+        nodes_desired = [(1, 1.345600000e-02, 3.561675700e-02, 0.0),
+                         (2, 5.206839561e-01, 3.740820950e-02, 0.0),
+                         (3, 3.851982918e-02, 5.460016703e-01, 0.0),
+                         (4, 5.457667372e-01, 5.477935420e-01, 0.0),
+                         (5, 1.027911912e+00, 3.919966200e-02, 0.0),
+                         (6, 6.358365836e-02, 1.056386584e+00, 0.0),
+                         (7, 1.040469476e+00, 5.445628213e-01, 0.0),
+                         (8, 5.582746582e-01, 1.053154002e+00, 0.0),
+                         (9, 1.052965658e+00, 1.049921420e+00, 0.0),
+                         (10, 1.535139868e+00, 4.099111450e-02, 0.0),
+                         (11, 1.547697432e+00, 5.463542738e-01, 0.0),
+                         (12, 1.547656658e+00, 1.046688838e+00, 0.0),
+                         (13, 2.042367825e+00, 4.278256700e-02, 0.0),
+                         (14, 2.042357741e+00, 5.431194119e-01, 0.0),
+                         (15, 2.042347658e+00, 1.043456257e+00, 0.0)]
+        elements_desired = [(1, 'Tri6', [13, 15, 9, 14, 12, 11]),
+                            (2, 'Tri6', [9, 6, 5, 8, 4, 7]),
+                            (3, 'Tri6', [9, 5, 13, 7, 10, 11]),
+                            (4, 'Tri6', [1, 5, 6, 2, 4, 3]),
+                            (5, 'quadratic_line', [5, 13, 10]),
+                            (6, 'quadratic_line', [1, 5, 2]),
+                            (7, 'quadratic_line', [6, 1, 3]),
+                            (8, 'quadratic_line', [9, 6, 8]),
+                            (9, 'quadratic_line', [13, 15, 14]),
+                            (10, 'quadratic_line', [15, 9, 12])
+                            ]
+        dimension_desired = 2
+        groups_desired = [
+            ('left', [], [2, 4]),
+            ('right', [], [1, 3]),
+            ('left_boundary', [], [7]),
+            ('right_boundary', [], [9]),
+            ('top_boundary', [], [8, 10]),
+            ('left_dirichlet', [1, 3, 6], [])
+        ]
+        # Define input file path
+        with open(amfe_dir('tests/meshes/amfe_obj_4_tets.amsh'), 'rb') as fp:
+            meshobj = pickle.load(fp)
+        # Define Reader Object, initialized with AmfeMeshConverter
+        reader = AmfeMeshObjMeshReader(meshobj, DummyMeshConverter())
+        # Parse mesh
+        mesh = reader.parse()
+        # Check nodes
+        for i, node in enumerate(nodes_desired):
+            self.assertEqual(mesh._nodes[i], node)
+        # Check elements
+        for i, element in enumerate(elements_desired):
+            self.assertEqual(mesh._elements[mesh._elements.index(element)], element)
+        # Check mesh dimension
+        self.assertEqual(mesh._dimension, dimension_desired)
+        self.assertEqual(mesh._groups, groups_desired)
+        self.assertEqual(mesh._no_of_nodes, 15)
+        self.assertEqual(mesh._no_of_elements, 10)

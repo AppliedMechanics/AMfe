@@ -261,3 +261,8 @@ class Mesh:
             returns all nodeidxs
         """
         return np.arange(self.no_of_nodes, dtype=np.int)
+
+    def get_nodeids_by_nodeidxs(self, nodeidxs):
+        keys = list(self.nodeid2idx.keys())
+        values = list(self.nodeid2idx.values())
+        return [keys[values.index(idx)] for idx in nodeidxs]
