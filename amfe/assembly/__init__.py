@@ -12,7 +12,7 @@ Module for assembly algorithms
 """
 
 # --- ABSTRACT SUPER CLASS ---
-from .assembly import *  # abstract super class
+# from .assembly import *  # abstract super class
 
 
 # --- STRUCTURAL ASSEMBLY ---
