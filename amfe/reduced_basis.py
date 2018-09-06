@@ -7,7 +7,7 @@ import scipy as sp
 from scipy import linalg
 from scipy.sparse.linalg import LinearOperator
 
-from .solver import solve_sparse, PardisoSolver
+from .linalg.linearsolvers import solve_sparse, PardisoSolver
 from .linalg.norms import m_normalize
 from .linalg.orth import m_orthogonalize
 
