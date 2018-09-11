@@ -10,7 +10,7 @@ from numpy.testing import assert_equal
 
 class TestMesh(TestCase):
     def setUp(self):
-        from amfe import Mesh
+        from amfe.mesh import Mesh
         self.testmesh = Mesh(dimension=2)
         nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0]], dtype=np.float)
         connectivity = [np.array([4, 5, 2], dtype=np.int), np.array([2, 1, 4], dtype=np.int),

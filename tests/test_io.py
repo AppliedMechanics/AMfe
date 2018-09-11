@@ -12,7 +12,7 @@ from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, 
                     AmfeMeshConverter
 from amfe.io.mesh_converter import MeshConverter
 
-from amfe import amfe_dir
+from amfe.tools import amfe_dir
 
 
 class DummyMeshConverter(MeshConverter):

@@ -9,9 +9,10 @@ import scipy as sp
 import nose
 
 from numpy.testing import assert_allclose, assert_almost_equal
-import amfe
-from amfe import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10, Hexa8, Hexa20
-from amfe import material
+from amfe.element import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10, Hexa8, Hexa20
+from amfe.element import Tri3Boundary, Tri6Boundary, Quad4Boundary, Quad8Boundary, LineLinearBoundary
+from amfe.element import compute_B_matrix
+from amfe.material import KirchhoffMaterial, NeoHookean, MooneyRivlin
 
 def jacobian(func, X, u, t):
     '''
@@ -54,7 +55,7 @@ class ElementTest(unittest.TestCase):
         no_of_dofs = len(X_def)
         self.X = X_def + 0.5*sp.rand(no_of_dofs)
         self.u = sp.rand(no_of_dofs)
-        self.my_material = material.KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
+        self.my_material = KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
         self.my_element = element(self.my_material)
 
     @nose.tools.nottest
@@ -137,7 +138,7 @@ class Hexa8Test(ElementTest):
         self.jacobi_test_element(rtol=2E-3)
 
     def test_mass(self):
-        my_material = material.KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
+        my_material = KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
         my_element = Hexa8(my_material)
         M = my_element.m_int(X_hexa8, np.zeros_like(X_hexa8), t=0)
         np.testing.assert_almost_equal(np.sum(M), 3)
@@ -150,7 +151,7 @@ class Hexa20Test(ElementTest):
         self.jacobi_test_element(rtol=5E-3)
 
     def test_mass(self):
-        my_material = material.KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
+        my_material = KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
         my_element = Hexa20(my_material)
         M = my_element.m_int(X_hexa20, np.zeros_like(X_hexa20), t=0)
         np.testing.assert_almost_equal(np.sum(M), 3)
@@ -170,7 +171,7 @@ class MaterialTest3D(ElementTest):
     def test_Mooney(self):
         A10, A01, kappa, rho = sp.rand(4)*1E3 + 100
         print('Material parameters A10, A01 and kappa:', A10, A01, kappa)
-        my_material = material.MooneyRivlin(A10, A01, kappa, rho)
+        my_material = MooneyRivlin(A10, A01, kappa, rho)
         self.my_element.material = my_material
         self.jacobi_test_element(rtol=1E-3)
 
@@ -178,7 +179,7 @@ class MaterialTest3D(ElementTest):
         mu, kappa, rho = sp.rand(3)*1E3 + 100
         print('Material parameters mu, kappa:', mu, kappa)
 #        mu /= 4
-        my_material = material.NeoHookean(mu, kappa, rho)
+        my_material = NeoHookean(mu, kappa, rho)
         self.my_element.material = my_material
         self.jacobi_test_element(rtol=5E-4)
 
@@ -193,7 +194,7 @@ class MaterialTest2D(ElementTest):
 
     def test_Mooney(self):
         A10, A01, kappa, rho = sp.rand(4)*1E3 + 100
-        my_material = material.MooneyRivlin(A10, A01, kappa, rho)
+        my_material = MooneyRivlin(A10, A01, kappa, rho)
         self.my_element.material = my_material
         self.jacobi_test_element(rtol=5E-4)
 
@@ -201,7 +202,7 @@ class MaterialTest2D(ElementTest):
         mu, kappa, rho = sp.rand(3)*1E3 + 100
 #        mu /= 4
         kappa *= 100
-        my_material = material.NeoHookean(mu, kappa, rho)
+        my_material = NeoHookean(mu, kappa, rho)
         self.my_element.material = my_material
         self.jacobi_test_element()
 
@@ -214,8 +215,8 @@ class MaterialTest(unittest.TestCase):
         A01 = 0
         F = sp.rand(3,3)
         self.E = 1/2*(F.T @ F - sp.eye(3))
-        self.mooney = material.MooneyRivlin(A10, A01, kappa, rho)
-        self.neo = material.NeoHookean(mu, kappa, rho)
+        self.mooney = MooneyRivlin(A10, A01, kappa, rho)
+        self.neo = NeoHookean(mu, kappa, rho)
 
     def test_Neo_vs_Mooney_S(self):
         S_mooney, Sv_mooney, C_mooney = self.mooney.S_Sv_and_C(self.E)
@@ -241,8 +242,8 @@ class MaterialTest2dPlaneStress(unittest.TestCase):
         self.E = 1/2*(F.T @ F - sp.eye(3))
         A10, A01, kappa, rho = sp.rand(4)
         mu = A10*2
-        self.mooney = material.MooneyRivlin(A10, A01, kappa, rho, plane_stress=False)
-        self.neo = material.NeoHookean(mu, kappa, rho, plane_stress=False)
+        self.mooney = MooneyRivlin(A10, A01, kappa, rho, plane_stress=False)
+        self.neo = NeoHookean(mu, kappa, rho, plane_stress=False)
 
     def test_mooney_2d(self):
         E = self.E
@@ -264,7 +265,7 @@ class MaterialTest2dPlaneStress(unittest.TestCase):
 def test_tri3_pressure():
     X = np.array([0,0,0,1,0,0,0,1,0])
     u = np.zeros_like(X)
-    my_press_ele = amfe.Tri3Boundary(1, direct='normal')
+    my_press_ele = Tri3Boundary(1, direct='normal')
     K, f = my_press_ele.k_and_f_int(X, u)
     np.testing.assert_array_equal( K, np.zeros((9,9)))
     np.testing.assert_allclose(np.sum(f), -1/2)
@@ -272,7 +273,7 @@ def test_tri3_pressure():
 def test_line_pressure():
     X = np.array([0,0,1,1])
     u = X
-    my_press_ele = amfe.LineLinearBoundary(-1, 'normal')
+    my_press_ele = LineLinearBoundary(-1, 'normal')
     K, f = my_press_ele.k_and_f_int(X, u)
     np.testing.assert_array_equal( K, np.zeros((4,4)))
     np.testing.assert_allclose(f, np.array([-1,1,-1,1]))
@@ -280,7 +281,7 @@ def test_line_pressure():
 def test_line_pressure2():
     X = np.array([0,0,1,1])
     u = X
-    my_press_ele = amfe.LineLinearBoundary(1, direct=np.array([-1,0]))
+    my_press_ele = LineLinearBoundary(1, direct=np.array([-1,0]))
     K, f = my_press_ele.k_and_f_int(X, u)
     np.testing.assert_array_equal(K, np.zeros((4,4)))
     np.testing.assert_allclose(f, np.sqrt(2)*np.array([-1,0,-1,0]))
@@ -290,8 +291,8 @@ def test_tri6_pressure():
     Test, if the Tri3 pressure element reveals the same behavior as a mass
     element, which is accelerated in one direction only.
     '''
-    my_material = amfe.KirchhoffMaterial(rho=1)
-    my_tri6 = amfe.Tri6(my_material)
+    my_material = KirchhoffMaterial(rho=1)
+    my_tri6 = Tri6(my_material)
     X = np.array([0,0,2,0,0,2,1,0,1,1,0,1.])
     u = np.zeros(12)
     X += sp.rand(12)*0.2
@@ -299,7 +300,7 @@ def test_tri6_pressure():
     t = np.array([ 0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.])
     f_2d = M @ t
     f_1d = f_2d[1::2]
-    my_boundary = amfe.Tri6Boundary(val=1., direct='normal')
+    my_boundary = Tri6Boundary(val=1., direct='normal')
     X_3D = np.zeros(3*6)
     X_3D[0::3] = X[0::2]
     X_3D[1::3] = X[1::2]
@@ -311,8 +312,8 @@ def test_tri6_pressure():
     np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
 
 def test_quad4_pressure():
-    my_material = amfe.KirchhoffMaterial(rho=1)
-    my_quad4 = amfe.Quad4(my_material)
+    my_material = KirchhoffMaterial(rho=1)
+    my_quad4 = Quad4(my_material)
     X = X_quad4
     u = np.zeros(8)
     X += sp.rand(8)*0.2
@@ -320,7 +321,7 @@ def test_quad4_pressure():
     t = np.array([ 0.,  1.,  0.,  1.,  0.,  1.,  0.,  1., ])
     f_2d = M @ t
     f_1d = f_2d[1::2]
-    my_boundary = amfe.Quad4Boundary(val=1., direct='normal')
+    my_boundary = Quad4Boundary(val=1., direct='normal')
     X_3D = np.zeros(3*4)
     X_3D[0::3] = X[0::2]
     X_3D[1::3] = X[1::2]
@@ -332,8 +333,8 @@ def test_quad4_pressure():
     np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
 
 def test_quad8_pressure():
-    my_material = amfe.KirchhoffMaterial(rho=1)
-    my_quad8 = amfe.Quad8(my_material)
+    my_material = KirchhoffMaterial(rho=1)
+    my_quad8 = Quad8(my_material)
     X = X_quad8
     u = np.zeros(16)
     X += sp.rand(16)*0.2
@@ -342,7 +343,7 @@ def test_quad8_pressure():
     t[1::2] = 1
     f_2d = M @ t
     f_1d = f_2d[1::2]
-    my_boundary = amfe.Quad8Boundary(val=1., direct='normal')
+    my_boundary = Quad8Boundary(val=1., direct='normal')
     X_3D = np.zeros(3*8)
     X_3D[0::3] = X[0::2]
     X_3D[1::3] = X[1::2]
@@ -356,28 +357,28 @@ def test_quad8_pressure():
 #%%
 
 def test_name_tet4():
-    assert('Tet4' == amfe.Tet4.name)
+    assert('Tet4' == Tet4.name)
 
 def test_name_tet10():
-    assert('Tet10' == amfe.Tet10.name)
+    assert('Tet10' == Tet10.name)
 
 def test_name_quad4():
-    assert('Quad4' == amfe.Quad4.name)
+    assert('Quad4' == Quad4.name)
 
 def test_name_quad8():
-    assert('Quad8' == amfe.Quad8.name)
+    assert('Quad8' == Quad8.name)
 
 def test_name_tri3():
-    assert('Tri3' == amfe.Tri3.name)
+    assert('Tri3' == Tri3.name)
 
 def test_name_tri6():
-    assert('Tri6' == amfe.Tri6.name)
+    assert('Tri6' == Tri6.name)
 
 def test_name_hexa8():
-    assert('Hexa8' == amfe.Hexa8.name)
+    assert('Hexa8' == Hexa8.name)
 
 def test_name_hexa20():
-    assert('Hexa20' == amfe.Hexa20.name)
+    assert('Hexa20' == Hexa20.name)
 
 #%%
 
@@ -400,7 +401,7 @@ class TestB_matrix_compuation(unittest.TestCase):
                           [S_v[5], S_v[1], S_v[3]],
                           [S_v[4], S_v[3], S_v[2]]])
 
-        B = amfe.element.compute_B_matrix(B_tilde, F)
+        B = compute_B_matrix(B_tilde, F)
         self.res1 = B.T @ S_v
         self.res2 = B_tilde @ S @ F.T
 

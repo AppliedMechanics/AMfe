@@ -42,9 +42,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from .structural_dynamics import *
-from .linalg import *
-
+from amfe.linalg import signal_norm, vector_norm
+from amfe.structural_dynamics import modal_assurance
 
 def node2total(node_index, coordinate_index, ndof_node=2):
     '''

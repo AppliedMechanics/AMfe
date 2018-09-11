@@ -6,7 +6,8 @@ Test routine to test some of the model reduction routines
 import numpy as np
 import scipy as sp
 import nose
-from amfe import modal_assurance, principal_angles
+from amfe.structural_dynamics import modal_assurance
+from amfe.tools import principal_angles
 
 
 def test_mac_diag_ones():
