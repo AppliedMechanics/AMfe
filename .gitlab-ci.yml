@@ -5,7 +5,6 @@ stages:
     - build
     - unittest
     - doctest
-    - coverage
     - linttest
 
 build_without_fortran:
