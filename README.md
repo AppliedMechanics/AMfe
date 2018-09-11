@@ -5,6 +5,11 @@ AMfe - Finite Element Research Code at the Chair of Applied Mechanics
 
 This Finite Element Research code is developed, maintained and used by a part of the numerics group of AM.
 
+Coverage Report for Refactoring 2018:
+[![coverage report](https://gitlab.lrz.de/AMCode/AMfe/badges/refactoring-2018/coverage.svg)](https://gitlab.lrz.de/AMCode/AMfe/commits/refactoring-2018)
+
+Pipeline Status:
+[![pipeline status](https://gitlab.lrz.de/AMCode/AMfe/badges/refactoring-2018/pipeline.svg)](https://gitlab.lrz.de/AMCode/AMfe/commits/refactoring-2018)
 
 Overview:
 ---------
