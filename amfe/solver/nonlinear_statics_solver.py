@@ -13,7 +13,6 @@ import numpy as np
 from time import time
 
 from .solver import abort_statement, Solver
-from ..mechanical_system import ConstrainedMechanicalSystem
 from ..linalg.norms import vector_norm
 from ..linalg.linearsolvers import PardisoSolver
 
@@ -45,13 +44,11 @@ class NonlinearStaticsSolver(Solver):
         if 'linear_solver' in options:
             self.linear_solver = options['linear_solver']
         else:
-            if isinstance(mechanical_system, ConstrainedMechanicalSystem):
-                print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver() with'
-                      'options for saddle point problems.')
-                self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
-            else:
-                print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-                self.linear_solver = PardisoSolver(A=None, mtype='sid')
+            print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
+            self.linear_solver = PardisoSolver(A=None, mtype='sid')
+            if 'constrained' in options:
+                if options['constrained']:
+                    self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
         if 'number_of_load_steps' in options:
             self.number_of_load_steps = options['number_of_load_steps']
         else:

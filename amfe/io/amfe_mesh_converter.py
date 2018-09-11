@@ -12,7 +12,7 @@ AMfe mesh converter for I/O module.
 import numpy as np
 
 from .mesh_converter import MeshConverter
-from .. import Mesh
+from amfe.mesh import Mesh
 
 __all__ = [
     'AmfeMeshConverter'
