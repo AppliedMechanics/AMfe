@@ -9,10 +9,11 @@ from scipy import rand
 from numpy.testing import assert_array_equal
 
 from amfe.assembly.assembly import Assembly
+from amfe.assembly import StructuralAssembly
 from amfe.assembly.tools import get_index_of_csr_data, fill_csr_matrix
 
 
-class AssemblyTest(TestCase):
+class AssemblyToolsTest(TestCase):
     def setUp(self):
         pass
 
@@ -84,3 +85,44 @@ class AssemblyTest(TestCase):
         assembly.notify()
         self.assertEqual(dummy1.number, 1)
         self.assertEqual(dummy2.number, -1)
+
+
+class StructuralAssemblyTest(TestCase):
+    def setUp(self):
+        self.nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0]], dtype=np.float)
+        self.connectivity = [np.array([4, 5, 2], dtype=np.int), np.array([2, 1, 4], dtype=np.int),
+                        np.array([0, 1, 2, 3], dtype=np.int)]
+        self.boundary_connectivity = [np.array([3, 0], dtype=np.int), np.array([4, 5], dtype=np.int)]
+
+        self.asm = StructuralAssembly(2, self.nodes, self.connectivity, self.boundary_connectivity)
+
+    def tearDown(self):
+        self.asm = None
+
+    def test_mapping(self):
+        self.asm.element_mapping = None
+        self.asm.compute_element_mapping(self.connectivity, self.boundary_connectivity)
+
+        element_mapping_desired = [np.array([8, 9, 10, 11, 4, 5], dtype=int),
+                                   np.array([4, 5, 2, 3, 8, 9], dtype=int),
+                                   np.array([0, 1, 2, 3, 4, 5, 6, 7], dtype=int)]
+        boundary_element_mapping_desired = [np.array([6, 7, 0, 1], dtype=int), np.array([8, 9, 10, 11], dtype=int)]
+        for i, mapping in enumerate(element_mapping_desired):
+            assert_array_equal(self.asm.element_mapping[i], element_mapping_desired[i])
+        for i, mapping in enumerate(boundary_element_mapping_desired):
+            assert_array_equal(self.asm.boundary_element_mapping[i], boundary_element_mapping_desired[i])
+
+    def test_get_dofs_by_nodeidxs(self):
+        nodeidxs = np.array([0, 4, 5], dtype=int)
+        coords = 'y'
+        dofs_actual = self.asm.get_dofs_by_nodeidxs(nodeidxs, coords)
+        dofs_desired = np.array([1, 9, 11], dtype=int)
+        assert_array_equal(dofs_actual, dofs_desired)
+        self.asm.node_mapping[0, 1] = 101
+        dofs_actual = self.asm.get_dofs_by_nodeidxs(nodeidxs, coords)
+        dofs_desired = np.array([101, 9, 11], dtype=int)
+        assert_array_equal(dofs_actual, dofs_desired)
+
+    def test_no_of_dofs_per_node(self):
+        actual = self.asm.no_of_dofs_per_node
+        self.assertEqual(actual, 2)
