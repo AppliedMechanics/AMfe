@@ -193,8 +193,6 @@ class NonlinearDynamicsSolver(Solver):
         t_clock_start = time()
 
         # initialize variables and set parameters
-        self.mechanical_system.clear_timesteps()
-        self.iteration_info = []
         t = self.t0
         q = self.initial_conditions['q0'].copy()
         dq = self.initial_conditions['dq0'].copy()
@@ -202,11 +200,11 @@ class NonlinearDynamicsSolver(Solver):
             v = self.initial_conditions['dq0'].copy()
         else:
             v = np.empty((0, 0))
-        ddq = np.zeros_like(q)
-        f_ext = np.zeros_like(q)
+        f_ext = self.mechanical_system.f_ext(q, dq, t)
         abs_f_ext = self.absolute_tolerance
-
-        # write output of initial conditions
+        self.linear_solver.set_A(self.mechanical_system.M(q, t))
+        ddq = self.linear_solver.solve(f_ext - self.mechanical_system.D(q, t) @ dq - self.mechanical_system.f_int(q, t))
+        self.iteration_info = [(t, 0., 0.)]
         self.mechanical_system.write_timestep(t, q.copy())
 
         # time step loop
@@ -360,8 +358,8 @@ class NonlinearDynamicsSolver(Solver):
         else:
             v = np.empty((0, 0))
         f_ext = self.mechanical_system.f_ext(q, dq, t)
-        self.linear_solver.set_A(self.mechanical_system.M(q, t))
         max_f_ext = self.absolute_tolerance
+        self.linear_solver.set_A(self.mechanical_system.M(q, t))
         ddq = self.linear_solver.solve(f_ext - self.mechanical_system.D(q, t) @ dq - self.mechanical_system.f_int(q, t))
         self.iteration_info = [(t, 0, 0, 0)]
         self.mechanical_system.write_timestep(t, q.copy())

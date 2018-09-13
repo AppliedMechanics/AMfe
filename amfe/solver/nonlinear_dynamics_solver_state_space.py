@@ -175,15 +175,13 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         t_clock_start = time()
 
         # initialize variables and set parameters
-        self.iteration_info = []
-        self.mechanical_system.clear_timesteps()
         t = self.t0
         x = self.initial_conditions['x0'].copy()
-        dx = np.zeros_like(x)
-        F_ext = np.zeros_like(x)
+        F_ext = self.mechanical_system.F_ext(x, t)
         abs_F_ext = self.absolute_tolerance
-
-        # write output of initial conditions
+        self.linear_solver.set_A(self.mechanical_system.E(x, t))
+        dx = self.linear_solver.solve(F_ext + self.mechanical_system.F_int(x, t))
+        self.iteration_info = [(t, 0., 0.)]
         self.mechanical_system.write_timestep(t, x.copy())
 
         # time step loop
