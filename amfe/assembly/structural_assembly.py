@@ -15,6 +15,9 @@ routines, as they allow for a huge speedup.
 """
 
 import numpy as np
+import logging
+import time
+from scipy.sparse import csr_matrix
 
 from .assembly import Assembly
 
@@ -62,6 +65,7 @@ class StructuralAssembly(Assembly):
         """
 
         super().__init__()
+        self.logger = logging.getLogger('amfe.assembly.StructuralAssembly')
         self._no_of_dofs_per_node = dimension
         # mapping
         # set standard mapping
@@ -73,6 +77,8 @@ class StructuralAssembly(Assembly):
             self.boundary_element_mapping = []
         self.elements_on_node = []
         self.compute_element_mapping(connectivity, boundary_connectivity)
+        self.C_csr = None
+        self.preallocate(self.no_of_dofs, self.element_mapping)
         return
 
     @property
@@ -96,6 +102,10 @@ class StructuralAssembly(Assembly):
         """
 
         return self._no_of_dofs_per_node
+
+    @property
+    def no_of_dofs(self):
+        return len(np.unique(self._node_mapping))
 
     def get_dofs_by_nodeidxs(self, nodeidxs, coords):
         """
@@ -153,3 +163,63 @@ class StructuralAssembly(Assembly):
         nodes_vec = np.concatenate(connectivity)
         self.elements_on_node = np.bincount(nodes_vec)
         return
+
+    def preallocate(self, no_of_dofs, eleidx2globaldofs):
+        """
+        Compute the sparsity pattern of the assembled matrices and store an empty matrix in self.C_csr.
+
+        The matrix self.C_csr serves as a 'blueprint' matrix which is filled in the assembly process.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        This pre-allocation routine can take some while for large matrices. Furthermore it is not implemented
+        memory-efficient, so for large systems and low RAM this might become an issue...
+        """
+
+        self.logger.info('Pre-allocating the stiffness matrix')
+        t1 = time.clock()
+
+        # NOTE
+        # the following algorithm only works under the following constraints:
+        #   - the mapping starts at zero
+        #   - if there are gaps in the mapping, they will not be pre-allocated
+
+        max_dofs_per_element = max((len(i) for i in eleidx2globaldofs))
+
+        # Auxiliary Help-Matrix H which is the blueprint of the local element stiffness matrix
+        H = np.zeros((max_dofs_per_element, max_dofs_per_element))
+
+        # pre-allocate the CSR-matrix
+
+        # pre-allocate row_global with maximal possible size for pre-alloc. C_csr
+        row_global = np.zeros(len(eleidx2globaldofs) * max_dofs_per_element ** 2, dtype=int)
+        # pre-allocate col_global with maximal possible size for pre-alloc. C_csr
+        col_global = row_global.copy()
+        # set 'dummy' values
+        vals_global = np.zeros_like(col_global, dtype=bool)
+
+        # calculate row_global and col_global
+        for i, global_dofs_of_current_element in enumerate(eleidx2globaldofs):
+            l = len(global_dofs_of_current_element)
+            # insert global-dof-ids in l rows (l rows have equal entries)
+            H[:l, :l] = global_dofs_of_current_element
+            # calculate row_global and col_global such that every possible combination of indices_of_one_element can be
+            # returned by (row_global[k], col_global[k]) for all k
+            row_global[i * max_dofs_per_element ** 2:(i + 1) * max_dofs_per_element ** 2] = H.reshape(-1)
+            col_global[i * max_dofs_per_element ** 2:(i + 1) * max_dofs_per_element ** 2] = H.T.reshape(-1)
+
+        # fill C_csr matrix with dummy entries in those places where matrix will be filled in assembly
+        self.C_csr = csr_matrix((vals_global, (row_global, col_global)), shape=(no_of_dofs, no_of_dofs), dtype=float)
+
+        t2 = time.clock()
+        self.logger.info('Done pre-allocating stiffness matrix with {0:d} elements and {1:d} dofs.'
+                         .format(len(eleidx2globaldofs), no_of_dofs))
+        self.logger.info('Time taken for pre-allocation: {0:2.2f} seconds.'.format(t2 - t1))

@@ -126,3 +126,18 @@ class StructuralAssemblyTest(TestCase):
     def test_no_of_dofs_per_node(self):
         actual = self.asm.no_of_dofs_per_node
         self.assertEqual(actual, 2)
+
+    def test_preallocate_csr(self):
+        self.asm.C_csr = None
+        self.asm.element_mapping = [np.array([0, 1, 2, 3], dtype=int), np.array([2, 3, 4, 5], dtype=int)]
+        self.asm.node_mapping = np.array(np.arange(0,6)).reshape(-1)
+        self.asm.preallocate(self.asm.no_of_dofs, self.asm.element_mapping)
+        vals = np.zeros(32)
+        rows = [0, 1, 2, 3]*4
+        rows.extend([2, 3, 4, 5]*4)
+        cols = [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3]
+        cols.extend([2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5])
+        C_csr_desired = csr_matrix((vals, (rows, cols)), dtype=float)
+        assert_array_equal(self.asm.C_csr.data, C_csr_desired.data)
+        assert_array_equal(self.asm.C_csr.indptr, C_csr_desired.indptr)
+        assert_array_equal(self.asm.C_csr.indices, C_csr_desired.indices)
