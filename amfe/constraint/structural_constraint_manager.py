@@ -54,7 +54,7 @@ class StructuralConstraintManager:
         None
 
         """
-        self._constraints.append((np.array(dofsarg), constraint, strategy))
+        self._constraints.append({'dofsarg': np.array(dofsarg, dtype=int), 'obj': constraint, 'strategy': strategy})
         # TODO: Prüfung ob slave-dofs passen sehr aufwendig, bitte schlauer programmieren
         # if [dof for dof in dofs if dof in self._slave_dofs]:
         #    raise ValueError('some of the dofs are already constrained')
@@ -162,7 +162,7 @@ class StructuralConstraintManager:
         """
         u_unconstr = self.L.dot(u_constr)
         for constraint in self._constraints:
-            u_unconstr[constraint.dofs] = constraint.u(t)
+            u_unconstr[constraint['dofsarg']] = constraint['obj'].u(t)
         return u_unconstr
 
     def constrain_u(self, u_unconstr, t=0):
@@ -204,12 +204,12 @@ class StructuralConstraintManager:
         ndof = self._no_of_unconstrained_dofs
         result = np.zeros(self.no_of_constrained_dofs)
         for constraint in self._constraints:
-            if constraint[2] == 'elim':
+            if constraint['strategy'] == 'elim':
                 mask = np.zeros(ndof, dtype=bool)
                 mask[constraint.slave_dofs] = True
                 result -= self.L.T.dot(M_unconstr)[:, mask] @ constraint.ddu(t)
                 if D_unconstr is not None:
-                    result -= self.L.T.dot(D_unconstr)[:,mask] @ constraint.du(t)
+                    result -= self.L.T.dot(D_unconstr)[:, mask] @ constraint.du(t)
         return result
 
     def get_rhs_nl_static(self, t):
@@ -258,13 +258,13 @@ class StructuralConstraintManager:
         ndof = self._no_of_unconstrained_dofs
         result = np.zeros(self.no_of_constrained_dofs)
         for constraint in self._constraints:
-            if constraint[2] == 'elim':
+            if constraint['strategy'] == 'elim':
                 mask = np.zeros(ndof, dtype=bool)
                 mask[constraint.slave_dofs] = True
-                result -= (self.L.T.dot(M_unconstr)[:, mask] @ constraint.ddu(t) \
-                          + self.L.T.dot(K_unconstr)[:, mask] @ constraint.u(t))
+                result -= (self.L.T.dot(M_unconstr)[:, mask] @ constraint['obj'].ddu(t) \
+                          + self.L.T.dot(K_unconstr)[:, mask] @ constraint['obj'].u(t))
                 if D_unconstr is not None:
-                    result -= self.L.T.dot(D_unconstr)[:, mask] @ constraint.du(t)
+                    result -= self.L.T.dot(D_unconstr)[:, mask] @ constraint['obj'].du(t)
         return result
 
     def get_rhs_lin_static(self, t, K_unconstr):
@@ -287,7 +287,7 @@ class StructuralConstraintManager:
         ndof = self._no_of_unconstrained_dofs
         result = np.zeros(self.no_of_constrained_dofs)
         for constraint in self._constraints:
-            if constraint[2] == 'elim':
+            if constraint['strategy'] == 'elim':
                 mask = np.zeros(ndof, dtype=bool)
                 mask[constraint.slave_dofs] = True
                 result -= self.L.T.dot(K_unconstr)[:, mask] @ constraint.u(t)
@@ -306,7 +306,7 @@ class StructuralConstraintManager:
         None
         """
         ndof = self._no_of_unconstrained_dofs
-        L_raw = speye(ndof, format='csr')
+        L_raw = speye(ndof, format='csr', dtype=bool)
         if len(self._slave_dofs) > 0:
             mask = np.ones(ndof, dtype=bool)
             mask[self._slave_dofs] = False
