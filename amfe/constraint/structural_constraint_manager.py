@@ -205,11 +205,12 @@ class StructuralConstraintManager:
         result = np.zeros(self.no_of_constrained_dofs)
         for constraint in self._constraints:
             if constraint['strategy'] == 'elim':
+                constraintobj = constraint['obj']
                 mask = np.zeros(ndof, dtype=bool)
-                mask[constraint.slave_dofs] = True
-                result -= self.L.T.dot(M_unconstr)[:, mask] @ constraint.ddu(t)
+                mask[constraintobj.slave_dofs(constraint['dofsarg'])] = True
+                result -= self.L.T.dot(M_unconstr)[:, mask] @ constraintobj.ddu(t)
                 if D_unconstr is not None:
-                    result -= self.L.T.dot(D_unconstr)[:, mask] @ constraint.du(t)
+                    result -= self.L.T.dot(D_unconstr)[:, mask] @ constraintobj.du(t)
         return result
 
     def get_rhs_nl_static(self, t):
@@ -259,12 +260,13 @@ class StructuralConstraintManager:
         result = np.zeros(self.no_of_constrained_dofs)
         for constraint in self._constraints:
             if constraint['strategy'] == 'elim':
+                constraintobj = constraint['obj']
                 mask = np.zeros(ndof, dtype=bool)
-                mask[constraint.slave_dofs] = True
-                result -= (self.L.T.dot(M_unconstr)[:, mask] @ constraint['obj'].ddu(t) \
-                          + self.L.T.dot(K_unconstr)[:, mask] @ constraint['obj'].u(t))
+                mask[constraintobj.slave_dofs(constraint['dofsarg'])] = True
+                result -= (self.L.T.dot(M_unconstr)[:, mask] @ constraintobj.ddu(t) \
+                          + self.L.T.dot(K_unconstr)[:, mask] @ constraintobj.u(t))
                 if D_unconstr is not None:
-                    result -= self.L.T.dot(D_unconstr)[:, mask] @ constraint['obj'].du(t)
+                    result -= self.L.T.dot(D_unconstr)[:, mask] @ constraintobj.du(t)
         return result
 
     def get_rhs_lin_static(self, t, K_unconstr):
@@ -288,12 +290,13 @@ class StructuralConstraintManager:
         result = np.zeros(self.no_of_constrained_dofs)
         for constraint in self._constraints:
             if constraint['strategy'] == 'elim':
+                constraintobj = constraint['obj']
                 mask = np.zeros(ndof, dtype=bool)
-                mask[constraint.slave_dofs] = True
-                result -= self.L.T.dot(K_unconstr)[:, mask] @ constraint.u(t)
+                mask[constraintobj.slave_dofs(constraint['dofsarg'])] = True
+                result -= self.L.T.dot(K_unconstr)[:, mask] @ constraintobj.u(t)
         return result
 
-    def update_L(self):
+    def update_l(self):
         """
         Update the L matrix that eliminates the dofs that are eliminated by constraints
 
@@ -326,7 +329,7 @@ class StructuralConstraintManager:
         if self._L is not None:
             return self._L
         else:
-            self.update_L()
+            self.update_l()
             return self._L
 
     @property

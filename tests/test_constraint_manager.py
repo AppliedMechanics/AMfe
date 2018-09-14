@@ -11,9 +11,9 @@ from amfe.constraint.structural_constraint_manager import StructuralConstraintMa
 
 class StructuralConstraintManagerTest(TestCase):
     def setUp(self):
-        M = np.eye(3, dtype=float)
-        D = 3*np.eye(3, dtype=float)
+        M = np.array([[1,-1,0],[-1,1.2,-1.5],[0,-1.5,2]], dtype=float)
         K = np.array([[2, -1, 0], [-1, 2, -1.5], [0, -1.5, 3]], dtype=float)
+        D = 0.2*M + 0.1*K
 
 
         self.M_unconstr = csr_matrix(M)
@@ -28,13 +28,13 @@ class StructuralConstraintManagerTest(TestCase):
                 pass
 
             def u(self, t):
-                return t
+                return np.array([t])
 
             def du(self, t):
-                return t
+                return np.array([t])
 
             def ddu(self, t):
-                return t
+                return np.array([t])
 
             def slave_dofs(self, dofs_arg):
                 return dofs_arg
@@ -51,7 +51,7 @@ class StructuralConstraintManagerTest(TestCase):
         # Constrain third dof
         self.cm.add_constraint(self.diric_constraint, (2), 'elim')
         M_constr = self.cm.constrain_m(self.M_unconstr)
-        M_constr_desired = csr_matrix(np.eye(2, dtype=float))
+        M_constr_desired = self.M_unconstr[0:2, 0:2]
         assert_array_equal(M_constr.todense(), M_constr_desired.todense())
 
     def test_constrain_k(self):
@@ -108,8 +108,37 @@ class StructuralConstraintManagerTest(TestCase):
         self.cm.add_constraint(self.diric_constraint, (2), 'elim')
         L_old = self.cm.L
         self.cm.add_constraint(self.diric_constraint, (0), 'elim')
-        self.cm.update_L()
+        self.cm.update_l()
         L_new = self.cm.L
         assert_raises(AssertionError, assert_array_equal, L_new.todense(), L_old.todense())
         L_desired = L_desired = csr_matrix(np.array([[0],[1],[0]], dtype=bool))
         assert_array_equal(L_new.todense(), L_desired.todense())
+
+    def test_get_rhs_nl(self):
+        self.cm.add_constraint(self.diric_constraint, (2), 'elim')
+        rhs_actual = self.cm.get_rhs_nl(3, self.M_unconstr, self.D_unconstr)
+        rhs_desired = np.array([0,
+                                -self.M_unconstr[1,2]*self.diric_constraint.ddu(3)
+                                -self.D_unconstr[1,2]*self.diric_constraint.du(3)], dtype=float)
+        assert_array_equal(rhs_actual, rhs_desired)
+
+    def test_get_rhs_nl_static(self):
+        self.cm.add_constraint(self.diric_constraint, (2), 'elim')
+        rhs_actual = self.cm.get_rhs_nl_static(3)
+        rhs_desired = np.array([0, 0], dtype=float)
+        assert_array_equal(rhs_actual, rhs_desired)
+
+    def test_get_rhs_lin(self):
+        self.cm.add_constraint(self.diric_constraint, (2), 'elim')
+        rhs_actual = self.cm.get_rhs_lin(3, self.M_unconstr, self.K_unconstr, self.D_unconstr)
+        rhs_desired = np.array([0,
+                                -self.M_unconstr[1,2]*self.diric_constraint.ddu(3)
+                                -self.D_unconstr[1,2]*self.diric_constraint.du(3)
+                                -self.K_unconstr[1,2]*self.diric_constraint.u(3)], dtype=float)
+        assert_array_equal(rhs_actual, rhs_desired)
+
+    def test_get_rhs_lin_static(self):
+        self.cm.add_constraint(self.diric_constraint, (2), 'elim')
+        rhs_actual = self.cm.get_rhs_lin_static(3, self.K_unconstr)
+        rhs_desired = np.array([0, -self.K_unconstr[1,2]*self.diric_constraint.u(3)], dtype=float)
+        assert_array_equal(rhs_actual, rhs_desired)
