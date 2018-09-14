@@ -13,11 +13,23 @@ __all__ = ['StructuralConstraintManager',
 
 
 class StructuralConstraintManager:
-    '''
+    """
     Class responsible constraints in the mechanical component
 
-
-    '''
+    Attributes
+    ----------
+    _no_of_unconstrained_dofs : int
+        number of dofs of the unconstrained system/component
+    _constraints : list
+        list of dicts with keys 'dofsarg', 'obj', 'strategy'
+        the dofsarg value is an iterable with global degrees of freedom that must be passed to the constraint
+        the obj is a constraint object
+        the strategy is a string that describes the strategy (e.g. 'elim' for elimination)
+    _slave_dofs : ndarray, dtype:int
+        array with global ids of the slave dofs that are eliminatea by the constraintmanager
+    _L : ndarray
+        matrix with boolean values to eliminate dofs form vectors and matrices
+    """
 
     # Strategies to apply constraints
     # currently: elimination and lagrange multiplier
