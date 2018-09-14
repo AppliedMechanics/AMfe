@@ -26,7 +26,7 @@ class StructuralConstraintManager:
         the obj is a constraint object
         the strategy is a string that describes the strategy (e.g. 'elim' for elimination)
     _slave_dofs : ndarray, dtype:int
-        array with global ids of the slave dofs that are eliminatea by the constraintmanager
+        array with global ids of the slave dofs that are eliminated by the constraintmanager
     _L : ndarray
         matrix with boolean values to eliminate dofs form vectors and matrices
     """
@@ -35,15 +35,15 @@ class StructuralConstraintManager:
     # currently: elimination and lagrange multiplier
     STRATEGIES = ['elim', 'lm']
 
-    def __init__(self, no_of_unconstrained_dofs=0):
-        '''
+    def __init__(self, ndof_unconstrained_system=0):
+        """
         Parameters
         ----------
         ndof_unconstrained_system : int
             Number of dofs of the unconstrained system.
 
-        '''
-        self._no_of_unconstrained_dofs = no_of_unconstrained_dofs
+        """
+        self._no_of_unconstrained_dofs = ndof_unconstrained_system
         self._constraints = list()
         self._slave_dofs = np.array([], dtype=int)
         self._L = None
@@ -183,7 +183,7 @@ class StructuralConstraintManager:
 
         Parameters
         ----------
-        u_constr : ndarray
+        u_unconstr : ndarray
             Displacement vector of the unconstrained system
         t : float
             time
@@ -234,10 +234,6 @@ class StructuralConstraintManager:
         ----------
         t : int
             time
-        M_unconstr : csr_matrix
-            Unconstrained csr_matrix
-        D_unconstr : csr_matrix
-            Unconstrained viscous damping matrix
 
         Returns
         -------
@@ -275,8 +271,8 @@ class StructuralConstraintManager:
                 constraintobj = constraint['obj']
                 mask = np.zeros(ndof, dtype=bool)
                 mask[constraintobj.slave_dofs(constraint['dofsarg'])] = True
-                result -= (self.L.T.dot(M_unconstr)[:, mask] @ constraintobj.ddu(t) \
-                          + self.L.T.dot(K_unconstr)[:, mask] @ constraintobj.u(t))
+                result -= (self.L.T.dot(M_unconstr)[:, mask] @ constraintobj.ddu(t)
+                           + self.L.T.dot(K_unconstr)[:, mask] @ constraintobj.u(t))
                 if D_unconstr is not None:
                     result -= self.L.T.dot(D_unconstr)[:, mask] @ constraintobj.du(t)
         return result
@@ -311,10 +307,6 @@ class StructuralConstraintManager:
     def update_l(self):
         """
         Update the L matrix that eliminates the dofs that are eliminated by constraints
-
-        Parameters
-        ----------
-        None
 
         Returns
         -------
