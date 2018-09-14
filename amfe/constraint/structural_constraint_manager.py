@@ -1,25 +1,29 @@
-# Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
-# Universitaet Muenchen.
 #
-# Distributed under BSD-3-Clause License. See LICENSE-File for more information
+# Copyright (c) 2018 TECHNICAL UNIVERSITY OF MUNICH, DEPARTMENT OF MECHANICAL ENGINEERING, CHAIR OF APPLIED MECHANICS,
+# BOLTZMANNSTRASSE 15, 85748 GARCHING/MUNICH, GERMANY, RIXEN@TUM.DE.
 #
-"""Module for handling mechanical constraints """
+# Distributed under 3-Clause BSD license. See LICENSE file for more information.
+#
+"""
+Module handling structural constraints
+"""
 
 import numpy as np
-from scipy.sparse import eye as speye
+from scipy.sparse import eye as eyes
 
-__all__ = ['StructuralConstraintManager',
-           ]
+__all__ = [
+    'StructuralConstraintManager',
+]
 
 
 class StructuralConstraintManager:
     """
-    Class responsible constraints in the mechanical component
+    Class responsible for constraints in the structural component
 
     Attributes
     ----------
     _no_of_unconstrained_dofs : int
-        number of dofs of the unconstrained system/component
+        number of dofs of the unconstrained component
     _constraints : list
         list of dicts with keys 'dofsarg', 'obj', 'strategy'
         the dofsarg value is an iterable with global degrees of freedom that must be passed to the constraint
@@ -33,20 +37,24 @@ class StructuralConstraintManager:
 
     # Strategies to apply constraints
     # currently: elimination and lagrange multiplier
-    STRATEGIES = ['elim', 'lm']
+    STRATEGIES = [
+        'elim',
+        'lagrmult'
+    ]
 
     def __init__(self, ndof_unconstrained_system=0):
         """
         Parameters
         ----------
         ndof_unconstrained_system : int
-            Number of dofs of the unconstrained system.
-
+            number of dofs of the unconstrained system.
         """
+
         self._no_of_unconstrained_dofs = ndof_unconstrained_system
-        self._constraints = list()
+        self._constraints = []
         self._slave_dofs = np.array([], dtype=int)
         self._L = None
+        return
 
     def add_constraint(self, constraint, dofsarg, strategy):
         """
@@ -55,28 +63,30 @@ class StructuralConstraintManager:
         Parameters
         ----------
         constraint : StructuralConstraint
-            a constraint object, describing the constraint
+            constraint object, describing the constraint
         dofsarg : tuple
-            dofsindices that must be passed to the constraint
+            dofs' indices that must be passed to the constraint
         strategy : str
             strategy how the constraint shall be applied (e.g. via elimination or lagrange multiplier)
 
         Returns
         -------
         None
-
         """
+
+        if strategy not in self.STRATEGIES:
+            raise ValueError('strategy must be \'elim\' or \'lagrmult\'')
+
         self._constraints.append({'dofsarg': np.array(dofsarg, dtype=int), 'obj': constraint, 'strategy': strategy})
-        # TODO: Prüfung ob slave-dofs passen sehr aufwendig, bitte schlauer programmieren
+        # FIXME: Prüfung ob slave-dofs passen sehr aufwendig, bitte schlauer programmieren!
         # if [dof for dof in dofs if dof in self._slave_dofs]:
         #    raise ValueError('some of the dofs are already constrained')
-        if strategy not in self.STRATEGIES:
-            raise ValueError('strategy must be elim or lm')
         if strategy == 'elim':
             slave_dofs = constraint.slave_dofs(dofsarg)
             self._slave_dofs = np.append(self._slave_dofs, slave_dofs)
+        return
 
-    def constrain_m(self, M_unconstr, t=0):
+    def constrain_m(self, M_unconstr, t=0.):
         """
         Constrain the mass matrix of the structural component
 
@@ -90,9 +100,10 @@ class StructuralConstraintManager:
         M_constr : csr_matrix
             Constrained mass matrix
         """
-        return self.L.T.dot(M_unconstr.dot(self.L))
 
-    def constrain_k(self, K_unconstr, t=0):
+        return self.L.T @ M_unconstr @ self.L
+
+    def constrain_k(self, K_unconstr, t=0.):
         """
         Constrain the linear stiffness matrix of the structural component
 
@@ -106,9 +117,10 @@ class StructuralConstraintManager:
         K_constr : csr_matrix
             Constrained linear stiffness matrix
         """
-        return self.L.T.dot(K_unconstr.dot(self.L))
 
-    def constrain_d(self, D_unconstr, t=0):
+        return self.L.T @ K_unconstr @ self.L
+
+    def constrain_d(self, D_unconstr, t=0.):
         """
         Constrain the viscous damping matrix of the structural component
 
@@ -122,9 +134,10 @@ class StructuralConstraintManager:
         D_constr : csr_matrix
             Constrained viscous damping matrix
         """
-        return self.L.T.dot(D_unconstr.dot(self.L))
 
-    def constrain_f_int(self, f_int_unconstr, t=0):
+        return self.L.T @ D_unconstr @ self.L
+
+    def constrain_f_int(self, f_int_unconstr, t=0.):
         """
         Constrain the internal force vector of the structural component
 
@@ -138,9 +151,10 @@ class StructuralConstraintManager:
         f_int_constr : ndarray
             Constrained internal force vector
         """
-        return self.L.T.dot(f_int_unconstr)
 
-    def constrain_f_ext(self, f_ext_unconstr, t=0):
+        return self.L.T @ f_int_unconstr
+
+    def constrain_f_ext(self, f_ext_unconstr, t=0.):
         """
         Constrain the external force vector of the structural component
 
@@ -154,7 +168,8 @@ class StructuralConstraintManager:
         f_ext_constr : ndarray
             Constrained external force vector
         """
-        return self.L.T.dot(f_ext_unconstr)
+
+        return self.L.T @ f_ext_unconstr
 
     def unconstrain_u(self, u_constr, t):
         """
@@ -172,12 +187,13 @@ class StructuralConstraintManager:
         u_unconstr : ndarray
             Unconstrained displacements = u_constr extended by constrained displacements at time t
         """
-        u_unconstr = self.L.dot(u_constr)
+
+        u_unconstr = self.L @ u_constr
         for constraint in self._constraints:
             u_unconstr[constraint['dofsarg']] = constraint['obj'].u(t)
         return u_unconstr
 
-    def constrain_u(self, u_unconstr, t=0):
+    def constrain_u(self, u_unconstr, t=0.):
         """
         Constrain the u_unconstr = eliminate the dofs that must be eliminated
 
@@ -193,6 +209,7 @@ class StructuralConstraintManager:
         u_unconstr : ndarray
             Unconstrained displacements = u_constr extended by constrained displacements at time t
         """
+
         return self.L.T @ u_unconstr
 
     def get_rhs_nl(self, t, M_unconstr, D_unconstr=None):
@@ -213,6 +230,7 @@ class StructuralConstraintManager:
         f_nl_rhs : ndarray
             Additional RHS for the nonlinear equation of motion when constraints are applied by elimination
         """
+
         ndof = self._no_of_unconstrained_dofs
         result = np.zeros(self.no_of_constrained_dofs)
         for constraint in self._constraints:
@@ -220,9 +238,9 @@ class StructuralConstraintManager:
                 constraintobj = constraint['obj']
                 mask = np.zeros(ndof, dtype=bool)
                 mask[constraintobj.slave_dofs(constraint['dofsarg'])] = True
-                result -= self.L.T.dot(M_unconstr)[:, mask] @ constraintobj.ddu(t)
+                result -= (self.L.T @ M_unconstr)[:, mask] @ constraintobj.ddu(t)
                 if D_unconstr is not None:
-                    result -= self.L.T.dot(D_unconstr)[:, mask] @ constraintobj.du(t)
+                    result -= (self.L.T @ D_unconstr)[:, mask] @ constraintobj.du(t)
         return result
 
     def get_rhs_nl_static(self, t):
@@ -240,8 +258,8 @@ class StructuralConstraintManager:
         f_nl_rhs_static : ndarray
             Additional RHS for the static nonlinear equation of motion when constraints are applied by elimination
         """
-        result = np.zeros(self.no_of_constrained_dofs)
-        return result
+
+        return np.zeros(self.no_of_constrained_dofs)
 
     def get_rhs_lin(self, t, M_unconstr, K_unconstr, D_unconstr=None):
         """
@@ -264,6 +282,7 @@ class StructuralConstraintManager:
         f_lin_rhs : ndarray
             Additional RHS for the linear equation of motion when constraints are applied by elimination
         """
+
         ndof = self._no_of_unconstrained_dofs
         result = np.zeros(self.no_of_constrained_dofs)
         for constraint in self._constraints:
@@ -271,10 +290,10 @@ class StructuralConstraintManager:
                 constraintobj = constraint['obj']
                 mask = np.zeros(ndof, dtype=bool)
                 mask[constraintobj.slave_dofs(constraint['dofsarg'])] = True
-                result -= (self.L.T.dot(M_unconstr)[:, mask] @ constraintobj.ddu(t)
-                           + self.L.T.dot(K_unconstr)[:, mask] @ constraintobj.u(t))
+                result -= (self.L.T @ M_unconstr)[:, mask] @ constraintobj.ddu(t) \
+                          + (self.L.T @ K_unconstr)[:, mask] @ constraintobj.u(t)
                 if D_unconstr is not None:
-                    result -= self.L.T.dot(D_unconstr)[:, mask] @ constraintobj.du(t)
+                    result -= (self.L.T @ D_unconstr)[:, mask] @ constraintobj.du(t)
         return result
 
     def get_rhs_lin_static(self, t, K_unconstr):
@@ -294,6 +313,7 @@ class StructuralConstraintManager:
         f_lin_rhs_static : ndarray
             Additional RHS for the static linear equation of motion when constraints are applied by elimination
         """
+
         ndof = self._no_of_unconstrained_dofs
         result = np.zeros(self.no_of_constrained_dofs)
         for constraint in self._constraints:
@@ -301,7 +321,7 @@ class StructuralConstraintManager:
                 constraintobj = constraint['obj']
                 mask = np.zeros(ndof, dtype=bool)
                 mask[constraintobj.slave_dofs(constraint['dofsarg'])] = True
-                result -= self.L.T.dot(K_unconstr)[:, mask] @ constraintobj.u(t)
+                result -= (self.L.T @ K_unconstr)[:, mask] @ constraintobj.u(t)
         return result
 
     def update_l(self):
@@ -312,29 +332,29 @@ class StructuralConstraintManager:
         -------
         None
         """
+
         ndof = self._no_of_unconstrained_dofs
-        L_raw = speye(ndof, format='csr', dtype=bool)
+        L_raw = eyes(ndof, format='csr', dtype=bool)
         if len(self._slave_dofs) > 0:
             mask = np.ones(ndof, dtype=bool)
             mask[self._slave_dofs] = False
             self._L = L_raw[:, mask]
         else:
             self._L = L_raw
+        return
 
     @property
     def L(self):
         """
-
         Returns
         -------
         L : ndarray
             Retuns the L matrix that eliminates the dofs that are eliminated by constraints
         """
-        if self._L is not None:
-            return self._L
-        else:
+
+        if self._L is None:
             self.update_l()
-            return self._L
+        return self._L
 
     @property
     def no_of_constrained_dofs(self):
@@ -346,4 +366,5 @@ class StructuralConstraintManager:
         no_of_constrained_dofs : int
             Number of dofs of the constrained system
         """
+
         return self._no_of_unconstrained_dofs - len(self._slave_dofs)

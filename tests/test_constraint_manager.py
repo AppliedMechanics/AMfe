@@ -1,6 +1,5 @@
 """Test Routine for constraint manager"""
 
-
 from unittest import TestCase
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -11,10 +10,9 @@ from amfe.constraint.structural_constraint_manager import StructuralConstraintMa
 
 class StructuralConstraintManagerTest(TestCase):
     def setUp(self):
-        M = np.array([[1,-1,0],[-1,1.2,-1.5],[0,-1.5,2]], dtype=float)
+        M = np.array([[1, -1, 0], [-1, 1.2, -1.5], [0, -1.5, 2]], dtype=float)
         K = np.array([[2, -1, 0], [-1, 2, -1.5], [0, -1.5, 3]], dtype=float)
-        D = 0.2*M + 0.1*K
-
+        D = 0.2 * M + 0.1 * K
 
         self.M_unconstr = csr_matrix(M)
         self.D_unconstr = csr_matrix(D)
@@ -94,7 +92,7 @@ class StructuralConstraintManagerTest(TestCase):
 
     def test_L(self):
         self.cm.add_constraint(self.diric_constraint, (2), 'elim')
-        L_desired = csr_matrix(np.array([[1,0],[0,1],[0,0]], dtype=bool))
+        L_desired = csr_matrix(np.array([[1, 0], [0, 1], [0, 0]], dtype=bool))
         L_actual = self.cm.L
         assert_array_equal(L_actual.todense(), L_desired.todense())
 
@@ -111,15 +109,15 @@ class StructuralConstraintManagerTest(TestCase):
         self.cm.update_l()
         L_new = self.cm.L
         assert_raises(AssertionError, assert_array_equal, L_new.todense(), L_old.todense())
-        L_desired = L_desired = csr_matrix(np.array([[0],[1],[0]], dtype=bool))
+        L_desired = L_desired = csr_matrix(np.array([[0], [1], [0]], dtype=bool))
         assert_array_equal(L_new.todense(), L_desired.todense())
 
     def test_get_rhs_nl(self):
         self.cm.add_constraint(self.diric_constraint, (2), 'elim')
         rhs_actual = self.cm.get_rhs_nl(3, self.M_unconstr, self.D_unconstr)
         rhs_desired = np.array([0,
-                                -self.M_unconstr[1,2]*self.diric_constraint.ddu(3)
-                                -self.D_unconstr[1,2]*self.diric_constraint.du(3)], dtype=float)
+                                -self.M_unconstr[1, 2] * self.diric_constraint.ddu(3)
+                                - self.D_unconstr[1, 2] * self.diric_constraint.du(3)], dtype=float)
         assert_array_equal(rhs_actual, rhs_desired)
 
     def test_get_rhs_nl_static(self):
@@ -132,13 +130,13 @@ class StructuralConstraintManagerTest(TestCase):
         self.cm.add_constraint(self.diric_constraint, (2), 'elim')
         rhs_actual = self.cm.get_rhs_lin(3, self.M_unconstr, self.K_unconstr, self.D_unconstr)
         rhs_desired = np.array([0,
-                                -self.M_unconstr[1,2]*self.diric_constraint.ddu(3)
-                                -self.D_unconstr[1,2]*self.diric_constraint.du(3)
-                                -self.K_unconstr[1,2]*self.diric_constraint.u(3)], dtype=float)
+                                -self.M_unconstr[1, 2] * self.diric_constraint.ddu(3)
+                                - self.D_unconstr[1, 2] * self.diric_constraint.du(3)
+                                - self.K_unconstr[1, 2] * self.diric_constraint.u(3)], dtype=float)
         assert_array_equal(rhs_actual, rhs_desired)
 
     def test_get_rhs_lin_static(self):
         self.cm.add_constraint(self.diric_constraint, (2), 'elim')
         rhs_actual = self.cm.get_rhs_lin_static(3, self.K_unconstr)
-        rhs_desired = np.array([0, -self.K_unconstr[1,2]*self.diric_constraint.u(3)], dtype=float)
+        rhs_desired = np.array([0, -self.K_unconstr[1, 2] * self.diric_constraint.u(3)], dtype=float)
         assert_array_equal(rhs_actual, rhs_desired)
