@@ -110,5 +110,7 @@ class FixedDistanceConstraint(StructuralConstraint):
         # u_slave is u1_x
         return u2[0] + X2[0] - X1[0] - np.sqrt(sum((X2-X1)**2) + sum(x2[1:]-x1[1:]))
 
+    # FIXME: add def du_slave and ddu_slave
+
     def slave_dofs(self, dofs):
         return dofs[self._slave_dofs]
