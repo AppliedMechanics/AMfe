@@ -35,11 +35,11 @@ class AssemblyToolsTest(TestCase):
 
     def test_fill_csr_matrix(self):
         # Test: Build matrix
-        #           -                 -     -                 -
+        #           --               --     --               --
         #           | 2.0   0.0   3.0 |     | 1.0   0.0   1.0 |
         #           | 1.0   0.0   1.0 |     | 1.0   0.0   1.0 |
         #           | 4.0   1.0   5.0 |     | 1.0   1.0   1.0 |
-        #           -                 -     -                 -
+        #           --               --     --               --
 
         k_indices = np.array([0, 2])
         K = np.array([[1.0, 2.0], [3.0, 4.0]])
@@ -96,6 +96,37 @@ class StructuralAssemblyTest(TestCase):
 
         self.asm = StructuralAssembly(2, self.nodes, self.connectivity, self.boundary_connectivity)
 
+        class DummyTri3Element:
+            def __init__(self):
+                pass
+
+            def m_int(self, X, u, t=0.):
+                M = np.array([[2, 0, -0.5, 0, -0.5, 0],
+                              [0, 2, 0, -0.5, 0, -0.5],
+                              [-0.5, 0, 2, 0, -0.5, 0],
+                              [0, -0.5, 0, 2, 0, -0.5],
+                              [-0.5, 0, -0.5, 0, 2, 0],
+                              [0, -0.5, 0, -0.5, 0, 2]], dtype=float)
+                return M
+
+            def k_and_f_int(self, X, u, t=0.):
+                K = np.array([[4, -0.5, -0.5, -0.2, -0.5, -0.2],
+                              [-0.2, 4, -0.2, -0.5, -0.2, -0.5],
+                              [-0.5, -0.2, 4, -0.2, -0.5, -0.2],
+                              [-0.2, -0.5, -0.2, 4, -0.2, -0.5],
+                              [-0.5, -0.2, -0.5, -0.2, 4, -0.2],
+                              [-0.2, -0.5, -0.2, -0.5, -0.2, 4]], dtype=float)
+                f = np.array([3, 1, 3, 1, 3, 1], dtype=float)
+                return K, f
+
+            def k_f_S_E_int(self, X, u, t=0):
+                K, f = self.k_and_f_int(X, u, t)
+                S = np.ones((3, 6), dtype=float)
+                E = 2*np.ones((3, 6), dtype=float)
+                return K, f, S, E
+
+        self.ele = DummyTri3Element()
+
     def tearDown(self):
         self.asm = None
 
@@ -141,3 +172,94 @@ class StructuralAssemblyTest(TestCase):
         assert_array_equal(self.asm.C_csr.data, C_csr_desired.data)
         assert_array_equal(self.asm.C_csr.indptr, C_csr_desired.indptr)
         assert_array_equal(self.asm.C_csr.indices, C_csr_desired.indices)
+
+    def test_assemble_m(self):
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
+        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int)]
+        boundary_connectivity = [np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
+
+        asm = StructuralAssembly(2, nodes, connectivity, boundary_connectivity)
+        ele_obj = np.array([self.ele, self.ele], dtype=object)
+        element2dofs = [np.array([0,1,2,3,4,5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
+
+        M_global = asm.assemble_m(nodes, ele_obj, connectivity, element2dofs)
+        M_global_desired = np.zeros((8,8), dtype=float)
+        # element 1
+        M_global_desired[0:6, 0:6] = self.ele.m_int(None, None)
+
+        # element 2
+        # diagonals
+        M_global_desired[0:2, 0:2] += self.ele.m_int(None, None)[0:2, 0:2]
+        M_global_desired[4:, 4:] += self.ele.m_int(None, None)[2:, 2:]
+        # off-diagonals
+        M_global_desired[0:2, 4:] += self.ele.m_int(None, None)[0:2, 2:]
+        M_global_desired[4:, 0:2] += self.ele.m_int(None, None)[2:, 0:2]
+
+        assert_array_equal(M_global.todense(), M_global_desired)
+
+    def test_assemble_k_and_f(self):
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
+        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int)]
+        boundary_connectivity = [np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
+
+        asm = StructuralAssembly(2, nodes, connectivity, boundary_connectivity)
+        ele_obj = np.array([self.ele, self.ele], dtype=object)
+        element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
+
+        K_global, f_global = asm.assemble_k_and_f(nodes, ele_obj, connectivity, element2dofs)
+        K_global_desired = np.zeros((8, 8), dtype=float)
+        f_global_desired = np.zeros(8, dtype=float)
+        # element 1
+        K_global_desired[0:6, 0:6], f_global_desired[0:6] = self.ele.k_and_f_int(None, None)
+
+        # element 2
+        K_local, f_local = self.ele.k_and_f_int(None, None)
+        # diagonals
+        K_global_desired[0:2, 0:2] += K_local[0:2, 0:2]
+        K_global_desired[4:, 4:] += K_local[2:, 2:]
+        # off-diagonals
+        K_global_desired[0:2, 4:] += K_local[0:2, 2:]
+        K_global_desired[4:, 0:2] += K_local[2:, 0:2]
+        # f_int:
+        f_global_desired[0:2] += f_local[0:2]
+        f_global_desired[4:] += f_local[2:]
+
+        assert_array_equal(K_global.todense(), K_global_desired)
+        assert_array_equal(f_global, f_global_desired)
+
+    def test_assemble_k_f_S_E(self):
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
+        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int)]
+        boundary_connectivity = [np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
+
+        asm = StructuralAssembly(2, nodes, connectivity, boundary_connectivity)
+        ele_obj = np.array([self.ele, self.ele], dtype=object)
+        element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
+        elements_on_node = np.array([2, 1, 2, 1], dtype=int)
+
+        K_global, f_global, S_global, E_global= asm.assemble_k_f_S_E(nodes, ele_obj, connectivity,
+                                                                     element2dofs, elements_on_node)
+        K_global_desired = np.zeros((8, 8), dtype=float)
+        f_global_desired = np.zeros(8, dtype=float)
+        # Currently strains and stresses are always 3D (therefore 6 components)
+        S_global_desired = np.ones((4, 6))
+        E_global_desired = 2*np.ones((4, 6))
+        # element 1
+        K_global_desired[0:6, 0:6], f_global_desired[0:6], _, _ = self.ele.k_f_S_E_int(None, None)
+
+        # element 2
+        K_local, f_local, S_local, E_local = self.ele.k_f_S_E_int(None, None)
+        # diagonals
+        K_global_desired[0:2, 0:2] += K_local[0:2,0:2]
+        K_global_desired[4:, 4:] += K_local[2:, 2:]
+        # off-diagonals
+        K_global_desired[0:2, 4:] += K_local[0:2, 2:]
+        K_global_desired[4:, 0:2] += K_local[2:, 0:2]
+        # f_int:
+        f_global_desired[0:2] += f_local[0:2]
+        f_global_desired[4:] += f_local[2:]
+
+        assert_array_equal(K_global.todense(), K_global_desired)
+        assert_array_equal(f_global, f_global_desired)
+        assert_array_equal(S_global, S_global_desired)
+        assert_array_equal(E_global, E_global_desired)
