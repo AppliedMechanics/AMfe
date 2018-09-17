@@ -6,11 +6,8 @@
 #
 
 """
-Abstract class of structural constraint algorithms.
+Super class of all structural constraint algorithms.
 """
-
-import numpy as np
-from scipy.sparse import eye as speye
 
 __all__ = [
     'StructuralConstraint'
@@ -19,10 +16,10 @@ __all__ = [
 
 class StructuralConstraint:
     """
-    Super class for all structural constraints
+    Super class of all structural constraints.
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         pass
 
     def c(self, X_local, u_local, du_local, ddu_local, t):

@@ -5,31 +5,33 @@
 # Distributed under 3-Clause BSD license. See LICENSE file for more information.
 #
 
+"""
+Dirichlet constraint.
+"""
 
 import numpy as np
-from scipy.sparse import eye as speye
+from scipy.sparse import eye as eyes
 
 from .structural_constraint import StructuralConstraint
 
 
 class DirichletConstraint(StructuralConstraint):
     """
-    DirichletConstraint
-
-    Class to define a Dirichlet Constraint on several dofs
-
+    Class to define a Dirichlet constraints on several dofs.
     """
-    def __init__(self, dofs, U = lambda t: 0, dU = lambda t: 0, ddU = lambda t: 0):
+
+    def __init__(self, dofs, U=(lambda t: 0.), dU=(lambda t: 0.), ddU=(lambda t: 0.)):
         super().__init__()
         self._U = U
         self._dU = dU
         self._ddU = ddU
         self._no_of_dofs = len(dofs)
         self._slave_dofs = np.arange(self._no_of_dofs)
+        return
 
     def c(self, X_local, u_local, du_local, ddu_local, t):
         """
-        Returns residual of c_equation for a fixed dirichlet constraint
+        Return residual of c_equation for a fixed dirichlet constraint.
 
         Parameters
         ----------
@@ -50,13 +52,13 @@ class DirichletConstraint(StructuralConstraint):
         -------
         res : numpy.array
             Residual of c(q) as vector
-
         """
+
         return u_local - self._U(t)
 
     def b(self, X_local, u_local, du_local, ddu_local, t):
         """
-        Returns derivative of c_equation with resprect to u for a Dirichlet constraint
+        Return derivative of c_equation with respect to u for a Dirichlet constraint.
 
         Parameters
         ----------
@@ -77,13 +79,13 @@ class DirichletConstraint(StructuralConstraint):
         -------
         b : numpy.array
             vector or matrix b with b = dc/du
-
         """
-        return speye(len(u_local))
+
+        return eyes(len(u_local))
 
     def u_slave(self, X_local, u_local, du_local, ddu_local, t):
         """
-        Returns the displacements of the slave_dofs (needed for elimination)
+        Return the displacements of the slave_dofs (needed for elimination).
 
         Parameters
         ----------
@@ -105,11 +107,12 @@ class DirichletConstraint(StructuralConstraint):
         u_slave : numpy.array
             displacements of the slave_dofs
         """
+
         return np.ones(self._no_of_dofs) * self._U(t)
 
     def du_slave(self, X_local, u_local, du_local, ddu_local, t):
         """
-        Returns the velocities of the slave_dofs (needed for elimination)
+        Return the velocities of the slave_dofs (needed for elimination).
 
         Parameters
         ----------
@@ -131,11 +134,12 @@ class DirichletConstraint(StructuralConstraint):
         du_slave : numpy.array
             velocities of the slave_dofs
         """
+
         return np.ones(self._no_of_dofs) * self._dU(t)
 
     def ddu_slave(self, X_local, u_local, du_local, ddu_local, t):
         """
-        Returns the accelerations of the slave_dofs (needed for elimination)
+        Return the accelerations of the slave_dofs (needed for elimination).
 
         Parameters
         ----------
@@ -157,15 +161,15 @@ class DirichletConstraint(StructuralConstraint):
         ddu_slave : numpy.array
             accelerations of the slave_dofs
         """
+
         return np.ones(self._no_of_dofs) * self._ddU(t)
 
     def slave_dofs(self, dofs):
         """
-
         Parameters
         ----------
         dofs : ndarray
-            ndarray of integers that describe the global dof inidices that must be passed to the constraint (dofs arg)
+            ndarray of integers that describe the global dof indices that must be passed to the constraint (dofs arg)
 
         Returns
         -------
@@ -173,4 +177,5 @@ class DirichletConstraint(StructuralConstraint):
             returns ndarray of integers that are the global indices of the dofs that are slaves (eliminated if 'elim'
             strategy is chosen)
         """
+
         return dofs[self._slave_dofs]

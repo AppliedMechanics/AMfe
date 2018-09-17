@@ -5,25 +5,30 @@
 # Distributed under 3-Clause BSD license. See LICENSE file for more information.
 #
 
+"""
+Fixed distance constraint.
+"""
+
 import numpy as np
 
 from .structural_constraint import StructuralConstraint
+from ..linalg.norms import vector_norm
 
 
 class FixedDistanceConstraint(StructuralConstraint):
     """
-    Fixed Distance Constraint
-
-    Class to define a fixed distance between two nodes
+    Class to define a fixed distance between two nodes.
     """
+
     def __init__(self, dofs):
         super().__init__()
         self._no_of_dofs = len(dofs)
         self._slave_dofs = [0]
+        return
 
     def c(self, X_local, u_local, du_local, ddu_local, t=0):
         """
-        Returns residual of c_equation for a fixed distance constraint between two nodes
+        Return residual of c_equation for a fixed distance constraint between two nodes.
 
         Parameters
         ----------
@@ -45,8 +50,8 @@ class FixedDistanceConstraint(StructuralConstraint):
         -------
         res : numpy.array
             Residual of c(q) as vector
-
         """
+
         dofs_per_node = len(u_local) // 2
         u1 = u_local[:dofs_per_node]
         u2 = u_local[dofs_per_node:]
@@ -56,14 +61,13 @@ class FixedDistanceConstraint(StructuralConstraint):
         x1 = X1 + u1
         x2 = X2 + u2
 
-        scaling = np.linalg.norm(X2 - X1)
+        scaling = vector_norm(X2 - X1)
 
-        return 10 * (np.sqrt(np.sum(((x2 - x1) ** 2))) -
-                     np.sqrt(np.sum(((X2 - X1) ** 2)))) / scaling
+        return 10. * (vector_norm(x2 - x1) - vector_norm(X2 - X1)) / scaling
 
     def b(self, X_local, u_local, du_local, ddu_local, t=0):
         """
-        Returns the b vector (for assembly in B matrix) for a fixed distance constraint between two nodes
+        Return the b vector (for assembly in B matrix) for a fixed distance constraint between two nodes.
 
         Parameters
         ----------
@@ -80,8 +84,8 @@ class FixedDistanceConstraint(StructuralConstraint):
         -------
         b : numpy.array
             b vector for assembly in B matrix [bx1 by1 bz1 bx2 by2 bz2]
-
         """
+
         dofs_per_node = len(u_local) // 2
         u1 = u_local[:dofs_per_node]
         u2 = u_local[dofs_per_node:]
@@ -91,11 +95,10 @@ class FixedDistanceConstraint(StructuralConstraint):
         x1 = X1 + u1
         x2 = X2 + u2
 
-        scaling = np.linalg.norm(X2 - X1)
-        l_current = np.sqrt(np.sum(((x2 - x1) ** 2)))
+        scaling = vector_norm(X2 - X1)
+        l_current = vector_norm(x2 - x1)
 
-        return 10 * np.concatenate((-(x2 - x1) / (l_current * scaling),
-                                    (x2 - x1) / (l_current * scaling)))
+        return 10. * np.concatenate((-(x2 - x1) / (l_current * scaling), (x2 - x1) / (l_current * scaling)))
 
     def u_slave(self, X_local, u_local, du_local, ddu_local, t):
         dofs_per_node = len(u_local) // 2
@@ -108,9 +111,15 @@ class FixedDistanceConstraint(StructuralConstraint):
         x2 = X2 + u2
 
         # u_slave is u1_x
-        return u2[0] + X2[0] - X1[0] - np.sqrt(sum((X2-X1)**2) + sum(x2[1:]-x1[1:]))
+        return u2[0] + X2[0] - X1[0] - np.sqrt(np.sum((X2 - X1) ** 2) + np.sum(x2[1:] - x1[1:]))
 
-    # FIXME: add def du_slave and ddu_slave
+    def du_slave(self, X_local, u_local, du_local, ddu_local, t):
+        # FIXME: add du_slave
+        raise NotImplementedError()
+
+    def ddu_slave(self, X_local, u_local, du_local, ddu_local, t):
+        # FIXME: add ddu_slave
+        raise NotImplementedError()
 
     def slave_dofs(self, dofs):
         return dofs[self._slave_dofs]
