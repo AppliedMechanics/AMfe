@@ -48,13 +48,10 @@ class AmfeMeshObjMeshReader(MeshReader):
                                          self._meshobj.nodes[nodeid2idx[nodeid], 1],
                                          self._meshobj.nodes[nodeid2idx[nodeid], 2])
         # build elements
-        elementid2idx = self._meshobj.eleid2idx
-        connectivitylist = (self._meshobj.connectivity, self._meshobj.boundary_connectivity)
-        eleshapeslist = (self._meshobj.ele_shapes, self._meshobj.boundary_ele_shapes)
-        for elementid in elementid2idx:
-            vol_boundary_flag, idx = elementid2idx[elementid]
-            etype = eleshapeslist[vol_boundary_flag][idx]
-            connectivity = connectivitylist[vol_boundary_flag][idx]
+        for elementid, element in self._meshobj.el_df.iterrows():
+            etype = element['shape']
+            idx = element['connectivity_idx']
+            connectivity = self._meshobj.connectivity[idx]
             connectivity = self._meshobj.get_nodeids_by_nodeidxs(connectivity)
             self._builder.build_element(elementid, etype, connectivity)
         # build groups

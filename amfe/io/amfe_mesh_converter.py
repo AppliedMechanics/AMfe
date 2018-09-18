@@ -10,6 +10,7 @@ AMfe mesh converter for I/O module.
 """
 
 import numpy as np
+import pandas as pd
 
 from .mesh_converter import MeshConverter
 from amfe.mesh import Mesh
@@ -52,11 +53,14 @@ class AmfeMeshConverter(MeshConverter):
         self._currentnodeid = 0
         self._currentelementid = 0
         self._connectivity = list()
-        self._eleshapes = list()
         self._groups = dict()
         # mapping from reader-nodeid to amfe-nodeid
         self._nodeid2idx = dict()
-        self._elementid2idx = dict()
+        # df information
+        self._el_df_indices = list()
+        self._el_df_eleshapes = list()
+        self._el_df_connectivity_idx = list()
+        self._el_df_is_boundary = list()
         return
 
     def build_no_of_nodes(self, no):
@@ -97,12 +101,13 @@ class AmfeMeshConverter(MeshConverter):
     def build_element(self, idx, etype, nodes):
         # append connectivity information
         self._connectivity.append(np.array(nodes, dtype=int))
-        # update mapping information
-        self._elementid2idx.update({idx: self._currentelementid})
+        # update df information
+        self._el_df_connectivity_idx.append(self._currentelementid)
+        self._el_df_indices.append(idx)
+        self._el_df_eleshapes.append(etype)
         # append element type information
         # Hint: The differentiation between volume and boundary elements will be performed after all
         # elements have been read
-        self._eleshapes.append(etype)
         # increment row-index counter
         self._currentelementid += 1
         return
@@ -116,7 +121,7 @@ class AmfeMeshConverter(MeshConverter):
     def return_mesh(self):
         # Check dimension of model
         if self._dimension is None:
-            if not self.element_3d_set.intersection(set(self._eleshapes)):
+            if not self.element_3d_set.intersection(set(self._el_df_eleshapes)):
                 # No 3D element in eleshapes, thus:
                 self._dimension = 2
             else:
@@ -129,7 +134,6 @@ class AmfeMeshConverter(MeshConverter):
         # divide in boundary and volume elements
         currentidx = 0
         currentboundaryidx = 0
-        elementid2idx = dict()
         if self._dimension == 3:
             volume_element_set = self.element_3d_set
             boundary_element_set = self.boundary_3d_set
@@ -142,24 +146,15 @@ class AmfeMeshConverter(MeshConverter):
         # write properties
         self._mesh.dimension = self._dimension
         self._mesh.connectivity = [np.array([self._nodeid2idx[nodeid] for nodeid in element])
-                                   for index, element in enumerate(self._connectivity)
-                                   if self._eleshapes[index] in volume_element_set]
-        self._mesh.boundary_connectivity = [np.array([self._nodeid2idx[nodeid] for nodeid in element])
-                                            for index, element in enumerate(self._connectivity)
-                                            if self._eleshapes[index] in boundary_element_set]
-        self._mesh.ele_shapes = [eleshape
-                                 for index, eleshape in enumerate(self._eleshapes)
-                                 if self._eleshapes[index] in volume_element_set]
-        self._mesh.boundary_ele_shapes = [eleshape
-                                          for index, eleshape in enumerate(self._eleshapes)
-                                          if self._eleshapes[index] in boundary_element_set]
-        for eleid in self._elementid2idx:
-            if self._eleshapes[self._elementid2idx[eleid]] in volume_element_set:
-                elementid2idx.update({eleid: (0, currentidx)})
-                currentidx += 1
-            elif self._eleshapes[self._elementid2idx[eleid]] in boundary_element_set:
-                elementid2idx.update({eleid: (1, currentboundaryidx)})
-                currentboundaryidx += 1
-        self._mesh.eleid2idx = elementid2idx
+                                   for index, element in enumerate(self._connectivity)]
+        self._el_df_is_boundary = len(self._connectivity)*[False]
+        for index, shape in enumerate(self._el_df_eleshapes):
+            if shape in boundary_element_set:
+                self._el_df_is_boundary[index] = True
+        data = {'connectivity_idx': self._el_df_connectivity_idx,
+                'shape': self._el_df_eleshapes,
+                'is_boundary': self._el_df_is_boundary}
+        self._mesh.el_df = pd.DataFrame(data, index=self._el_df_indices)
+
         self._mesh.groups = self._groups
         return self._mesh
