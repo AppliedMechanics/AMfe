@@ -5,13 +5,15 @@ Tests for testing io module
 
 from unittest import TestCase
 import numpy as np
+import pandas as pd
 import _pickle as pickle
 from numpy.testing import assert_allclose, assert_array_equal
+from pandas.testing import assert_frame_equal
 
 from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, AmfeMeshObjMeshReader, \
                     AmfeMeshConverter
 from amfe.io.mesh_converter import MeshConverter
-
+from amfe.mesh import Mesh
 from amfe.tools import amfe_dir
 
 
@@ -208,38 +210,26 @@ class IOTest(TestCase):
         assert_allclose(mesh.nodes, nodes_desired)
 
         # CHECK CONNECTIVITIES
-        connectivity_desired = [np.array(element[2])-1 for element in elements_input[:4]]
-        boundary_connectivity_desired = [np.array(element[2])-1 for element in elements_input[4:]]
+        connectivity_desired = [np.array(element[2])-1 for element in elements_input[:]]
         for i, conn in enumerate(connectivity_desired):
             assert_array_equal(mesh.connectivity[i], conn)
-        for i, conn in enumerate(boundary_connectivity_desired):
-            assert_array_equal(mesh.boundary_connectivity[i], conn)
-
-        # CHECK ELESHAPES
-        eleshapes_desired = [element[1] for element in elements_input[:4]]
-        boundary_eleshapes_desired = [element[1] for element in elements_input[4:]]
-        self.assertEqual(mesh.ele_shapes, eleshapes_desired)
-        self.assertEqual(mesh.boundary_ele_shapes, boundary_eleshapes_desired)
 
         # CHECK DIMENSION
-        self.assertEqual(mesh._dimension, 2)
+        self.assertEqual(mesh.dimension, 2)
 
         # CHECK NODE MAPPING
         node_mapping_desired = dict([(i+1, i) for i in range(nodes_desired.shape[0])])
         self.assertEqual(mesh.nodeid2idx, node_mapping_desired)
 
-        # CHECK ELEMENT MAPPING
-        element_mapping_desired = dict([(1, (0, 0)),
-                                        (2, (0, 1)),
-                                        (3, (0, 2)),
-                                        (4, (0, 3)),
-                                        (5, (1, 0)),
-                                        (6, (1, 1)),
-                                        (7, (1, 2)),
-                                        (8, (1, 3)),
-                                        (9, (1, 4)),
-                                        (10, (1, 5))])
-        self.assertEqual(mesh.eleid2idx, element_mapping_desired)
+        # CHECK ELESHAPES AND ELEMENTMAPPING IN DATAFRAME
+        indices = list(np.arange(1, 11))
+        data = {'connectivity_idx': list(np.arange(10)),
+                'shape': ['Tri6', 'Tri6', 'Tri6', 'Tri6', 'quadratic_line', 'quadratic_line',
+                          'quadratic_line', 'quadratic_line', 'quadratic_line', 'quadratic_line'],
+                'is_boundary': [False, False, False, False, True, True, True, True, True, True]}
+        el_df_desired = pd.DataFrame(data, index=indices)
+
+        assert_frame_equal(mesh.el_df, el_df_desired)
 
         # CHECK GROUPS
         groups_desired = dict()
@@ -333,8 +323,55 @@ class IOTest(TestCase):
             ('left_dirichlet', [1, 3, 6], [])
         ]
         # Define input file path
-        with open(amfe_dir('tests/meshes/amfe_obj_4_tets.amsh'), 'rb') as fp:
-            meshobj = pickle.load(fp)
+        meshobj = Mesh(dimension=2)
+
+        meshobj.nodes = np.array([[1.345600000e-02, 3.561675700e-02],
+                                  [5.206839561e-01, 3.740820950e-02],
+                                  [3.851982918e-02, 5.460016703e-01],
+                                  [5.457667372e-01, 5.477935420e-01],
+                                  [1.027911912e+00, 3.919966200e-02],
+                                  [6.358365836e-02, 1.056386584e+00],
+                                  [1.040469476e+00, 5.445628213e-01],
+                                  [5.582746582e-01, 1.053154002e+00],
+                                  [1.052965658e+00, 1.049921420e+00],
+                                  [1.535139868e+00, 4.099111450e-02],
+                                  [1.547697432e+00, 5.463542738e-01],
+                                  [1.547656658e+00, 1.046688838e+00],
+                                  [2.042367825e+00, 4.278256700e-02],
+                                  [2.042357741e+00, 5.431194119e-01],
+                                  [2.042347658e+00, 1.043456257e+00]], dtype=float)
+
+        meshobj.connectivity = [np.array([12, 14,  8, 13, 11, 10], dtype=int),
+                                np.array([8, 5, 4, 7, 3, 6], dtype=int),
+                                np.array([ 8,  4, 12,  6,  9, 10], dtype=int),
+                                np.array([0, 4, 5, 1, 3, 2], dtype=int),
+                                np.array([ 4, 12,  9], dtype=int),
+                                np.array([0, 4, 1], dtype=int),
+                                np.array([5, 0, 2], dtype=int),
+                                np.array([8, 5, 7], dtype=int),
+                                np.array([12, 14, 13], dtype=int),
+                                np.array([14,  8, 11], dtype=int)]
+
+        data = {'shape': ['Tri6', 'Tri6', 'Tri6', 'Tri6', 'quadratic_line',
+                           'quadratic_line', 'quadratic_line', 'quadratic_line',
+                           'quadratic_line', 'quadratic_line'],
+                'connectivity_idx': list(np.arange(10)),
+                'is_boundary': [False, False, False, False, True, True, True, True, True, True]
+                }
+        indices = list(np.arange(1,11))
+
+        meshobj.el_df = pd.DataFrame(data, index=indices)
+
+        meshobj.groups = {'left': {'nodes': [], 'elements': [2, 4]},
+                          'right': {'nodes': [], 'elements': [1, 3]},
+                          'left_boundary': {'nodes': [], 'elements': [7]},
+                          'right_boundary': {'nodes': [], 'elements': [9]},
+                          'top_boundary': {'nodes': [], 'elements': [8, 10]},
+                          'left_dirichlet': {'nodes': [1, 3, 6], 'elements': []}}
+
+        meshobj.nodeid2idx = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9,
+                              11: 10, 12: 11, 13: 12, 14: 13, 15: 14}
+
         # Define Reader Object, initialized with AmfeMeshConverter
         reader = AmfeMeshObjMeshReader(meshobj, DummyMeshConverter())
         # Parse mesh

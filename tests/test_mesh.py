@@ -5,7 +5,8 @@
 
 from unittest import TestCase
 import numpy as np
-from numpy.testing import assert_equal
+import pandas as pd
+from numpy.testing import assert_equal, assert_array_equal
 
 
 class TestMesh(TestCase):
@@ -14,12 +15,17 @@ class TestMesh(TestCase):
         self.testmesh = Mesh(dimension=2)
         nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0]], dtype=np.float)
         connectivity = [np.array([4, 5, 2], dtype=np.int), np.array([2, 1, 4], dtype=np.int),
-                        np.array([0, 1, 2, 3], dtype=np.int)]
-        boundary_connectivity = [np.array([3, 0], dtype=np.int), np.array([4, 5], dtype=np.int)]
-        eleid2idx = {1: (0, 0), 2: (0, 1), 3: (0, 2), 4: (1, 0), 5: (1, 1)}
+                        np.array([0, 1, 2, 3], dtype=np.int),
+                        # boundary elements
+                        np.array([3, 0], dtype=np.int), np.array([4, 5], dtype=np.int)]
+
+        data = {'shape': ['Tri3', 'Tri3', 'Quad4', 'straight_line', 'straight_line'],
+                'is_boundary': [False, False, False, True, True],
+                'connectivity_idx': [0, 1, 2, 3, 4]}
+        indices = [1, 2, 3, 4, 5]
+        el_df = pd.DataFrame(data, index=indices)
+
         nodeid2idx = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5}
-        ele_shapes = ['Tri3', 'Tri3', 'Quad4']
-        boundary_ele_shapes = ['straight_line', 'straight_line']
         groups = {'left': {'elements': [3], 'nodes': []},
                   'right': {'elements': [1, 2], 'nodes': [2, 3, 5, 6]},
                   'left_boundary': {'elements': [4], 'nodes': []},
@@ -28,12 +34,9 @@ class TestMesh(TestCase):
 
         self.testmesh.nodes = nodes
         self.testmesh.connectivity = connectivity
-        self.testmesh.boundary_connectivity = boundary_connectivity
-        self.testmesh.ele_shapes = ele_shapes
-        self.testmesh.boundary_ele_shapes = boundary_ele_shapes
         self.testmesh.nodeid2idx = nodeid2idx
-        self.testmesh.eleid2idx = eleid2idx
         self.testmesh.groups = groups
+        self.testmesh.el_df = el_df
 
     def tearDown(self):
         pass
@@ -50,13 +53,13 @@ class TestMesh(TestCase):
 
     def test_get_elementidxs_by_group(self):
         actual = self.testmesh.get_elementidxs_by_groups(['right'])
-        desired = [(0, 0), (0, 1)]
-        self.assertEqual(actual, desired)
+        desired = np.array([0, 1], dtype=int)
+        assert_array_equal(actual, desired)
 
     def test_get_elementidxs_by_groups(self):
         actual = self.testmesh.get_elementidxs_by_groups(['right', 'left_boundary'])
-        desired = [(0, 0), (0, 1), (1, 0)]
-        self.assertEqual(actual, desired)
+        desired = np.array([0, 1, 3], dtype=int)
+        assert_array_equal(actual, desired)
 
     def test_get_nodeidxs_by_group(self):
         actual = self.testmesh.get_nodeidxs_by_groups(['left'])
@@ -72,9 +75,9 @@ class TestMesh(TestCase):
         assert_equal(actual, desired)
 
     def test_get_ele_shapes_by_idxs(self):
-        actual = self.testmesh.get_ele_shapes_by_idxs([(0, 1), (1, 1), (0, 2)])
-        desired = ['Tri3', 'straight_line', 'Quad4']
-        self.assertEqual(actual, desired)
+        actual = self.testmesh.get_ele_shapes_by_idxs([1, 4, 2])
+        desired = np.array(['Tri3', 'straight_line', 'Quad4'], dtype=object)
+        assert_equal(actual, desired)
 
     def test_get_nodeidxs_by_all(self):
         actual = self.testmesh.get_nodeidxs_by_all()
