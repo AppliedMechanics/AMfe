@@ -56,6 +56,11 @@ class TestMesh(TestCase):
         desired = np.array([0, 1], dtype=int)
         assert_array_equal(actual, desired)
 
+    def test_get_elementidxs_by_elementids(self):
+        actual = self.testmesh.get_elementidxs_by_elementids([4, 1])
+        desired = np.array([3, 0], dtype=int)
+        assert_array_equal(actual, desired)
+
     def test_get_elementidxs_by_groups(self):
         actual = self.testmesh.get_elementidxs_by_groups(['right', 'left_boundary'])
         desired = np.array([0, 1, 3], dtype=int)

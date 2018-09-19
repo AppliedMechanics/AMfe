@@ -190,6 +190,21 @@ class Mesh:
             elementids.extend(self.groups[group]['elements'])
         return self.el_df.loc[elementids, 'connectivity_idx'].values
 
+    def get_elementidxs_by_elementids(self, elementids):
+        """
+        Returns elementindices of the connectivity property belonging to elementids
+
+        Parameters
+        ----------
+        elementids : iterable
+            elementids as integers
+
+        Returns
+        -------
+            indices of the elements in the connectivity array
+        """
+        return [self.el_df.loc[self.el_df.index == elementid, 'connectivity_idx'].values[0] for elementid in elementids]
+
     def get_nodeidxs_by_groups(self, groups):
         """
         Returns nodeindieces of the nodes property belonging to a group
