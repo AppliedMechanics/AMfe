@@ -37,3 +37,4 @@ amfe/fortran/f90_elementmodule.c
 MANIFEST
 
 *.hdf5
+/.pydevproject
