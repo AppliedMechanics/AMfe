@@ -6,12 +6,15 @@
 import numpy as np
 from scipy.sparse import csc_matrix
 
-from .component_base import ComponentBase
+from .mesh_component import MeshComponent
+from amfe.component.constants import ELEPROTOTYPEHELPERLIST
 
 
-class StructuralComponent(ComponentBase):
+class StructuralComponent(MeshComponent):
         
-    name = 'StructuralComponent'
+    TYPE = 'StructuralComponent'
+    ELEMENTPROTOTYPES = dict(((element[0], element[1]()) for element in ELEPROTOTYPEHELPERLIST
+                              if element[1] is not None))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
