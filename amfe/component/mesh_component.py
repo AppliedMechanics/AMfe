@@ -7,6 +7,7 @@
 
 from copy import deepcopy
 import numpy as np
+import pandas as pd
 
 from amfe.mesh import Mesh
 from .component_base import ComponentBase
@@ -16,14 +17,25 @@ __all__ = ['MeshComponent']
 
 
 class MeshComponent(ComponentBase):
-
     # The following class attributes must be overwritten by subclasses
     ELEMENTPROTOTYPES = dict(((element[0], None) for element in ELEPROTOTYPEHELPERLIST))
+    BOUNDARYELEMENTFACTORY = dict(((element[0], None) for element in ELEPROTOTYPEHELPERLIST))
 
     def __init__(self, mesh=Mesh()):
         super().__init__()
         self._mesh = mesh
         self._ele_obj = np.empty(mesh.no_of_elements, dtype=object)
+
+        # Neumann Properties
+        # ------------------
+        # Dataframe for reconstructing applied conditions
+        self._neumann_df = pd.DataFrame(columns=['name', 'tag', 'property_names', 'function', 'direction',
+                                                 'shadow_area'])
+        # Dataframe containing element_objects and their position in connectivity array and their
+        # foreign key to the _neumann_df they belong to
+        self._neumann_obj_df = pd.DataFrame(columns=['ele_obj', 'connectivity_idx', 'fk_neumann_df'])
+        self._neumann_obj_df['fk_neumann_df'] = self._neumann_obj_df['fk_neumann_df'].astype(int)
+        self._neumann_obj_df['connectivity_idx'] = self._neumann_obj_df['connectivity_idx'].astype(int)
 
     # -- PROPERTIES --------------------------------------------------------------------------------------
     @property
@@ -48,6 +60,46 @@ class MeshComponent(ComponentBase):
         self._ele_obj[eleidxes] = [prototypes[ele_shape] for ele_shape in ele_shapes]
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
+    def assign_neumann_condition(self, val, direction, property_names, tag='_groups', shadow_area=False,
+                                 name='Unknown'):
+        if tag == '_groups':
+            eleidxes = self._mesh.get_elementidxs_by_groups(property_names)
+        elif tag == '_eleidxs':
+            eleidxes = property_names
+        else:
+            eleidxes = self._mesh.get_elementidxs_by_tags(property_names)
+        dfindex = self._neumann_df.index.max() + 1
+        if pd.isnull(dfindex):
+            dfindex = 0
+        self._assign_neumann_condition(val, direction, eleidxes, shadow_area, dfindex)
+        df_data = {'name': name, 'tag': tag, 'property_names': [property_names], 'function': val,
+                   'direction': [direction], 'shadow_area': shadow_area}
+        self._neumann_df = self._neumann_df.append(pd.DataFrame(df_data, index=[dfindex]), sort=True)
+
+    def _assign_neumann_condition(self, val, direction, eleidxes, shadow_area, index):
+        #
+        # extends _neumann_obj_df by new b.c. with Neumann_elements
+        #
+
+        # Create prototypes for each boundary element shape
+        neumann_ele_prototypes = deepcopy(self.BOUNDARYELEMENTFACTORY)
+        for element_shape in neumann_ele_prototypes:
+            # create prototype for current element_shape
+            neumann_ele_prototypes[element_shape] = neumann_ele_prototypes[element_shape](val=1.0,
+                                                                                          time_func=val,
+                                                                                          direct=direction,
+                                                                                          shadow_area=shadow_area)
+        # get ele_shapes of the elements belonging to the passed eleidxes
+        ele_shapes = self._mesh.get_ele_shapes_by_idxs(eleidxes)
+        # create pointers to eleobjects
+        neumann_ele_objects = np.array([neumann_ele_prototypes[ele_shape] for ele_shape in ele_shapes],
+                                       dtype=object)
+        # add tuple (eleidxes, ele_object) to neumann_ele_obj
+        df = pd.DataFrame(
+            {'ele_obj': neumann_ele_objects, 'connectivity_idx': eleidxes,
+             'fk_neumann_df': np.ones(len(neumann_ele_objects), dtype=int) * index}
+        )
+        self._neumann_obj_df = self._neumann_obj_df.append(df)
 
     # -- ASSIGN CONSTRAINTS METHODS ------------------------------------------------------------------------
 

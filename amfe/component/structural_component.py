@@ -15,6 +15,8 @@ class StructuralComponent(MeshComponent):
     TYPE = 'StructuralComponent'
     ELEMENTPROTOTYPES = dict(((element[0], element[1]()) for element in ELEPROTOTYPEHELPERLIST
                               if element[1] is not None))
+    BOUNDARYELEMENTFACTORY = dict(((element[0], element[2]) for element in ELEPROTOTYPEHELPERLIST
+                                   if element[2] is not None))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
