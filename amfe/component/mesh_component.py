@@ -71,12 +71,12 @@ class MeshComponent(ComponentBase):
         dfindex = self._neumann_df.index.max() + 1
         if pd.isnull(dfindex):
             dfindex = 0
-        self._assign_neumann_condition(val, direction, eleidxes, shadow_area, dfindex)
+        self._add_neumann_condition_by_eleidxs(val, direction, eleidxes, shadow_area, dfindex)
         df_data = {'name': name, 'tag': tag, 'property_names': [property_names], 'function': val,
                    'direction': [direction], 'shadow_area': shadow_area}
         self._neumann_df = self._neumann_df.append(pd.DataFrame(df_data, index=[dfindex]), sort=True)
 
-    def _assign_neumann_condition(self, val, direction, eleidxes, shadow_area, index):
+    def _add_neumann_condition_by_eleidxs(self, val, direction, eleidxes, shadow_area, index):
         #
         # extends _neumann_obj_df by new b.c. with Neumann_elements
         #
