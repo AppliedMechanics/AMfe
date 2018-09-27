@@ -19,7 +19,7 @@ __all__ = [
 
 # Describe Element shapes, that can be used in AMfe
 # 2D volume elements:
-element_2d_set = {'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8', }
+element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
 # 3D volume elements:
 element_3d_set = {'Tet4', 'Tet10', 'Hexa8', 'Hexa20', 'Prism6'}
 # 2D boundary elements
@@ -40,7 +40,7 @@ class Mesh:
         z-direction is dropped for 2D problems!
     nodeid2idx : dict
         Dictionary with key = node-id: value = row id in self.nodes array for getting nodes coordinates X
-    connectivity : list
+    connectivity : ndarray
         List of node-rowindices of self.nodes belonging to one element.
     el_df : pandas.DataFrame
         DataFrame with element information
@@ -82,10 +82,7 @@ class Mesh:
         # -- ELEMENT INFORMATION --
         # connectivity for volume elements and list of shape information of each element
         # list of elements containing rowidx of nodes array of connected nodes in each element
-        self.connectivity = list()
-
-        # the same for boundary elements
-        self.boundary_connectivity = list()
+        self.connectivity = np.empty(0, dtype=object)
 
         # Pandas dataframe for elements:
         self.el_df = pd.DataFrame(columns=('shape', 'is_boundary', 'connectivity_idx'))
@@ -188,6 +185,8 @@ class Mesh:
         elementids = list()
         for group in groups:
             elementids.extend(self.groups[group]['elements'])
+        elementids = np.array(elementids)
+        elementids = np.unique(elementids)
         return self.el_df.loc[elementids, 'connectivity_idx'].values
 
     def get_elementidxs_by_elementids(self, elementids):
