@@ -11,12 +11,14 @@ Module handling structural constraints
 import numpy as np
 from scipy.sparse import eye as eyes
 
+from .constraint_manager import ConstraintManager
+
 __all__ = [
     'StructuralConstraintManager',
 ]
 
 
-class StructuralConstraintManager:
+class StructuralConstraintManager(ConstraintManager):
     """
     Class responsible for constraints in the structural component
 
@@ -49,7 +51,7 @@ class StructuralConstraintManager:
         ndof_unconstrained_system : int
             number of dofs of the unconstrained system.
         """
-
+        super().__init__()
         self._no_of_unconstrained_dofs = ndof_unconstrained_system
         self._constraints = []
         self._slave_dofs = np.array([], dtype=int)
