@@ -18,6 +18,7 @@ class StructuralComponent(MeshComponent):
                               if element[1] is not None))
     BOUNDARYELEMENTFACTORY = dict(((element[0], element[2]) for element in ELEPROTOTYPEHELPERLIST
                                    if element[2] is not None))
+    VALID_GET_MAT_NAMES = ('K', 'M', 'D')
 
     def __init__(self, mesh=Mesh()):
         super().__init__(mesh)
@@ -102,5 +103,5 @@ class StructuralComponent(MeshComponent):
         if u is None:
             u = np.zeros(self._constraints.no_of_constrained_dofs)
 
-        K_unconstr = self._assembly.assemble_k_and_f(self.constraints.unconstrain_u(u), t)[0]
+        K_unconstr = self._assembly.assemble_k_and_f(self._constraints.unconstrain_u(u), t)[0]
         return self._constraints.constrain_matrix(K_unconstr)

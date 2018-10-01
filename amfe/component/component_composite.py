@@ -51,7 +51,7 @@ class ComponentComposite:
             #mat = self.assembly.assemble(self.component)
             return None
         else:
-            self._test_input(matrix_type, self.components[component_id].valid_function_names)
+            self._test_input(matrix_type, self.components[component_id].VALID_GET_MAT_NAMES)
             func = getattr(self.components[component_id], matrix_type)
             mat = func(u, t)
             return mat
