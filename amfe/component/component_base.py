@@ -7,12 +7,10 @@
 class ComponentBase:
     
     def __init__(self, *args, **kwargs):
-        self.mesh = None
-        self.assembly = None
-        self.constraint = None
-        self.elements = None
+        pass
         
-    def partition(self, num_components, element_id_sets):
+    def partition(self, no_of_components, element_id_sets):
         """
         TODO: Implement subroutines to split up component
         """
+        pass
