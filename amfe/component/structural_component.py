@@ -8,6 +8,7 @@ from scipy.sparse import csc_matrix
 
 from .mesh_component import MeshComponent
 from amfe.component.constants import ELEPROTOTYPEHELPERLIST
+from amfe.mesh import Mesh
 
 
 class StructuralComponent(MeshComponent):
@@ -18,9 +19,10 @@ class StructuralComponent(MeshComponent):
     BOUNDARYELEMENTFACTORY = dict(((element[0], element[2]) for element in ELEPROTOTYPEHELPERLIST
                                    if element[2] is not None))
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, mesh=Mesh()):
+        super().__init__(mesh)
         self.rayleigh_damping = None
+        self.mesh = mesh
 
     def M(self, u=None, t=0, force_update=False):
         """
@@ -43,12 +45,12 @@ class StructuralComponent(MeshComponent):
 
         if self.M_constr is None or force_update:
             if u is not None:
-                u_unconstr = self.constraint.unconstrain_vec(u)
+                u_unconstr = self._constraints.unconstrain_vec(u)
             else:
                 u_unconstr = None
 
-            M_unconstr = self.assembly.assemble_m(u_unconstr, t)
-            self.M_constr = self.constraint.constrain_m(M_unconstr)
+            M_unconstr = self._assembly.assemble_m(u_unconstr, t)
+            self.M_constr = self._constraints.constrain_m(M_unconstr)
         return self.M_constr
 
     def D(self, u=None, t=0, force_update=False):
@@ -98,7 +100,7 @@ class StructuralComponent(MeshComponent):
         """
 
         if u is None:
-            u = np.zeros(self.constraint.no_of_constrained_dofs)
+            u = np.zeros(self._constraints.no_of_constrained_dofs)
 
-        K_unconstr = self.assembly.assemble_k_and_f(self.constraint.unconstrain_u(u), t)[0]
-        return self.constraint.constrain_matrix(K_unconstr)
+        K_unconstr = self._assembly.assemble_k_and_f(self.constraints.unconstrain_u(u), t)[0]
+        return self._constraints.constrain_matrix(K_unconstr)
