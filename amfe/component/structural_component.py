@@ -7,6 +7,8 @@ import numpy as np
 from scipy.sparse import csc_matrix
 
 from .mesh_component import MeshComponent
+from amfe.constraint.structural_constraint_manager import  StructuralConstraintManager
+from amfe.assembly.structural_assembly import StructuralAssembly
 from amfe.component.constants import ELEPROTOTYPEHELPERLIST
 from amfe.mesh import Mesh
 
@@ -24,6 +26,8 @@ class StructuralComponent(MeshComponent):
         super().__init__(mesh)
         self.rayleigh_damping = None
         self.mesh = mesh
+        self._constraints = StructuralConstraintManager()
+        self._assembly = StructuralAssembly(mesh.dimension, mesh.nodes, mesh.connectivity)
 
     def M(self, u=None, t=0, force_update=False):
         """

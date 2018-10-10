@@ -52,7 +52,7 @@ class StructuralAssembly(Assembly):
 
     COORD2COL = {'x': 0, 'y': 1, 'z': 2}
 
-    def __init__(self, dimension, nodes, connectivity, boundary_connectivity=None):
+    def __init__(self, dimension, nodes, connectivity, boundary_connectivity=()):
         """
         Parameters
         ----------
@@ -76,9 +76,10 @@ class StructuralAssembly(Assembly):
         else:
             self.boundary_element_mapping = []
         self.elements_on_node = []
-        self.compute_element_mapping(connectivity, boundary_connectivity)
         self.C_csr = None
-        self.preallocate(self.no_of_dofs, self.element_mapping)
+        if connectivity:
+            self.compute_element_mapping(connectivity, boundary_connectivity)
+            self.preallocate(self.no_of_dofs, self.element_mapping)
         return
 
     @property
@@ -128,7 +129,7 @@ class StructuralAssembly(Assembly):
 
         return self.node_mapping[np.ix_(rows, cols)].reshape(-1)
 
-    def compute_element_mapping(self, connectivity, boundary_connectivity=None):
+    def compute_element_mapping(self, connectivity, boundary_connectivity=()):
         """
         Compute the mapping between elements, their local dofs and the global dofs.
 
@@ -160,8 +161,11 @@ class StructuralAssembly(Assembly):
                                          in boundary_connectivity]
 
         # compute nodes_frequency for stress recovery
-        nodes_vec = np.concatenate(connectivity)
-        self.elements_on_node = np.bincount(nodes_vec)
+        if connectivity:
+            nodes_vec = np.concatenate(connectivity)
+            self.elements_on_node = np.bincount(nodes_vec)
+        else:
+            self.elements_on_node = None
         return
 
     def preallocate(self, no_of_dofs, eleidx2globaldofs):
