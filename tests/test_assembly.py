@@ -91,10 +91,10 @@ class StructuralAssemblyTest(TestCase):
     def setUp(self):
         self.nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0]], dtype=np.float)
         self.connectivity = [np.array([4, 5, 2], dtype=np.int), np.array([2, 1, 4], dtype=np.int),
-                        np.array([0, 1, 2, 3], dtype=np.int)]
-        self.boundary_connectivity = [np.array([3, 0], dtype=np.int), np.array([4, 5], dtype=np.int)]
+                             np.array([0, 1, 2, 3], dtype=np.int), np.array([3, 0], dtype=np.int),
+                             np.array([4, 5], dtype=np.int)]
 
-        self.asm = StructuralAssembly(2, self.nodes, self.connectivity, self.boundary_connectivity)
+        self.asm = StructuralAssembly(('ux', 'uy'), self.nodes, self.connectivity)
 
         class DummyTri3Element:
             def __init__(self):
@@ -130,39 +130,12 @@ class StructuralAssemblyTest(TestCase):
     def tearDown(self):
         self.asm = None
 
-    def test_mapping(self):
-        self.asm.element_mapping = None
-        self.asm.compute_element_mapping(self.connectivity, self.boundary_connectivity)
-
-        element_mapping_desired = [np.array([8, 9, 10, 11, 4, 5], dtype=int),
-                                   np.array([4, 5, 2, 3, 8, 9], dtype=int),
-                                   np.array([0, 1, 2, 3, 4, 5, 6, 7], dtype=int)]
-        boundary_element_mapping_desired = [np.array([6, 7, 0, 1], dtype=int), np.array([8, 9, 10, 11], dtype=int)]
-        for i, mapping in enumerate(element_mapping_desired):
-            assert_array_equal(self.asm.element_mapping[i], element_mapping_desired[i])
-        for i, mapping in enumerate(boundary_element_mapping_desired):
-            assert_array_equal(self.asm.boundary_element_mapping[i], boundary_element_mapping_desired[i])
-
-    def test_get_dofs_by_nodeidxs(self):
-        nodeidxs = np.array([0, 4, 5], dtype=int)
-        coords = 'y'
-        dofs_actual = self.asm.get_dofs_by_nodeidxs(nodeidxs, coords)
-        dofs_desired = np.array([1, 9, 11], dtype=int)
-        assert_array_equal(dofs_actual, dofs_desired)
-        self.asm.node_mapping[0, 1] = 101
-        dofs_actual = self.asm.get_dofs_by_nodeidxs(nodeidxs, coords)
-        dofs_desired = np.array([101, 9, 11], dtype=int)
-        assert_array_equal(dofs_actual, dofs_desired)
-
-    def test_no_of_dofs_per_node(self):
-        actual = self.asm.no_of_dofs_per_node
-        self.assertEqual(actual, 2)
-
     def test_preallocate_csr(self):
         self.asm.C_csr = None
-        self.asm.element_mapping = [np.array([0, 1, 2, 3], dtype=int), np.array([2, 3, 4, 5], dtype=int)]
-        self.asm.node_mapping = np.array(np.arange(0,6)).reshape(-1)
-        self.asm.preallocate(self.asm.no_of_dofs, self.asm.element_mapping)
+        no_of_dofs = 6
+        elements2global = [np.array([0, 1, 2, 3], dtype=int), np.array([2, 3, 4, 5], dtype=int)]
+        self.asm.preallocate(no_of_dofs, elements2global)
+
         vals = np.zeros(32)
         rows = [0, 1, 2, 3]*4
         rows.extend([2, 3, 4, 5]*4)
@@ -175,15 +148,17 @@ class StructuralAssemblyTest(TestCase):
 
     def test_assemble_m(self):
         nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
-        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int)]
-        boundary_connectivity = [np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
+        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
+                        np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
 
-        asm = StructuralAssembly(2, nodes, connectivity, boundary_connectivity)
+        asm = StructuralAssembly(('ux', 'uy'), nodes, connectivity)
+
         ele_obj = np.array([self.ele, self.ele], dtype=object)
-        element2dofs = [np.array([0,1,2,3,4,5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
+        elements2global = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
+        asm.preallocate(8, elements2global)
 
-        M_global = asm.assemble_m(nodes, ele_obj, connectivity, element2dofs)
-        M_global_desired = np.zeros((8,8), dtype=float)
+        M_global = asm.assemble_m(nodes, ele_obj, connectivity[0:2], elements2global)
+        M_global_desired = np.zeros((8, 8), dtype=float)
         # element 1
         M_global_desired[0:6, 0:6] = self.ele.m_int(None, None)
 
@@ -199,14 +174,15 @@ class StructuralAssemblyTest(TestCase):
 
     def test_assemble_k_and_f(self):
         nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
-        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int)]
-        boundary_connectivity = [np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
+        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
+                        np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
 
-        asm = StructuralAssembly(2, nodes, connectivity, boundary_connectivity)
+        asm = StructuralAssembly(('ux', 'uy'), nodes, connectivity)
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
+        asm.preallocate(8, element2dofs)
 
-        K_global, f_global = asm.assemble_k_and_f(nodes, ele_obj, connectivity, element2dofs)
+        K_global, f_global = asm.assemble_k_and_f(nodes, ele_obj, connectivity[0:2], element2dofs)
         K_global_desired = np.zeros((8, 8), dtype=float)
         f_global_desired = np.zeros(8, dtype=float)
         # element 1
@@ -229,15 +205,16 @@ class StructuralAssemblyTest(TestCase):
 
     def test_assemble_k_f_S_E(self):
         nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
-        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int)]
-        boundary_connectivity = [np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
+        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
+                        np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
 
-        asm = StructuralAssembly(2, nodes, connectivity, boundary_connectivity)
+        asm = StructuralAssembly(('ux', 'uy'), nodes, connectivity)
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
         elements_on_node = np.array([2, 1, 2, 1], dtype=int)
+        asm.preallocate(8, element2dofs)
 
-        K_global, f_global, S_global, E_global= asm.assemble_k_f_S_E(nodes, ele_obj, connectivity,
+        K_global, f_global, S_global, E_global= asm.assemble_k_f_S_E(nodes, ele_obj, connectivity[0:2],
                                                                      element2dofs, elements_on_node)
         K_global_desired = np.zeros((8, 8), dtype=float)
         f_global_desired = np.zeros(8, dtype=float)
