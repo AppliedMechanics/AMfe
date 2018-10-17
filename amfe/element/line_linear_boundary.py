@@ -41,6 +41,9 @@ class LineLinearBoundary(BoundaryElement):
         super().__init__(val=val, direct=direct, time_func=time_func,
                          shadow_area=shadow_area, ndof=4)
 
+    def dofs(self):
+        return ((('ux', 'uy'), )*2 , ())
+
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 2)).T
         # Connection line between two nodes of the element

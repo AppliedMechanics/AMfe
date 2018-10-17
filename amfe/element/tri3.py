@@ -61,6 +61,9 @@ class Tri3(Element):
         self.S = np.zeros((3,6))
         self.E = np.zeros((3,6))
 
+    def dofs(self):
+        return ((('ux', 'uy'), )*3 , ())
+
     def _compute_tensors(self, X, u, t):
         """
         Compute the tensors B0_tilde, B0, F, E and S at the Gauss Points.

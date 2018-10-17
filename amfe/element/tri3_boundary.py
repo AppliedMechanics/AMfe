@@ -35,6 +35,9 @@ class Tri3Boundary(BoundaryElement):
         super().__init__(val=val, direct=direct, time_func=time_func,
                          shadow_area=shadow_area, ndof=9)
 
+    def dofs(self):
+        return ((('ux', 'uy', 'uz'), )*3 , ())
+
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 3)).T
         v1 = x_vec[:,2] - x_vec[:,0]

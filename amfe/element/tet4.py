@@ -41,6 +41,9 @@ class Tet4(Element):
         self.S = np.zeros((4,6))
         self.E = np.zeros((4,6))
 
+    def dofs(self):
+        return ((('ux', 'uy', 'uz'), )*4 , ())
+
     def _compute_tensors(self, X, u, t):
         X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4 = X
         u_mat = u.reshape(-1, 3)

@@ -43,6 +43,9 @@ class LineQuadraticBoundary(BoundaryElement):
         super().__init__(val=val, direct=direct, time_func=time_func,
                          shadow_area=shadow_area, ndof=6)
 
+    def dofs(self):
+        return ((('ux', 'uy'), )*3 , ())
+
     def _compute_tensors(self, X, u, t):
         x_vec = (X+u).reshape((-1, 2)).T
         v = x_vec[:,1] - x_vec[:,0]

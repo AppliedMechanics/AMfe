@@ -78,6 +78,9 @@ class Tri6(Element):
 
         self.gauss_points = self.gauss_points2
 
+    def dofs(self):
+        return ((('ux', 'uy'), )*6 , ())
+
     def _compute_tensors(self, X, u, t):
         """
         Tensor computation the same way as in the Tri3 element
