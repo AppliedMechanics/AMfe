@@ -91,6 +91,9 @@ class Tet10(Element):
              [c2, c2, c1, c2, m2, m1, m1, m2, m2, m1],
              [c2, c2, c2, c1, m2, m2, m2, m1, m1, m1]]).T
 
+    def dofs(self):
+        return ((('ux', 'uy', 'uz'), )*10 , ())
+
     def _compute_tensors(self, X, u, t):
 
         X1, Y1, Z1, \

@@ -74,6 +74,9 @@ class Quad8(Element):
          [ 0, 0, 0, 0, -sqrt(15)/6 + 5/6, 0, sqrt(15)/6 + 5/6, 0, -2/3],
          [ 0, 0, 0, 0, 0, -sqrt(15)/6 + 5/6, 0, sqrt(15)/6 + 5/6, -2/3]])
 
+    def dofs(self):
+        return ((('ux', 'uy'), )*8 , ())
+
     def _compute_tensors(self, X, u, t):
         # X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X
         X_mat = X.reshape(-1, 2)

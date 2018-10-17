@@ -130,6 +130,9 @@ class Hexa20(Element):
             [-p,p,n,p,f,-l,n,-l,l,q,p,-n,p,f,-l,-n,-l,m,-p,p,n,p,f,-l,n,-l,l],
             [n,p,-p,-l,f,p,l,-l,n,-n,p,q,-l,f,p,m,-l,-n,n,p,-p,-l,f,p,l,-l,n]])
 
+    def dofs(self):
+        return ((('ux', 'uy', 'uz'), )*20 , ())
+
     def _compute_tensors(self, X, u, t):
         X_mat = X.reshape(20, 3)
         u_mat = u.reshape(20, 3)

@@ -53,6 +53,27 @@ class Element:
         self.S = None
         self.E = None
 
+    def dofs(self):
+        """
+        Method that returns a tuple that contains local dof information for the element
+
+        (nodedofs, internaldofs)
+
+        with nodedofs = ((node1dof1, node1dof2, .. ), (node2dof1, node2dof2, ...), ...)
+        and internaldofs = (internal1, internal2, internal3, ....)
+
+        Examples
+        --------
+        2D three node element for displacements returns: ((('ux', 'uy'), ('ux', 'uy'), ('ux', 'uy')), ())
+        2D bar element for displacements, including viscoelastic information returns:
+        ((('ux', 'uy'), ('ux', 'uy')), ('visc'))
+
+        Returns
+        -------
+        dofs : tuple
+        """
+        return ((), ())
+
     def _compute_tensors(self, X, u, t):
         '''
         Virtual function for the element specific implementation of a tensor

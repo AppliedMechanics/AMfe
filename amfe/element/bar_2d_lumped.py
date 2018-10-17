@@ -36,11 +36,8 @@ class Bar2Dlumped(Element):
         self.M = np.zeros((4,4))
         self.f = np.zeros(4)
 
-    def foo(self):
-        self.e_modul      = self.material.E
-        self.crosssec      = self.material.crossec
-        self.rho           = self.material.rho
-
+    def dofs(self):
+        return ((('ux', 'uy'), ('ux', 'uy')), ())
 
     def _compute_tensors(self, X, u, t):
         self._k_and_m_int(X, u, t)
@@ -52,7 +49,7 @@ class Bar2Dlumped(Element):
         l = np.linalg.norm(X_mat[1,:]-X_mat[0,:])
 
         # Element stiffnes matrix
-        k_el_loc = self.e_modul*self.crosssec/l*np.array([[1, -1],
+        k_el_loc = self.material.E*self.material.crossec/l*np.array([[1, -1],
                                                           [-1, 1]])
         temp = (X_mat[1,:]-X_mat[0,:])/l
         A = np.array([[temp[0], temp[1], 0,       0],
@@ -60,7 +57,7 @@ class Bar2Dlumped(Element):
         k_el = A.T.dot(k_el_loc.dot(A))
 
         # Element mass matrix
-        m_el = self.rho*self.crosssec*l/6*np.array([[3, 0, 0, 0],
+        m_el = self.material.rho*self.material.crosssec*l/6*np.array([[3, 0, 0, 0],
                                                     [0, 3, 0, 0],
                                                     [0, 0, 3, 0],
                                                     [0, 0, 0, 3]])

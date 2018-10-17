@@ -41,10 +41,11 @@ class Prism6(Element):
         self.E = np.zeros((6,6))
         return
 
-    def _compute_tensors(self, X, u, t):
-        print('Warning! the Prism6 element has no stiffness!')
-        return
+    def dofs(self):
+        return ((('ux', 'uy', 'uz'), )*6 , ())
 
-    def _m_int(self, X, u, t):
-        print('Warning! the Prism6 element has no mass!')
-        return self.M
+    def _compute_tensors(self, X, u, t):
+        raise NotImplementedError('The Prism Element is not implemented')
+
+    def _m_int(self, X, u, t=0):
+        raise NotImplementedError('The Prism Element is not implemented')

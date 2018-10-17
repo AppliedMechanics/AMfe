@@ -42,6 +42,9 @@ class Quad8Boundary(BoundaryElement):
                          shadow_area=shadow_area, ndof=24)
         return
 
+    def dofs(self):
+        return ((('ux', 'uy', 'uz'), )*8 , ())
+
     def _compute_tensors(self, X, u, t):
         """
         Compute the full pressure contribution by performing gauss integration.

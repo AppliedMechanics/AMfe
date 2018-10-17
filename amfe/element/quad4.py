@@ -74,6 +74,9 @@ class Quad4(Element):
             [1-np.sqrt(3)/2, -1/2, 1+np.sqrt(3)/2, -1/2],
             [-1/2, 1-np.sqrt(3)/2, -1/2, 1+np.sqrt(3)/2]]).T
 
+    def dofs(self):
+        return ((('ux', 'uy'), )*4 , ())
+
     def _compute_tensors(self, X, u, t):
         """
         Compute the tensors.
