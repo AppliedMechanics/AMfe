@@ -189,6 +189,26 @@ class Mesh:
         elementids = np.unique(elementids)
         return self.el_df.loc[elementids, 'connectivity_idx'].values
 
+    def get_elementids_by_groups(self, groups):
+        """
+        Returns elementindices of the ele_shape/boundary_shape property belonging to groups
+
+        Parameters
+        ----------
+        groups : list
+            groupnames as strings in a list
+
+        Returns
+        -------
+            indices of the elements in the connectivity array
+        """
+        elementids = list()
+        for group in groups:
+            elementids.extend(self.groups[group]['elements'])
+        elementids = np.array(elementids)
+        elementids = np.unique(elementids)
+        return elementids
+
     def get_elementidxs_by_elementids(self, elementids):
         """
         Returns elementindices of the connectivity property belonging to elementids
@@ -203,6 +223,21 @@ class Mesh:
             indices of the elements in the connectivity array
         """
         return [self.el_df.loc[self.el_df.index == elementid, 'connectivity_idx'].values[0] for elementid in elementids]
+
+    def get_elementids_by_elementidxs(self, elementidxs):
+        """
+        Returns elementids belonging to elements with elementidxs in connectivity array
+
+        Parameters
+        ----------
+        elementidxs : iterable
+            elementidxs as integers
+
+        Returns
+        -------
+            ids of the elements
+        """
+        return [self.el_df.loc[self.el_df.connectivity_idx == idx].index[0] for idx in elementidxs]
 
     def get_nodeidxs_by_groups(self, groups):
         """
@@ -231,6 +266,22 @@ class Mesh:
         nodes = np.unique(np.hstack((nodes, np.array(nodeidxs))))
         return nodes
 
+    def get_ele_shapes_by_ids(self, elementids):
+        """
+        Returns list of element_shapes for elementids
+
+        Parameters
+        ----------
+        elementids : list or ndarray
+            contains the ids of elements the ele_shapes are asked for
+
+        Returns
+        -------
+        ele_shapes : list
+            list of element_shapes as string
+        """
+        return [self.el_df.loc[idx, 'shape'] for idx in elementids]
+
     def get_ele_shapes_by_idxs(self, elementidxes):
         """
         Returns list of element_shapes for elementidxes
@@ -238,7 +289,7 @@ class Mesh:
         Parameters
         ----------
         elementidxes : list
-            list of tuples (0/1, idx), where 0 = volume element, 1 = boundary_element
+            contains indices of the desired elements in connectivity array
 
         Returns
         -------

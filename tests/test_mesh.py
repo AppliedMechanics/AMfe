@@ -61,9 +61,19 @@ class TestMesh(TestCase):
         desired = np.array([3, 0], dtype=int)
         assert_array_equal(actual, desired)
 
+    def test_get_elementids_by_elementidxs(self):
+        actual = self.testmesh.get_elementids_by_elementidxs([3, 0])
+        desired = np.array([4, 1], dtype=int)
+        assert_array_equal(actual, desired)
+
     def test_get_elementidxs_by_groups(self):
         actual = self.testmesh.get_elementidxs_by_groups(['right', 'left_boundary'])
         desired = np.array([0, 1, 3], dtype=int)
+        assert_array_equal(actual, desired)
+
+    def test_get_elementids_by_groups(self):
+        actual = self.testmesh.get_elementids_by_groups(['right', 'left_boundary'])
+        desired = np.array([1, 2, 4], dtype=int)
         assert_array_equal(actual, desired)
 
     def test_get_nodeidxs_by_group(self):
@@ -81,6 +91,11 @@ class TestMesh(TestCase):
 
     def test_get_ele_shapes_by_idxs(self):
         actual = self.testmesh.get_ele_shapes_by_idxs([1, 4, 2])
+        desired = np.array(['Tri3', 'straight_line', 'Quad4'], dtype=object)
+        assert_equal(actual, desired)
+
+    def test_get_ele_shapes_by_ids(self):
+        actual = self.testmesh.get_ele_shapes_by_ids([2, 5, 3])
         desired = np.array(['Tri3', 'straight_line', 'Quad4'], dtype=object)
         assert_equal(actual, desired)
 

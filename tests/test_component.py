@@ -3,6 +3,7 @@
 
 from unittest import TestCase
 import numpy as np
+import pandas as pd
 from numpy.testing import assert_array_equal
 from copy import deepcopy
 
@@ -37,10 +38,11 @@ class ComponentCompositeTest(TestCase):
                 self.dimension = dimension
                 self.nodes = np.empty((0, dimension), dtype=float)
                 self.connectivity = list()
+                self.el_df = pd.DataFrame(columns=['shape', 'is_boundary', 'connectivity_idx'])
                 
             @property
             def no_of_elements(self):
-                return 2
+                return 0
             
         self.mesh = DummyMesh(2)
         self.constraints = DummyConstraint()
@@ -109,10 +111,11 @@ class StructuralComponentTest(TestCase):
                 self.dimension = dimension
                 self.nodes = np.empty((0, dimension), dtype=float)
                 self.connectivity = list()
+                self.el_df = pd.DataFrame(columns=['shape', 'is_boundary', 'connectivity_idx'])
 
             @property
             def no_of_elements(self):
-                return 2
+                return 0
             
         self.mesh = DummyMesh(2)
         self.constraints = DummyConstraint()
