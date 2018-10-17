@@ -24,7 +24,9 @@ class MeshComponent(ComponentBase):
     def __init__(self, mesh=Mesh()):
         super().__init__()
         self._mesh = mesh
-        self._ele_obj = np.empty(mesh.no_of_elements, dtype=object)
+        no_of_volume_elements = mesh.no_of_elements
+        indices = mesh.el_df[mesh.el_df['is_boundary'] != True].index
+        self._ele_obj_df = pd.DataFrame([None]*no_of_volume_elements, index=indices, columns=['ele_obj'])
 
         # Neumann Properties
         # ------------------
@@ -40,24 +42,26 @@ class MeshComponent(ComponentBase):
     # -- PROPERTIES --------------------------------------------------------------------------------------
     @property
     def ele_obj(self):
-        return self._ele_obj
+        return self._ele_obj_df['ele_obj'].values
 
     # -- ASSIGN MATERIAL METHODS -------------------------------------------------------------------------
     def assign_material(self, materialobj, propertynames, tag='_groups'):
         if tag == '_groups':
-            eleidxes = self._mesh.get_elementidxs_by_groups(propertynames)
+            eleids = self._mesh.get_elementids_by_groups(propertynames)
+        elif tag == '_eleids':
+            eleids = propertynames
         elif tag == '_eleidxs':
-            eleidxes = propertynames
+            eleids = self._mesh.get_elementids_by_elementidxs(propertynames)
         else:
-            eleidxes = self._mesh.get_elementidxs_by_tags(propertynames)
-        self._assign_material_by_eleidxs(materialobj, eleidxes)
+            eleids = self._mesh.get_elementids_by_tags(propertynames)
+        self._assign_material_by_eleids(materialobj, eleids)
 
-    def _assign_material_by_eleidxs(self, materialobj, eleidxes):
+    def _assign_material_by_eleids(self, materialobj, eleids):
         prototypes = deepcopy(self.ELEMENTPROTOTYPES)
         for prototype in prototypes.values():
             prototype.material = materialobj
-        ele_shapes = self._mesh.get_ele_shapes_by_idxs(eleidxes)
-        self._ele_obj[eleidxes] = [prototypes[ele_shape] for ele_shape in ele_shapes]
+        ele_shapes = self._mesh.get_ele_shapes_by_ids(eleids)
+        self._ele_obj_df.loc[eleids, 'ele_obj'] = [prototypes[ele_shape] for ele_shape in ele_shapes]
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
     def assign_neumann_condition(self, val, direction, property_names, tag='_groups', shadow_area=False,

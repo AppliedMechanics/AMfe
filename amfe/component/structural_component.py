@@ -25,7 +25,6 @@ class StructuralComponent(MeshComponent):
     def __init__(self, mesh=Mesh()):
         super().__init__(mesh)
         self.rayleigh_damping = None
-        self.mesh = mesh
         self._constraints = StructuralConstraintManager()
         self._assembly = StructuralAssembly(mesh.dimension, mesh.nodes, mesh.connectivity)
 
