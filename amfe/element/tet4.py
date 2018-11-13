@@ -42,7 +42,10 @@ class Tet4(Element):
         self.E = np.zeros((4,6))
 
     def dofs(self):
-        return ((('ux', 'uy', 'uz'), )*4 , ())
+        return (('N', 0, 'ux'), ('N', 0, 'uy'), ('N', 0, 'uz'),
+                ('N', 1, 'ux'), ('N', 1, 'uy'), ('N', 1, 'uz'),
+                ('N', 2, 'ux'), ('N', 2, 'uy'), ('N', 2, 'uz'),
+                ('N', 3, 'ux'), ('N', 3, 'uy'), ('N', 3, 'uz'))
 
     def _compute_tensors(self, X, u, t):
         X1, Y1, Z1, X2, Y2, Z2, X3, Y3, Z3, X4, Y4, Z4 = X

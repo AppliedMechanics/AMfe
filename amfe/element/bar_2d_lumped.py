@@ -37,7 +37,10 @@ class Bar2Dlumped(Element):
         self.f = np.zeros(4)
 
     def dofs(self):
-        return ((('ux', 'uy'), ('ux', 'uy')), ())
+        return (('N', 0, 'ux'),
+                ('N', 0, 'uy'),
+                ('N', 1, 'ux'),
+                ('N', 1, 'uy'))
 
     def _compute_tensors(self, X, u, t):
         self._k_and_m_int(X, u, t)

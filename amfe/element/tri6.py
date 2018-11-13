@@ -79,7 +79,12 @@ class Tri6(Element):
         self.gauss_points = self.gauss_points2
 
     def dofs(self):
-        return ((('ux', 'uy'), )*6 , ())
+        return (('N', 0, 'ux'), ('N', 0, 'uy'),
+                ('N', 1, 'ux'), ('N', 1, 'uy'),
+                ('N', 2, 'ux'), ('N', 2, 'uy'),
+                ('N', 3, 'ux'), ('N', 3, 'uy'),
+                ('N', 4, 'ux'), ('N', 4, 'uy'),
+                ('N', 5, 'ux'), ('N', 5, 'uy'))
 
     def _compute_tensors(self, X, u, t):
         """

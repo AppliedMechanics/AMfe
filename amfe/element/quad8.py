@@ -75,7 +75,14 @@ class Quad8(Element):
          [ 0, 0, 0, 0, 0, -sqrt(15)/6 + 5/6, 0, sqrt(15)/6 + 5/6, -2/3]])
 
     def dofs(self):
-        return ((('ux', 'uy'), )*8 , ())
+        return (('N', 0, 'ux'), ('N', 0, 'uy'),
+                ('N', 1, 'ux'), ('N', 1, 'uy'),
+                ('N', 2, 'ux'), ('N', 2, 'uy'),
+                ('N', 3, 'ux'), ('N', 3, 'uy'),
+                ('N', 4, 'ux'), ('N', 4, 'uy'),
+                ('N', 5, 'ux'), ('N', 5, 'uy'),
+                ('N', 6, 'ux'), ('N', 6, 'uy'),
+                ('N', 7, 'ux'), ('N', 7, 'uy'))
 
     def _compute_tensors(self, X, u, t):
         # X1, Y1, X2, Y2, X3, Y3, X4, Y4, X5, Y5, X6, Y6, X7, Y7, X8, Y8 = X

@@ -62,7 +62,9 @@ class Tri3(Element):
         self.E = np.zeros((3,6))
 
     def dofs(self):
-        return ((('ux', 'uy'), )*3 , ())
+        return (('N', 0, 'ux'), ('N', 0, 'uy'),
+                ('N', 1, 'ux'), ('N', 1, 'uy'),
+                ('N', 2, 'ux'), ('N', 2, 'uy'))
 
     def _compute_tensors(self, X, u, t):
         """

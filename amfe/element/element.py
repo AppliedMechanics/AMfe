@@ -57,22 +57,28 @@ class Element:
         """
         Method that returns a tuple that contains local dof information for the element
 
-        (nodedofs, internaldofs)
+        ((<type>, <nr>, <physics>), (<type>, <nr>, <physics>), ... )
 
-        with nodedofs = ((node1dof1, node1dof2, .. ), (node2dof1, node2dof2, ...), ...)
-        and internaldofs = (internal1, internal2, internal3, ....)
+        with: <type> =  'N': nodal dof
+                        'E': elemental dof
+
+              <nr>   =  number of nodal or elemental dof, respectively (starts at zero)
+              <physics> = string that describe the physic of the dof (e.g. 'ux', 'uy', 'T', 'visc', ...)
+
 
         Examples
         --------
-        2D three node element for displacements returns: ((('ux', 'uy'), ('ux', 'uy'), ('ux', 'uy')), ())
-        2D bar element for displacements, including viscoelastic information returns:
-        ((('ux', 'uy'), ('ux', 'uy')), ('visc'))
+        2D three node element for displacements returns:
+            (('N', 0, 'ux'), ('N', 0, 'uy'), ('N', 1, 'ux'), ('N', 1, 'ux'), ('N', 2, 'uy'))
+
+        2D bar element for displacements, including one viscoelastic information returns:
+            (('N', 0, 'ux'), ('N', 0, 'uy'), ('N', 1, 'ux'), ('N', 1, 'uy'), ('E', 0, 'visc'))
 
         Returns
         -------
         dofs : tuple
         """
-        return ((), ())
+        return ()
 
     def _compute_tensors(self, X, u, t):
         '''

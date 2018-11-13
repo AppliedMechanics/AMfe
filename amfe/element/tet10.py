@@ -92,7 +92,16 @@ class Tet10(Element):
              [c2, c2, c2, c1, m2, m2, m2, m1, m1, m1]]).T
 
     def dofs(self):
-        return ((('ux', 'uy', 'uz'), )*10 , ())
+        return (('N', 0, 'ux'), ('N', 0, 'uy'), ('N', 0, 'uz'),
+                ('N', 1, 'ux'), ('N', 1, 'uy'), ('N', 1, 'uz'),
+                ('N', 2, 'ux'), ('N', 2, 'uy'), ('N', 2, 'uz'),
+                ('N', 3, 'ux'), ('N', 3, 'uy'), ('N', 3, 'uz'),
+                ('N', 4, 'ux'), ('N', 4, 'uy'), ('N', 4, 'uz'),
+                ('N', 5, 'ux'), ('N', 5, 'uy'), ('N', 5, 'uz'),
+                ('N', 6, 'ux'), ('N', 6, 'uy'), ('N', 6, 'uz'),
+                ('N', 7, 'ux'), ('N', 7, 'uy'), ('N', 7, 'uz'),
+                ('N', 8, 'ux'), ('N', 8, 'uy'), ('N', 8, 'uz'),
+                ('N', 9, 'ux'), ('N', 9, 'uy'), ('N', 9, 'uz'))
 
     def _compute_tensors(self, X, u, t):
 
