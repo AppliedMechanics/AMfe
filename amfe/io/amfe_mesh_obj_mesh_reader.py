@@ -34,25 +34,24 @@ class AmfeMeshObjMeshReader(MeshReader):
         self._builder.build_no_of_nodes(self._meshobj.no_of_nodes)
         self._builder.build_no_of_elements(self._meshobj.no_of_elements + self._meshobj.no_of_boundary_elements)
         # build nodes
-        nodeid2idx = self._meshobj.nodeid2idx
         if self._meshobj.dimension == 2:
-            for nodeid in nodeid2idx:
-                self._builder.build_node(nodeid,
-                                         self._meshobj.nodes[nodeid2idx[nodeid], 0],
-                                         self._meshobj.nodes[nodeid2idx[nodeid], 1],
+            for index, row in self._meshobj.nodes_df.iterrows():
+                self._builder.build_node(index,
+                                         row['x'],
+                                         row['y'],
                                          0.0)
         else:
-            for nodeid in nodeid2idx:
-                self._builder.build_node(nodeid,
-                                         self._meshobj.nodes[nodeid2idx[nodeid], 0],
-                                         self._meshobj.nodes[nodeid2idx[nodeid], 1],
-                                         self._meshobj.nodes[nodeid2idx[nodeid], 2])
+            for index, row in self._meshobj.nodes_df.iterrows():
+                self._builder.build_node(index,
+                                         row['x'],
+                                         row['y'],
+                                         row['z'])
+
         # build elements
         for elementid, element in self._meshobj.el_df.iterrows():
             etype = element['shape']
             idx = element['connectivity_idx']
-            connectivity = self._meshobj.connectivity[idx]
-            connectivity = self._meshobj.get_nodeids_by_nodeidxs(connectivity)
+            connectivity = list(self._meshobj.connectivity[idx])
             self._builder.build_element(elementid, etype, connectivity)
         # build groups
         for group in self._meshobj.groups:

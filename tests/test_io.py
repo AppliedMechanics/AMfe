@@ -206,11 +206,12 @@ class IOTest(TestCase):
         mesh = converter.return_mesh()
 
         # CHECK NODES
+
         nodes_desired = np.array([[node[1], node[2]] for node in nodes_input])
         assert_allclose(mesh.nodes, nodes_desired)
 
         # CHECK CONNECTIVITIES
-        connectivity_desired = [np.array(element[2])-1 for element in elements_input[:]]
+        connectivity_desired = [np.array(element[2]) for element in elements_input[:]]
         for i, conn in enumerate(connectivity_desired):
             assert_array_equal(mesh.connectivity[i], conn)
 
@@ -218,8 +219,11 @@ class IOTest(TestCase):
         self.assertEqual(mesh.dimension, 2)
 
         # CHECK NODE MAPPING
-        node_mapping_desired = dict([(i+1, i) for i in range(nodes_desired.shape[0])])
-        self.assertEqual(mesh.nodeid2idx, node_mapping_desired)
+        for node in nodes_input:
+            nodeid = node[0]
+            node_actual = mesh.nodes_df.loc[nodeid]
+            self.assertAlmostEqual(node_actual['x'], node[1])
+            self.assertAlmostEqual(node_actual['y'], node[2])
 
         # CHECK ELESHAPES AND ELEMENTMAPPING IN DATAFRAME
         indices = list(np.arange(1, 11))
@@ -325,7 +329,7 @@ class IOTest(TestCase):
         # Define input file path
         meshobj = Mesh(dimension=2)
 
-        meshobj.nodes = np.array([[1.345600000e-02, 3.561675700e-02],
+        nodes = np.array([[1.345600000e-02, 3.561675700e-02],
                                   [5.206839561e-01, 3.740820950e-02],
                                   [3.851982918e-02, 5.460016703e-01],
                                   [5.457667372e-01, 5.477935420e-01],
@@ -341,24 +345,24 @@ class IOTest(TestCase):
                                   [2.042357741e+00, 5.431194119e-01],
                                   [2.042347658e+00, 1.043456257e+00]], dtype=float)
 
-        meshobj.connectivity = [np.array([12, 14,  8, 13, 11, 10], dtype=int),
-                                np.array([8, 5, 4, 7, 3, 6], dtype=int),
-                                np.array([ 8,  4, 12,  6,  9, 10], dtype=int),
-                                np.array([0, 4, 5, 1, 3, 2], dtype=int),
-                                np.array([ 4, 12,  9], dtype=int),
-                                np.array([0, 4, 1], dtype=int),
-                                np.array([5, 0, 2], dtype=int),
-                                np.array([8, 5, 7], dtype=int),
-                                np.array([12, 14, 13], dtype=int),
-                                np.array([14,  8, 11], dtype=int)]
+        meshobj.connectivity = [np.array([13, 15,  9, 14, 12, 11], dtype=int),
+                                np.array([9, 6, 5, 8, 4, 7], dtype=int),
+                                np.array([9,  5, 13,  7,  10, 11], dtype=int),
+                                np.array([1, 5, 6, 2, 4, 3], dtype=int),
+                                np.array([5, 13,  10], dtype=int),
+                                np.array([1, 5, 2], dtype=int),
+                                np.array([6, 1, 3], dtype=int),
+                                np.array([9, 6, 8], dtype=int),
+                                np.array([13, 15, 14], dtype=int),
+                                np.array([15,  9, 12], dtype=int)]
 
         data = {'shape': ['Tri6', 'Tri6', 'Tri6', 'Tri6', 'quadratic_line',
-                           'quadratic_line', 'quadratic_line', 'quadratic_line',
-                           'quadratic_line', 'quadratic_line'],
+                          'quadratic_line', 'quadratic_line', 'quadratic_line',
+                          'quadratic_line', 'quadratic_line'],
                 'connectivity_idx': list(np.arange(10)),
                 'is_boundary': [False, False, False, False, True, True, True, True, True, True]
                 }
-        indices = list(np.arange(1,11))
+        indices = list(np.arange(1, 11))
 
         meshobj.el_df = pd.DataFrame(data, index=indices)
 
@@ -369,8 +373,9 @@ class IOTest(TestCase):
                           'top_boundary': {'nodes': [], 'elements': [8, 10]},
                           'left_dirichlet': {'nodes': [1, 3, 6], 'elements': []}}
 
-        meshobj.nodeid2idx = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9,
-                              11: 10, 12: 11, 13: 12, 14: 13, 15: 14}
+        nodeids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+        meshobj.nodes_df = pd.DataFrame({'x': nodes[:, 0], 'y': nodes[:, 1]}, index=nodeids)
 
         # Define Reader Object, initialized with AmfeMeshConverter
         reader = AmfeMeshObjMeshReader(meshobj, DummyMeshConverter())

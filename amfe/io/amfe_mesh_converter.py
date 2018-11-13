@@ -49,7 +49,7 @@ class AmfeMeshConverter(MeshConverter):
         self._dimension = None
         self._no_of_nodes = None
         self._no_of_elements = None
-        self._nodes = np.empty((0, 3), dtype=float)
+        self._nodes = np.empty((0, 4), dtype=float)
         self._currentnodeid = 0
         self._currentelementid = 0
         self._connectivity = list()
@@ -68,7 +68,7 @@ class AmfeMeshConverter(MeshConverter):
         # It is not necessary to call, but useful if information about no_of_nodes exists
         self._no_of_nodes = no
         if self._nodes.shape[0] == 0:
-            self._nodes = np.zeros((no, 3), dtype=float)
+            self._nodes = np.zeros((no, 4), dtype=float)
         return
 
     def build_no_of_elements(self, no):
@@ -88,12 +88,10 @@ class AmfeMeshConverter(MeshConverter):
         # Check if preallocation has been done so far
         if self._no_of_nodes is not None:
             # write node in preallocated array
-            self._nodes[amfeid, :] = [x, y, z]
+            self._nodes[amfeid, :] = [idx, x, y, z]
         else:
             # append node if array is not preallocated with full node dimension
-            self._nodes = np.append(self._nodes, np.array([x, y, z], dtype=float, ndmin=2), axis=0)
-        # add mapping information
-        self._nodeid2idx.update({idx: amfeid})
+            self._nodes = np.append(self._nodes, np.array([idx, x, y, z], dtype=float, ndmin=2), axis=0)
         # increment row-index counter
         self._currentnodeid += 1
         return
@@ -127,10 +125,14 @@ class AmfeMeshConverter(MeshConverter):
             else:
                 self._dimension = 3
         # If dimension = 2 cut the z coordinate
+        x = self._nodes[:, 1]
+        y = self._nodes[:, 2]
         if self._dimension == 2:
-            self._mesh.nodes = self._nodes[:, :self._dimension]
-        # set the node mapping information
-        self._mesh.nodeid2idx = self._nodeid2idx
+            self._mesh.nodes_df = pd.DataFrame({'x': x, 'y': y}, index=np.array(self._nodes[:, 0], dtype=int))
+        else:
+            z = self._nodes[:, 3]
+            self._mesh.nodes_df = pd.DataFrame({'x': x, 'y': y, 'z': z}, index=np.array(self._nodes[:, 0], dtype=int))
+
         # divide in boundary and volume elements
         currentidx = 0
         currentboundaryidx = 0
@@ -145,8 +147,8 @@ class AmfeMeshConverter(MeshConverter):
 
         # write properties
         self._mesh.dimension = self._dimension
-        self._mesh.connectivity = [np.array([self._nodeid2idx[nodeid] for nodeid in element])
-                                   for index, element in enumerate(self._connectivity)]
+        self._mesh.connectivity = self._connectivity
+
         self._el_df_is_boundary = len(self._connectivity)*[False]
         for index, shape in enumerate(self._el_df_eleshapes):
             if shape in boundary_element_set:
