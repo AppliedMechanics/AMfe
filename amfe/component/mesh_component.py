@@ -51,7 +51,7 @@ class MeshComponent(ComponentBase):
         elif tag == '_eleids':
             eleids = propertynames
         elif tag == '_eleidxs':
-            eleids = self._mesh.get_elementids_by_elementiloc(propertynames)
+            eleids = self._mesh.get_elementids_by_elementidxs(propertynames)
         else:
             eleids = self._mesh.get_elementids_by_tags(propertynames)
         self._assign_material_by_eleids(materialobj, eleids)
@@ -67,7 +67,7 @@ class MeshComponent(ComponentBase):
     def assign_neumann_condition(self, val, direction, property_names, tag='_groups', shadow_area=False,
                                  name='Unknown'):
         if tag == '_groups':
-            eleidxes = self._mesh.get_elementiloc_by_groups(property_names)
+            eleidxes = self._mesh.get_elementidxs_by_groups(property_names)
         elif tag == '_eleidxs':
             eleidxes = property_names
         else:
@@ -94,7 +94,7 @@ class MeshComponent(ComponentBase):
                                                                                           direct=direction,
                                                                                           shadow_area=shadow_area)
         # get ele_shapes of the elements belonging to the passed eleidxes
-        ele_shapes = self._mesh.get_ele_shapes_by_elementiloc(eleidxes)
+        ele_shapes = self._mesh.get_ele_shapes_by_elementidxs(eleidxes)
         # create pointers to eleobjects
         neumann_ele_objects = np.array([neumann_ele_prototypes[ele_shape] for ele_shape in ele_shapes],
                                        dtype=object)

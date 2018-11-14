@@ -122,7 +122,7 @@ class TestMeshComponent(TestCase):
     def test_assign_neumann_condition_by_eleidxs(self):
         component = StructuralComponent(self.testmesh)
         eleids = [4, 5]
-        eleidxs = self.testmesh.get_elementiloc_by_elementids(eleids)
+        eleidxs = self.testmesh.get_elementidxs_by_elementids(eleids)
         time_func = lambda t: 3.0*t
         component.assign_neumann_condition(time_func, (1, 0), eleidxs, tag='_eleidxs', shadow_area=False,
                                            name='TestCondition')

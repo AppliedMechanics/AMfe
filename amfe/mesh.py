@@ -175,7 +175,7 @@ class Mesh:
         """
         return self.nodes_df.values.reshape(-1)
 
-    def get_elementiloc_by_groups(self, groups):
+    def get_elementidxs_by_groups(self, groups):
         """
         Returns elementindices of the connectivity property belonging to groups
 
@@ -215,7 +215,7 @@ class Mesh:
         elementids = np.unique(elementids)
         return elementids
 
-    def get_elementiloc_by_elementids(self, elementids):
+    def get_elementidxs_by_elementids(self, elementids):
         """
         Returns elementindices of the connectivity property belonging to elementids
 
@@ -230,7 +230,7 @@ class Mesh:
         """
         return [self.el_df.loc[self.el_df.index == elementid, 'connectivity_idx'].values[0] for elementid in elementids]
 
-    def get_elementids_by_elementiloc(self, elementidxs):
+    def get_elementids_by_elementidxs(self, elementidxs):
         """
         Returns elementids belonging to elements with elementidxs in connectivity array
 
@@ -245,7 +245,7 @@ class Mesh:
         """
         return [self.el_df.loc[self.el_df.connectivity_idx == idx].index[0] for idx in elementidxs]
 
-    def get_nodeiloc_by_groups(self, groups):
+    def get_nodeidxs_by_groups(self, groups):
         """
         Returns nodeindieces of the nodes property belonging to a group
 
@@ -290,7 +290,7 @@ class Mesh:
         """
         return [self.el_df.loc[idx, 'shape'] for idx in elementids]
 
-    def get_ele_shapes_by_elementiloc(self, elementidxes):
+    def get_ele_shapes_by_elementidxs(self, elementidxes):
         """
         Returns list of element_shapes for elementidxes
 
@@ -317,7 +317,7 @@ class Mesh:
         """
         return np.arange(self.no_of_nodes, dtype=np.int)
 
-    def get_nodeids_by_nodeiloc(self, nodeidxs):
+    def get_nodeids_by_nodeidxs(self, nodeidxs):
         """
 
         Parameters

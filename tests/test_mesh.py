@@ -57,22 +57,22 @@ class TestMesh(TestCase):
         assert_equal(self.testmesh.nodes_voigt, desired)
 
     def test_get_elementidxs_by_group(self):
-        actual = self.testmesh.get_elementiloc_by_groups(['right'])
+        actual = self.testmesh.get_elementidxs_by_groups(['right'])
         desired = np.array([0, 1], dtype=int)
         assert_array_equal(actual, desired)
 
     def test_get_elementidxs_by_elementids(self):
-        actual = self.testmesh.get_elementiloc_by_elementids([4, 1])
+        actual = self.testmesh.get_elementidxs_by_elementids([4, 1])
         desired = np.array([3, 0], dtype=int)
         assert_array_equal(actual, desired)
 
     def test_get_elementids_by_elementidxs(self):
-        actual = self.testmesh.get_elementids_by_elementiloc([3, 0])
+        actual = self.testmesh.get_elementids_by_elementidxs([3, 0])
         desired = np.array([4, 1], dtype=int)
         assert_array_equal(actual, desired)
 
     def test_get_elementidxs_by_groups(self):
-        actual = self.testmesh.get_elementiloc_by_groups(['right', 'left_boundary'])
+        actual = self.testmesh.get_elementidxs_by_groups(['right', 'left_boundary'])
         desired = np.array([0, 1, 3], dtype=int)
         assert_array_equal(actual, desired)
 
@@ -82,20 +82,20 @@ class TestMesh(TestCase):
         assert_array_equal(actual, desired)
 
     def test_get_nodeidxs_by_group(self):
-        actual = self.testmesh.get_nodeiloc_by_groups(['left'])
+        actual = self.testmesh.get_nodeidxs_by_groups(['left'])
         desired = np.array([0, 1, 2, 3], dtype=np.int)
         assert_equal(actual, desired)
-        actual = set(self.testmesh.get_nodeiloc_by_groups(['right_boundary']))
+        actual = set(self.testmesh.get_nodeidxs_by_groups(['right_boundary']))
         desired = set(np.array([4, 5, 0, 1]))
         assert_equal(actual, desired)
 
     def test_get_nodeidxs_by_groups(self):
-        actual = self.testmesh.get_nodeiloc_by_groups(['left', 'right_boundary'])
+        actual = self.testmesh.get_nodeidxs_by_groups(['left', 'right_boundary'])
         desired = np.array([0, 1, 2, 3, 4, 5])
         assert_equal(actual, desired)
 
     def test_get_ele_shapes_by_idxs(self):
-        actual = self.testmesh.get_ele_shapes_by_elementiloc([1, 4, 2])
+        actual = self.testmesh.get_ele_shapes_by_elementidxs([1, 4, 2])
         desired = np.array(['Tri3', 'straight_line', 'Quad4'], dtype=object)
         assert_equal(actual, desired)
 
@@ -110,9 +110,9 @@ class TestMesh(TestCase):
         assert_equal(actual, desired)
 
     def test_get_nodeids_by_nodeidxs(self):
-        actual = self.testmesh.get_nodeids_by_nodeiloc([3, 5, 2])
+        actual = self.testmesh.get_nodeids_by_nodeidxs([3, 5, 2])
         desired = [4, 6, 3]
         assert_equal(actual, desired)
-        actual = self.testmesh.get_nodeids_by_nodeiloc([3])
+        actual = self.testmesh.get_nodeids_by_nodeidxs([3])
         desired = [4]
         assert_equal(actual, desired)
