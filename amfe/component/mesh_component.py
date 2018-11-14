@@ -94,7 +94,7 @@ class MeshComponent(ComponentBase):
                                                                                           direct=direction,
                                                                                           shadow_area=shadow_area)
         # get ele_shapes of the elements belonging to the passed eleidxes
-        ele_shapes = self._mesh.get_ele_shapes_by_idxs(eleidxes)
+        ele_shapes = self._mesh.get_ele_shapes_by_elementidxs(eleidxes)
         # create pointers to eleobjects
         neumann_ele_objects = np.array([neumann_ele_prototypes[ele_shape] for ele_shape in ele_shapes],
                                        dtype=object)
