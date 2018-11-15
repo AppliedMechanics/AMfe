@@ -3,13 +3,16 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
 
+from collections.abc import Iterable
+from abc import ABC, abstractmethod
+
 import numpy as np
 import pandas as pd
 
-__all__ = ['Mapping']
+__all__ = ['MappingBase']
 
 
-class Mapping:
+class MappingBase(ABC):
     def __init__(self, fields, nodeids, connectivity, dofs_by_element, **kwargs):
         """
 
@@ -55,25 +58,7 @@ class Mapping:
     def elements2global(self, elements2global):
         self._elements2global = elements2global
 
-    def get_dof_by_nodeid(self, nodeid, field):
-        """
-        Returns a the global dof number of a node with certain nodeid and given field
-
-        Parameters
-        ----------
-        nodeid : int
-            number of node id
-        field : str
-            string describing the field (e.g. 'ux', 'uy', 'T', ....)
-
-        Returns
-        -------
-        dof : int
-            global dof number
-        """
-        return self._nodal2global.loc[nodeid, field]
-
-    def get_dofs_by_nodeidxs(self, nodeids, fields):
+    def get_dofs_by_nodeids(self, nodeids, fields):
         """
         Returns the global dofs associated with a given node-row-index and a direction x, y or z
 
@@ -82,18 +67,48 @@ class Mapping:
         nodeids : iterable
             Nodeids where one wants to know their global dofs
         fields : tuple
-            tuple with strings that describe the fields, the global dofs are asked for
+            tuple with strings that describe the fields, the global dofs are asked for (e.g. 'ux', 'uy', 'T', ....)
 
         Returns
         -------
         dofs : ndarray
             array with global dofs. Rows = nodeids, columns = fields
         """
+        if not isinstance(nodeids, Iterable):
+            nodeids = [nodeids]
         return self._nodal2global.loc[nodeids, fields].values
 
+    def update_mapping(self, fields, nodeids, connectivity, dofs_by_element, **kwargs):
+        """
+        Update the mapping (nodal2global and elements2global)
+
+        Parameters
+        ----------
+        fields : tuple
+            tuple with strings that describe the field that shall be mapped, e.g. ('ux', 'uy', 'uz', 'T')
+            for a 3D displacement and Temperature field
+        nodeids : array
+            array containing the nodeids that shall be mapped
+        connectivity : ndarray
+            iterable containing nodeids of the connectivity in each element
+        dofs_by_element : iterable
+            iterable containing the dofs as strings per element
+            e.g. [(('N', 0, 'ux'), ('N', 0, 'uy'), ('E', 0, 'T'), ('N', 1, 'ux')), ( ..same for 2nd element ), ... )
+        kwargs : dict
+            keyword value list for future implementations
+
+        Returns
+        -------
+        None
+        """
+        self._set_standard_mapping(fields, nodeids, connectivity, dofs_by_element, **kwargs)
+
+    @abstractmethod
     def _set_standard_mapping(self, fields, nodeids, connectivity, dofs_by_element, **kwargs):
         """
         Computes the mapping according to a certain algorithm.
+
+        This private method must be overwritten by subclasses of Mapping (Template Pattern).
 
         This method can be overwritten by subclasses to get other algorithms to get a mapping for elements
         and nodes.
@@ -118,40 +133,5 @@ class Mapping:
         -------
         None
         """
-        # make empty pandas Dataframe for nodes2global
-        data = -1*np.ones(len(nodeids), dtype=int)
-        self._nodal2global = pd.DataFrame({key: data for key in fields}, index=nodeids)
-        # allocate list for elements2global
-        self._elements2global = [None]*len(connectivity)
+        raise NotImplementedError('The _set_standard_mapping method must be implemented in subclasses')
 
-        # collect node dofs
-        current_global = 0
-        # iterate over all elements
-        for index, (element_connectivity, element_dofinfos) in enumerate(zip(connectivity, dofs_by_element)):
-            # iterate over dofs of element
-            global_dofs_for_element = []
-            for localdofnumber, dofinfo in enumerate(element_dofinfos):
-                # investigate current dof
-                localnodenumber = dofinfo[1]  # or local elementdof number
-                field = dofinfo[2]  # physical field (e.g. 'ux')
-                # check if dof is a nodal dof
-                if dofinfo[0] == 'N':
-                    nodeid = element_connectivity[localnodenumber]
-                    # check if node already has a global dof for this field
-                    stored_global = self._nodal2global.loc[nodeid, field]
-                    if stored_global == -1:
-                        # set a global dof for this node and field combination
-                        self._nodal2global.loc[nodeid, field] = current_global
-                        global_dofs_for_element.append(current_global)
-                        # increment current_global dof number
-                        current_global += 1
-                    else:
-                        global_dofs_for_element.append(stored_global)
-                # elif check if dof is elemental dof
-                elif dofinfo[0] == 'E':
-                    raise NotImplementedError('The mapping for elemental degrees of freedom is not implemented in'
-                                              'this mapping class')
-                else:
-                    raise ValueError('Doftype must be E or N')
-            # Get global dof numbers of element
-            self._elements2global[index] = np.array(global_dofs_for_element, dtype=int)

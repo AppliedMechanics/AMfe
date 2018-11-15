@@ -10,7 +10,7 @@ from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
 
 
-from amfe.mapping import Mapping
+from amfe.mapping import StandardMapping
 
 
 class TestMapping(TestCase):
@@ -37,7 +37,7 @@ class TestMapping(TestCase):
         pass
 
     def test_standard_mapping(self):
-        mapping = Mapping(self.fields, self.nodeids, self.connectivity,
+        mapping = StandardMapping(self.fields, self.nodeids, self.connectivity,
                           self.dofs_by_element)
 
         nodal2global_desired = pd.DataFrame({'ux': {1: 0, 2: 3, 3: 6, 4: 9}, 'uy': {1: 1, 2: 4, 3: 7, 4: 10},
@@ -54,27 +54,29 @@ class TestMapping(TestCase):
         for element_actual, element_desired in zip(mapping.elements2global, elements2global_desired):
             assert_array_equal(element_actual, element_desired)
 
-    def test_get_global_by_local(self):
-        mapping = Mapping(self.fields, self.no_of_nodes, self.connectivity,
-                          self.dofs_by_node, self.dofs_by_element)
-        mapping.nodes2global = np.array([[0, 1, 2],
-                                         [3, 4, 5],
-                                         [60, 70, 80],
-                                         [9, 10, -1]], dtype=int)
-        global_desired = 70
-        self.assertEqual(mapping.get_dof_by_nodeidx(2, 'uy'), global_desired)
-        global_desired = -1
-        self.assertEqual(mapping.get_dof_by_nodeidx(3, 'T'), global_desired)
+    def test_get_dofs_by_nodeids(self):
+        mapping = StandardMapping(self.fields, self.nodeids, self.connectivity,
+                          self.dofs_by_element)
+        nodal2global = pd.DataFrame({'ux': {1: 0, 5: 3, 10: 6, 20: 9}, 'uy': {1: 1, 5: 4, 10: 7, 20: 10},
+                                     'T': {1: 2, 5: 5, 10: 8, 20: -1}})
+        mapping.nodal2global = nodal2global
 
-    def test_get_dofs_by_nodeidxs(self):
-        mapping = Mapping(self.fields, self.no_of_nodes, self.connectivity,
-                          self.dofs_by_node, self.dofs_by_element)
-        mapping.nodes2global = np.array([[0, 1, 2],
-                                         [3, 4, 5],
-                                         [60, 70, 80],
-                                         [9, 10, -1]], dtype=int)
-        nodeidxs = (0, 2, 3)
-        fields = ('ux', 'T')
-        actual = mapping.get_dofs_by_nodeidxs(nodeidxs, fields)
-        desired = np.array([0, 2, 60, 80, 9, -1])
-        assert_array_equal(actual, desired)
+        self.assertEqual(mapping.get_dofs_by_nodeids(5, 'uy'), 4)
+        self.assertEqual(mapping.get_dofs_by_nodeids(20, 'T'), -1)
+
+    def test_setter_and_getter(self):
+        mapping = StandardMapping(self.fields, self.nodeids, self.connectivity,
+                          self.dofs_by_element)
+        nodal2global_desired = pd.DataFrame({'ux': {1: 0, 5: 3, 10: 6, 20: 9}, 'uy': {1: 1, 5: 4, 10: 7, 20: 10},
+                                     'T': {1: 2, 5: 5, 10: 8, 20: -1}})
+        mapping.nodal2global = nodal2global_desired
+        assert_frame_equal(mapping.nodal2global, nodal2global_desired)
+        elements2global_desired = [np.array([10, 1, 2,
+                                             30, 4, 5,
+                                             60, 7, 8], dtype=int),
+                                   np.array([31, 4,
+                                             91, 10,
+                                             61, 7], dtype=int)]
+        mapping.elements2global = elements2global_desired
+        for actual, desired in zip(mapping.elements2global, elements2global_desired):
+            assert_array_equal(actual, desired)

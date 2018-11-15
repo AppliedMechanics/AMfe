@@ -10,3 +10,4 @@ Mapping Module
 
 # -- STANDARD MAPPING --
 from .mapping_base import *
+from .mapping_standard import *
