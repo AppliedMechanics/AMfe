@@ -331,3 +331,152 @@ class Mesh:
             IDs of the corresponding nodes
         """
         return self.nodes_df.iloc[nodeidxs, :].index.values
+
+    def insert_tag(self,tag_name,tag_value_dict=None):
+        """
+        This function add an extra column in the el_df
+        with name equal the  "tag_name" paramenter . By default 
+        a column will be inserted will None value for every elem_id.
+        If a dictionary is provided with tag_value_dict[value] = [list of elements id]
+        then, the el_df will populated with this information.
+
+        Parameters
+        ----------
+        tag_name : str
+            tag name for adding column in el_df 
+        tag_value_dict : dict, default None
+            a dictionary with tag_value_dict[value] = [list of elements id]
+            where value are the associated property to a list a elements.
+
+        Returns
+        -------
+            None
+        """
+
+        self.el_df[tag_name] = None
+
+        if tag_value_dict is not None:
+            self.change_tag_values_by_dict(tag_name,tag_value_dict)
+
+        return None
+
+    def remove_tag(self,tag_name):
+        """
+        This function deletes a columns which has name equal to 
+        'tag_name' parameter
+        
+        Parameters
+        ----------
+        tag_name : str
+            tag name for adding column in el_df 
+
+        Returns
+        -------
+            None
+
+        """
+        self.el_df = self.el_df.drop(columns=tag_name)
+        return None
+
+    def change_tag_values_by_dict(self,tag_name,tag_value_dict):
+        """
+        This function changes the values of the el_df column
+        with name equal to the "tag_name" paramenter . By default 
+        The tag_value_dict parameters has the format:
+        tag_value_dict[value] = [list of elements id]
+        
+
+        Parameters
+        ----------
+        tag_name : str
+            tag name for adding column in el_df 
+        tag_value_dict : dict
+            a dictionary with tag_value_dict[value] = [list of elements id]
+            where value are the associated property to a list a elements.
+
+        Returns
+        -------
+            None
+        """
+        for tag_value, elem_list in tag_value_dict.items():
+            self.el_df.loc[elem_list,(tag_name)] = tag_value
+        
+        return None
+
+    def replace_tag_values(self,tag_name, current_tag_value, new_tag_value):
+        """
+        This function replaces tag values of the el_df column named
+        given by the "tag_name" parameter. The user must provide the current 
+        tag value which will replace by the new tag.
+        
+
+        Parameters
+        ----------
+        tag_name : str
+            tag name for adding column in el_df 
+        current_tag_value : str, int, Boolean, float
+            current tag value in the tag_name column
+        new_tag_value : str, int, Boolean, float
+            new tag value to replace the current tag value
+
+        Returns
+        -------
+            None
+        """
+        
+        
+        self.el_df = self.el_df.replace({tag_name : current_tag_value},new_tag_value)
+        return None
+
+    def get_elementids_by_tag(self,tag_name,tag_value):
+        """
+        This function returns a list with the element ids given a "tag_name" 
+        and the tag value associated with it. 
+        
+
+        Parameters
+        ----------
+        tag_name : str
+            tag name for adding column in el_df 
+        tag_value : str, int, Boolean, float
+            current tag value to select the element ids
+    
+        Returns
+        -------
+            elementids : list
+                indices of the elements in the self.el_df
+
+        Example
+        -------
+            testmesh = amfe.mesh.Mesh()
+            elementids_list = testmesh.get_elementids_by_tag('is_boundary','False')   
+        """
+        
+        return self.el_df[self.el_df[tag_name] == tag_value].index.tolist()
+
+    def get_elementidxs_by_tag(self,tag_name,tag_value):
+        """
+        This function returns a list with the elementidxs in connectivity array
+        given a "tag_name" and the tag value associated with it. 
+        
+
+        Parameters
+        ----------
+        tag_name : str
+            tag name for adding column in el_df 
+        tag_value : str, int, Boolean, float
+            current tag value to select the element idxs
+    
+        Returns
+        -------
+            elementidxs : list
+                indices of the elements in the connectivity array
+
+        Example
+        -------
+            testmesh = amfe.mesh.Mesh()
+            elementidxs_list = testmesh.get_elementidxs_by_tag('is_boundary','False')                
+        """
+        
+        rows = self.get_elementids_by_tag(tag_name,tag_value)
+        return self.el_df.loc[rows,('connectivity_idx')].tolist()

@@ -3,7 +3,7 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
 
-from unittest import TestCase
+from unittest import TestCase, main
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_equal, assert_array_equal
@@ -116,3 +116,55 @@ class TestMesh(TestCase):
         actual = self.testmesh.get_nodeids_by_nodeidxs([3])
         desired = [4]
         assert_equal(actual, desired)
+
+    def test_insert_tag(self):
+        current_col_num = len(self.testmesh.el_df.columns)
+        tag_to_add = 'partition_id'
+        self.testmesh.insert_tag(tag_to_add)
+        new_col_num = len(self.testmesh.el_df.columns)
+        assert_equal(current_col_num + 1, new_col_num)
+        self.assertTrue(tag_to_add in self.testmesh.el_df.columns)
+        
+
+    def test_remove_tag(self):
+        tag_name = self.testmesh.el_df.columns[1]
+        current_col_num = len(self.testmesh.el_df.columns)
+        self.testmesh.remove_tag(tag_name)        
+        new_col_num = len(self.testmesh.el_df.columns)
+        assert_equal(current_col_num, new_col_num + 1)
+        self.assertFalse(tag_name in self.testmesh.el_df.columns)
+    
+    def test_change_tag_values_by_dict(self):        
+        desired_list_1 = [4,5]
+        desired_list_2 = [1,2,3]
+        tag_value_dict = {}
+        tag_value_dict['False'] = desired_list_1
+        tag_value_dict['True'] = desired_list_2
+        self.testmesh.change_tag_values_by_dict('is_boundary',tag_value_dict)
+        actual_list_1 = self.testmesh.el_df[self.testmesh.el_df['is_boundary'] == 'False'].index.tolist()
+        actual_list_2 = self.testmesh.el_df[self.testmesh.el_df['is_boundary'] == 'True'].index.tolist()
+        assert_equal(actual_list_1, desired_list_1)
+        assert_equal(actual_list_2, desired_list_2)
+
+
+    def test_replace_tag_values(self):
+        current_key = 'Tri3' 
+        new_key = 'Tri6'
+        tag_name = 'shape'
+        desired = [1,2]
+        self.testmesh.replace_tag_values(tag_name,current_key,new_key)
+        actual = self.testmesh.el_df[self.testmesh.el_df[tag_name] == new_key].index.tolist()
+        assert_equal(desired, actual)
+        
+    def test_get_elementids_by_tag(self):
+        desired = [1,2]
+        actual = self.testmesh.get_elementids_by_tag('shape','Tri3')
+        assert_equal(desired, actual)
+
+    def test_get_elementidxs_by_tag_value(self):
+        desired = [0,1]
+        actual = self.testmesh.get_elementidxs_by_tag('shape','Tri3')
+        assert_equal(desired, actual)
+
+if __name__ == '__main__':
+    main()
