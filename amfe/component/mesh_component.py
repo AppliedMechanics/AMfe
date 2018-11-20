@@ -50,8 +50,6 @@ class MeshComponent(ComponentBase):
             eleids = self._mesh.get_elementids_by_groups(propertynames)
         elif tag == '_eleids':
             eleids = propertynames
-        elif tag == '_eleidxs':
-            eleids = self._mesh.get_elementids_by_elementidxs(propertynames)
         else:
             eleids = self._mesh.get_elementids_by_tags(propertynames)
         self._assign_material_by_eleids(materialobj, eleids)

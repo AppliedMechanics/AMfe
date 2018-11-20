@@ -44,11 +44,11 @@ class TestMeshComponent(TestCase):
     def tearDown(self):
         pass
 
-    def test_assign_material_by_eleidx(self):
+    def test_assign_material_by_eleids(self):
         component = StructuralComponent(self.testmesh)
-        eleidxes1 = np.array([0, 1], dtype=int)
-        eleidxes2 = np.array([2], dtype=int)
-        component.assign_material(self.mat1, eleidxes1, '_eleidxs')
+        eleids1 = np.array([1, 2], dtype=int)
+        eleids2 = np.array([3], dtype=int)
+        component.assign_material(self.mat1, eleids1, '_eleids')
         ele_obj_actual = component.ele_obj
         # check ele_obj is instance array
         self.assertIsInstance(ele_obj_actual, np.ndarray)
@@ -61,7 +61,7 @@ class TestMeshComponent(TestCase):
         self.assertEqual(ele_obj_actual[1].material.name, 'steel')
 
         # assign second material
-        component.assign_material(self.mat2, eleidxes2, '_eleidxs')
+        component.assign_material(self.mat2, eleids2, '_eleids')
         ele_obj_actual = component.ele_obj
         # check each object
         self.assertIsInstance(ele_obj_actual[0], Tri3)
@@ -73,8 +73,8 @@ class TestMeshComponent(TestCase):
         self.assertEqual(ele_obj_actual[2].material.name, 'rubber')
 
         component = StructuralComponent(self.testmesh)
-        eleidxes3 = np.array([2, 0], dtype=int)
-        component.assign_material(self.mat1, eleidxes3, '_eleidxs')
+        eleids3 = np.array([3, 1], dtype=int)
+        component.assign_material(self.mat1, eleids3, '_eleids')
         ele_obj_actual = component.ele_obj
         # check ele_obj is instance array
         self.assertIsInstance(ele_obj_actual, np.ndarray)

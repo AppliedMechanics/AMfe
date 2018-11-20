@@ -42,7 +42,7 @@ class Mesh:
         Dictionary with key = node-id: value = row id in self.nodes array for getting nodes coordinates X
     connectivity : ndarray
         List of node-rowindices of self.nodes belonging to one element.
-    el_df : pandas.DataFrame
+    _el_df : pandas.DataFrame
         DataFrame with element information
     groups : list
         List of groups containing ids (not row indices!)
@@ -81,16 +81,19 @@ class Mesh:
         else:
             raise ValueError('Mesh dimension must be 2 or 3')
 
-        # -- ELEMENT INFORMATION --
-        # connectivity for volume elements and list of shape information of each element
-        # list of elements containing rowidx of nodes array of connected nodes in each element
-        self.connectivity = np.empty(0, dtype=object)
-
         # Pandas dataframe for elements:
-        self.el_df = pd.DataFrame(columns=('shape', 'is_boundary', 'connectivity_idx'))
+        self._el_df = pd.DataFrame(columns=('shape', 'is_boundary', 'connectivity'))
 
         # group dict with names mapping to element ids or node ids, respectively
         self.groups = dict()
+
+    @property
+    def el_df(self):
+        return self._el_df
+
+    @el_df.setter
+    def el_df(self, df):
+        self._el_df = df
 
     @property
     def no_of_nodes(self):
@@ -103,6 +106,10 @@ class Mesh:
             Number of nodes of the whole mesh.
         """
         return self.nodes_df.shape[0]
+
+    @property
+    def connectivity(self):
+        return self._el_df['connectivity'].values
 
     @property
     def nodes(self):
@@ -118,7 +125,7 @@ class Mesh:
         no_of_elements : int
             Number of volume elements in the mesh
         """
-        return len(self.el_df[self.el_df['is_boundary'] != True].index)
+        return len(self._el_df[self._el_df['is_boundary'] != True].index)
 
     @property
     def no_of_boundary_elements(self):
@@ -130,7 +137,7 @@ class Mesh:
         no_of_elements : int
             Number of boundary elements in the mesh
         """
-        return len(self.el_df[self.el_df['is_boundary'] == True].index)
+        return len(self._el_df[self._el_df['is_boundary'] == True].index)
 
     @property
     def dimension(self):
@@ -175,6 +182,20 @@ class Mesh:
         """
         return self.nodes_df.values.reshape(-1)
 
+    def get_connectivity_by_elementids(self, elementids):
+        """
+
+        Parameters
+        ----------
+        elementids : iterable(int)
+            elementids for which the connectivity shall be returned
+        Returns
+        -------
+        connectivity : list of ndarrays
+            list containing the connectivity of the desired elements
+        """
+        return self._el_df.loc[elementids, 'connectivity'].values
+
     def get_elementidxs_by_groups(self, groups):
         """
         Returns elementindices of the connectivity property belonging to groups
@@ -193,7 +214,7 @@ class Mesh:
             elementids.extend(self.groups[group]['elements'])
         elementids = np.array(elementids)
         elementids = np.unique(elementids)
-        return self.el_df.loc[elementids, 'connectivity_idx'].values
+        return np.array([self._el_df.index.get_loc(elementid) for elementid in elementids], dtype=int)
 
     def get_elementids_by_groups(self, groups):
         """
@@ -228,7 +249,7 @@ class Mesh:
         -------
             indices of the elements in the connectivity array
         """
-        return [self.el_df.loc[self.el_df.index == elementid, 'connectivity_idx'].values[0] for elementid in elementids]
+        return np.array([self._el_df.index.get_loc(elementid) for elementid in elementids], dtype=int)
 
     def get_elementids_by_elementidxs(self, elementidxs):
         """
@@ -243,11 +264,11 @@ class Mesh:
         -------
             ids of the elements
         """
-        return [self.el_df.loc[self.el_df.connectivity_idx == idx].index[0] for idx in elementidxs]
+        return self._el_df.iloc[elementidxs].index.values
 
-    def get_nodeidxs_by_groups(self, groups):
+    def get_nodeids_by_groups(self, groups):
         """
-        Returns nodeindieces of the nodes property belonging to a group
+        Returns nodeids of the nodes property belonging to a group
 
         Parameters
         ----------
@@ -268,7 +289,7 @@ class Mesh:
                 nodeids.extend(self.groups[group]['nodes'])
 
         nodeids_from_nodes = np.array(nodeids, dtype=int)
-        nodeids_from_elements = np.hstack((self.connectivity[idx] for idx in self.el_df.loc[elementids, 'connectivity_idx'].values))
+        nodeids_from_elements = np.hstack(self._el_df.loc[elementids, 'connectivity'].values)
         nodeids_from_elements = np.unique(nodeids_from_elements)
         nodes = np.unique(np.hstack((nodeids_from_nodes, np.array(nodeids_from_elements))))
         nodeiloc = np.array([self.nodes_df.index.get_loc(nodeid) for nodeid in nodes], dtype=int)
@@ -288,7 +309,7 @@ class Mesh:
         ele_shapes : list
             list of element_shapes as string
         """
-        return [self.el_df.loc[idx, 'shape'] for idx in elementids]
+        return [self._el_df.loc[idx, 'shape'] for idx in elementids]
 
     def get_ele_shapes_by_elementidxs(self, elementidxes):
         """
@@ -304,7 +325,7 @@ class Mesh:
         ele_shapes : list
             list of element_shapes as string
         """
-        return [self.el_df.loc[self.el_df.connectivity_idx == idx, 'shape'].values[0] for idx in elementidxes]
+        return self._el_df.iloc[elementidxes]['shape'].values
 
     def get_nodeidxs_by_all(self):
         """

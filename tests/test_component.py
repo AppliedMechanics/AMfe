@@ -32,10 +32,10 @@ class StructuralComponentTest(TestCase):
                 return K_unconstr, f_unsonstr
 
         class DummyMesh:
-            def __init__(self,dimension):
+            def __init__(self, dimension):
                 self.dimension = dimension
                 self.nodes = np.empty((0, dimension), dtype=float)
-                self.connectivity = list()
+                self.connectivity = None
                 self.el_df = pd.DataFrame(columns=['shape', 'is_boundary', 'connectivity_idx'])
 
             @property
@@ -87,7 +87,7 @@ class ComponentCompositeTest(TestCase):
             def __init__(self, dimension):
                 self.dimension = dimension
                 self.nodes = np.empty((0, dimension), dtype=float)
-                self.connectivity = list()
+                self.connectivity = None
                 self.el_df = pd.DataFrame(columns=['shape', 'is_boundary', 'connectivity_idx'])
 
             @property
@@ -181,7 +181,7 @@ class TreeBuilderTest(TestCase):
             def __init__(self, dimension):
                 self.dimension = dimension
                 self.nodes = np.empty((0, dimension), dtype=float)
-                self.connectivity = list()
+                self.connectivity = None
                 self.el_df = pd.DataFrame(columns=['shape', 'is_boundary', 'connectivity_idx'])
 
             @property

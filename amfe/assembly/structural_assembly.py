@@ -54,7 +54,7 @@ class StructuralAssembly(Assembly):
         self.logger = logging.getLogger('amfe.assembly.StructuralAssembly')
         # compute nodes_frequency for stress recovery
         # TODO: move this to another class
-        if connectivity:
+        if connectivity is not None:
             nodes_vec = np.concatenate(connectivity)
             self.elements_on_node = np.bincount(nodes_vec)
         else:

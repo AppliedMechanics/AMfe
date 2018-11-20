@@ -211,9 +211,10 @@ class IOTest(TestCase):
         assert_allclose(mesh.nodes, nodes_desired)
 
         # CHECK CONNECTIVITIES
-        connectivity_desired = [np.array(element[2]) for element in elements_input[:]]
-        for i, conn in enumerate(connectivity_desired):
-            assert_array_equal(mesh.connectivity[i], conn)
+        # connectivity_desired = [np.array(element[2]) for element in elements_input[:]]
+        #elmentids_desired =
+        for element in elements_input:
+            assert_array_equal(mesh.get_connectivity_by_elementids([element[0]])[0], np.array(element[2], dtype=int))
 
         # CHECK DIMENSION
         self.assertEqual(mesh.dimension, 2)
@@ -227,10 +228,10 @@ class IOTest(TestCase):
 
         # CHECK ELESHAPES AND ELEMENTMAPPING IN DATAFRAME
         indices = list(np.arange(1, 11))
-        data = {'connectivity_idx': list(np.arange(10)),
-                'shape': ['Tri6', 'Tri6', 'Tri6', 'Tri6', 'quadratic_line', 'quadratic_line',
+        data = {'shape': ['Tri6', 'Tri6', 'Tri6', 'Tri6', 'quadratic_line', 'quadratic_line',
                           'quadratic_line', 'quadratic_line', 'quadratic_line', 'quadratic_line'],
-                'is_boundary': [False, False, False, False, True, True, True, True, True, True]}
+                'is_boundary': [False, False, False, False, True, True, True, True, True, True],
+                'connectivity': [element[2] for element in elements_input]}
         el_df_desired = pd.DataFrame(data, index=indices)
 
         assert_frame_equal(mesh.el_df, el_df_desired)
@@ -345,7 +346,7 @@ class IOTest(TestCase):
                                   [2.042357741e+00, 5.431194119e-01],
                                   [2.042347658e+00, 1.043456257e+00]], dtype=float)
 
-        meshobj.connectivity = [np.array([13, 15,  9, 14, 12, 11], dtype=int),
+        connectivity = [np.array([13, 15,  9, 14, 12, 11], dtype=int),
                                 np.array([9, 6, 5, 8, 4, 7], dtype=int),
                                 np.array([9,  5, 13,  7,  10, 11], dtype=int),
                                 np.array([1, 5, 6, 2, 4, 3], dtype=int),
@@ -359,7 +360,7 @@ class IOTest(TestCase):
         data = {'shape': ['Tri6', 'Tri6', 'Tri6', 'Tri6', 'quadratic_line',
                           'quadratic_line', 'quadratic_line', 'quadratic_line',
                           'quadratic_line', 'quadratic_line'],
-                'connectivity_idx': list(np.arange(10)),
+                'connectivity': connectivity,
                 'is_boundary': [False, False, False, False, True, True, True, True, True, True]
                 }
         indices = list(np.arange(1, 11))
