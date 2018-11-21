@@ -87,10 +87,10 @@ class ComponentComposite:
             if isinstance(component, ComponentComposite):
                 component.update_tree(leaf_paths)
 
-    def get_mat(self, matrix_type="K", u=None, t=0, path=None):
+    def get_mat(self, matrix_type="K", u=None, t=0):
         """
-        Returns a requested matrix dependend on given path
-
+        Returns a requested matrix
+        
         Parameters
         ----------
         matrix_type : str
@@ -99,27 +99,19 @@ class ComponentComposite:
             primal variable (e.g. displacements)
         t : float
             time
-        path : list
-            requested component
 
         Returns
         -------
         matrix : ndarray or csc_matrix
             the requested matrix
         """
-        if path is None:
-            #mat = self.assembly.assemble(self.component)
-            return None
-        else:
-            if not isinstance(path, list):
-                path = [path]
-            if isinstance(self.components[path[0]], ComponentComposite):
-                mat = self.components[path[0]].get_mat(matrix_type, u, t, path[1:])
-            else:
-                self._test_input(matrix_type, self.components[path[0]].VALID_GET_MAT_NAMES)
-                func = getattr(self.components[path[0]], matrix_type)
-                mat = func(u, t)
-            return mat
+        pass
+        #for comp in self.components:
+            #################################
+            ## ASSEMBLE LOCAL MATRICES!!!
+            #################################
+            #mat = comp.get_mat(matrix_type, u, t)
+
         
     #PRIVATE METHODS
     

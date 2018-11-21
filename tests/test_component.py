@@ -60,6 +60,10 @@ class StructuralComponentTest(TestCase):
     def test_k(self):
         desiredK=np.array([[10, -5], [-5, 10]])
         assert_array_equal(self.structComp[0].K(), desiredK)
+        
+    def test_get_mat(self):
+        desiredK = np.array([[10, -5], [-5, 10]])
+        assert_array_equal(self.structComp[0].get_mat('K'), desiredK)
 
 
 class ComponentCompositeTest(TestCase):
@@ -151,9 +155,6 @@ class ComponentCompositeTest(TestCase):
 
         self.assertEqual(self.CompComposite.no_of_components, prev_N_components-1)
         self.assertTrue(TestComponent2 not in self.CompComposite.components)
-
-    def test_get_mat(self):
-        assert_array_equal(self.CompComposite.get_mat('K', None, 0, 0), self.CompComposite.components[0].K(None, 0))
 
 
 class TreeBuilderTest(TestCase):
