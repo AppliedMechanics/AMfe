@@ -108,13 +108,14 @@ class ComponentComposite(ComponentBase):
         matrix : ndarray or csc_matrix
             the requested matrix
         """
-        if path is None:
+        if path is None or path is []:
             #mat = self.assembly.assemble(self.component)
             return None
         else:
             if not isinstance(path, Iterable):
                 path = [path]
-            if isinstance(self.components[path[0]], ComponentComposite):
+
+            if len(path) > 1:
                 mat = self.components[path[0]].get_mat(matrix_type, u, t, path[1:])
             else:
                 mat = self.components[path[0]].get_mat(matrix_type, u, t)
