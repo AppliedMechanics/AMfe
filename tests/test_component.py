@@ -60,6 +60,10 @@ class StructuralComponentTest(TestCase):
     def test_k(self):
         desiredK=np.array([[10, -5], [-5, 10]])
         assert_array_equal(self.structComp[0].K(), desiredK)
+        
+    def test_get_mat(self):
+        desiredK = np.array([[10, -5], [-5, 10]])
+        assert_array_equal(self.structComp[0].get_mat('K'), desiredK)
 
 
 class ComponentCompositeTest(TestCase):

@@ -6,9 +6,10 @@
 #
 
 from collections.abc import Iterable
+from .component_base import ComponentBase
 
 
-class ComponentComposite:
+class ComponentComposite(ComponentBase):
     """
     Class which handles child-components and child-ComponentComposites and acts as an interface to foreign clients
     """
@@ -111,22 +112,10 @@ class ComponentComposite:
             #mat = self.assembly.assemble(self.component)
             return None
         else:
-            if not isinstance(path, list):
+            if not isinstance(path, Iterable):
                 path = [path]
             if isinstance(self.components[path[0]], ComponentComposite):
                 mat = self.components[path[0]].get_mat(matrix_type, u, t, path[1:])
             else:
-                self._test_input(matrix_type, self.components[path[0]].VALID_GET_MAT_NAMES)
-                func = getattr(self.components[path[0]], matrix_type)
-                mat = func(u, t)
+                mat = self.components[path[0]].get_mat(matrix_type, u, t)
             return mat
-        
-    #PRIVATE METHODS
-    
-    def _test_input(self, input_to_test, valid_input):
-        try:
-            return valid_input.index(input_to_test)
-        except AttributeError as error:
-            print('{} not a valid input. Please try one of the following instead: '.format(input_to_test))
-            print(valid_input)
-
