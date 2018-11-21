@@ -50,8 +50,7 @@ class AmfeMeshObjMeshReader(MeshReader):
         # build elements
         for elementid, element in self._meshobj.el_df.iterrows():
             etype = element['shape']
-            idx = element['connectivity_idx']
-            connectivity = list(self._meshobj.connectivity[idx])
+            connectivity = list(element['connectivity'])
             self._builder.build_element(elementid, etype, connectivity)
         # build groups
         for group in self._meshobj.groups:
