@@ -21,8 +21,6 @@ class ComponentBase:
             primal variable (e.g. displacements)
         t : float
             time
-        path : list
-            requested component
 
         Returns
         -------
