@@ -112,7 +112,6 @@ class ComponentComposite:
             #################################
             #mat = comp.get_mat(matrix_type, u, t)
 
-        return mat
         
     #PRIVATE METHODS
     
