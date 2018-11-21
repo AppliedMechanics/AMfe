@@ -289,7 +289,7 @@ class Mesh:
                 nodeids.extend(self.groups[group]['nodes'])
 
         nodeids_from_nodes = np.array(nodeids, dtype=int)
-        nodeids_from_elements = np.hstack(self._el_df.loc[elementids, 'connectivity'].values)
+        nodeids_from_elements = np.hstack(self.get_connectivity_by_elementids(elementids))
         nodeids_from_elements = np.unique(nodeids_from_elements)
         nodes = np.unique(np.hstack((nodeids_from_nodes, np.array(nodeids_from_elements))))
         nodeiloc = np.array([self.nodes_df.index.get_loc(nodeid) for nodeid in nodes], dtype=int)
