@@ -156,9 +156,6 @@ class ComponentCompositeTest(TestCase):
         self.assertEqual(self.CompComposite.no_of_components, prev_N_components-1)
         self.assertTrue(TestComponent2 not in self.CompComposite.components)
 
-    def test_get_mat(self):
-        assert_array_equal(self.CompComposite.get_mat('K', None, 0, 0), self.CompComposite.components[0].K(None, 0))
-
 
 class TreeBuilderTest(TestCase):
     def setUp(self):

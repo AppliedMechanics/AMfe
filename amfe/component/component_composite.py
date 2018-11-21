@@ -105,11 +105,12 @@ class ComponentComposite:
         matrix : ndarray or csc_matrix
             the requested matrix
         """
-        for comp in self.components:
+        pass
+        #for comp in self.components:
             #################################
             ## ASSEMBLE LOCAL MATRICES!!!
             #################################
-            mat = comp.get_mat(matrix_type, u, t)
+            #mat = comp.get_mat(matrix_type, u, t)
 
         return mat
         
