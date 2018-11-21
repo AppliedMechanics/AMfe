@@ -42,7 +42,7 @@ class Prism6(Element):
         return
 
     def dofs(self):
-        return ((('ux', 'uy', 'uz'), )*6 , ())
+        return ()
 
     def _compute_tensors(self, X, u, t):
         raise NotImplementedError('The Prism Element is not implemented')

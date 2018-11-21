@@ -85,8 +85,30 @@ class Hexa8(Element):
                                               [d, e, e, b, e, b, b, c]])
 
     def dofs(self):
-        return (('ux', 'uy', 'uz'), ('ux', 'uy', 'uz'), ('ux', 'uy', 'uz'), ('ux', 'uy', 'uz'),
-                ('ux', 'uy', 'uz'), ('ux', 'uy', 'uz'), ('ux', 'uy', 'uz'), ('ux', 'uy', 'uz'), ())
+        return (('N', 0, 'ux'),
+                ('N', 0, 'uy'),
+                ('N', 0, 'uz'),
+                ('N', 1, 'ux'),
+                ('N', 1, 'uy'),
+                ('N', 1, 'uz'),
+                ('N', 2, 'ux'),
+                ('N', 2, 'uy'),
+                ('N', 2, 'uz'),
+                ('N', 3, 'ux'),
+                ('N', 3, 'uy'),
+                ('N', 3, 'uz'),
+                ('N', 4, 'ux'),
+                ('N', 4, 'uy'),
+                ('N', 4, 'uz'),
+                ('N', 5, 'ux'),
+                ('N', 5, 'uy'),
+                ('N', 5, 'uz'),
+                ('N', 6, 'ux'),
+                ('N', 6, 'uy'),
+                ('N', 6, 'uz'),
+                ('N', 7, 'ux'),
+                ('N', 7, 'uy'),
+                ('N', 7, 'uz'))
 
     def _compute_tensors(self, X, u, t):
         X_mat = X.reshape(8, 3)
