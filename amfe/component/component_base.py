@@ -9,7 +9,7 @@ class ComponentBase:
     def __init__(self, *args, **kwargs):
         pass
     
-    def get_mat(self, matrix_type="K", u=None, t=0, path=None):
+    def get_mat(self, matrix_type="K", u=None, t=0):
         """
         Returns a requested matrix dependend on given path
 

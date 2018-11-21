@@ -6,10 +6,9 @@
 #
 
 from collections.abc import Iterable
-from .component_base import ComponentBase
 
 
-class ComponentComposite(ComponentBase):
+class ComponentComposite:
     """
     Class which handles child-components and child-ComponentComposites and acts as an interface to foreign clients
     """
@@ -88,10 +87,10 @@ class ComponentComposite(ComponentBase):
             if isinstance(component, ComponentComposite):
                 component.update_tree(leaf_paths)
 
-    def get_mat(self, matrix_type="K", u=None, t=0, path=None):
+    def get_mat(self, matrix_type="K", u=None, t=0):
         """
-        Returns a requested matrix dependend on given path
-
+        Returns a requested matrix
+        
         Parameters
         ----------
         matrix_type : str
@@ -100,23 +99,26 @@ class ComponentComposite(ComponentBase):
             primal variable (e.g. displacements)
         t : float
             time
-        path : list
-            requested component
 
         Returns
         -------
         matrix : ndarray or csc_matrix
             the requested matrix
         """
-        if path is None or path is []:
-            #mat = self.assembly.assemble(self.component)
-            return None
-        else:
-            if not isinstance(path, Iterable):
-                path = [path]
+        for comp in self.components:
+            #################################
+            ## ASSEMBLE LOCAL MATRICES!!!
+            #################################
+            mat = comp.get_mat(matrix_type, u, t)
 
-            if len(path) > 1:
-                mat = self.components[path[0]].get_mat(matrix_type, u, t, path[1:])
-            else:
-                mat = self.components[path[0]].get_mat(matrix_type, u, t)
-            return mat
+        return mat
+        
+    #PRIVATE METHODS
+    
+    def _test_input(self, input_to_test, valid_input):
+        try:
+            return valid_input.index(input_to_test)
+        except AttributeError as error:
+            print('{} not a valid input. Please try one of the following instead: '.format(input_to_test))
+            print(valid_input)
+
