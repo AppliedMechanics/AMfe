@@ -37,15 +37,11 @@ class Quad8Boundary(BoundaryElement):
                     (-g,  g,  w*w), ( 0, -g, w0*w ), ( g,  0,  w*w0),
                     ( 0,  g, w0*w), (-g,  0,  w*w0), ( 0,  0, w0*w0))
 
-    def __init__(self, val, direct, time_func=None, shadow_area=False):
-        super().__init__(val=val, direct=direct, time_func=time_func,
-                         shadow_area=shadow_area, ndof=24)
+    def __init__(self):
+        super().__init__()
         return
 
-    def dofs(self):
-        return ((('ux', 'uy', 'uz'), )*8 , ())
-
-    def _compute_tensors(self, X, u, t):
+    def f_mat(self, X, u):
         """
         Compute the full pressure contribution by performing gauss integration.
         """
@@ -77,5 +73,4 @@ class Quad8Boundary(BoundaryElement):
             dx_dxi = x_vec.T @ dN_dxi
             n = np.cross(dx_dxi[:,1], dx_dxi[:,0])
             f_mat += np.outer(N, n) * w
-        # no minus sign as force will be on the right hand side of eqn.
-        self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
+        return f_mat

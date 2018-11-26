@@ -31,20 +31,14 @@ class Tri3Boundary(BoundaryElement):
     Class for application of Neumann Boundary Conditions.
     """
 
-    def __init__(self, val, direct, time_func=None, shadow_area=False):
-        super().__init__(val=val, direct=direct, time_func=time_func,
-                         shadow_area=shadow_area, ndof=9)
+    def __init__(self):
+        super().__init__()
 
-    def dofs(self):
-        return ((('ux', 'uy', 'uz'), )*3 , ())
-
-    def _compute_tensors(self, X, u, t):
+    def f_mat(self, X, u):
         x_vec = (X+u).reshape((-1, 3)).T
         v1 = x_vec[:,2] - x_vec[:,0]
         v2 = x_vec[:,1] - x_vec[:,0]
         n = np.cross(v1, v2)/2
         N = np.array([1/3, 1/3, 1/3])
         f_mat = np.outer(N, n)
-        # positive sign as it is external force on the right hand side of the
-        # function
-        self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
+        return f_mat

@@ -31,24 +31,18 @@ class LineQuadraticBoundary(BoundaryElement):
     Quadratic line boundary element for 2D problems.
     """
 
-    #rot_mat = np.array([[ 0, -1],
+    # rot_mat = np.array([[ 0, -1],
     #                    [ 1,  0]])
     # same as above:
-    rot_mat = np.array([[0, 1],[-1, 0]])
-
+    rot_mat = np.array([[0, 1], [-1, 0]])
     N = np.array([1, 1, 4])/6
 
-    def __init__(self, val, direct, time_func=None, shadow_area=False):
+    def __init__(self):
+        super().__init__()
 
-        super().__init__(val=val, direct=direct, time_func=time_func,
-                         shadow_area=shadow_area, ndof=6)
-
-    def dofs(self):
-        return ((('ux', 'uy'), )*3 , ())
-
-    def _compute_tensors(self, X, u, t):
+    def f_mat(self, X, u):
         x_vec = (X+u).reshape((-1, 2)).T
-        v = x_vec[:,1] - x_vec[:,0]
+        v = x_vec[:, 1] - x_vec[:, 0]
         n = self.rot_mat @ v
         f_mat = np.outer(self.N, n)
-        self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
+        return f_mat

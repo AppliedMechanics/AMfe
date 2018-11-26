@@ -147,31 +147,29 @@ class TestMeshComponent(TestCase):
         self.assertEqual(ele_obj_df['ele_obj'].loc[3].material.name, 'steel')
         # check if mapping is proceeded
 
-    def test_assign_neumann_condition_by_eleidxs(self):
+    def test_assign_neumann_condition_by_eleids(self):
         component = StructuralComponent(self.testmesh)
         eleids = [4, 5]
-        eleidxs = self.testmesh.get_elementidxs_by_elementids(eleids)
         time_func = lambda t: 3.0*t
-        component.assign_neumann_condition(time_func, (1, 0), eleidxs, tag='_eleidxs', shadow_area=False,
-                                           name='TestCondition')
+        direction = (1, 0)
+        condition = component._neumann.create_fixed_direction_neumann(direction, time_func)
+        component.assign_neumann_condition(condition, tag='_eleids', property_names=eleids, name='TestCondition')
         # It must be set:
         #   - neumann_df
         #   - neumann_obj_df
-        neumann_obj_df =component._neumann_obj_df
-        neumann_obj_array = neumann_obj_df[['ele_obj', 'connectivity_idx']].values
-        self.assertIsInstance(neumann_obj_array[0, 0], LineLinearBoundary)
-        self.assertEqual(neumann_obj_array[0, 1], 3)
-        self.assertIsInstance(neumann_obj_array[1, 0], LineLinearBoundary)
-        self.assertEqual(neumann_obj_array[1, 1], 4)
+        neumann_obj_df =component._neumann._neumann_obj_df
+        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_elementid']].values
+        self.assertIsInstance(neumann_obj_array[0, 0]._boundary_element, LineLinearBoundary)
+        self.assertEqual(neumann_obj_array[0, 1], 4)
+        self.assertIsInstance(neumann_obj_array[1, 0]._boundary_element, LineLinearBoundary)
+        self.assertEqual(neumann_obj_array[1, 1], 5)
         self.assertEqual(neumann_obj_array.shape, (2, 2))
 
-        neumann_df_actual = component._neumann_df
+        neumann_df_actual = component._neumann._neumann_df
         df_dict = {'name': {0: 'TestCondition'},
-                   'tag': {0: '_eleidxs'},
-                   'property_names': {0: np.array([3, 4], dtype=int)},
-                   'function': {0: time_func},
-                   'direction': {0: (1, 0)},
-                   'shadow_area': {0: np.array(False, dtype=bool)}}
+                   'neumann_obj': {0: condition},
+                   'property_names': {0: np.array([4, 5], dtype=int)},
+                   'tag': {0: '_eleids'}}
         neumann_df_desired = pd.DataFrame.from_dict(df_dict)
         assert_frame_equal(neumann_df_actual, neumann_df_desired, check_like=True)
 
@@ -179,25 +177,24 @@ class TestMeshComponent(TestCase):
         component = StructuralComponent(self.testmesh)
         group = 'left_boundary'
         time_func = lambda t: 3.0*t
-        component.assign_neumann_condition(time_func, (1, 0), [group], tag='_groups', shadow_area=False,
-                                           name='TestCondition')
+        direction = (1, 0)
+        condition = component._neumann.create_fixed_direction_neumann(direction, time_func)
+        component.assign_neumann_condition(condition, [group], name='TestCondition')
         # It must be set:
         #   - neumann_df
         #   - neumann_obj_df
-        neumann_obj_df = component._neumann_obj_df
-        neumann_obj_array = neumann_obj_df[['ele_obj', 'connectivity_idx']].values
-        self.assertIsInstance(neumann_obj_array[0, 0], LineLinearBoundary)
-        self.assertEqual(neumann_obj_array[0, 1], 3)
+        neumann_obj_df = component._neumann._neumann_obj_df
+        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_elementid']].values
+        self.assertIsInstance(neumann_obj_array[0, 0]._boundary_element, LineLinearBoundary)
+        self.assertEqual(neumann_obj_array[0, 1], 4)
         self.assertEqual(neumann_obj_array.shape, (1, 2))
 
-        neumann_df_actual = component._neumann_df
+        neumann_df_actual = component._neumann._neumann_df
         df_dict = {
             'name': {0: 'TestCondition'},
             'tag': {0: '_groups'},
             'property_names': {0: np.array(['left_boundary'])},
-            'function': {0: time_func},
-            'direction': {0: (1, 0)},
-            'shadow_area': {0: np.array(False, dtype=bool)}
+            'neumann_obj': {0: condition}
         }
         neumann_df_desired = pd.DataFrame.from_dict(df_dict)
         assert_frame_equal(neumann_df_actual, neumann_df_desired, check_like=True)

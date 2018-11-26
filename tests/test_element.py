@@ -262,97 +262,63 @@ class MaterialTest2dPlaneStress(unittest.TestCase):
 
 
 #%%
-def test_tri3_pressure():
-    X = np.array([0,0,0,1,0,0,0,1,0])
-    u = np.zeros_like(X)
-    my_press_ele = Tri3Boundary(1, direct='normal')
-    K, f = my_press_ele.k_and_f_int(X, u)
-    np.testing.assert_array_equal( K, np.zeros((9,9)))
-    np.testing.assert_allclose(np.sum(f), -1/2)
+class BoundaryElementTest(unittest.TestCase):
+    def setUp(self):
+        pass
 
-def test_line_pressure():
-    X = np.array([0,0,1,1])
-    u = X
-    my_press_ele = LineLinearBoundary(-1, 'normal')
-    K, f = my_press_ele.k_and_f_int(X, u)
-    np.testing.assert_array_equal( K, np.zeros((4,4)))
-    np.testing.assert_allclose(f, np.array([-1,1,-1,1]))
+    def tearDown(self):
+        pass
 
-def test_line_pressure2():
-    X = np.array([0,0,1,1])
-    u = X
-    my_press_ele = LineLinearBoundary(1, direct=np.array([-1,0]))
-    K, f = my_press_ele.k_and_f_int(X, u)
-    np.testing.assert_array_equal(K, np.zeros((4,4)))
-    np.testing.assert_allclose(f, np.sqrt(2)*np.array([-1,0,-1,0]))
+    def test_tri3_pressure(self):
+        X = np.array([0, 0, 0, 1, 0, 0, 0, 1, 0], dtype=float)
+        u = np.zeros_like(X)
+        f_mat_desired = np.array([[0, 0, -1/6], [0, 0, -1/6], [0, 0, -1/6]])
+        my_press_ele = Tri3Boundary()
+        f_mat = my_press_ele.f_mat(X, u)
+        np.testing.assert_allclose(f_mat, f_mat_desired, rtol=1E-6, atol=1E-7)
 
-def test_tri6_pressure():
-    '''
-    Test, if the Tri3 pressure element reveals the same behavior as a mass
-    element, which is accelerated in one direction only.
-    '''
-    my_material = KirchhoffMaterial(rho=1)
-    my_tri6 = Tri6(my_material)
-    X = np.array([0,0,2,0,0,2,1,0,1,1,0,1.])
-    u = np.zeros(12)
-    X += sp.rand(12)*0.2
-    M = my_tri6.m_int(X, u)
-    t = np.array([ 0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.,  0.,  1.])
-    f_2d = M @ t
-    f_1d = f_2d[1::2]
-    my_boundary = Tri6Boundary(val=1., direct='normal')
-    X_3D = np.zeros(3*6)
-    X_3D[0::3] = X[0::2]
-    X_3D[1::3] = X[1::2]
-    u_3D = np.zeros(3*6)
-    K, f = my_boundary.k_and_f_int(X_3D, u_3D)
-    np.testing.assert_equal(K, np.zeros((18,18)))
-    # as the skin element produces a force acting on the right hand side,
-    # f has a negative sign.
-    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
+    def test_line_pressure(self):
+        X = np.array([0, 0, 1, 1], dtype=float)
+        u = X
+        f_mat_desired = np.array([[1, -1], [1, -1]], dtype=float)
+        my_press_ele = LineLinearBoundary()
+        f_mat = my_press_ele.f_mat(X, u)
+        np.testing.assert_allclose(f_mat, f_mat_desired, rtol=1E-6, atol=1E-7)
 
-def test_quad4_pressure():
-    my_material = KirchhoffMaterial(rho=1)
-    my_quad4 = Quad4(my_material)
-    X = X_quad4
-    u = np.zeros(8)
-    X += sp.rand(8)*0.2
-    M = my_quad4.m_int(X, u)
-    t = np.array([ 0.,  1.,  0.,  1.,  0.,  1.,  0.,  1., ])
-    f_2d = M @ t
-    f_1d = f_2d[1::2]
-    my_boundary = Quad4Boundary(val=1., direct='normal')
-    X_3D = np.zeros(3*4)
-    X_3D[0::3] = X[0::2]
-    X_3D[1::3] = X[1::2]
-    u_3D = np.zeros(3*4)
-    K, f = my_boundary.k_and_f_int(X_3D, u_3D)
-    np.testing.assert_equal(K, np.zeros((12,12)))
-    # as the skin element produces a force acting on the right hand side,
-    # f has a negative sign.
-    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
+    def test_tri6_pressure(self):
+        X = np.array([0, 0, 2, 0, 0, 2, 1, 0, 1, 1, 0, 1.])
+        f_mat_desired = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0],
+                                  [0., 0., -8/3], [0., 0., -8/3], [0., 0., -8/3]])
+        X_3D = np.zeros(3*6)
+        X_3D[0::3] = X[0::2]
+        X_3D[1::3] = X[1::2]
+        u_3D = X_3D
+        my_boundary = Tri6Boundary()
+        f_mat = my_boundary.f_mat(X_3D, u_3D)
+        np.testing.assert_allclose(f_mat, f_mat_desired, rtol=1E-6, atol=1E-7)
 
-def test_quad8_pressure():
-    my_material = KirchhoffMaterial(rho=1)
-    my_quad8 = Quad8(my_material)
-    X = X_quad8
-    u = np.zeros(16)
-    X += sp.rand(16)*0.2
-    M = my_quad8.m_int(X, u)
-    t = np.zeros(16)
-    t[1::2] = 1
-    f_2d = M @ t
-    f_1d = f_2d[1::2]
-    my_boundary = Quad8Boundary(val=1., direct='normal')
-    X_3D = np.zeros(3*8)
-    X_3D[0::3] = X[0::2]
-    X_3D[1::3] = X[1::2]
-    u_3D = np.zeros(3*8)
-    K, f = my_boundary.k_and_f_int(X_3D, u_3D)
-    np.testing.assert_equal(K, np.zeros((24,24)))
-    # as the skin element produces a force acting on the right hand side,
-    # f has a negative sign.
-    np.testing.assert_allclose(f_1d, -f[2::3], rtol=1E-6, atol=1E-7)
+    def test_quad4_pressure(self):
+        X = X_quad4
+        f_mat_desired = np.array([[0, 0, -1], [0, 0, -1], [0, 0, -1], [0, 0, -1]])
+        X_3D = np.zeros(3*4)
+        X_3D[0::3] = X[0::2]
+        X_3D[1::3] = X[1::2]  # X_3D is a unit quad 4 element
+        u_3D = X_3D  # this displacement vector leads to an area of 4 units
+        my_boundary = Quad4Boundary()
+        f_mat = my_boundary.f_mat(X_3D, u_3D)
+        np.testing.assert_allclose(f_mat, f_mat_desired, rtol=1E-6, atol=1E-7)
+
+    def test_quad8_pressure(self):
+        X = X_quad8
+        f_mat_desired = np.array([[0, 0, 1/3], [0, 0, 1/3], [0, 0, 1/3], [0, 0, 1/3],
+                                  [0, 0, -4/3], [0, 0, -4/3], [0, 0, -4/3], [0, 0, -4/3]])
+        X_3D = np.zeros(3*8)
+        X_3D[0::3] = X[0::2]
+        X_3D[1::3] = X[1::2]  # This is a unit Quad8
+        u_3D = X_3D  # This displacement vector leads to an area of 4 units
+        my_boundary = Quad8Boundary()
+        f_mat = my_boundary.f_mat(X_3D, u_3D)
+        np.testing.assert_allclose(f_mat, f_mat_desired, rtol=1E-6, atol=1E-7)
 
 #%%
 

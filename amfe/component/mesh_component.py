@@ -13,6 +13,7 @@ from amfe.mesh import Mesh
 from amfe.mapping import StandardMapping
 from .component_base import ComponentBase
 from amfe.component.constants import ELEPROTOTYPEHELPERLIST
+from amfe.neumann.neumann_manager import *
 
 __all__ = ['MeshComponent']
 
@@ -20,7 +21,6 @@ __all__ = ['MeshComponent']
 class MeshComponent(ComponentBase):
     # The following class attributes must be overwritten by subclasses
     ELEMENTPROTOTYPES = dict(((element[0], None) for element in ELEPROTOTYPEHELPERLIST))
-    BOUNDARYELEMENTFACTORY = dict(((element[0], None) for element in ELEPROTOTYPEHELPERLIST))
 
     def __init__(self, mesh=Mesh()):
         super().__init__()
@@ -31,16 +31,7 @@ class MeshComponent(ComponentBase):
         indices = mesh.el_df[mesh.el_df['is_boundary'] != True].index
         self._ele_obj_df = pd.DataFrame([None]*no_of_volume_elements, index=indices, columns=['ele_obj'])
 
-        # Neumann Properties
-        # ------------------
-        # Dataframe for reconstructing applied conditions
-        self._neumann_df = pd.DataFrame(columns=['name', 'tag', 'property_names', 'function', 'direction',
-                                                 'shadow_area'])
-        # Dataframe containing element_objects and their position in connectivity array and their
-        # foreign key to the _neumann_df they belong to
-        self._neumann_obj_df = pd.DataFrame(columns=['ele_obj', 'connectivity_idx', 'fk_neumann_df'])
-        self._neumann_obj_df['fk_neumann_df'] = self._neumann_obj_df['fk_neumann_df'].astype(int)
-        self._neumann_obj_df['connectivity_idx'] = self._neumann_obj_df['connectivity_idx'].astype(int)
+        self._neumann = NeumannManager()
 
     # -- PROPERTIES --------------------------------------------------------------------------------------
     @property
@@ -66,46 +57,18 @@ class MeshComponent(ComponentBase):
         self._update_mapping()
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
-    def assign_neumann_condition(self, val, direction, property_names, tag='_groups', shadow_area=False,
-                                 name='Unknown'):
+    def assign_neumann_condition(self, condition, property_names, tag='_groups', name='Unknown'):
         if tag == '_groups':
-            eleidxes = self._mesh.get_elementidxs_by_groups(property_names)
-        elif tag == '_eleidxs':
-            eleidxes = property_names
+            eleids = self._mesh.get_elementids_by_groups(property_names)
+        elif tag == '_eleids':
+            eleids = property_names
         else:
-            eleidxes = self._mesh.get_elementidxs_by_tags(property_names)
-        dfindex = self._neumann_df.index.max() + 1
-        if pd.isnull(dfindex):
-            dfindex = 0
-        self._add_neumann_condition_by_eleidxs(val, direction, eleidxes, shadow_area, dfindex)
-        df_data = {'name': name, 'tag': tag, 'property_names': [property_names], 'function': val,
-                   'direction': [direction], 'shadow_area': shadow_area}
-        self._neumann_df = self._neumann_df.append(pd.DataFrame(df_data, index=[dfindex]), sort=True)
-
-    def _add_neumann_condition_by_eleidxs(self, val, direction, eleidxes, shadow_area, index):
-        #
-        # extends _neumann_obj_df by new b.c. with Neumann_elements
-        #
-
-        # Create prototypes for each boundary element shape
-        neumann_ele_prototypes = deepcopy(self.BOUNDARYELEMENTFACTORY)
-        for element_shape in neumann_ele_prototypes:
-            # create prototype for current element_shape
-            neumann_ele_prototypes[element_shape] = neumann_ele_prototypes[element_shape](val=1.0,
-                                                                                          time_func=val,
-                                                                                          direct=direction,
-                                                                                          shadow_area=shadow_area)
+            eleids = self._mesh.get_elementids_by_tags(property_names)
+            
         # get ele_shapes of the elements belonging to the passed eleidxes
-        ele_shapes = self._mesh.get_ele_shapes_by_elementidxs(eleidxes)
-        # create pointers to eleobjects
-        neumann_ele_objects = np.array([neumann_ele_prototypes[ele_shape] for ele_shape in ele_shapes],
-                                       dtype=object)
-        # add tuple (eleidxes, ele_object) to neumann_ele_obj
-        df = pd.DataFrame(
-            {'ele_obj': neumann_ele_objects, 'connectivity_idx': eleidxes,
-             'fk_neumann_df': np.ones(len(neumann_ele_objects), dtype=int) * index}
-        )
-        self._neumann_obj_df = self._neumann_obj_df.append(df)
+        ele_shapes = self._mesh.get_ele_shapes_by_elementids(eleids)
+            
+        self._neumann.assign_neumann_by_eleids(condition, eleids, ele_shapes, property_names, tag, name)
 
     # -- ASSIGN CONSTRAINTS METHODS ------------------------------------------------------------------------
 

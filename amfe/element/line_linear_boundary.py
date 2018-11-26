@@ -32,22 +32,18 @@ class LineLinearBoundary(BoundaryElement):
     """
     # Johannes Rutzmoser: rot_mat is a rotationmatrix, that turns +90deg
     # rot_mat = np.array([[0,-1], [1, 0]])
-    # Christian Meyer: more intuitiv: boundary in math. positive direction equals outer vector => rotate -90deg:
+    # Christian Meyer: more intuitive: boundary in math. positive direction equals outer vector => rotate -90deg:
     rot_mat = np.array([[0, 1], [-1, 0]])
     # weighting for the two nodes
     N = np.array([1/2, 1/2])
 
-    def __init__(self, val, direct, time_func=None, shadow_area=False, ):
-        super().__init__(val=val, direct=direct, time_func=time_func,
-                         shadow_area=shadow_area, ndof=4)
+    def __init__(self):
+        super().__init__()
 
-    def dofs(self):
-        return ((('ux', 'uy'), )*2 , ())
-
-    def _compute_tensors(self, X, u, t):
+    def f_mat(self, X, u):
         x_vec = (X+u).reshape((-1, 2)).T
         # Connection line between two nodes of the element
-        v = x_vec[:,1] - x_vec[:,0]
+        v = x_vec[:, 1] - x_vec[:, 0]
         # Generate the orthogonal vector to connection line by rotation 90deg
         n = self.rot_mat @ v
         # Remember: n must not be normalized because forces are defined as force-values per area of forces per line
@@ -56,4 +52,4 @@ class LineLinearBoundary(BoundaryElement):
         # f_mat: Generate the weights or in other words participations of each dof to generate force
         # Dimension of f_mat: (number of nodes, number of dofs per node)
         f_mat = np.outer(self.N, n)
-        self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
+        return f_mat

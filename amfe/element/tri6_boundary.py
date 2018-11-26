@@ -41,14 +41,10 @@ class Tri6Boundary(BoundaryElement):
                     (1/6, 2/3, 1/6, 1/3),
                     (2/3, 1/6, 1/6, 1/3))
 
-    def __init__(self, val, direct, time_func=None, shadow_area=False):
-        super().__init__(val=val, direct=direct, time_func=time_func,
-                         shadow_area=shadow_area, ndof=18)
+    def __init__(self):
+        super().__init__()
 
-    def dofs(self):
-        return ((('ux', 'uy', 'uz'), )*6 , ())
-
-    def _compute_tensors(self, X, u, t):
+    def f_mat(self, X, u):
         """
         Compute the full pressure contribution by performing gauss integration.
 
@@ -74,5 +70,4 @@ class Tri6Boundary(BoundaryElement):
             v2 = dx_dL[:,1] - dx_dL[:,0]
             n = np.cross(v1, v2)
             f_mat += np.outer(N, n) / 2 * w
-        # no minus sign as force will be on the right hand side of eqn.
-        self.f = self.f_proj(f_mat) * self.val * self.time_func(t)
+        return f_mat

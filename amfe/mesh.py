@@ -327,6 +327,22 @@ class Mesh:
         """
         return self._el_df.iloc[elementidxes]['shape'].values
 
+    def get_ele_shapes_by_elementids(self, elementids):
+        """
+        Returns list of element_shapes for elementidxes
+
+        Parameters
+        ----------
+        elementids : list
+            contains indices of the desired elements in connectivity array
+
+        Returns
+        -------
+        ele_shapes : list
+            list of element_shapes as string
+        """
+        return self._el_df.loc[elementids]['shape'].values
+
     def get_nodeidxs_by_all(self):
         """
         Returns all nodeidxs
