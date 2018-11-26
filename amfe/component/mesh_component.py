@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from amfe.mesh import Mesh
+from amfe.mapping import StandardMapping
 from .component_base import ComponentBase
 from amfe.component.constants import ELEPROTOTYPEHELPERLIST
 
@@ -24,6 +25,7 @@ class MeshComponent(ComponentBase):
     def __init__(self, mesh=Mesh()):
         super().__init__()
         self._mesh = mesh
+        self._mapping = StandardMapping()
         no_of_volume_elements = mesh.no_of_elements
         indices = mesh.el_df[mesh.el_df['is_boundary'] != True].index
         self._ele_obj_df = pd.DataFrame([None]*no_of_volume_elements, index=indices, columns=['ele_obj'])

@@ -13,34 +13,11 @@ __all__ = ['MappingBase']
 
 
 class MappingBase(ABC):
-    def __init__(self, fields, nodeids, connectivity, dofs_by_element, **kwargs):
-        """
-
-        Parameters
-        ----------
-        fields : tuple
-            tuple with strings that describe the field that shall be mapped, e.g. ('ux', 'uy', 'uz', 'T')
-            for a 3D displacement and Temperature field
-        nodeids : array
-            array containing the nodeids that shall be mapped
-        connectivity : ndarray
-            iterable containing nodeids of the connectivity in each element
-        dofs_by_element : iterable
-            iterable containing the dofs as strings per element
-            e.g. [(('N', 0, 'ux'), ('N', 0, 'uy'), ('E', 0, 'T'), ('N', 1, 'ux')), ( ..same for 2nd element ), ... )
-        kwargs : dict
-            keyword value list for future implementations
-        """
-        self._fields = fields
-
-        # create empty DataFrame
-        data = -1*np.ones(len(nodeids), dtype=int)
-        self._nodal2global = pd.DataFrame({key: data for key in fields}, index=nodeids)
+    def __init__(self):
+        self._nodal2global = None
         # TODO: Insert an elemental2global property to store elemental dofs
 
-        self._elements2global = []*len(connectivity)
-        # update nodes2global and elements2global
-        self._set_standard_mapping(fields, nodeids, connectivity, dofs_by_element, **kwargs)
+        self._elements2global = []
 
     @property
     def nodal2global(self):
