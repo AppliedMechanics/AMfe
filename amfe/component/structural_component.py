@@ -51,7 +51,7 @@ class StructuralComponent(MeshComponent):
 
         if self._M_constr is None or force_update:
             if u is not None:
-                u_unconstr = self._constraints.unconstrain_vec(u)
+                u_unconstr = self._constraints.unconstrain_u(u, t)
             else:
                 u_unconstr = None
 
@@ -108,5 +108,5 @@ class StructuralComponent(MeshComponent):
         if u is None:
             u = np.zeros(self._constraints.no_of_constrained_dofs)
 
-        K_unconstr = self._assembly.assemble_k_and_f(self._constraints.unconstrain_u(u), t)[0]
-        return self._constraints.constrain_matrix(K_unconstr)
+        K_unconstr = self._assembly.assemble_k_and_f(self._constraints.unconstrain_u(u, t), t)[0]
+        return self._constraints.constrain_k(K_unconstr)
