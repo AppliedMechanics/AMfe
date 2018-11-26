@@ -27,6 +27,8 @@ class StructuralComponent(MeshComponent):
         self.rayleigh_damping = None
         self._constraints = StructuralConstraintManager()
         self._assembly = StructuralAssembly(mesh.dimension, mesh.nodes, mesh.connectivity)
+        self._M_constr = None
+        self._D_constr = None
 
     def M(self, u=None, t=0, force_update=False):
         """
@@ -47,15 +49,15 @@ class StructuralComponent(MeshComponent):
             Mass matrix with applied constraints in sparse CSC format.
         """
 
-        if self.M_constr is None or force_update:
+        if self._M_constr is None or force_update:
             if u is not None:
                 u_unconstr = self._constraints.unconstrain_vec(u)
             else:
                 u_unconstr = None
 
             M_unconstr = self._assembly.assemble_m(u_unconstr, t)
-            self.M_constr = self._constraints.constrain_m(M_unconstr)
-        return self.M_constr
+            self._M_constr = self._constraints.constrain_m(M_unconstr)
+        return self._M_constr
 
     def D(self, u=None, t=0, force_update=False):
         """
@@ -79,12 +81,12 @@ class StructuralComponent(MeshComponent):
             Damping matrix with applied constraints in sparse CSC format.
         """
 
-        if self.D_constr is None or force_update:
+        if self._D_constr is None or force_update:
             if self.rayleigh_damping:
-                self.D_constr = self.rayleigh_damping[0] * self.M() + self.rayleigh_damping[1] * self.K()
+                self._D_constr = self.rayleigh_damping[0] * self.M() + self.rayleigh_damping[1] * self.K()
             else:
-                self.D_constr = csc_matrix(self.M().shape)
-        return self.D_constr
+                self._D_constr = csc_matrix(self.M().shape)
+        return self._D_constr
 
     def K(self, u=None, t=0):
         """
