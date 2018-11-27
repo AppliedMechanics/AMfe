@@ -7,6 +7,8 @@ from numpy.random import randint
 import numpy as np
 from scipy import rand
 from numpy.testing import assert_array_equal
+import pandas as pd
+from pandas.testing import assert_frame_equal
 
 from amfe.assembly.assembly import Assembly
 from amfe.assembly import StructuralAssembly
@@ -147,9 +149,9 @@ class StructuralAssemblyTest(TestCase):
         assert_array_equal(self.asm.C_csr.indices, C_csr_desired.indices)
 
     def test_assemble_m(self):
-        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
-        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
-                        np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
+        nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
+        connectivity = [np.array([1, 2, 3], dtype=np.int), np.array([1, 3, 4], dtype=np.int),
+                        np.array([2, 3], dtype=np.int), np.array([3, 4], dtype=np.int)]
 
         asm = StructuralAssembly()
 
@@ -157,7 +159,7 @@ class StructuralAssemblyTest(TestCase):
         elements2global = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
         asm.preallocate(8, elements2global)
 
-        M_global = asm.assemble_m(nodes, ele_obj, connectivity[0:2], elements2global)
+        M_global = asm.assemble_m(nodes_df, ele_obj, connectivity[0:2], elements2global)
         M_global_desired = np.zeros((8, 8), dtype=float)
         # element 1
         M_global_desired[0:6, 0:6] = self.ele.m_int(None, None)
@@ -173,16 +175,16 @@ class StructuralAssemblyTest(TestCase):
         assert_array_equal(M_global.todense(), M_global_desired)
 
     def test_assemble_k_and_f(self):
-        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
-        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
-                        np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
+        nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
+        connectivity = [np.array([1, 2, 3], dtype=np.int), np.array([1, 3, 4], dtype=np.int),
+                        np.array([2, 3], dtype=np.int), np.array([3, 4], dtype=np.int)]
 
         asm = StructuralAssembly()
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
         asm.preallocate(8, element2dofs)
 
-        K_global, f_global = asm.assemble_k_and_f(nodes, ele_obj, connectivity[0:2], element2dofs)
+        K_global, f_global = asm.assemble_k_and_f(nodes_df, ele_obj, connectivity[0:2], element2dofs)
         K_global_desired = np.zeros((8, 8), dtype=float)
         f_global_desired = np.zeros(8, dtype=float)
         # element 1
@@ -204,23 +206,28 @@ class StructuralAssemblyTest(TestCase):
         assert_array_equal(f_global, f_global_desired)
 
     def test_assemble_k_f_S_E(self):
-        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
-        connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
-                        np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
+        nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
+        connectivity = [np.array([1, 2, 3], dtype=np.int), np.array([1, 3, 4], dtype=np.int),
+                        np.array([2, 3], dtype=np.int), np.array([3, 4], dtype=np.int)]
 
         asm = StructuralAssembly()
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
-        elements_on_node = np.array([2, 1, 2, 1], dtype=int)
+        elements_on_node = pd.DataFrame({'elements_on_node': np.array([2, 1, 2, 1], dtype=int)},
+                                        index=[1, 2, 3, 4])
         asm.preallocate(8, element2dofs)
 
-        K_global, f_global, S_global, E_global= asm.assemble_k_f_S_E(nodes, ele_obj, connectivity[0:2],
+        K_global, f_global, S_global, E_global= asm.assemble_k_f_S_E(nodes_df, ele_obj, connectivity[0:2],
                                                                      element2dofs, elements_on_node)
         K_global_desired = np.zeros((8, 8), dtype=float)
         f_global_desired = np.zeros(8, dtype=float)
         # Currently strains and stresses are always 3D (therefore 6 components)
-        S_global_desired = np.ones((4, 6))
-        E_global_desired = 2*np.ones((4, 6))
+        S_global_desired = pd.DataFrame(np.ones((4, 6), dtype=float),
+                                        columns=['Sxx', 'Syy', 'Szz', 'Syz', 'Sxz', 'Sxy'],
+                                        index=[1, 2, 3, 4])
+        E_global_desired = pd.DataFrame(2*np.ones((4, 6), dtype=float),
+                                        columns=['Exx', 'Eyy', 'Ezz', 'Eyz', 'Exz', 'Exy'],
+                                        index=[1, 2, 3, 4])
         # element 1
         K_global_desired[0:6, 0:6], f_global_desired[0:6], _, _ = self.ele.k_f_S_E_int(None, None)
 
@@ -238,5 +245,5 @@ class StructuralAssemblyTest(TestCase):
 
         assert_array_equal(K_global.todense(), K_global_desired)
         assert_array_equal(f_global, f_global_desired)
-        assert_array_equal(S_global, S_global_desired)
-        assert_array_equal(E_global, E_global_desired)
+        assert_frame_equal(S_global, S_global_desired)
+        assert_frame_equal(E_global, E_global_desired)
