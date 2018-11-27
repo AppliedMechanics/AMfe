@@ -59,7 +59,9 @@ class StructuralComponent(MeshComponent):
             else:
                 u_unconstr = None
 
-            M_unconstr = self._assembly.assemble_m(u_unconstr, t)
+            M_unconstr = self._assembly.assemble_m(self._mesh.nodes_df, self.ele_obj,
+                                                   self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                   self._mapping.elements2global, u_unconstr, t)
             self._M_constr = self._constraints.constrain_m(M_unconstr)
         return self._M_constr
 
@@ -92,14 +94,42 @@ class StructuralComponent(MeshComponent):
                 self._D_constr = csc_matrix(self.M().shape)
         return self._D_constr
 
-    def K(self, u=None, t=0):
+    def f_int(self, u=None, t=0):
         """
-        Compute and return the stiffness matrix of the mechanical system.
+        Compute and return the nonlinear internal force vector of the structural component.
 
         Parameters
         ----------
         u : ndarray, optional
-            Displacement field in voigt notation.
+            Displacement field in voigt notation. len(u) is equal to the number of dofs after constraints have been
+            applied
+        t : float, optional
+            Time.
+
+        Returns
+        -------
+        f_int : ndarray
+            Nonlinear internal force vector after constraints have been applied
+        """
+
+        if u is None:
+            u = np.zeros(self._constraints.no_of_constrained_dofs)
+
+        f_unconstr = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
+                                                     self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                     self._mapping.elements2global,
+                                                     self._constraints.unconstrain_u(u, t), t)[1]
+        return self._constraints.constrain_f_int(f_unconstr)
+
+    def K(self, u=None, t=0):
+        """
+        Compute and return the stiffness matrix of the structural component
+
+        Parameters
+        ----------
+        u : ndarray, optional
+            Displacement field in voigt notation. len(u) is equal to the number of dofs after constraints have been
+            applied
         t : float, optional
             Time.
 
@@ -112,5 +142,37 @@ class StructuralComponent(MeshComponent):
         if u is None:
             u = np.zeros(self._constraints.no_of_constrained_dofs)
 
-        K_unconstr = self._assembly.assemble_k_and_f(self._constraints.unconstrain_u(u, t), t)[0]
+        K_unconstr = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
+                                                     self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                     self._mapping.elements2global,
+                                                     self._constraints.unconstrain_u(u, t), t)[0]
         return self._constraints.constrain_k(K_unconstr)
+
+    def K_and_f_int(self, u=None, t=0):
+        """
+        Compute and return the tangential stiffness matrix and internal force vector of the structural component.
+
+        Parameters
+        ----------
+        u : ndarray, optional
+            Displacement field in voigt notation. len(u) is equal to the number of dofs after constraints have been
+            applied
+        t : float, optional
+            Time.
+
+        Returns
+        -------
+        K : sp.sparse.sparse_matrix
+            Stiffness matrix with applied constraints in sparse CSC format.
+        f : ndarray
+            Internal nonlinear force vector after constraints have been applied
+        """
+
+        if u is None:
+            u = np.zeros(self._constraints.no_of_constrained_dofs)
+
+        K_unconstr, f_unconstr = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
+                                                                 self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                                 self._mapping.elements2global,
+                                                                 self._constraints.unconstrain_u(u, t), t)
+        return self._constraints.constrain_k(K_unconstr), self._constraints.constrain_f_int(f_unconstr)
