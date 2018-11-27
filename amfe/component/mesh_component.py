@@ -26,6 +26,7 @@ class MeshComponent(ComponentBase):
         super().__init__()
         self._mesh = mesh
         self._mapping = StandardMapping()
+        self._fields = None
         no_of_volume_elements = mesh.no_of_elements
         indices = mesh.el_df[mesh.el_df['is_boundary'] != True].index
         self._ele_obj_df = pd.DataFrame([None]*no_of_volume_elements, index=indices, columns=['ele_obj'])
@@ -62,6 +63,7 @@ class MeshComponent(ComponentBase):
             prototype.material = materialobj
         ele_shapes = self._mesh.get_ele_shapes_by_ids(eleids)
         self._ele_obj_df.loc[eleids, 'ele_obj'] = [prototypes[ele_shape] for ele_shape in ele_shapes]
+        self._update_mapping()
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
     def assign_neumann_condition(self, val, direction, property_names, tag='_groups', shadow_area=False,
@@ -108,6 +110,14 @@ class MeshComponent(ComponentBase):
     # -- ASSIGN CONSTRAINTS METHODS ------------------------------------------------------------------------
 
     # -- MAPPING METHODS -----------------------------------------------------------------------------------
+    def _update_mapping(self):
+        # collect parameters for call of update_mapping
+        fields = self._fields
+        nodeids = self._mesh.nodes_df.index.values
+        connectivity = self._ele_obj_df[self._ele_obj_df.notna().values].join(self._mesh.el_df)['connectivity'].values
+        dofs_by_element = [element.dofs() for element in self._ele_obj_df[self._ele_obj_df.notna().values]['ele_obj'].values]
+        # call update_mapping
+        self._mapping.update_mapping(fields, nodeids, connectivity, dofs_by_element)
 
     # -- GETTER FOR SYSTEM MATRICES ------------------------------------------------------------------------
     #
