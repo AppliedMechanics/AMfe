@@ -26,10 +26,13 @@ class StructuralComponentTest(TestCase):
             def __init__(self):
                 pass
 
-            def assemble_k_and_f(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0.):
-                K_unconstr=np.array([[10, -5, 0], [-5, 10, -5], [0, -5, 10]])
-                f_unsonstr=np.array([2, 0, 0])
-                return K_unconstr, f_unsonstr
+            def assemble_k_and_f(self, C_csr, f_glob, nodes_df, ele_objects, connectivities, elements2dofs,
+                                 dofvalues=None, t=0.):
+                C_csr[:, :] = np.array([[10, -5, 0], [-5, 10, -5], [0, -5, 10]])
+                f_glob[:] = np.array([2, 0, 0])
+
+            def preallocate(self, no_of_dofs, elements2dof):
+                return np.zeros((3, 3))
 
         class DummyMesh:
             def __init__(self, dimension):
@@ -50,6 +53,8 @@ class StructuralComponentTest(TestCase):
         comp = StructuralComponent(self.mesh)
         comp._constraints = DummyConstraint()
         comp._assembly = DummyAssembly()
+        comp._C_csr = comp._assembly.preallocate(2, None)
+        comp._f_glob = np.zeros(comp._C_csr.shape[0])
         self.structComp.append(comp)
 
     def tearDown(self):

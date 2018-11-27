@@ -48,7 +48,6 @@ class StructuralAssembly(Assembly):
         #     self.elements_on_node = np.bincount(nodes_vec)
         # else:
         #     self.elements_on_node = None
-        self.C_csr = None
         return
 
     def preallocate(self, no_of_dofs, elements2global):
@@ -66,7 +65,8 @@ class StructuralAssembly(Assembly):
 
         Returns
         -------
-        None
+        C_csr : csr_matrix
+            Empty csr_matrix for preallocation
 
         Notes
         -----
@@ -107,15 +107,15 @@ class StructuralAssembly(Assembly):
             col_global[i * max_dofs_per_element ** 2:(i + 1) * max_dofs_per_element ** 2] = H.T.reshape(-1)
 
         # fill C_csr matrix with dummy entries in those places where matrix will be filled in assembly
-        self.C_csr = csr_matrix((vals_global, (row_global, col_global)), shape=(no_of_dofs, no_of_dofs), dtype=float)
+        C_csr = csr_matrix((vals_global, (row_global, col_global)), shape=(no_of_dofs, no_of_dofs), dtype=float)
 
         t2 = time.clock()
         self.logger.info('Done pre-allocating stiffness matrix with {0:d} elements and {1:d} dofs.'
                          .format(len(elements2global), no_of_dofs))
         self.logger.info('Time taken for pre-allocation: {0:2.2f} seconds.'.format(t2 - t1))
-        return
+        return C_csr
 
-    def assemble_k_and_f(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0.):
+    def assemble_k_and_f(self, K_csr, f_glob, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0.):
         """
         Assemble the tangential stiffness matrix and nonliner internal or external force vector.
 
@@ -139,10 +139,7 @@ class StructuralAssembly(Assembly):
 
         Returns
         --------
-        K : sparse.csr_matrix
-            unconstrained assembled stiffness matrix in sparse matrix csr-format.
-        f : np.array
-            unconstrained assembled nonliner internal force vector
+        None
 
         Examples
         ---------
@@ -153,9 +150,8 @@ class StructuralAssembly(Assembly):
             maxdof = np.max(elements2dofs)
             dofvalues = np.zeros(maxdof + 1)
 
-        # allocate K and f
-        K_csr = self.C_csr.copy()
-        f_glob = np.zeros(K_csr.shape[1])
+        K_csr.data[:] = 0.0
+        f_glob[:] = 0.0
 
         # loop over all elements
         # (i - element index, indices - DOF indices of the element)
@@ -170,9 +166,8 @@ class StructuralAssembly(Assembly):
             f_glob[globaldofindices] += f_local
             # this is equal to K_csr[globaldofindices, globaldofindices] += K_local
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K_local, globaldofindices)
-        return K_csr, f_glob
 
-    def assemble_m(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0):
+    def assemble_m(self, M_csr, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0):
         """
         Assembles the mass matrix of the given mesh and element.
 
@@ -205,16 +200,13 @@ class StructuralAssembly(Assembly):
             maxdof = np.max(elements2dofs)
             dofvalues = np.zeros(maxdof + 1)
 
-        M_csr = self.C_csr.copy()
-
         for ele_obj, connectivity, globaldofindices in zip(ele_objects, connectivities, elements2dofs):
             X_local = nodes_df.loc[connectivity, :].values.reshape(-1)
             u_local = dofvalues[globaldofindices]
             M_local = ele_obj.m_int(X_local, u_local, t)
             fill_csr_matrix(M_csr.indptr, M_csr.indices, M_csr.data, M_local, globaldofindices)
-        return M_csr
 
-    def assemble_k_f_S_E(self, nodes_df, ele_objects, connectivities, elements2dofs, elements_on_node, dofvalues=None, t=0):
+    def assemble_k_f_S_E(self, K_csr, f_glob, nodes_df, ele_objects, connectivities, elements2dofs, elements_on_node, dofvalues=None, t=0):
         """
         Assemble the stiffness matrix with stress recovery of the given mesh and element.
 
@@ -237,10 +229,6 @@ class StructuralAssembly(Assembly):
 
         Returns
         --------
-        K : sparse.csr_matrix
-            unconstrained assembled stiffness matrix in sparse matrix csr format.
-        f : ndarray
-            unconstrained assembled force vector
         S : pandas.DataFrame
             unconstrained assembled stress tensor
         E : pandas.DataFrame
@@ -252,8 +240,9 @@ class StructuralAssembly(Assembly):
             dofvalues = np.zeros(maxdof + 1)
 
         # Allocate K and f
-        K_csr = self.C_csr.copy()
-        f_glob = np.zeros(K_csr.shape[1])
+        f_glob[:] = 0.0
+        K_csr.data[:] = 0.0
+
         no_of_nodes =len(nodes_df.index)
         S = pd.DataFrame(data=np.zeros((no_of_nodes, 6), dtype=float),
                          columns=['Sxx', 'Syy', 'Szz', 'Syz', 'Sxz', 'Sxy'], index=nodes_df.index)
@@ -279,4 +268,4 @@ class StructuralAssembly(Assembly):
         # Correct strains such, that average is taken at the elements
         E = E.divide(E.join(elements_on_node)['elements_on_node'], axis=0)
         S = S.divide(S.join(elements_on_node)['elements_on_node'], axis=0)
-        return K_csr, f_glob, S, E
+        return S, E

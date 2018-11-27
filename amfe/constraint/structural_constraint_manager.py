@@ -58,6 +58,10 @@ class StructuralConstraintManager(ConstraintManager):
         self._L = None
         return
 
+    def update(self, ndof):
+        self._no_of_unconstrained_dofs = ndof
+        self.update_l()
+
     def add_constraint(self, constraint, dofsarg, strategy):
         """
         Method for adding a structural constraint

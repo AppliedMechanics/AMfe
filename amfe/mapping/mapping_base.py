@@ -18,6 +18,9 @@ class MappingBase(ABC):
         # TODO: Insert an elemental2global property to store elemental dofs
 
         self._elements2global = []
+    @property
+    def no_of_dofs(self):
+        return len(np.unique(np.concatenate(self._elements2global)))
 
     @property
     def nodal2global(self):
