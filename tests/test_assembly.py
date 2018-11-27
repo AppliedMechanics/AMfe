@@ -94,7 +94,7 @@ class StructuralAssemblyTest(TestCase):
                              np.array([0, 1, 2, 3], dtype=np.int), np.array([3, 0], dtype=np.int),
                              np.array([4, 5], dtype=np.int)]
 
-        self.asm = StructuralAssembly(('ux', 'uy'), self.nodes, self.connectivity)
+        self.asm = StructuralAssembly()
 
         class DummyTri3Element:
             def __init__(self):
@@ -151,7 +151,7 @@ class StructuralAssemblyTest(TestCase):
         connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
                         np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
 
-        asm = StructuralAssembly(('ux', 'uy'), nodes, connectivity)
+        asm = StructuralAssembly()
 
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         elements2global = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
@@ -177,7 +177,7 @@ class StructuralAssemblyTest(TestCase):
         connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
                         np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
 
-        asm = StructuralAssembly(('ux', 'uy'), nodes, connectivity)
+        asm = StructuralAssembly()
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
         asm.preallocate(8, element2dofs)
@@ -208,7 +208,7 @@ class StructuralAssemblyTest(TestCase):
         connectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
                         np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
 
-        asm = StructuralAssembly(('ux', 'uy'), nodes, connectivity)
+        asm = StructuralAssembly()
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
         elements_on_node = np.array([2, 1, 2, 1], dtype=int)

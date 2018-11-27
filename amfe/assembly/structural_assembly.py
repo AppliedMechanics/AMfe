@@ -6,7 +6,7 @@
 #
 
 """
-Strcutural assembly.
+Structural assembly.
 
 Basic assembly module for the finite element code. Assumes to have all elements in the inertial frame. Provides an
 assembly class which knows the mesh. It can assemble the vector of nonlinear forces, the mass matrix and the tangential
@@ -30,35 +30,23 @@ __all__ = [
 class StructuralAssembly(Assembly):
     """
     Class handling assembly of elements for structures.
-
-    Attributes
-    ----------
-    elements_on_node : list
-        contains the number of elements that belong to a node. This property is needed for computing
-        stresses during postprocessing
     """
 
-    def __init__(self, fields, nodes, connectivity):
+    def __init__(self):
         """
         Parameters
         ----------
-        fields : tuple
-            tuple with names of physical fields
-        nodes : ndarray
-            node coordinates
-        connectivity : list
-            list with ndarrays that decribe the connectivity
         """
 
         super().__init__()
         self.logger = logging.getLogger('amfe.assembly.StructuralAssembly')
         # compute nodes_frequency for stress recovery
         # TODO: move this to another class
-        if connectivity is not None:
-            nodes_vec = np.concatenate(connectivity)
-            self.elements_on_node = np.bincount(nodes_vec)
-        else:
-            self.elements_on_node = None
+        # if connectivity is not None:
+        #     nodes_vec = np.concatenate(connectivity)
+        #     self.elements_on_node = np.bincount(nodes_vec)
+        # else:
+        #     self.elements_on_node = None
         self.C_csr = None
         return
 

@@ -30,7 +30,7 @@ class StructuralComponent(MeshComponent):
         elif mesh.dimension == 2:
             self._fields = ('ux', 'uy')
         self._constraints = StructuralConstraintManager()
-        self._assembly = StructuralAssembly(mesh.dimension, mesh.nodes, mesh.connectivity)
+        self._assembly = StructuralAssembly()
         self._M_constr = None
         self._D_constr = None
 
