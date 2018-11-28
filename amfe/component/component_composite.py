@@ -6,9 +6,10 @@
 #
 
 from collections.abc import Iterable
+from .component_base import *
 
 
-class ComponentComposite:
+class ComponentComposite(ComponentBase):
     """
     Class which handles child-components and child-ComponentComposites and acts as an interface to foreign clients
     """
