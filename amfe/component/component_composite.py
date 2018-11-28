@@ -17,6 +17,7 @@ class ComponentComposite(ComponentBase):
     TYPE = 'ComponentComposite'
     
     def __init__(self, leafpaths, arg_components=None):
+        super().__init__()
         
         self.components = []
         
