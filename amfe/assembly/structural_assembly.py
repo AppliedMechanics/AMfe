@@ -6,7 +6,7 @@
 #
 
 """
-Strcutural assembly.
+Structural assembly.
 
 Basic assembly module for the finite element code. Assumes to have all elements in the inertial frame. Provides an
 assembly class which knows the mesh. It can assemble the vector of nonlinear forces, the mass matrix and the tangential
@@ -18,6 +18,7 @@ import numpy as np
 import logging
 import time
 from scipy.sparse import csr_matrix
+import pandas as pd
 
 from .assembly import Assembly
 from .tools import fill_csr_matrix
@@ -30,35 +31,23 @@ __all__ = [
 class StructuralAssembly(Assembly):
     """
     Class handling assembly of elements for structures.
-
-    Attributes
-    ----------
-    elements_on_node : list
-        contains the number of elements that belong to a node. This property is needed for computing
-        stresses during postprocessing
     """
 
-    def __init__(self, fields, nodes, connectivity):
+    def __init__(self):
         """
         Parameters
         ----------
-        fields : tuple
-            tuple with names of physical fields
-        nodes : ndarray
-            node coordinates
-        connectivity : list
-            list with ndarrays that decribe the connectivity
         """
 
         super().__init__()
         self.logger = logging.getLogger('amfe.assembly.StructuralAssembly')
         # compute nodes_frequency for stress recovery
         # TODO: move this to another class
-        if connectivity is not None:
-            nodes_vec = np.concatenate(connectivity)
-            self.elements_on_node = np.bincount(nodes_vec)
-        else:
-            self.elements_on_node = None
+        # if connectivity is not None:
+        #     nodes_vec = np.concatenate(connectivity)
+        #     self.elements_on_node = np.bincount(nodes_vec)
+        # else:
+        #     self.elements_on_node = None
         self.C_csr = None
         return
 
@@ -126,7 +115,7 @@ class StructuralAssembly(Assembly):
         self.logger.info('Time taken for pre-allocation: {0:2.2f} seconds.'.format(t2 - t1))
         return
 
-    def assemble_k_and_f(self, nodes, ele_objects, connectivity, element2dofs, dofvalues=None, t=0.):
+    def assemble_k_and_f(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0.):
         """
         Assemble the tangential stiffness matrix and nonliner internal or external force vector.
 
@@ -135,13 +124,13 @@ class StructuralAssembly(Assembly):
 
         Parameters
         ----------
-        nodes : ndarray
+        nodes_df : pandas.DataFrame
             Node Coordinates
         ele_objects : ndarray
             Ndarray with Element objects that shall be assembled
-        connectivity : list of ndarrays
+        connectivities : list of ndarrays
             Connectivity of the elements mapping to the indices of nodes ndarray
-        element2dofs : list of ndarrays
+        elements2dofs : list of ndarrays
             Mapping the elements to their global dofs
         dofvalues : ndarray
             current values of all dofs (at time t)
@@ -161,7 +150,7 @@ class StructuralAssembly(Assembly):
         """
 
         if dofvalues is None:
-            maxdof = np.max(element2dofs)
+            maxdof = np.max(elements2dofs)
             dofvalues = np.zeros(maxdof + 1)
 
         # allocate K and f
@@ -170,34 +159,32 @@ class StructuralAssembly(Assembly):
 
         # loop over all elements
         # (i - element index, indices - DOF indices of the element)
-        for i, nodeindices in enumerate(connectivity):
+        for ele_obj, connectivity, globaldofindices in zip(ele_objects, connectivities, elements2dofs):
             # X - undeformed positions of the i-th element
-            X_local = nodes[nodeindices, :].reshape(-1)
-            # global dofs of the i-th element
-            globaldofindices = element2dofs[i]
+            X_local = nodes_df.loc[connectivity, :].values.reshape(-1)
             # displacements of the i-th element
             u_local = dofvalues[globaldofindices]
             # computation of the element tangential stiffness matrix and nonlinear force
-            K_local, f_local = ele_objects[i].k_and_f_int(X_local, u_local, t)
+            K_local, f_local = ele_obj.k_and_f_int(X_local, u_local, t)
             # adding the local force to the global one
             f_glob[globaldofindices] += f_local
             # this is equal to K_csr[globaldofindices, globaldofindices] += K_local
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K_local, globaldofindices)
         return K_csr, f_glob
 
-    def assemble_m(self, nodes, ele_objects, connectivity, element2dofs, dofvalues=None, t=0):
+    def assemble_m(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0):
         """
         Assembles the mass matrix of the given mesh and element.
 
         Parameters
         ----------
-        nodes : ndarray
+        nodes_df : pandas.Dataframe
             Node Coordinates
         ele_objects : ndarray
             Ndarray with Element objects that shall be assembled
-        connectivity : list of ndarrays
+        connectivities : list of ndarrays
             Connectivity of the elements mapping to the indices of nodes ndarray
-        element2dofs : list of ndarrays
+        elements2dofs : list of ndarrays
             Mapping the elements to their global dofs
         dofvalues : ndarray
             current values of all dofs (at time t)
@@ -215,37 +202,36 @@ class StructuralAssembly(Assembly):
         """
 
         if dofvalues is None:
-            maxdof = np.max(element2dofs)
+            maxdof = np.max(elements2dofs)
             dofvalues = np.zeros(maxdof + 1)
 
         M_csr = self.C_csr.copy()
 
-        for i, nodeindices in enumerate(connectivity):
-            X_local = nodes[nodeindices, :].reshape(-1)
-            globaldofindices = element2dofs[i]
+        for ele_obj, connectivity, globaldofindices in zip(ele_objects, connectivities, elements2dofs):
+            X_local = nodes_df.loc[connectivity, :].values.reshape(-1)
             u_local = dofvalues[globaldofindices]
-            M_local = ele_objects[i].m_int(X_local, u_local, t)
+            M_local = ele_obj.m_int(X_local, u_local, t)
             fill_csr_matrix(M_csr.indptr, M_csr.indices, M_csr.data, M_local, globaldofindices)
         return M_csr
 
-    def assemble_k_f_S_E(self, nodes, ele_objects, connectivity, element2dofs, elements_on_node, dofvalues=None, t=0):
+    def assemble_k_f_S_E(self, nodes_df, ele_objects, connectivities, elements2dofs, elements_on_node, dofvalues=None, t=0):
         """
         Assemble the stiffness matrix with stress recovery of the given mesh and element.
 
         Parameters
         ----------
-        nodes : ndarray
+        nodes_df : pandas.DataFrame
             Node Coordinates
         ele_objects : ndarray
             Ndarray with Element objects that shall be assembled
-        connectivity : list of ndarrays
-            Connectivity of the elements mapping to the indices of nodes ndarray
-        element2dofs : list of ndarrays
+        connectivities : list of ndarrays
+            Connectivity of the elements mapping to the indices of nodes pandas.DataFrame
+        elements2dofs : list of ndarrays
             Mapping the elements to their global dofs
-        elements_on_node : ndarray(int)
-            ndarray containing number of elements that are assembled belonging to a node
+        elements_on_node : pandas.DataFrame
+            DataFrame containing number of elements that are assembled belonging to a node
         dofvalues : ndarray
-            current values of all dofs (at time t)
+            current values of all dofs (at time t) ordered by the dofnumbers given by elements2dof list
         t : float
             time. Default: 0.
 
@@ -255,42 +241,42 @@ class StructuralAssembly(Assembly):
             unconstrained assembled stiffness matrix in sparse matrix csr format.
         f : ndarray
             unconstrained assembled force vector
-        S : ndarray
+        S : pandas.DataFrame
             unconstrained assembled stress tensor
-        E : ndarray
+        E : pandas.DataFrame
             unconstrained assembled strain tensor
         """
 
         if dofvalues is None:
-            maxdof = np.max(element2dofs)
+            maxdof = np.max(elements2dofs)
             dofvalues = np.zeros(maxdof + 1)
 
         # Allocate K and f
         K_csr = self.C_csr.copy()
         f_glob = np.zeros(K_csr.shape[1])
-        no_of_nodes = nodes.shape[0]
-        E_global = np.zeros((no_of_nodes, 6))
-        S_global = np.zeros((no_of_nodes, 6))
+        no_of_nodes =len(nodes_df.index)
+        S = pd.DataFrame(data=np.zeros((no_of_nodes, 6), dtype=float),
+                         columns=['Sxx', 'Syy', 'Szz', 'Syz', 'Sxz', 'Sxy'], index=nodes_df.index)
+        E = pd.DataFrame(data=np.zeros((no_of_nodes, 6), dtype=float),
+                         columns=['Exx', 'Eyy', 'Ezz', 'Eyz', 'Exz', 'Exy'], index=nodes_df.index)
 
         # Loop over all elements
         # (i - element index, indices - DOF indices of the element)
-        for i, nodeindices in enumerate(connectivity):
+        for ele_obj, connectivity, globaldofindices in zip(ele_objects, connectivities, elements2dofs):
             # X - undeformed positions of the i-th element
-            X_local = nodes[nodeindices, :].reshape(-1)
-            # global dofs of the i-th element
-            globaldofindices = element2dofs[i]
+            X_local = nodes_df.loc[connectivity, :].values.reshape(-1)
             # displacements of the i-th element
             u_local = dofvalues[globaldofindices]
             # computation of the element tangential stiffness matrix and nonlinear force
-            K_local, f_local, S_local, E_local = ele_objects[i].k_f_S_E_int(X_local, u_local, t)
+            K_local, f_local, S_local, E_local = ele_obj.k_f_S_E_int(X_local, u_local, t)
             # adding the local force to the global one
             f_glob[globaldofindices] += f_local
             # this is equal to K_csr[globaldofindices, globaldofindices] += K_local
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K_local, globaldofindices)
-            E_global[nodeindices, :] += E_local
-            S_global[nodeindices, :] += S_local
+            E.loc[connectivity, :] += E_local
+            S.loc[connectivity, :] += S_local
 
         # Correct strains such, that average is taken at the elements
-        E_global = (E_global.T/elements_on_node).T
-        S_global = (S_global.T/elements_on_node).T
-        return K_csr, f_glob, S_global, E_global
+        E = E.divide(E.join(elements_on_node)['elements_on_node'], axis=0)
+        S = S.divide(S.join(elements_on_node)['elements_on_node'], axis=0)
+        return K_csr, f_glob, S, E

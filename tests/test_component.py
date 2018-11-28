@@ -16,17 +16,17 @@ class StructuralComponentTest(TestCase):
             def __init__(self):
                 self.no_of_constrained_dofs = 2
 
-            def unconstrain_u(self, u_constr):
+            def unconstrain_u(self, u_constr, t):
                 return np.array([0, 0, 0])
 
-            def constrain_matrix(self,K_unconstr):
+            def constrain_k(self, K_unconstr, t=0):
                 return K_unconstr[0:2, 0:2]
 
         class DummyAssembly:
             def __init__(self):
                 pass
 
-            def assemble_k_and_f(self, u, t):
+            def assemble_k_and_f(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0.):
                 K_unconstr=np.array([[10, -5, 0], [-5, 10, -5], [0, -5, 10]])
                 f_unsonstr=np.array([2, 0, 0])
                 return K_unconstr, f_unsonstr
@@ -35,8 +35,9 @@ class StructuralComponentTest(TestCase):
             def __init__(self, dimension):
                 self.dimension = dimension
                 self.nodes = np.empty((0, dimension), dtype=float)
+                self.nodes_df = pd.DataFrame(columns=['x', 'y'])
                 self.connectivity = None
-                self.el_df = pd.DataFrame(columns=['shape', 'is_boundary', 'connectivity_idx'])
+                self.el_df = pd.DataFrame(columns=['shape', 'is_boundary', 'connectivity'])
 
             @property
             def no_of_elements(self):

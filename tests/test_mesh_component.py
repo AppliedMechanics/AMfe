@@ -5,6 +5,7 @@
 
 from unittest import TestCase
 import numpy as np
+from numpy.testing import assert_array_equal
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
@@ -53,24 +54,40 @@ class TestMeshComponent(TestCase):
         # check ele_obj is instance array
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
-        self.assertIsInstance(ele_obj_actual[0], Tri3)
-        self.assertIsInstance(ele_obj_actual[1], Tri3)
-        self.assertEqual(ele_obj_actual[2], None)
+        ele_obj_df = component._ele_obj_df
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc[1], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc[2], Tri3)
+        self.assertEqual(ele_obj_df['ele_obj'].loc[3], None)
         # check materials
-        self.assertEqual(ele_obj_actual[0].material.name, 'steel')
-        self.assertEqual(ele_obj_actual[1].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc[1].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc[2].material.name, 'steel')
+        # check mapping
+        nodal2global_desired = pd.DataFrame({'ux': {1: -1, 2: 6, 3: 4, 4: -1, 5: 0, 6: 2},
+                                             'uy': {1: -1, 2: 7, 3: 5, 4: -1, 5: 1, 6: 3}})
+        elements2global_desired = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([4, 5, 6, 7, 0, 1], dtype=int)]
+        assert_frame_equal(component._mapping.nodal2global, nodal2global_desired)
+        for actual, desired in zip(component._mapping.elements2global, elements2global_desired):
+            assert_array_equal(actual, desired)
 
         # assign second material
         component.assign_material(self.mat2, eleids2, '_eleids')
-        ele_obj_actual = component.ele_obj
+        ele_obj_df = component._ele_obj_df
         # check each object
-        self.assertIsInstance(ele_obj_actual[0], Tri3)
-        self.assertIsInstance(ele_obj_actual[1], Tri3)
-        self.assertIsInstance(ele_obj_actual[2], Quad4)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc[1], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc[2], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc[3], Quad4)
         # check materials
-        self.assertEqual(ele_obj_actual[0].material.name, 'steel')
-        self.assertEqual(ele_obj_actual[1].material.name, 'steel')
-        self.assertEqual(ele_obj_actual[2].material.name, 'rubber')
+        self.assertEqual(ele_obj_df['ele_obj'].loc[1].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc[2].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc[3].material.name, 'rubber')
+        nodal2global_desired = pd.DataFrame({'ux': {1: 8, 2: 6, 3: 4, 4: 10, 5: 0, 6: 2},
+                                             'uy': {1: 9, 2: 7, 3: 5, 4: 11, 5: 1, 6: 3}})
+        elements2global_desired = [np.array([0, 1, 2, 3, 4, 5], dtype=int),
+                                   np.array([4, 5, 6, 7, 0, 1], dtype=int),
+                                   np.array([8,  9,  6,  7,  4,  5, 10, 11], dtype=int)]
+        assert_frame_equal(component._mapping.nodal2global, nodal2global_desired)
+        for actual, desired in zip(component._mapping.elements2global, elements2global_desired):
+            assert_array_equal(actual, desired)
 
         component = StructuralComponent(self.testmesh)
         eleids3 = np.array([3, 1], dtype=int)
@@ -79,12 +96,20 @@ class TestMeshComponent(TestCase):
         # check ele_obj is instance array
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
-        self.assertIsInstance(ele_obj_actual[0], Tri3)
-        self.assertIsInstance(ele_obj_actual[2], Quad4)
-        self.assertEqual(ele_obj_actual[1], None)
+        ele_obj_df = component._ele_obj_df
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc[1], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc[3], Quad4)
+        self.assertEqual(ele_obj_df['ele_obj'].loc[2], None)
         # check materials
-        self.assertEqual(ele_obj_actual[0].material.name, 'steel')
-        self.assertEqual(ele_obj_actual[2].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc[1].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc[3].material.name, 'steel')
+        nodal2global_desired = pd.DataFrame({'ux': {1: 6, 2: 8, 3: 4, 4: 10, 5: 0, 6: 2},
+                                             'uy': {1: 7, 2: 9, 3: 5, 4: 11, 5: 1, 6: 3}})
+        elements2global_desired = [np.array([0, 1, 2, 3, 4, 5], dtype=int),
+                                   np.array([6,  7,  8,  9,  4,  5, 10, 11], dtype=int)]
+        assert_frame_equal(component._mapping.nodal2global, nodal2global_desired)
+        for actual, desired in zip(component._mapping.elements2global, elements2global_desired):
+            assert_array_equal(actual, desired)
 
     def test_assign_material_by_groups(self):
         # 2 Groups
@@ -96,13 +121,14 @@ class TestMeshComponent(TestCase):
         # check ele_obj is instance array
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
-        self.assertIsInstance(ele_obj_actual[0], Tri3)
-        self.assertIsInstance(ele_obj_actual[1], Tri3)
-        self.assertIsInstance(ele_obj_actual[2], Quad4)
+        ele_obj_df = component._ele_obj_df
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc[1], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc[2], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc[3], Quad4)
         # check materials
-        self.assertEqual(ele_obj_actual[0].material.name, 'steel')
-        self.assertEqual(ele_obj_actual[1].material.name, 'steel')
-        self.assertEqual(ele_obj_actual[2].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc[1].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc[2].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc[3].material.name, 'steel')
 
         # 1 Group
         #
@@ -113,11 +139,13 @@ class TestMeshComponent(TestCase):
         # check ele_obj is instance array
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
-        self.assertEqual(ele_obj_actual[0], None)
-        self.assertEqual(ele_obj_actual[1], None)
-        self.assertIsInstance(ele_obj_actual[2], Quad4)
+        ele_obj_df = component._ele_obj_df
+        self.assertEqual(ele_obj_df['ele_obj'].loc[1], None)
+        self.assertEqual(ele_obj_df['ele_obj'].loc[2], None)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc[3], Quad4)
         # check materials
-        self.assertEqual(ele_obj_actual[2].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc[3].material.name, 'steel')
+        # check if mapping is proceeded
 
     def test_assign_neumann_condition_by_eleidxs(self):
         component = StructuralComponent(self.testmesh)

@@ -37,8 +37,9 @@ class TestMapping(TestCase):
         pass
 
     def test_standard_mapping(self):
-        mapping = StandardMapping(self.fields, self.nodeids, self.connectivity,
-                          self.dofs_by_element)
+        mapping = StandardMapping()
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity,
+                               self.dofs_by_element)
 
         nodal2global_desired = pd.DataFrame({'ux': {1: 0, 2: 3, 3: 6, 4: 9}, 'uy': {1: 1, 2: 4, 3: 7, 4: 10},
                                              'T': {1: 2, 2: 5, 3: 8, 4: -1}})
@@ -55,8 +56,9 @@ class TestMapping(TestCase):
             assert_array_equal(element_actual, element_desired)
 
     def test_get_dofs_by_nodeids(self):
-        mapping = StandardMapping(self.fields, self.nodeids, self.connectivity,
-                          self.dofs_by_element)
+        mapping = StandardMapping()
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity,
+                               self.dofs_by_element)
         nodal2global = pd.DataFrame({'ux': {1: 0, 5: 3, 10: 6, 20: 9}, 'uy': {1: 1, 5: 4, 10: 7, 20: 10},
                                      'T': {1: 2, 5: 5, 10: 8, 20: -1}})
         mapping.nodal2global = nodal2global
@@ -65,8 +67,9 @@ class TestMapping(TestCase):
         self.assertEqual(mapping.get_dofs_by_nodeids(20, 'T'), -1)
 
     def test_setter_and_getter(self):
-        mapping = StandardMapping(self.fields, self.nodeids, self.connectivity,
-                          self.dofs_by_element)
+        mapping = StandardMapping()
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity,
+                               self.dofs_by_element)
         nodal2global_desired = pd.DataFrame({'ux': {1: 0, 5: 3, 10: 6, 20: 9}, 'uy': {1: 1, 5: 4, 10: 7, 20: 10},
                                      'T': {1: 2, 5: 5, 10: 8, 20: -1}})
         mapping.nodal2global = nodal2global_desired

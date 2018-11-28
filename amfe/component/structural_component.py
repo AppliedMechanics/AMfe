@@ -25,8 +25,14 @@ class StructuralComponent(MeshComponent):
     def __init__(self, mesh=Mesh()):
         super().__init__(mesh)
         self.rayleigh_damping = None
+        if mesh.dimension == 3:
+            self._fields = ('ux', 'uy', 'uz')
+        elif mesh.dimension == 2:
+            self._fields = ('ux', 'uy')
         self._constraints = StructuralConstraintManager()
-        self._assembly = StructuralAssembly(mesh.dimension, mesh.nodes, mesh.connectivity)
+        self._assembly = StructuralAssembly()
+        self._M_constr = None
+        self._D_constr = None
 
     def M(self, u=None, t=0, force_update=False):
         """
@@ -47,15 +53,17 @@ class StructuralComponent(MeshComponent):
             Mass matrix with applied constraints in sparse CSC format.
         """
 
-        if self.M_constr is None or force_update:
+        if self._M_constr is None or force_update:
             if u is not None:
-                u_unconstr = self._constraints.unconstrain_vec(u)
+                u_unconstr = self._constraints.unconstrain_u(u, t)
             else:
                 u_unconstr = None
 
-            M_unconstr = self._assembly.assemble_m(u_unconstr, t)
-            self.M_constr = self._constraints.constrain_m(M_unconstr)
-        return self.M_constr
+            M_unconstr = self._assembly.assemble_m(self._mesh.nodes_df, self.ele_obj,
+                                                   self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                   self._mapping.elements2global, u_unconstr, t)
+            self._M_constr = self._constraints.constrain_m(M_unconstr)
+        return self._M_constr
 
     def D(self, u=None, t=0, force_update=False):
         """
@@ -79,21 +87,49 @@ class StructuralComponent(MeshComponent):
             Damping matrix with applied constraints in sparse CSC format.
         """
 
-        if self.D_constr is None or force_update:
+        if self._D_constr is None or force_update:
             if self.rayleigh_damping:
-                self.D_constr = self.rayleigh_damping[0] * self.M() + self.rayleigh_damping[1] * self.K()
+                self._D_constr = self.rayleigh_damping[0] * self.M() + self.rayleigh_damping[1] * self.K()
             else:
-                self.D_constr = csc_matrix(self.M().shape)
-        return self.D_constr
+                self._D_constr = csc_matrix(self.M().shape)
+        return self._D_constr
 
-    def K(self, u=None, t=0):
+    def f_int(self, u=None, t=0):
         """
-        Compute and return the stiffness matrix of the mechanical system.
+        Compute and return the nonlinear internal force vector of the structural component.
 
         Parameters
         ----------
         u : ndarray, optional
-            Displacement field in voigt notation.
+            Displacement field in voigt notation. len(u) is equal to the number of dofs after constraints have been
+            applied
+        t : float, optional
+            Time.
+
+        Returns
+        -------
+        f_int : ndarray
+            Nonlinear internal force vector after constraints have been applied
+        """
+
+        if u is None:
+            u = np.zeros(self._constraints.no_of_constrained_dofs)
+
+        f_unconstr = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
+                                                     self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                     self._mapping.elements2global,
+                                                     self._constraints.unconstrain_u(u, t), t)[1]
+        return self._constraints.constrain_f_int(f_unconstr)
+
+    def K(self, u=None, t=0):
+        """
+        Compute and return the stiffness matrix of the structural component
+
+        Parameters
+        ----------
+        u : ndarray, optional
+            Displacement field in voigt notation. len(u) is equal to the number of dofs after constraints have been
+            applied
         t : float, optional
             Time.
 
@@ -106,5 +142,37 @@ class StructuralComponent(MeshComponent):
         if u is None:
             u = np.zeros(self._constraints.no_of_constrained_dofs)
 
-        K_unconstr = self._assembly.assemble_k_and_f(self._constraints.unconstrain_u(u), t)[0]
-        return self._constraints.constrain_matrix(K_unconstr)
+        K_unconstr = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
+                                                     self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                     self._mapping.elements2global,
+                                                     self._constraints.unconstrain_u(u, t), t)[0]
+        return self._constraints.constrain_k(K_unconstr)
+
+    def K_and_f_int(self, u=None, t=0):
+        """
+        Compute and return the tangential stiffness matrix and internal force vector of the structural component.
+
+        Parameters
+        ----------
+        u : ndarray, optional
+            Displacement field in voigt notation. len(u) is equal to the number of dofs after constraints have been
+            applied
+        t : float, optional
+            Time.
+
+        Returns
+        -------
+        K : sp.sparse.sparse_matrix
+            Stiffness matrix with applied constraints in sparse CSC format.
+        f : ndarray
+            Internal nonlinear force vector after constraints have been applied
+        """
+
+        if u is None:
+            u = np.zeros(self._constraints.no_of_constrained_dofs)
+
+        K_unconstr, f_unconstr = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
+                                                                 self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                                 self._mapping.elements2global,
+                                                                 self._constraints.unconstrain_u(u, t), t)
+        return self._constraints.constrain_k(K_unconstr), self._constraints.constrain_f_int(f_unconstr)
