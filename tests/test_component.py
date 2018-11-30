@@ -93,7 +93,7 @@ class ComponentCompositeTest(TestCase):
                 self.dimension = dimension
                 self.nodes = np.empty((0, dimension), dtype=float)
                 self.connectivity = None
-                self.el_df = pd.DataFrame(columns=['shape', 'is_boundary', 'connectivity_idx'])
+                self.el_df = pd.DataFrame(columns=['shape', 'is_boundary', 'connectivity'])
 
             @property
             def no_of_elements(self):

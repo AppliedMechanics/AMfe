@@ -151,12 +151,11 @@ class TestMesh(TestCase):
         assert_equal(actual_list_1, desired_list_1)
         assert_equal(actual_list_2, desired_list_2)
 
-
     def test_replace_tag_values(self):
         current_key = 'Tri3' 
         new_key = 'Tri6'
         tag_name = 'shape'
-        desired = [1,2]
+        desired = [1, 2]
         self.testmesh.replace_tag_values(tag_name,current_key,new_key)
         actual = self.testmesh.el_df[self.testmesh.el_df[tag_name] == new_key].index.tolist()
         assert_equal(desired, actual)
@@ -167,7 +166,7 @@ class TestMesh(TestCase):
         assert_equal(desired, actual)
 
     def test_get_elementidxs_by_tag_value(self):
-        desired = [0,1]
+        desired = np.array([0, 1], dtype=int)
         actual = self.testmesh.get_elementidxs_by_tag('shape','Tri3')
         assert_equal(desired, actual)
 

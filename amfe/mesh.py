@@ -491,7 +491,7 @@ class Mesh:
         
         return self.el_df[self.el_df[tag_name] == tag_value].index.tolist()
 
-    def get_elementidxs_by_tag(self,tag_name,tag_value):
+    def get_elementidxs_by_tag(self, tag_name, tag_value):
         """
         This function returns a list with the elementidxs in connectivity array
         given a "tag_name" and the tag value associated with it. 
@@ -515,5 +515,5 @@ class Mesh:
             elementidxs_list = testmesh.get_elementidxs_by_tag('is_boundary','False')                
         """
         
-        rows = self.get_elementids_by_tag(tag_name,tag_value)
-        return self.el_df.loc[rows,('connectivity_idx')].tolist()
+        rows = self.get_elementids_by_tag(tag_name, tag_value)
+        return np.array([self._el_df.index.get_loc(row) for row in rows], dtype=int)
