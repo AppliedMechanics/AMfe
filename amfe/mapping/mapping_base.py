@@ -15,12 +15,12 @@ __all__ = ['MappingBase']
 class MappingBase(ABC):
     def __init__(self):
         self._nodal2global = None
-        # TODO: Insert an elemental2global property to store elemental dofs
 
-        self._elements2global = []
+        self._elements2global = pd.DataFrame({'global_dofs': []})
+
     @property
     def no_of_dofs(self):
-        return len(np.unique(np.concatenate(self._elements2global)))
+        return len(np.unique(np.concatenate(self._elements2global['global_dofs'].values)))
 
     @property
     def nodal2global(self):
@@ -32,11 +32,14 @@ class MappingBase(ABC):
 
     @property
     def elements2global(self):
-        return self._elements2global
+        return self._elements2global['global_dofs'].values
 
     @elements2global.setter
     def elements2global(self, elements2global):
         self._elements2global = elements2global
+
+    def get_dofs_by_elementids(self, elementids):
+        return self._elements2global.loc[elementids]['global_dofs'].values
 
     def get_dofs_by_nodeids(self, nodeids, fields):
         """
@@ -58,7 +61,7 @@ class MappingBase(ABC):
             nodeids = [nodeids]
         return self._nodal2global.loc[nodeids, fields].values
 
-    def update_mapping(self, fields, nodeids, connectivity, dofs_by_element, **kwargs):
+    def update_mapping(self, fields, nodeids, elementids, connectivity, dofs_by_element, **kwargs):
         """
         Update the mapping (nodal2global and elements2global)
 
@@ -69,8 +72,10 @@ class MappingBase(ABC):
             for a 3D displacement and Temperature field
         nodeids : array
             array containing the nodeids that shall be mapped
+        elementids : ndarray
+            ndarray containing the elementids of the mesh that shall be mapped
         connectivity : ndarray
-            iterable containing nodeids of the connectivity in each element
+            iterable containing nodeids of the connectivity in each element (same length as the elementids)
         dofs_by_element : iterable
             iterable containing the dofs as strings per element
             e.g. [(('N', 0, 'ux'), ('N', 0, 'uy'), ('E', 0, 'T'), ('N', 1, 'ux')), ( ..same for 2nd element ), ... )
@@ -81,10 +86,10 @@ class MappingBase(ABC):
         -------
         None
         """
-        self._set_standard_mapping(fields, nodeids, connectivity, dofs_by_element, **kwargs)
+        self._set_standard_mapping(fields, nodeids, elementids, connectivity, dofs_by_element, **kwargs)
 
     @abstractmethod
-    def _set_standard_mapping(self, fields, nodeids, connectivity, dofs_by_element, **kwargs):
+    def _set_standard_mapping(self, fields, nodeids, elementids, connectivity, dofs_by_element, **kwargs):
         """
         Computes the mapping according to a certain algorithm.
 
@@ -100,6 +105,8 @@ class MappingBase(ABC):
             contains strings that describe the fieldnames
         nodeids : array
             array containing the nodeids that shall be mapped
+        elementids : ndarray
+            array containing the elementids that shall be mapped
         connectivity : ndarray
             iterable containing nodeids of the connectivity in each element
         dofs_by_element : iterable

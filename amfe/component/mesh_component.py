@@ -82,10 +82,11 @@ class MeshComponent(ComponentBase):
         # collect parameters for call of update_mapping
         fields = self._fields
         nodeids = self._mesh.nodes_df.index.values
-        connectivity = self._ele_obj_df[self._ele_obj_df.notna().values].join(self._mesh.el_df)['connectivity'].values
+        elementids_and_connectivity = self._ele_obj_df[self._ele_obj_df.notna().values].join(self._mesh.el_df)['connectivity']
         dofs_by_element = [element.dofs() for element in self._ele_obj_df[self._ele_obj_df.notna().values]['ele_obj'].values]
         # call update_mapping
-        self._mapping.update_mapping(fields, nodeids, connectivity, dofs_by_element)
+        self._mapping.update_mapping(fields, nodeids, elementids_and_connectivity.index,
+                                     elementids_and_connectivity.values, dofs_by_element)
 
     # -- GETTER FOR SYSTEM MATRICES ------------------------------------------------------------------------
     #
