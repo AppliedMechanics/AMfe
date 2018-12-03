@@ -49,6 +49,9 @@ class NeumannManager:
         df_data = {'name': name, 'tag': tag, 'property_names': [property_names], 'neumann_obj': neumannobj}
         self._neumann_df = self._neumann_df.append(pd.DataFrame(df_data, index=[dfindex]), sort=True)
 
+    def get_elementids_and_ele_obj(self):
+        return self._neumann_obj_df[['fk_elementid', 'neumann_obj']].values
+
     @staticmethod
     def create_fixed_direction_neumann(direction, time_func=lambda t: 1):
         return FixedDirectionNeumann(direction, time_func)
