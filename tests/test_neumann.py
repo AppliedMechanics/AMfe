@@ -88,8 +88,8 @@ class TestNeumannManager(TestCase):
         neumannbc = self.neumann_man.create_fixed_direction_neumann((1, 0), time_func)
         self.neumann_man.assign_neumann_by_eleids(neumannbc, eleids, ele_shapes, tag='_eleids',
                                                   property_names=eleids, name='TestCondition')
-        neumann_obj_df = self.neumann_man._neumann_obj_df
-        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_elementid']].values
+        neumann_obj_df = self.neumann_man.el_df
+        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_mesh']].values
         self.assertIsInstance(neumann_obj_array[0, 0], FixedDirectionNeumann)
         self.assertIsInstance(neumann_obj_array[0, 0]._boundary_element, Tri3Boundary)
         self.assertEqual(neumann_obj_array[0, 1], 2)
@@ -105,3 +105,18 @@ class TestNeumannManager(TestCase):
                    'neumann_obj': neumannbc}
         neumann_df_desired = pd.DataFrame.from_dict(df_dict)
         assert_frame_equal(neumann_df_actual, neumann_df_desired, check_like=True)
+
+    def test_write_mapping(self):
+        eleids = [2, 7]
+        ele_shapes = ['Tri3', 'Quad4']
+        time_func = lambda t: 3.0 * t
+
+        neumannbc = self.neumann_man.create_fixed_direction_neumann((1, 0), time_func)
+        self.neumann_man.assign_neumann_by_eleids(neumannbc, eleids, ele_shapes, tag='_eleids',
+                                                  property_names=eleids, name='TestCondition')
+        neumann_obj_df = self.neumann_man.el_df
+        fk = 100
+        local_id = neumann_obj_df.index.get_values()[0]
+        self.neumann_man.write_mapping_key(fk, local_id)
+        actual = self.neumann_man.el_df.loc[local_id, 'fk_mapping']
+        self.assertEqual(actual, fk)

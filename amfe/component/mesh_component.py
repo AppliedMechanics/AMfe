@@ -27,10 +27,10 @@ class MeshComponent(ComponentBase):
         self._mesh = mesh
         self._mapping = StandardMapping()
         self._fields = None
-        no_of_volume_elements = mesh.no_of_elements
-        indices = mesh.el_df[mesh.el_df['is_boundary'] != True].index
-        self._ele_obj_df = pd.DataFrame([None]*no_of_volume_elements, index=indices, columns=['ele_obj'])
-
+        self._ele_obj_df = pd.DataFrame([], columns=['physics', 'fk_mesh', 'ele_obj', 'fk_mapping'])
+        self._ele_obj_df['fk_mapping'] = self._ele_obj_df['fk_mapping'].astype(int)
+        self._ele_obj_df['fk_mesh'] = self._ele_obj_df['fk_mesh'].astype(int)
+        self._ele_obj_df = self._ele_obj_df.set_index(['physics', 'fk_mesh'])
         self._neumann = NeumannManager()
 
     # -- PROPERTIES --------------------------------------------------------------------------------------
@@ -39,21 +39,27 @@ class MeshComponent(ComponentBase):
         return self._ele_obj_df['ele_obj'].values
 
     # -- ASSIGN MATERIAL METHODS -------------------------------------------------------------------------
-    def assign_material(self, materialobj, propertynames, tag='_groups'):
+    def assign_material(self, materialobj, propertynames, physics, tag='_groups'):
         if tag == '_groups':
             eleids = self._mesh.get_elementids_by_groups(propertynames)
         elif tag == '_eleids':
             eleids = propertynames
         else:
             eleids = self._mesh.get_elementids_by_tags(propertynames)
-        self._assign_material_by_eleids(materialobj, eleids)
+        self._assign_material_by_eleids(materialobj, eleids, physics)
 
-    def _assign_material_by_eleids(self, materialobj, eleids):
+    def _assign_material_by_eleids(self, materialobj, eleids, physics):
         prototypes = deepcopy(self.ELEMENTPROTOTYPES)
         for prototype in prototypes.values():
             prototype.material = materialobj
         ele_shapes = self._mesh.get_ele_shapes_by_ids(eleids)
-        self._ele_obj_df.loc[eleids, 'ele_obj'] = [prototypes[ele_shape] for ele_shape in ele_shapes]
+        new_df = pd.DataFrame({'physics': [physics]*len(ele_shapes), 'fk_mesh': eleids,
+                               'ele_obj': [prototypes[ele_shape] for ele_shape in ele_shapes],
+                               'fk_mapping': np.ones(len(ele_shapes), dtype=int)*-1})
+        new_df = new_df.set_index(['physics', 'fk_mesh'])
+        self._ele_obj_df = new_df.combine_first(self._ele_obj_df)
+        self._ele_obj_df = self._ele_obj_df.sort_index()
+        self._ele_obj_df['fk_mapping'] = self._ele_obj_df['fk_mapping'].astype(int)
         self._update_mapping()
         self._C_csr = self._assembly.preallocate(self._mapping.no_of_dofs, self._mapping.elements2global)
         self._M_csr = self._C_csr.copy()
@@ -82,12 +88,27 @@ class MeshComponent(ComponentBase):
         # collect parameters for call of update_mapping
         fields = self._fields
         nodeids = self._mesh.nodes_df.index.values
-        elementids_and_connectivity = self._ele_obj_df[self._ele_obj_df.notna().values].join(self._mesh.el_df)['connectivity']
-        dofs_by_element = [element.dofs() for element in self._ele_obj_df[self._ele_obj_df.notna().values]['ele_obj'].values]
-        # call update_mapping
-        self._mapping.update_mapping(fields, nodeids, elementids_and_connectivity.index,
-                                     elementids_and_connectivity.values, dofs_by_element)
 
+        volume_connectivites = self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values
+        dofs_by_elements = [element.dofs() for element in self._ele_obj_df['ele_obj'].values]
+        volume_callbacks = [self.write_mapping_key]*len(dofs_by_elements)
+        volume_callbackargs = self._ele_obj_df.index.get_values()
+
+        boundary_connectivities = self._neumann.el_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values
+        dofs_by_elements_boundary = [element.dofs() for element in self._neumann.el_df['neumann_obj'].values]
+        boundary_callbacks = [self._neumann.write_mapping_key]*len(dofs_by_elements_boundary)
+        boundary_callbackargs = self._neumann.el_df.index.get_values()
+
+        connectivities = np.concatenate([volume_connectivites, boundary_connectivities])
+        dofs_by_elements.extend(dofs_by_elements_boundary)
+        callbacks = np.concatenate([volume_callbacks, boundary_callbacks])
+        callbackargs = np.concatenate([volume_callbackargs, boundary_callbackargs])
+
+        # call update_mapping
+        self._mapping.update_mapping(fields, nodeids, connectivities, dofs_by_elements, callbacks, callbackargs)
+
+    def write_mapping_key(self, fk, local_id):
+        self._ele_obj_df.loc[local_id, 'fk_mapping'] = fk
     # -- GETTER FOR SYSTEM MATRICES ------------------------------------------------------------------------
     #
     # MUST BE IMPLEMENTED IN SUBCLASSES

@@ -147,7 +147,7 @@ class StructuralComponent(MeshComponent):
             u = np.zeros(self._constraints.no_of_constrained_dofs)
 
         self._assembly.assemble_k_and_f(self._C_csr, self._f_glob, self._mesh.nodes_df, self.ele_obj,
-                                        self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                        self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values,
                                         self._mapping.elements2global,
                                         self._constraints.unconstrain_u(u, t), t)
         return self._constraints.constrain_k(self._C_csr)
@@ -180,3 +180,31 @@ class StructuralComponent(MeshComponent):
                                         self._mapping.elements2global,
                                         self._constraints.unconstrain_u(u, t), t)
         return self._constraints.constrain_k(self._C_csr), self._constraints.constrain_f_int(self._f_glob)
+
+    def f_ext(self, u=None, t=0):
+        """
+        Compute and return external force vector
+
+        Parameters
+        ----------
+        u : ndarray
+            displacement field in voigt noation. len(u)  is equl to the number of dofs after constraints have been
+            applied
+        t : float, optional
+            time
+
+        Returns
+        -------
+        f_ext : ndarray
+            external force vector after contraints have been applied
+        """
+
+        if u is None:
+            u = np.zeros(self._constraints.no_of_constrained_dofs)
+
+        neumann_infos = self._neumann.get_elementids_and_ele_obj()  # column 0: eleids, column 1: eleobjects
+        self._assembly.assemble_f_ext(self._f_glob, self._mesh.nodes_df, neumann_infos[1],
+                                      self._mesh.get_connectivity_by_elementids(neumann_infos[0]),
+                                      self._mapping.get_dofs_by_elementids(neumann_infos[0]),
+                                      self._constraints.unconstrain_u(u, t), t)
+        return self._constraints.constrain_f_ext(self._f_glob)

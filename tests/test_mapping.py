@@ -25,7 +25,6 @@ class TestMapping(TestCase):
 
         self.nodeids = [1, 2, 3, 4]
 
-        self.elementids = np.array([1, 5], dtype=int)
         # self.dofs_by_node = ((0, 1, 2), (0, 1, 2), (0, 1, 2), (0, 1))
         self.dofs_by_element = [(('N', 0, 'ux'), ('N', 0, 'uy'), ('N', 0, 'T'),
                                 ('N', 1, 'ux'), ('N', 1, 'uy'), ('N', 1, 'T'),
@@ -34,12 +33,21 @@ class TestMapping(TestCase):
                                 ('N', 1, 'ux'), ('N', 1, 'uy'),
                                 ('N', 2, 'ux'), ('N', 2, 'uy'))]
 
+        self.callbacks = [self.callback, self.callback]
+        self.callbackargs = [1, 5]
+
+        self.callbackinfo = dict()
+
+    def callback(self, localid, args):
+        self.callbackinfo.update({args: localid})
+
     def tearDown(self):
         pass
 
     def test_standard_mapping(self):
         mapping = StandardMapping()
-        mapping.update_mapping(self.fields, self.nodeids, self.elementids, self.connectivity, self.dofs_by_element)
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity, self.dofs_by_element,
+                               self.callbacks, self.callbackargs)
 
         nodal2global_desired = pd.DataFrame({'ux': {1: 0, 2: 3, 3: 6, 4: 9}, 'uy': {1: 1, 2: 4, 3: 7, 4: 10},
                                              'T': {1: 2, 2: 5, 3: 8, 4: -1}})
@@ -57,21 +65,24 @@ class TestMapping(TestCase):
 
     def test_no_of_dofs(self):
         mapping = StandardMapping()
-        mapping.update_mapping(self.fields, self.nodeids, self.elementids, self.connectivity, self.dofs_by_element)
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity, self.dofs_by_element, self.callbacks,
+                               self.callbackargs)
         self.assertEqual(mapping.no_of_dofs, 11)
 
-    def test_get_dofs_by_elementids(self):
+    def test_get_dofs_by_ids(self):
         mapping = StandardMapping()
-        mapping.update_mapping(self.fields, self.nodeids, self.elementids, self.connectivity, self.dofs_by_element)
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity, self.dofs_by_element, self.callbacks,
+                               self.callbackargs)
         desired = np.array([3, 4,
                   9, 10,
                   6, 7], dtype=int)
-        actual = mapping.get_dofs_by_elementids([5])
+        actual = mapping.get_dofs_by_ids([self.callbackinfo[5]])
         assert_array_equal(actual[0], desired)
 
     def test_get_dofs_by_nodeids(self):
         mapping = StandardMapping()
-        mapping.update_mapping(self.fields, self.nodeids, self.elementids, self.connectivity, self.dofs_by_element)
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity, self.dofs_by_element, self.callbacks,
+                               self.callbackargs)
         nodal2global = pd.DataFrame({'ux': {1: 0, 5: 3, 10: 6, 20: 9}, 'uy': {1: 1, 5: 4, 10: 7, 20: 10},
                                      'T': {1: 2, 5: 5, 10: 8, 20: -1}})
         mapping.nodal2global = nodal2global
@@ -81,7 +92,8 @@ class TestMapping(TestCase):
 
     def test_setter_and_getter(self):
         mapping = StandardMapping()
-        mapping.update_mapping(self.fields, self.nodeids, self.elementids, self.connectivity, self.dofs_by_element)
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity, self.dofs_by_element, self.callbacks,
+                               self.callbackargs)
         nodal2global_desired = pd.DataFrame({'ux': {1: 0, 5: 3, 10: 6, 20: 9}, 'uy': {1: 1, 5: 4, 10: 7, 20: 10},
                                      'T': {1: 2, 5: 5, 10: 8, 20: -1}})
         mapping.nodal2global = nodal2global_desired

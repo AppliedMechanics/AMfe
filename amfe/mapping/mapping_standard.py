@@ -15,18 +15,20 @@ class StandardMapping(MappingBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _set_standard_mapping(self, fields, nodeids, elementids, connectivity, dofs_by_element, **kwargs):
+    def _set_standard_mapping(self, fields, nodeids, connectivity, dofs_by_element, callbacks, callbackargs, **kwargs):
         # make empty pandas Dataframe for nodes2global
         data = -1*np.ones(len(nodeids), dtype=int)
         self._nodal2global = pd.DataFrame({key: data for key in fields}, index=nodeids)
         # allocate list for elements2global
-        self._elements2global = pd.DataFrame([None]*len(elementids), index=elementids, columns=['global_dofs'])
+        self._elements2global = pd.DataFrame([None]*len(connectivity), columns=['global_dofs'])
 
         # collect node dofs
         current_global = 0
         # iterate over all elements
-        for index, (elementid, element_connectivity, element_dofinfos) in enumerate(zip(elementids, connectivity,
-                                                                                        dofs_by_element)):
+        for index, (element_connectivity, element_dofinfos, callback, callbackarg) in enumerate(zip(connectivity,
+                                                                                                    dofs_by_element,
+                                                                                                    callbacks,
+                                                                                                    callbackargs)):
             # iterate over dofs of element
             global_dofs_for_element = []
             for localdofnumber, dofinfo in enumerate(element_dofinfos):
@@ -53,4 +55,5 @@ class StandardMapping(MappingBase):
                 else:
                     raise ValueError('Doftype must be E or N')
             # Get global dof numbers of element
-            self._elements2global.loc[elementid]['global_dofs'] = np.array(global_dofs_for_element, dtype=int)
+            self._elements2global.loc[index]['global_dofs'] = np.array(global_dofs_for_element, dtype=int)
+            callback(index, callbackarg)
