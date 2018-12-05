@@ -55,6 +55,11 @@ class MeshComponent(ComponentBase):
         ele_shapes = self._mesh.get_ele_shapes_by_ids(eleids)
         self._ele_obj_df.loc[eleids, 'ele_obj'] = [prototypes[ele_shape] for ele_shape in ele_shapes]
         self._update_mapping()
+        self._C_csr = self._assembly.preallocate(self._mapping.no_of_dofs, self._mapping.elements2global)
+        self._M_csr = self._C_csr.copy()
+        self._f_glob = np.zeros(self._C_csr.shape[1])
+        # TODO: CAREFUL! THE FOLLOWING LINE WILL NOT WORK IT IS JUST FOR THE CURRENT MERGE REQUEST
+        self._constraints.update(self._mapping.no_of_dofs)
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
     def assign_neumann_condition(self, condition, property_names, tag='_groups', name='Unknown'):
