@@ -179,7 +179,7 @@ class StructuralAssembly(Assembly):
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K_local, globaldofindices)
         return K_csr, f_glob
 
-    def assemble_m(self, M_csr, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0):
+    def assemble_m(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0, M_csr=None):
         """
         Assembles the mass matrix of the given mesh and element.
 
@@ -197,6 +197,8 @@ class StructuralAssembly(Assembly):
             current values of all dofs (at time t)
         t : float
             time. Default: 0.
+        M_csr : csr_matrix
+            if a preallocated csr_matrix for M exist, it can be passed here
 
         Returns
         --------
@@ -212,11 +214,16 @@ class StructuralAssembly(Assembly):
             maxdof = np.max(elements2dofs)
             dofvalues = np.zeros(maxdof + 1)
 
+        if M_csr is None:
+            no_of_dofs = np.max(elements2dofs) + 1
+            M_csr = self.preallocate(no_of_dofs, elements2dofs)
+
         for ele_obj, connectivity, globaldofindices in zip(ele_objects, connectivities, elements2dofs):
             X_local = nodes_df.loc[connectivity, :].values.reshape(-1)
             u_local = dofvalues[globaldofindices]
             M_local = ele_obj.m_int(X_local, u_local, t)
             fill_csr_matrix(M_csr.indptr, M_csr.indices, M_csr.data, M_local, globaldofindices)
+        return M_csr
 
     def assemble_k_f_S_E(self, K_csr, f_glob, nodes_df, ele_objects, connectivities, elements2dofs, elements_on_node, dofvalues=None, t=0):
         """

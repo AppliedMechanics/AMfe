@@ -119,10 +119,11 @@ class StructuralComponent(MeshComponent):
         if u is None:
             u = np.zeros(self._constraints.no_of_constrained_dofs)
 
-        f_unconstr = self._assembly.assemble_k_and_f(self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+        f_unconstr = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
+                                                     self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
                                                      self._mapping.elements2global,
-                                                     self._constraints.unconstrain_u(u, t), t, self.ele_obj,
-                                                     self._mesh.nodes_df)[1]
+                                                     self._constraints.unconstrain_u(u, t), t,
+                                                     self._C_csr, self._f_glob)[1]
         return self._constraints.constrain_f_int(f_unconstr)
 
     def K(self, u=None, t=0):

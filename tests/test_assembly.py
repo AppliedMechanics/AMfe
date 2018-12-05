@@ -158,7 +158,7 @@ class StructuralAssemblyTest(TestCase):
         elements2global = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
         M_global = asm.preallocate(8, elements2global)
 
-        asm.assemble_m(M_global, nodes_df, ele_obj, connectivity[0:2], elements2global)
+        asm.assemble_m(nodes_df, ele_obj, connectivity[0:2], elements2global, M_csr=M_global)
         M_global_desired = np.zeros((8, 8), dtype=float)
         # element 1
         M_global_desired[0:6, 0:6] = self.ele.m_int(None, None)
