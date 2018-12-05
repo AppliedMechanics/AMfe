@@ -62,5 +62,30 @@ class MeshConverter:
     def build_mesh_dimension(self, dim):
         pass
 
+    def build_tag(self, tag_dict):
+        """
+        Builds a tag with following dict given in tag_dict
+
+        Parameters
+        ----------
+        tag_dict : dict
+            dict with following format:
+            { tagname1 : { tagvalue1 : [elementids],
+                           tagvalue2 : [elementids],
+                           ...
+                         },
+              tagname2 : { tagvalue1 : [elementids],
+                           tagvalue2 : [elementids]
+                           ...
+                         },
+              ...
+            }
+
+        Returns
+        -------
+        None
+        """
+        pass
+
     def return_mesh(self):
         pass

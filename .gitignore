@@ -30,7 +30,7 @@ meshes/gid/
 experiments/paper_icoev
 .idea/
 .spyproject/
-
+.vscode/
 # specific files to ignore
 amfe/fortran/f90_elementmodule.c
 .project
