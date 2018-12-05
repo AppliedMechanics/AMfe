@@ -188,7 +188,7 @@ class StructuralComponent(MeshComponent):
         Parameters
         ----------
         u : ndarray
-            displacement field in voigt noation. len(u)  is equl to the number of dofs after constraints have been
+            displacement field in voigt noation. len(u)  is equal to the number of dofs after constraints have been
             applied
         t : float, optional
             time
@@ -202,9 +202,9 @@ class StructuralComponent(MeshComponent):
         if u is None:
             u = np.zeros(self._constraints.no_of_constrained_dofs)
 
-        neumann_infos = self._neumann.get_elementids_and_ele_obj()  # column 0: eleids, column 1: eleobjects
-        self._assembly.assemble_f_ext(self._f_glob, self._mesh.nodes_df, neumann_infos[1],
-                                      self._mesh.get_connectivity_by_elementids(neumann_infos[0]),
-                                      self._mapping.get_dofs_by_elementids(neumann_infos[0]),
-                                      self._constraints.unconstrain_u(u, t), t)
+        neumann_elements, neumann_mesh_fk, neumann_mapping_fk = self._neumann.get_ele_obj_fk_mesh_and_fk_mapping()
+        neumann_connectivities = self._mesh.get_connectivity_by_elementids(neumann_mesh_fk)
+        neumann_dofs = self._mapping.get_dofs_by_ids(neumann_mapping_fk)
+        self._assembly.assemble_f_ext(self._f_glob, self._mesh.nodes_df, neumann_elements,
+                                      neumann_connectivities, neumann_dofs, self._constraints.unconstrain_u(u, t), t)
         return self._constraints.constrain_f_ext(self._f_glob)

@@ -16,13 +16,6 @@ __all__ = [
 
 import numpy as np
 
-# try to import Fortran routines
-use_fortran = False
-try:
-    import amfe.f90_element
-    use_fortran = True
-except Exception:
-    print('Python was not able to load the fast fortran element routines.')
 
 def f_proj_a(f_mat, direction):
     """

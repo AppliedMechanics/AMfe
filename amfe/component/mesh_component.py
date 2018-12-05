@@ -80,6 +80,7 @@ class MeshComponent(ComponentBase):
         ele_shapes = self._mesh.get_ele_shapes_by_elementids(eleids)
             
         self._neumann.assign_neumann_by_eleids(condition, eleids, ele_shapes, property_names, tag, name)
+        self._update_mapping()
 
     # -- ASSIGN CONSTRAINTS METHODS ------------------------------------------------------------------------
 

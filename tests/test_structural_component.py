@@ -1,0 +1,40 @@
+"""Test Routine for structural component"""
+
+
+from unittest import TestCase
+import numpy as np
+from scipy.linalg import norm
+from numpy.testing import assert_allclose
+
+from amfe.tools import amfe_dir
+from amfe.io import GidJsonMeshReader, AmfeMeshConverter
+from amfe.material import KirchhoffMaterial
+from amfe.component.structural_component import StructuralComponent
+
+
+class StructuralComponentTest(TestCase):
+    def setUp(self):
+        mesh_input = amfe_dir('tests/meshes/gid_json_4_tets.json')
+        mesh_reader = GidJsonMeshReader(mesh_input, AmfeMeshConverter())
+        self.mesh = mesh_reader.parse()
+        self.amp = 1.0
+        my_comp = StructuralComponent(self.mesh)
+        my_material = KirchhoffMaterial()
+        my_comp.assign_material(my_material, ['left', 'right'], 'S')
+        neumann_bc = my_comp._neumann.create_fixed_direction_neumann((1, 0), lambda t: self.amp)
+        my_comp.assign_neumann_condition(neumann_bc, ['right_boundary'], name='Right force')
+        self.my_comp = my_comp
+
+    def test_f_ext(self):
+
+        f_ext = self.my_comp.f_ext()
+        summed_force_actual = np.sum(f_ext)
+        length_right = norm(self.mesh.nodes_df.loc[15] - self.mesh.nodes_df.loc[13])
+        summed_force_desired = self.amp * length_right
+        assert_allclose(summed_force_actual, summed_force_desired)
+        # test global locations of f_ext
+        locations_not_zero_desired = self.my_comp._mapping.nodal2global.loc[[13, 14, 15], 'ux']
+        locations_not_zero_actual = np.nonzero(f_ext)[0]
+        self.assertTrue(np.all(np.isin(locations_not_zero_desired, locations_not_zero_actual)))
+        self.assertTrue(np.all(np.isin(locations_not_zero_actual, locations_not_zero_desired)))
+        self.assertEqual(len(locations_not_zero_desired), len(locations_not_zero_actual))

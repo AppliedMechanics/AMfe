@@ -56,10 +56,42 @@ class NeumannManager:
         return self._neumann_obj_df
 
     def write_mapping_key(self, fk, local_id):
+        """
+        Write a foreign key info to a mapping element
+
+        Parameters
+        ----------
+        fk : int
+            foreign key to a mapping class that contains mapping info
+        local_id : int
+            index of the neumann obj that shall get the new mapping info
+
+        Returns
+        -------
+        None
+
+        """
         self._neumann_obj_df.loc[local_id, 'fk_mapping'] = fk
+
+    def get_ele_obj_fk_mesh_and_fk_mapping(self):
+        """
+        Returns neumann objects, their foreign keys to mesh elements and their foreign keys to mapping infos
+
+        Returns
+        -------
+        neumann_obj : iterable
+            iterable containing neumann_objects
+        fk_mesh : iterable
+            iterable containing the mesh foreign keys to elements
+        fk_mapping : iterable
+            iterable containing mapping foreign keys to mapping information of a mapping object
+        """
+        values = self._neumann_obj_df[['neumann_obj', 'fk_mesh', 'fk_mapping']].values
+        return values[:, 0], values[:, 1], values[:, 2]
 
     @staticmethod
     def create_fixed_direction_neumann(direction, time_func=lambda t: 1):
+        direction = np.array(direction, dtype=float)
         return FixedDirectionNeumann(direction, time_func)
 
     @staticmethod
@@ -68,4 +100,5 @@ class NeumannManager:
 
     @staticmethod
     def create_projected_area_neumann(direction, time_func=lambda t: 1):
+        direction = np.array(direction, dtype=float)
         return ProjectedAreaNeumann(direction, time_func)
