@@ -71,3 +71,11 @@ class Tri6Boundary(BoundaryElement):
             n = np.cross(v1, v2)
             f_mat += np.outer(N, n) / 2 * w
         return f_mat
+
+    def dofs(self):
+        return (('N', 0, 'ux'), ('N', 0, 'uy'), ('N', 0, 'uz'),
+                ('N', 1, 'ux'), ('N', 1, 'uy'), ('N', 1, 'uz'),
+                ('N', 2, 'ux'), ('N', 2, 'uy'), ('N', 2, 'uz'),
+                ('N', 3, 'ux'), ('N', 3, 'uy'), ('N', 3, 'uz'),
+                ('N', 4, 'ux'), ('N', 4, 'uy'), ('N', 4, 'uz'),
+                ('N', 5, 'ux'), ('N', 5, 'uy'), ('N', 5, 'uz'))

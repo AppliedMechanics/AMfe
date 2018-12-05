@@ -31,3 +31,6 @@ class BoundaryElement:
         """
     def f_mat(self, X, u):
         raise NotImplementedError('The f_mat is not implemented')
+
+    def dofs(self):
+        return ()
