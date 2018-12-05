@@ -3,10 +3,11 @@
 Tests for testing io module
 """
 
-from unittest import TestCase
+from unittest import TestCase, main
 import numpy as np
 import pandas as pd
-import _pickle as pickle
+#import _pickle as pickle
+import pickle
 from numpy.testing import assert_allclose, assert_array_equal
 from pandas.testing import assert_frame_equal
 
@@ -393,3 +394,62 @@ class IOTest(TestCase):
         self.assertEqual(mesh._groups, groups_desired)
         self.assertEqual(mesh._no_of_nodes, 15)
         self.assertEqual(mesh._no_of_elements, 10)
+
+    def test_gmsh_parser_with_2_partitions(self):
+
+        msh_filename = amfe_dir('tests/meshes/2_partitions_2quad_mesh.msh')
+        reader_obj = GmshAsciiMeshReader(msh_filename)
+        mesh_obj = reader_obj.parse()
+
+        self.assertTrue('no_of_mesh_partitions' in mesh_obj.el_df)
+        self.assertTrue('partition_id' in mesh_obj.el_df)
+        self.assertTrue('partitions_neighbors' in mesh_obj.el_df)
+        
+        desired_list_1 = [1,1,2,2]
+        desired_list_2 = [1,1,1,2]
+        desired_list_3 = [None,None,-2,-1]
+        actual_list_1 = mesh_obj.el_df['no_of_mesh_partitions'].tolist()
+        actual_list_2 = mesh_obj.el_df['partition_id'].tolist()
+        actual_list_3 = mesh_obj.el_df['partitions_neighbors'].tolist()
+        
+        self.assertListEqual(actual_list_1, desired_list_1)
+        self.assertListEqual(actual_list_2, desired_list_2)
+        self.assertListEqual(actual_list_3, desired_list_3)
+        
+    def test_gmsh_parser_with_8_partitions(self):
+
+        msh_filename = amfe_dir('tests/meshes/retangule_5_by_2_quad_par_8_irreg.msh')
+        reader_obj = GmshAsciiMeshReader(msh_filename,builder=AmfeMeshConverter())
+        mesh_obj = reader_obj.parse()
+
+        self.assertTrue('no_of_mesh_partitions' in mesh_obj.el_df)
+        self.assertTrue('partition_id' in mesh_obj.el_df)
+        self.assertTrue('partitions_neighbors' in mesh_obj.el_df)
+        
+
+        actual_list_1 = mesh_obj.el_df['no_of_mesh_partitions'].tolist()
+        actual_list_2 = mesh_obj.el_df['partition_id'].tolist()
+        actual_list_3 = mesh_obj.el_df['partitions_neighbors'].tolist()
+
+        desired_list_1 = load_object(amfe_dir('tests/pickle_obj/l1.pkl'))
+        desired_list_2 = load_object(amfe_dir('tests/pickle_obj/l2.pkl'))
+        desired_list_3 = load_object(amfe_dir('tests/pickle_obj/l3.pkl'))
+        
+        self.assertListEqual(actual_list_1, desired_list_1)
+        self.assertListEqual(actual_list_2, desired_list_2)
+        self.assertListEqual(actual_list_3, desired_list_3)
+
+
+def save_object(obj, filename):
+    with open(filename, 'wb') as output:
+        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
+
+def load_object(filename):
+    with open(filename, 'rb') as input:
+        obj = pickle.load(input)
+    return obj
+
+if __name__ == '__main__':
+    main()
+    #io_obj = IOTest()
+    #io_obj.test_gmsh_parser_with_8_partitions()

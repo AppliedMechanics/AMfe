@@ -94,25 +94,25 @@ class GmshAsciiMeshReader(MeshReader):
         i_physical_names_end = None
 
         # Store indices of lines where different sections start and end
-        for s in data_geometry:
+        for index, s in enumerate(data_geometry):
             if s == self.tag_format_start:  # Start Formatliste
-                i_format_start = data_geometry.index(s) + 1
+                i_format_start = index + 1
             elif s == self.tag_format_end:  # Ende Formatliste
-                i_format_end = data_geometry.index(s)
+                i_format_end = index
             elif s == self.tag_nodes_start:  # Start Knotenliste
-                i_nodes_start = data_geometry.index(s) + 2
+                i_nodes_start = index + 2
                 n_nodes = int(data_geometry[i_nodes_start - 1])
             elif s == self.tag_nodes_end:  # Ende Knotenliste
-                i_nodes_end = data_geometry.index(s)
+                i_nodes_end = index
             elif s == self.tag_elements_start:  # Start Elementliste
-                i_elements_start = data_geometry.index(s) + 2
+                i_elements_start = index + 2
                 n_elements = int(data_geometry[i_elements_start - 1])
             elif s == self.tag_elements_end:  # Ende Elementliste
-                i_elements_end = data_geometry.index(s)
+                i_elements_end = index
             elif s == self.tag_physical_names_start:  # Start Physical Names
-                i_physical_names_start = data_geometry.index(s) + 2
+                i_physical_names_start = index + 2
             elif s == self.tag_physical_names_end:
-                i_physical_names_end = data_geometry.index(s)
+                i_physical_names_end = index
 
         # build number of nodes and elements
         if n_nodes is not None and n_elements is not None:
@@ -122,9 +122,8 @@ class GmshAsciiMeshReader(MeshReader):
             raise ValueError('Could not read number of nodes and number of elements in File {}'.format(self._filename))
 
         # Check if indices could be read:
-        for i in [i_nodes_start, i_nodes_end, i_elements_start, i_elements_end, i_format_start, i_format_end]:
-            if i is None:
-                raise ValueError('Could not read start and end tags of format, nodes and elements '
+        if None in [i_nodes_start, i_nodes_end, i_elements_start, i_elements_end, i_format_start, i_format_end]:
+            raise ValueError('Could not read start and end tags of format, nodes and elements '
                                  'in file {}'.format(self._filename))
 
         # Check inconsistent dimensions
@@ -166,6 +165,10 @@ class GmshAsciiMeshReader(MeshReader):
 
         # Build elements
         groupentities = dict()
+        tag_entities = {'no_of_mesh_partitions':{},
+                        'partition_id' : {},
+                        'partitions_neighbors': {}}
+        has_partitions = False
         for element in list_imported_elements:
             elementinfo = element.split()
             elementid = int(elementinfo[0])
@@ -173,16 +176,36 @@ class GmshAsciiMeshReader(MeshReader):
             if int(elementinfo[1]) in self.eletypes_3d:
                 self._dimension = 3
             no_of_tags = int(elementinfo[2])
-            physical_group = int(elementinfo[3])
             connectivity = elementinfo[2+no_of_tags+1:]
             connectivity = [int(node) for node in connectivity]
 
             self._builder.build_element(elementid, eletype, connectivity)
             # Add element to group
+            physical_group = int(elementinfo[3])
             if physical_group in groupentities:
                 groupentities[physical_group].append(elementid)
             else:
                 groupentities.update({physical_group: [elementid]})
+            
+            # add element to tags 
+            if no_of_tags>3: 
+                has_partitions = True               
+                tag_list = [int(tag) for tag in elementinfo[3:3+no_of_tags][2:]]
+                if no_of_tags==3:
+                    tag_list.extend([None,None])
+                elif no_of_tags==4:
+                    tag_list.extend([None])
+                
+                no_of_mesh_partitions, partition_id, *partition_neighbors = tag_list
+                elem_tag_dict = {'no_of_mesh_partitions' : no_of_mesh_partitions, 
+                                 'partition_id' : partition_id, 
+                                 'partitions_neighbors' : tuple(partition_neighbors)}
+                for tag_name, dict_tag in tag_entities.items():
+                    elem_tag_value = elem_tag_dict[tag_name]
+                    if elem_tag_value in dict_tag:
+                        dict_tag[elem_tag_value].append(elementid)
+                    else:
+                        dict_tag[elem_tag_value] = [elementid]
 
         # Build groups
         for group in groupentities:
@@ -190,6 +213,10 @@ class GmshAsciiMeshReader(MeshReader):
                 self.builder.build_group(groupnames[group], [], groupentities[group])
             else:
                 self.builder.build_group(group, [], groupentities[group])
+
+        # Build tags
+        if has_partitions:
+            self.builder.build_tag(tag_entities)
 
         self.builder.build_mesh_dimension(self._dimension)
 

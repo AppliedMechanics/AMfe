@@ -52,6 +52,7 @@ class AmfeMeshConverter(MeshConverter):
         self._nodes = np.empty((0, 4), dtype=float)
         self._currentnodeid = 0
         self._groups = dict()
+        self._tags = dict()
         # df information
         self._el_df_indices = list()
         self._el_df_eleshapes = list()
@@ -104,6 +105,11 @@ class AmfeMeshConverter(MeshConverter):
         self._groups.update(group)
         return
 
+    def build_tag(self, tag_dict):
+        # append tag information
+        self._tags.update(tag_dict)
+        return None
+
     def return_mesh(self):
         # Check dimension of model
         if self._dimension is None:
@@ -144,4 +150,8 @@ class AmfeMeshConverter(MeshConverter):
         self._mesh.el_df = pd.DataFrame(data, index=self._el_df_indices)
 
         self._mesh.groups = self._groups
+        
+        for tag_name, tag_dict in self._tags.items():
+            self._mesh.insert_tag(tag_name, tag_dict)
+
         return self._mesh

@@ -34,14 +34,11 @@ class Mesh:
 
     Attributes
     ----------
-    nodes : ndarray
-        Array of x-y-z coordinates of the nodes in reference configuration. Dimension is
+    nodes_df : pandas.DataFrame
+        DataFrame containing the x-y-z coordinates of the nodes in reference configuration. Dimension is
         (no_of_nodes, 2) for 2D problems and (no_of_nodes, 3) for 3D problems.
         z-direction is dropped for 2D problems!
-    nodeid2idx : dict
-        Dictionary with key = node-id: value = row id in self.nodes array for getting nodes coordinates X
-    connectivity : ndarray
-        List of node-rowindices of self.nodes belonging to one element.
+        The Dataframe also provides accessing nodes by arbitrary indices
     _el_df : pandas.DataFrame
         DataFrame with element information
     groups : list
@@ -68,7 +65,8 @@ class Mesh:
 
         Returns
         -------
-        None
+        mesh : Mesh
+            a new mesh object
         """
         # -- GENERAL INFORMATION --
         self._dimension = dimension
@@ -369,11 +367,11 @@ class Mesh:
         """
         return self.nodes_df.iloc[nodeidxs, :].index.values
 
-    def insert_tag(self,tag_name,tag_value_dict=None):
+    def insert_tag(self, tag_name, tag_value_dict=None):
         """
-        This function add an extra column in the el_df
-        with name equal the  "tag_name" paramenter . By default 
-        a column will be inserted will None value for every elem_id.
+        This function adds an extra column in the el_df
+        with name equal the "tag_name" parameter . By default
+        a column will be inserted with None value for every elem_id.
         If a dictionary is provided with tag_value_dict[value] = [list of elements id]
         then, the el_df will populated with this information.
 
@@ -393,11 +391,11 @@ class Mesh:
         self.el_df[tag_name] = None
 
         if tag_value_dict is not None:
-            self.change_tag_values_by_dict(tag_name,tag_value_dict)
+            self.change_tag_values_by_dict(tag_name, tag_value_dict)
 
         return None
 
-    def remove_tag(self,tag_name):
+    def remove_tag(self, tag_name):
         """
         This function deletes a columns which has name equal to 
         'tag_name' parameter
@@ -412,10 +410,10 @@ class Mesh:
             None
 
         """
-        self.el_df = self.el_df.drop(columns=tag_name)
+        self._el_df = self.el_df.drop(columns=tag_name)
         return None
 
-    def change_tag_values_by_dict(self,tag_name,tag_value_dict):
+    def change_tag_values_by_dict(self, tag_name, tag_value_dict):
         """
         This function changes the values of the el_df column
         with name equal to the "tag_name" paramenter . By default 
@@ -436,11 +434,17 @@ class Mesh:
             None
         """
         for tag_value, elem_list in tag_value_dict.items():
-            self.el_df.loc[elem_list,(tag_name)] = tag_value
+            try:
+                self.el_df.loc[elem_list, (tag_name)] = tag_value
+            except:
+                temp_list = self.el_df[tag_name].tolist()
+                for elem in elem_list:
+                    temp_list[elem] = tag_value 
+                self.el_df[tag_name] = temp_list
         
         return None
 
-    def replace_tag_values(self,tag_name, current_tag_value, new_tag_value):
+    def replace_tag_values(self, tag_name, current_tag_value, new_tag_value):
         """
         This function replaces tag values of the el_df column named
         given by the "tag_name" parameter. The user must provide the current 
@@ -460,12 +464,11 @@ class Mesh:
         -------
             None
         """
-        
-        
-        self.el_df = self.el_df.replace({tag_name : current_tag_value},new_tag_value)
+
+        self._el_df = self._el_df.replace({tag_name : current_tag_value}, new_tag_value)
         return None
 
-    def get_elementids_by_tag(self,tag_name,tag_value):
+    def get_elementids_by_tag(self, tag_name, tag_value):
         """
         This function returns a list with the element ids given a "tag_name" 
         and the tag value associated with it. 
