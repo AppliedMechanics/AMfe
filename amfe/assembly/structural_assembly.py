@@ -115,7 +115,8 @@ class StructuralAssembly(Assembly):
         self.logger.info('Time taken for pre-allocation: {0:2.2f} seconds.'.format(t2 - t1))
         return C_csr
 
-    def assemble_k_and_f(self, K_csr, f_glob, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0.):
+    def assemble_k_and_f(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0., K_csr=None,
+                         f_glob=None):
         """
         Assemble the tangential stiffness matrix and nonliner internal or external force vector.
 
@@ -139,7 +140,10 @@ class StructuralAssembly(Assembly):
 
         Returns
         --------
-        None
+        K : csr_matrix
+            global stiffness matrix
+        f : ndarray
+            global internal force vector
 
         Examples
         ---------
@@ -149,6 +153,13 @@ class StructuralAssembly(Assembly):
         if dofvalues is None:
             maxdof = np.max(elements2dofs)
             dofvalues = np.zeros(maxdof + 1)
+
+        if K_csr is None:
+            no_of_dofs = np.max(elements2dofs) + 1
+            K_csr = self.preallocate(no_of_dofs, elements2dofs)
+
+        if f_glob is None:
+            f_glob = np.zeros(K_csr.shape[1], dtype=float)
 
         K_csr.data[:] = 0.0
         f_glob[:] = 0.0
@@ -166,6 +177,7 @@ class StructuralAssembly(Assembly):
             f_glob[globaldofindices] += f_local
             # this is equal to K_csr[globaldofindices, globaldofindices] += K_local
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K_local, globaldofindices)
+        return K_csr, f_glob
 
     def assemble_m(self, M_csr, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0):
         """

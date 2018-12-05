@@ -26,10 +26,17 @@ class StructuralComponentTest(TestCase):
             def __init__(self):
                 pass
 
-            def assemble_k_and_f(self, C_csr, f_glob, nodes_df, ele_objects, connectivities, elements2dofs,
-                                 dofvalues=None, t=0.):
-                C_csr[:, :] = np.array([[10, -5, 0], [-5, 10, -5], [0, -5, 10]])
-                f_glob[:] = np.array([2, 0, 0])
+            def assemble_k_and_f(self, nodes_df, ele_objects, connectivities, elements2dofs,
+                                 dofvalues=None, t=0., C_csr=None, f_glob=None):
+                if C_csr is None:
+                    C_csr = np.array([[10, -5, 0], [-5, 10, -5], [0, -5, 10]])
+                else:
+                    C_csr[:, :] = np.array([[10, -5, 0], [-5, 10, -5], [0, -5, 10]])
+                if f_glob is None:
+                    f_glob = np.array([2, 0, 0])
+                else:
+                    f_glob[:] = np.array([2, 0, 0])
+                return C_csr, f_glob
 
             def preallocate(self, no_of_dofs, elements2dof):
                 return np.zeros((3, 3))

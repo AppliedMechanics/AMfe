@@ -184,7 +184,7 @@ class StructuralAssemblyTest(TestCase):
         K_global = asm.preallocate(8, element2dofs)
         f_global = np.zeros(K_global.shape[0])
 
-        asm.assemble_k_and_f(K_global, f_global, nodes_df, ele_obj, connectivity[0:2], element2dofs)
+        asm.assemble_k_and_f(nodes_df, ele_obj, connectivity[0:2], element2dofs, K_csr=K_global, f_glob=f_global)
         K_global_desired = np.zeros((8, 8), dtype=float)
         f_global_desired = np.zeros(8, dtype=float)
         # element 1
@@ -204,6 +204,44 @@ class StructuralAssemblyTest(TestCase):
 
         assert_array_equal(K_global.todense(), K_global_desired)
         assert_array_equal(f_global, f_global_desired)
+
+    def test_assemble_k_and_f_preallocation(self):
+        nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
+        connectivity = [np.array([1, 2, 3], dtype=np.int), np.array([1, 3, 4], dtype=np.int),
+                        np.array([2, 3], dtype=np.int), np.array([3, 4], dtype=np.int)]
+
+        asm = StructuralAssembly()
+        ele_obj = np.array([self.ele, self.ele], dtype=object)
+        element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
+        K_global = asm.preallocate(8, element2dofs)
+        f_global = np.zeros(K_global.shape[0])
+        memory_K_global_before = id(K_global)
+        memory_K_global_data_before = id(K_global.data)
+        memory_f_global_before = id(f_global)
+
+        K_global, f_global = asm.assemble_k_and_f(nodes_df, ele_obj, connectivity[0:2], element2dofs, K_csr=K_global)
+
+        memory_K_global_after = id(K_global)
+        memory_K_global_data_after = id(K_global.data)
+        memory_f_global_after = id(f_global)
+
+        self.assertTrue(memory_K_global_after == memory_K_global_before)
+        self.assertTrue(memory_K_global_data_after == memory_K_global_data_before)
+        self.assertFalse(memory_f_global_after == memory_f_global_before)
+
+        memory_K_global_before = memory_K_global_after
+        memory_K_global_data_before = memory_K_global_data_after
+        memory_f_global_before = memory_f_global_after
+
+        K_global, f_global = asm.assemble_k_and_f(nodes_df, ele_obj, connectivity[0:2], element2dofs, f_glob=f_global)
+
+        memory_K_global_after = id(K_global)
+        memory_K_global_data_after = id(K_global.data)
+        memory_f_global_after = id(f_global)
+
+        self.assertFalse(memory_K_global_after == memory_K_global_before)
+        self.assertFalse(memory_K_global_data_after == memory_K_global_data_before)
+        self.assertTrue(memory_f_global_after == memory_f_global_before)
 
     def test_assemble_k_f_S_E(self):
         nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
