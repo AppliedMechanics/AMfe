@@ -205,6 +205,7 @@ class StructuralComponent(MeshComponent):
         neumann_elements, neumann_mesh_fk, neumann_mapping_fk = self._neumann.get_ele_obj_fk_mesh_and_fk_mapping()
         neumann_connectivities = self._mesh.get_connectivity_by_elementids(neumann_mesh_fk)
         neumann_dofs = self._mapping.get_dofs_by_ids(neumann_mapping_fk)
-        self._assembly.assemble_f_ext(self._f_glob, self._mesh.nodes_df, neumann_elements,
-                                      neumann_connectivities, neumann_dofs, self._constraints.unconstrain_u(u, t), t)
+        self._f_glob = self._assembly.assemble_f_ext(self._mesh.nodes_df, neumann_elements,
+                                      neumann_connectivities, neumann_dofs, self._constraints.unconstrain_u(u, t), t,
+                                      f_glob=self._f_glob)
         return self._constraints.constrain_f_ext(self._f_glob)

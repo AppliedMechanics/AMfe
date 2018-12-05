@@ -302,7 +302,7 @@ class StructuralAssembly(Assembly):
         S = S.divide(S.join(elements_on_node)['elements_on_node'], axis=0)
         return K_csr, f_glob, S, E
 
-    def assemble_f_ext(self, f_glob, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0.):
+    def assemble_f_ext(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0., f_glob=None):
         """
         Assemble the tangential stiffness matrix and nonliner internal or external force vector.
 
@@ -323,10 +323,13 @@ class StructuralAssembly(Assembly):
             current values of all dofs (at time t)
         t : float
             time. Default: 0.
+        f_glob : ndarray
+            preallocated ndarray
 
         Returns
         --------
-        None
+        f_ext : ndarray
+            external force
 
         Examples
         ---------
@@ -337,6 +340,8 @@ class StructuralAssembly(Assembly):
             maxdof = np.max(elements2dofs)
             dofvalues = np.zeros(maxdof + 1)
 
+        if f_glob is None:
+            f_glob = np.zeros(len(dofvalues), dtype=float)
         f_glob[:] = 0.0
 
         # loop over all elements
@@ -350,3 +355,4 @@ class StructuralAssembly(Assembly):
             f_local = ele_obj.f_ext(X_local, u_local, t)
             # adding the local force to the global one
             f_glob[globaldofindices] += f_local
+        return f_glob
