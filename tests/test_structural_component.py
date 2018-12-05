@@ -21,13 +21,13 @@ class StructuralComponentTest(TestCase):
         my_comp = StructuralComponent(self.mesh)
         my_material = KirchhoffMaterial()
         my_comp.assign_material(my_material, ['left', 'right'], 'S')
-        neumann_bc = my_comp._neumann.create_fixed_direction_neumann((1, 0), lambda t: self.amp)
+        neumann_bc = my_comp._neumann.create_fixed_direction_neumann((1, 0), lambda t: self.amp*t)
         my_comp.assign_neumann_condition(neumann_bc, ['right_boundary'], name='Right force')
         self.my_comp = my_comp
 
     def test_f_ext(self):
 
-        f_ext = self.my_comp.f_ext()
+        f_ext = self.my_comp.f_ext(t=1.0)
         summed_force_actual = np.sum(f_ext)
         length_right = norm(self.mesh.nodes_df.loc[15] - self.mesh.nodes_df.loc[13])
         summed_force_desired = self.amp * length_right
@@ -38,3 +38,8 @@ class StructuralComponentTest(TestCase):
         self.assertTrue(np.all(np.isin(locations_not_zero_desired, locations_not_zero_actual)))
         self.assertTrue(np.all(np.isin(locations_not_zero_actual, locations_not_zero_desired)))
         self.assertEqual(len(locations_not_zero_desired), len(locations_not_zero_actual))
+
+        # check if time parameter is propagated:
+        f_ext = self.my_comp.f_ext(t=1.0)
+        f_ext_2 = self.my_comp.f_ext(t=2.0)
+        assert_allclose(2*f_ext, f_ext_2)
