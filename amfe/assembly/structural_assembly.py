@@ -218,6 +218,8 @@ class StructuralAssembly(Assembly):
             no_of_dofs = np.max(elements2dofs) + 1
             M_csr = self.preallocate(no_of_dofs, elements2dofs)
 
+        M_csr.data[:] = 0.0
+
         for ele_obj, connectivity, globaldofindices in zip(ele_objects, connectivities, elements2dofs):
             X_local = nodes_df.loc[connectivity, :].values.reshape(-1)
             u_local = dofvalues[globaldofindices]
@@ -248,6 +250,10 @@ class StructuralAssembly(Assembly):
 
         Returns
         --------
+        K : csr_matrix
+            global stiffness matrix
+        f : ndarray
+            global internal force vector
         S : pandas.DataFrame
             unconstrained assembled stress tensor
         E : pandas.DataFrame
@@ -259,6 +265,13 @@ class StructuralAssembly(Assembly):
             dofvalues = np.zeros(maxdof + 1)
 
         # Allocate K and f
+        if K_csr is None:
+            no_of_dofs = np.max(elements2dofs) + 1
+            K_csr = self.preallocate(no_of_dofs, elements2dofs)
+
+        if f_glob is None:
+            f_glob = np.zeros(K_csr.shape[1], dtype=float)
+
         f_glob[:] = 0.0
         K_csr.data[:] = 0.0
 
@@ -287,4 +300,4 @@ class StructuralAssembly(Assembly):
         # Correct strains such, that average is taken at the elements
         E = E.divide(E.join(elements_on_node)['elements_on_node'], axis=0)
         S = S.divide(S.join(elements_on_node)['elements_on_node'], axis=0)
-        return S, E
+        return K_csr, f_glob, S, E

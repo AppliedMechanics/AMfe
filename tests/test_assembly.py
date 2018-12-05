@@ -156,9 +156,15 @@ class StructuralAssemblyTest(TestCase):
 
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         elements2global = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
+
         M_global = asm.preallocate(8, elements2global)
 
+        memory_m_before = id(M_global)
         asm.assemble_m(nodes_df, ele_obj, connectivity[0:2], elements2global, M_csr=M_global)
+        memory_m_after = id(M_global)
+        # test if preallocated version works
+        self.assertTrue(memory_m_after, memory_m_before)
+
         M_global_desired = np.zeros((8, 8), dtype=float)
         # element 1
         M_global_desired[0:6, 0:6] = self.ele.m_int(None, None)
@@ -256,8 +262,22 @@ class StructuralAssemblyTest(TestCase):
         C_csr = asm.preallocate(8, element2dofs)
         f_global = np.zeros(C_csr.shape[0])
 
-        S_global, E_global= asm.assemble_k_f_S_E(C_csr, f_global, nodes_df, ele_obj, connectivity[0:2],
+        memory_K_global_before = id(C_csr)
+        memory_K_global_data_before = id(C_csr.data)
+        memory_f_global_before = id(f_global)
+
+        C_csr, f_global, S_global, E_global= asm.assemble_k_f_S_E(C_csr, f_global, nodes_df, ele_obj, connectivity[0:2],
                                                                      element2dofs, elements_on_node)
+
+        memory_K_global_after = id(C_csr)
+        memory_K_global_data_after = id(C_csr.data)
+        memory_f_global_after = id(f_global)
+
+        # test fully preallocated version
+        self.assertTrue(memory_K_global_after == memory_K_global_before)
+        self.assertTrue(memory_K_global_data_after == memory_K_global_data_before)
+        self.assertTrue(memory_f_global_after == memory_f_global_before)
+
         K_global_desired = np.zeros((8, 8), dtype=float)
         f_global_desired = np.zeros(8, dtype=float)
         # Currently strains and stresses are always 3D (therefore 6 components)

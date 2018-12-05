@@ -62,10 +62,9 @@ class StructuralComponent(MeshComponent):
             else:
                 u_unconstr = None
 
-            self._M_csr.data[:] = 0.0
-            self._assembly.assemble_m(self._M_csr, self._mesh.nodes_df, self.ele_obj,
-                                      self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
-                                      self._mapping.elements2global, u_unconstr, t)
+            self._M_csr = self._assembly.assemble_m(self._mesh.nodes_df, self.ele_obj,
+                                                    self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                    self._mapping.elements2global, u_unconstr, t, self._M_csr)
             self._M_constr = self._constraints.constrain_m(self._M_csr)
         return self._M_constr
 
@@ -119,12 +118,12 @@ class StructuralComponent(MeshComponent):
         if u is None:
             u = np.zeros(self._constraints.no_of_constrained_dofs)
 
-        f_unconstr = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
-                                                     self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
-                                                     self._mapping.elements2global,
-                                                     self._constraints.unconstrain_u(u, t), t,
-                                                     self._C_csr, self._f_glob)[1]
-        return self._constraints.constrain_f_int(f_unconstr)
+        _, self._f_glob = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
+                                                          self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                          self._mapping.elements2global,
+                                                          self._constraints.unconstrain_u(u, t), t,
+                                                          self._C_csr, self._f_glob)[1]
+        return self._constraints.constrain_f_int(self._f_glob)
 
     def K(self, u=None, t=0):
         """
@@ -147,10 +146,10 @@ class StructuralComponent(MeshComponent):
         if u is None:
             u = np.zeros(self._constraints.no_of_constrained_dofs)
 
-        self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
-                                        self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
-                                        self._mapping.elements2global, self._constraints.unconstrain_u(u, t), t,
-                                        self._C_csr, self._f_glob)
+        self._C_csr, _ = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
+                                                         self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                         self._mapping.elements2global, self._constraints.unconstrain_u(u, t), t,
+                                                         self._C_csr, self._f_glob)
         return self._constraints.constrain_k(self._C_csr)
 
     def K_and_f_int(self, u=None, t=0):
@@ -176,8 +175,8 @@ class StructuralComponent(MeshComponent):
         if u is None:
             u = np.zeros(self._constraints.no_of_constrained_dofs)
 
-        self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
-                                        self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
-                                        self._mapping.elements2global, self._constraints.unconstrain_u(u, t), t,
-                                        self._C_csr, self._f_glob)
+        self._C_csr, self._f_glob = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
+                                                                    self._ele_obj_df.join(self._mesh.el_df)['connectivity'].values,
+                                                                    self._mapping.elements2global, self._constraints.unconstrain_u(u, t), t,
+                                                                    self._C_csr, self._f_glob)
         return self._constraints.constrain_k(self._C_csr), self._constraints.constrain_f_int(self._f_glob)
