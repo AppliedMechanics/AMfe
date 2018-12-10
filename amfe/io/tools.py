@@ -12,7 +12,8 @@ Tools for I/O module.
 from os import path, makedirs
 
 __all__ = [
-    'check_dir'
+    'check_dir',
+    'prettify_xml'
     ]
 
 
@@ -37,3 +38,19 @@ def check_dir(*filenames):
             makedirs(path.dirname(filename))  # if not, then create directory
             print('Created directory \'' + path.dirname(filename) + '\'.')
     return
+
+
+def prettify_xml(root, level=0):
+    i = "\n" + level*"  "
+    if len(root):
+        if not root.text or not root.text.strip():
+            root.text = i + "  "
+        if not root.tail or not root.tail.strip():
+            root.tail = i
+        for root in root:
+            prettify_xml(root, level + 1)
+        if not root.tail or not root.tail.strip():
+            root.tail = i
+    else:
+        if level and (not root.tail or not root.tail.strip()):
+            root.tail = i
