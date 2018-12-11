@@ -5,6 +5,7 @@
 
 from enum import Enum
 import numpy as np
+import pandas as pd
 import xml.etree.ElementTree as ET
 import h5py
 from os.path import basename
@@ -23,7 +24,7 @@ class XdmfMeshConverter(MeshConverter):
     """
     class Preallocation(Enum):
         PREALLOCATED = 1
-        NOTPREALLOCATD = 2
+        NOTPREALLOCATED = 2
         UNKNOWN = 0
 
     ELEMENTS = {'Tri3': {'no_of_nodes': 3, 'xdmf_name': 'Triangle'},
@@ -49,35 +50,34 @@ class XdmfMeshConverter(MeshConverter):
         self._nodes_current_row = 0
         self._node_preallocation = self.Preallocation.UNKNOWN
         self._nodeids2row = dict()
-        self._elements = dict()
+        self._tag_dict = dict()
+        self._connectivity = list()
+        self._ele_indices = list()
+        self._eleshapes = list()
 
     def build_no_of_nodes(self, no):
         if self._node_preallocation == self.Preallocation.UNKNOWN:
-            self._nodes = np.zeros((no, 3))
+            self._nodes = np.zeros((no, 4))
+            self._node_preallocation = self.Preallocation.PREALLOCATED
 
     def build_no_of_elements(self, no):
         pass
 
-    def build_node(self, id, x, y, z):
+    def build_node(self, idx, x, y, z):
         if self._node_preallocation == self.Preallocation.PREALLOCATED:
-            self._nodes[self._nodes_current_row, :] = [float(x), float(y), float(z)]
-            if id not in self._nodeids2row:
-                self._nodeids2row.update({id: self._nodes_current_row})
-                self._nodes_current_row += 1
-            else:
-                raise ValueError('Nodeid already in nodeids2row')
+            self._nodes[self._nodes_current_row, :] = [float(idx), float(x), float(y), float(z)]
         else:
-            self._nodes = np.append(self._nodes, np.array([x, y, z], ndmin=2, dtype=float), axis=0)
+            if self._node_preallocation == self.Preallocation.UNKNOWN:
+                self._nodes = np.empty((0, 4), dtype=float)
+                self._node_preallocation = self.Preallocation.NOTPREALLOCATED
+            self._nodes = np.append(self._nodes, np.array([idx, x, y, z], ndmin=2, dtype=float), axis=0)
             self._nodeids2row.update({id: self._nodes_current_row})
             self._nodes_current_row += 1
-            if self._node_preallocation == self.Preallocation.UNKNOWN:
-                self._node_preallocation = self.Preallocation.NOTPREALLOCATD
 
     def build_element(self, eid, etype, nodes):
-        connectivity = np.array(nodes, ndmin=2, dtype=int)
-        if etype not in self._elements:
-            self._elements.update({etype: np.empty((0, self.ELEMENTS[etype]['no_of_nodes']))})
-        self._elements[etype] = np.append(self._elements[etype], connectivity, 0)
+        self._connectivity.append(np.array(nodes, ndmin=2, dtype=int))
+        self._ele_indices.append(eid)
+        self._eleshapes.append(etype)
 
     def build_group(self, name, nodeids, elementids):
         """
@@ -130,19 +130,59 @@ class XdmfMeshConverter(MeshConverter):
         -------
         None
         """
-        pass
+        self._tag_dict.update(tag_dict)
 
     def return_mesh(self):
+        # Make a pd Dataframe for the nodes
+        # If dimension = 2 cut the z coordinate
+        x = self._nodes[:, 1]
+        y = self._nodes[:, 2]
+        z = self._nodes[:, 3]
+        no_of_nodes = self._nodes.shape[0]
 
+        nodes_df = pd.DataFrame({'row': np.arange(no_of_nodes), 'x': x, 'y': y, 'z': z}, index=np.array(self._nodes[:, 0], dtype=int))
+
+        # make a pd Dataframe for the elements
+        data = {'shape': self._eleshapes,
+                'connectivity': self._connectivity}
+        el_df = pd.DataFrame(data, index=self._ele_indices)
+        # introduce row values for each shape
+        etypes_in_el_df = el_df['shape'].unique()
+        el_df['row'] = None
+        for etype in etypes_in_el_df:
+            el_df.loc[el_df['shape'] == etype, 'row'] = np.arange(sum(el_df['shape'] == etype))
+
+        tag_names = list()
+        for tag_name, tag_dict in self._tag_dict.items():
+            el_df[tag_name] = None
+            if tag_dict is not None:
+                for tag_value, elem_list in tag_dict.items():
+                    try:
+                        el_df.loc[elem_list, (tag_name)] = tag_value
+                    except:
+                        temp_list = el_df[tag_name].tolist()
+                        for elem in elem_list:
+                            temp_list[elem] = tag_value
+                        el_df[tag_name] = temp_list
+            tag_names.extend(tag_name)
+
+        # write hdf5 file
         hdf5filename = self._filename + '.hdf5'
         with h5py.File(hdf5filename, 'w') as hdf_fp:
+            # create mesh group
             group_mesh = hdf_fp.create_group('mesh')
             group_mesh.create_dataset('nodes', self._nodes.shape, float, self._nodes)
             group_elements = group_mesh.create_group('topology')
-            for etype in self._elements:
-                self._elements[etype] = np.vectorize(self._nodeids2row.get)(self._elements[etype])
-                group_elements.create_dataset(etype, self._elements[etype].shape,
+            # write topology for each element
+            for etype in el_df['shape'].unique():
+                for row in el_df[el_df['shape'] == etype].iteritems():
+                    print('Hello')
+                    el_df[el_df['shape' == etype]]['connectivity'] = np.vectorize(self._nodeids2row.get)(self._elements[etype])
+                    group_elements.create_dataset(etype, self._elements[etype].shape,
                                               int, self._elements[etype])
+            group_tags = group_mesh.create_group('tags')
+            for tag, taginfo in self._tag_dict.items():
+                tag_group = group_mesh.create_group(tag)
 
         with open(self._filename + '.xdmf', 'wb') as xdmf_fp:
             prologue = '<?xml version="1.0" ?>\n'

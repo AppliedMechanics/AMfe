@@ -283,6 +283,14 @@ class IOTest(TestCase):
             ('left_dirichlet', [1, 3, 6], [])
         ]
 
+        tags_dict = {'domain': {'A': [2, 4],
+                                'B': [1, 3],
+                                },
+                     'border': {'top': [8, 10],
+                                'left': [7],
+                                'right': [9]}
+                     }
+
         filename = amfe_dir('results/tests/test_xdmf')
         converter = XdmfMeshConverter(filename)
         # Build nodes
@@ -292,6 +300,9 @@ class IOTest(TestCase):
             converter.build_element(element[0], element[1], element[2])
         for group in groups_input:
             converter.build_group(group[0], group[1], group[2])
+        # build tags:
+        converter.build_tag(tags_dict)
+
         converter.return_mesh()
 
     def test_gmshascii_to_dummy(self):
