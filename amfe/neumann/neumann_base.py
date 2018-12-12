@@ -71,3 +71,6 @@ class NeumannBase:
 
     def set_element(self, ele_shape):
         self._boundary_element = self.ELEMENTFACTORY[ele_shape]()
+
+    def dofs(self):
+        return self._boundary_element.dofs()

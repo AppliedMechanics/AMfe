@@ -301,3 +301,59 @@ class StructuralAssembly(Assembly):
         E = E.divide(E.join(elements_on_node)['elements_on_node'], axis=0)
         S = S.divide(S.join(elements_on_node)['elements_on_node'], axis=0)
         return K_csr, f_glob, S, E
+
+    def assemble_f_ext(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0., f_glob=None):
+        """
+        Assemble the external force vector.
+
+        This method can be used for assembling f_ext
+
+        Parameters
+        ----------
+        nodes_df : pandas.DataFrame
+            Node Coordinates
+        ele_objects : ndarray
+            Ndarray with Element objects that shall be assembled
+        connectivities : list of ndarrays
+            Connectivity of the elements mapping to the indices of nodes ndarray
+        elements2dofs : list of ndarrays
+            Mapping the elements to their global dofs
+        dofvalues : ndarray
+            current values of all dofs (at time t)
+        t : float
+            time. Default: 0.
+        f_glob : ndarray
+            preallocated ndarray
+
+        Returns
+        --------
+        f_ext : ndarray
+            external force
+
+        Examples
+        ---------
+        TODO
+        """
+
+        # TODO: This could be refactored to one single function for f_int and f_ext by renaming the f_ext function
+        # in the boundary elements to f_int or something different..
+        if dofvalues is None:
+            maxdof = np.max(elements2dofs)
+            dofvalues = np.zeros(maxdof + 1)
+
+        if f_glob is None:
+            f_glob = np.zeros(len(dofvalues), dtype=float)
+        f_glob[:] = 0.0
+
+        # loop over all elements
+        # (i - element index, indices - DOF indices of the element)
+        for ele_obj, connectivity, globaldofindices in zip(ele_objects, connectivities, elements2dofs):
+            # X - undeformed positions of the i-th element
+            X_local = nodes_df.loc[connectivity, :].values.reshape(-1)
+            # displacements of the i-th element
+            u_local = dofvalues[globaldofindices]
+            # computation of the element tangential stiffness matrix and nonlinear force
+            f_local = ele_obj.f_ext(X_local, u_local, t)
+            # adding the local force to the global one
+            f_glob[globaldofindices] += f_local
+        return f_glob

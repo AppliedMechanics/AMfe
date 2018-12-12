@@ -53,3 +53,9 @@ class LineLinearBoundary(BoundaryElement):
         # Dimension of f_mat: (number of nodes, number of dofs per node)
         f_mat = np.outer(self.N, n)
         return f_mat
+
+    def dofs(self):
+        return (('N', 0, 'ux'),
+                ('N', 0, 'uy'),
+                ('N', 1, 'ux'),
+                ('N', 1, 'uy'))
