@@ -146,17 +146,32 @@ class XdmfMeshConverter(MeshConverter):
         data = {'shape': self._eleshapes,
                 'connectivity': self._connectivity}
         el_df = pd.DataFrame(data, index=self._ele_indices)
-        # introduce row values for each shape
+        # introduce row values for each shape. The row values will map to the row entries in an separate array for each
+        # elementtype
         etypes_in_el_df = el_df['shape'].unique()
         el_df['row'] = None
         for etype in etypes_in_el_df:
             el_df.loc[el_df['shape'] == etype, 'row'] = np.arange(sum(el_df['shape'] == etype))
 
+        # Function change connectivity ids to row ids in nodes array:
+        def change_connectivity(arr):
+            return np.array([nodes_df.loc[node, 'row'] for node in arr], ndmin=2, dtype=int)
+        el_df['connectivity'] = el_df['connectivity'].apply(change_connectivity)
+
         tag_names = list()
+
         for tag_name, tag_dict in self._tag_dict.items():
             el_df[tag_name] = None
+            currentscalar = -1
+            name2scalars = dict()
             if tag_dict is not None:
                 for tag_value, elem_list in tag_dict.items():
+                    # Check if tag_value is string
+                    # if it is a string map the string to a scalar because xdmf does not support strings
+                    if isinstance(tag_value, str):
+                        name2scalars.update({tag_value: currentscalar})
+                        tag_value = currentscalar
+                        currentscalar -= 1
                     try:
                         el_df.loc[elem_list, (tag_name)] = tag_value
                     except:
@@ -164,49 +179,64 @@ class XdmfMeshConverter(MeshConverter):
                         for elem in elem_list:
                             temp_list[elem] = tag_value
                         el_df[tag_name] = temp_list
-            tag_names.extend(tag_name)
+            tag_names.extend([tag_name])
+            self._tag_dict[tag_name].update({'name2scalars': name2scalars})
 
         # write hdf5 file
         hdf5filename = self._filename + '.hdf5'
         with h5py.File(hdf5filename, 'w') as hdf_fp:
-            # create mesh group
-            group_mesh = hdf_fp.create_group('mesh')
-            group_mesh.create_dataset('nodes', self._nodes.shape, float, self._nodes)
-            group_elements = group_mesh.create_group('topology')
-            # write topology for each element
-            for etype in el_df['shape'].unique():
-                for row in el_df[el_df['shape'] == etype].iteritems():
-                    print('Hello')
-                    el_df[el_df['shape' == etype]]['connectivity'] = np.vectorize(self._nodeids2row.get)(self._elements[etype])
-                    group_elements.create_dataset(etype, self._elements[etype].shape,
-                                              int, self._elements[etype])
-            group_tags = group_mesh.create_group('tags')
-            for tag, taginfo in self._tag_dict.items():
-                tag_group = group_mesh.create_group(tag)
+            with open(self._filename + '.xdmf', 'wb') as xdmf_fp:
+                # create mesh group
+                group_mesh = hdf_fp.create_group('mesh')
+                group_mesh.create_dataset('nodes', nodes_df[['x', 'y', 'z']].values.shape, float,
+                                          nodes_df[['x', 'y', 'z']].values)
+                group_elements = group_mesh.create_group('topology')
+                group_tags = group_mesh.create_group('tags')
+                for tag in tag_names:
+                    tag_group = group_tags.create_group(tag)
 
-        with open(self._filename + '.xdmf', 'wb') as xdmf_fp:
-            prologue = '<?xml version="1.0" ?>\n'
-            doctype = '<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>\n'
+                relative_hdf5_path = basename(self._filename)
+                root = ET.Element('Xdmf', {'Version': '3.0'})
+                domain = ET.SubElement(root, 'Domain')  # , {'Type': 'Uniform'})
+                collection = ET.SubElement(domain, 'Grid', {'GridType': 'Collection', 'CollectionType': 'spatial'})
 
-            #xdmf_fp.write(prologue.encode('UTF-8'))
-            # xdmf_fp.write(doctype)
-            relative_hdf5_path = basename(self._filename)
-            root = ET.Element('Xdmf', {'Version': '3.0'})
-            domain = ET.SubElement(root, 'Domain')  # , {'Type': 'Uniform'})
-            collection = ET.SubElement(domain, 'Grid', {'GridType': 'Collection', 'CollectionType': 'spatial'})
-            for etype, arr in self._elements.items():
-                grid = ET.SubElement(collection, 'Grid', {'Name': 'mesh', 'GridType': 'Uniform'})
-                no_of_elements = arr.shape[0]
-                topology = ET.SubElement(grid, 'Topology', {'NumberOfElements': str(no_of_elements),
-                                                        'TopologyType': self.ELEMENTS[etype]['xdmf_name']})
-                elementdata = ET.SubElement(topology, 'DataItem', {'Dimensions': '{} {}'.format(arr.shape[0],
-                                                                                                arr.shape[1]),
-                                                                   'Format': 'HDF', 'NumberType': 'Int'})
-                elementdata.text = relative_hdf5_path + '.hdf5:/mesh/topology/' + etype
-                geometry = ET.SubElement(grid, 'Geometry', {'GeometryType': 'XYZ'})
-                nodedata = ET.SubElement(geometry, 'DataItem', {'Dimensions': '{} {}'.format(
-                    self._nodes.shape[0], self._nodes.shape[1]), 'Format': 'HDF', 'NumberType': 'Float'})
-                nodedata.text = relative_hdf5_path + '.hdf5:/mesh/nodes'
-            prettify_xml(root)
-            tree = ET.ElementTree(root)
-            tree.write(xdmf_fp, 'UTF-8', True)
+                # write topology for each element
+                for etype in el_df['shape'].unique():
+                    connectivity_of_current_etype = el_df[el_df['shape'] == etype]['connectivity'].values
+                    no_of_elements_of_current_etype = len(connectivity_of_current_etype)
+                    no_of_nodes_per_element = connectivity_of_current_etype[0].shape[1]
+                    connectivity_array = np.concatenate(connectivity_of_current_etype, axis=0)
+                    if no_of_elements_of_current_etype > 0:
+                        group_elements.create_dataset(etype, (no_of_elements_of_current_etype, no_of_nodes_per_element),
+                                                      int, connectivity_array)
+
+                    grid = ET.SubElement(collection, 'Grid', {'Name': 'mesh', 'GridType': 'Uniform'})
+                    topology = ET.SubElement(grid, 'Topology',
+                                             {'NumberOfElements': str(no_of_elements_of_current_etype),
+                                              'TopologyType': self.ELEMENTS[etype]['xdmf_name']})
+                    elementdata = ET.SubElement(topology, 'DataItem',
+                                                {'Dimensions': '{} {}'.format(no_of_elements_of_current_etype,
+                                                                              no_of_nodes_per_element),
+                                                 'Format': 'HDF', 'NumberType': 'Int'})
+                    elementdata.text = relative_hdf5_path + '.hdf5:/mesh/topology/' + etype
+                    geometry = ET.SubElement(grid, 'Geometry', {'GeometryType': 'XYZ'})
+                    nodedata = ET.SubElement(geometry, 'DataItem', {'Dimensions': '{} {}'.format(
+                        no_of_nodes, 3), 'Format': 'HDF', 'NumberType': 'Float'})
+                    nodedata.text = relative_hdf5_path + '.hdf5:/mesh/nodes'
+
+                    for tag in tag_names:
+                        # write values for each element type
+                        tag_values = el_df[el_df['shape'] == etype][tag].values
+                        group_tags.create_dataset('{}/{}'.format(tag, etype), tag_values.shape, dtype=float,
+                                                  data=tag_values.astype(float))
+
+                        attribute = ET.SubElement(grid, 'Attribute', {'Name': tag, 'Center': 'Cell',
+                                                                      'AttributeType': 'Scalar'})
+                        attribute_data = ET.SubElement(attribute, 'DataItem',
+                                                       {'Dimensions': '{} 1'.format(no_of_elements_of_current_etype),
+                                                        'Format': 'HDF'})
+                        attribute_data.text = relative_hdf5_path + '.hdf5:/mesh/tags/{}/{}'.format(tag, etype)
+
+                prettify_xml(root)
+                tree = ET.ElementTree(root)
+                tree.write(xdmf_fp, 'UTF-8', True)

@@ -4,7 +4,7 @@ Tests for testing io module
 """
 
 from unittest import TestCase, main
-from io import StringIO
+import os
 import numpy as np
 import pandas as pd
 #import _pickle as pickle
@@ -291,7 +291,10 @@ class IOTest(TestCase):
                                 'right': [9]}
                      }
 
-        filename = amfe_dir('results/tests/test_xdmf')
+        filename = amfe_dir('results/tests/test_xdmf_2')
+        if not os.path.exists(amfe_dir('results/tests')):
+            os.makedirs(amfe_dir('results/tests'))
+
         converter = XdmfMeshConverter(filename)
         # Build nodes
         for node in nodes_input:
