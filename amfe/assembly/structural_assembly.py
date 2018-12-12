@@ -304,10 +304,9 @@ class StructuralAssembly(Assembly):
 
     def assemble_f_ext(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0., f_glob=None):
         """
-        Assemble the tangential stiffness matrix and nonliner internal or external force vector.
+        Assemble the external force vector.
 
-        This method can be used for assembling K_int and f_int or for assembling K_ext and f_ext depending on which
-        ele_objects and connectivities are passed
+        This method can be used for assembling f_ext
 
         Parameters
         ----------
@@ -336,6 +335,8 @@ class StructuralAssembly(Assembly):
         TODO
         """
 
+        # TODO: This could be refactored to one single function for f_int and f_ext by renaming the f_ext function
+        # in the boundary elements to f_int or something different..
         if dofvalues is None:
             maxdof = np.max(elements2dofs)
             dofvalues = np.zeros(maxdof + 1)
