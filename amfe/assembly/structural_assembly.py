@@ -211,7 +211,7 @@ class StructuralAssembly(Assembly):
         """
 
         if dofvalues is None:
-            maxdof = np.max(elements2dofs)
+            maxdof = np.vstack(elements2dofs).max()
             dofvalues = np.zeros(maxdof + 1)
 
         if M_csr is None:
