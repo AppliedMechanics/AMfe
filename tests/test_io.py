@@ -12,7 +12,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from pandas.testing import assert_frame_equal
 
 from amfe.io import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, AmfeMeshObjMeshReader, \
-                    AmfeMeshConverter
+                    AmfeMeshConverter, VtkMeshConverter, check_dir
 from amfe.io.mesh_converter import MeshConverter
 from amfe.mesh import Mesh
 from amfe.tools import amfe_dir
@@ -242,6 +242,116 @@ class IOTest(TestCase):
         for group in groups_input:
             groups_desired.update({group[0]: {'nodes': group[1], 'elements': group[2]}})
         self.assertEqual(mesh.groups, groups_desired)
+
+    def set_dummy_input(self):
+        # Desired nodes
+        self.nodes_input = [(1, 1.345600000e-02, 3.561675700e-02, 0.000000000e+00),
+                       (2, 5.206839561e-01, 3.740820950e-02, 6.193195000e-04),
+                       (3, 3.851982918e-02, 5.460016703e-01, 4.489461500e-03),
+                       (4, 5.457667372e-01, 5.477935420e-01, 6.984401105e-04),
+                       (50, 1.027911912e+00, 3.919966200e-02, 1.238639000e-03),
+                       (6, 6.358365836e-02, 1.056386584e+00, 8.978923000e-03),
+                       (7, 1.040469476e+00, 5.445628213e-01, 1.301993398e-03),
+                       (8, 5.582746582e-01, 1.053154002e+00, 7.377279750e-03),
+                       (9, 1.052965658e+00, 1.049921420e+00, 5.775636500e-03),
+                       (10, 1.535139868e+00, 4.099111450e-02, 1.857958500e-03),
+                       (11, 1.547697432e+00, 5.463542738e-01, 1.921312898e-03),
+                       (12, 1.547656658e+00, 1.046688838e+00, 4.173993250e-03),
+                       (13, 2.042367825e+00, 4.278256700e-02, 2.477278000e-03),
+                       (14, 2.042357741e+00, 5.431194119e-01, 2.524814000e-03),
+                       (15, 2.042347658e+00, 1.043456257e+00, 2.572350000e-03)]
+        # Desired elements
+        # (internal name of Triangle Nnode 3 is 'Tri3')
+        self.elements_input = [(1, 'Tri6', [13, 15, 9, 14, 12, 11]),
+                          (2, 'Tri6', [9, 6, 50, 8, 4, 7]),
+                          (3, 'Tri6', [9, 50, 13, 7, 10, 11]),
+                          (4, 'Tri6', [1, 50, 6, 2, 4, 3]),
+                          (5, 'quadratic_line', [50, 13, 10]),
+                          (6, 'quadratic_line', [1, 50, 2]),
+                          (7, 'quadratic_line', [6, 1, 3]),
+                          (8, 'quadratic_line', [9, 6, 8]),
+                          (9, 'quadratic_line', [13, 15, 14]),
+                          (10, 'quadratic_line', [15, 9, 12])
+                          ]
+        self.groups_input = [
+            ('left', [], [2, 4]),
+            ('right', [], [1, 3]),
+            ('left_boundary', [], [7]),
+            ('right_boundary', [], [9]),
+            ('top_boundary', [], [8, 10]),
+            ('left_dirichlet', [1, 3, 6], [])
+        ]
+
+        self.tags_input = {'domain': {1: [2, 4], 2: [1, 3]}}
+
+    def run_build_commands(self, converter):
+        for node in self.nodes_input:
+            converter.build_node(node[0], node[1], node[2], node[3])
+        for element in self.elements_input:
+            converter.build_element(element[0], element[1], element[2])
+        for group in self.groups_input:
+            converter.build_group(group[0], group[1], group[2])
+        converter.build_tag(self.tags_input)
+        converter.build_mesh_dimension(3)
+
+    def test_dummy_to_vtu(self):
+        self.set_dummy_input()
+
+        filename = amfe_dir('results/tests/vtk_dummy.vtu')
+        check_dir(filename)
+
+        converter = VtkMeshConverter(filename=filename)
+        # Build nodes
+        self.run_build_commands(converter)
+        converter.return_mesh()
+
+    def test_dummy_to_vtk(self):
+        self.set_dummy_input()
+
+        filename = amfe_dir('results/tests/vtk_dummy.vtk')
+        check_dir(filename)
+
+        converter = VtkMeshConverter(filename=filename)
+        # Build nodes
+        self.run_build_commands(converter)
+        converter.return_mesh()
+
+    def test_dummy_to_vtk_wrong_fileextension(self):
+        self.set_dummy_input()
+
+        filename = amfe_dir('results/tests/vtk_dummy.abc')
+        check_dir(filename)
+
+        converter = VtkMeshConverter(filename=filename)
+        # Build nodes
+        self.run_build_commands(converter)
+        converter.return_mesh()
+
+    def test_dummy_to_vtk_with_preallocation(self):
+        self.set_dummy_input()
+
+        filename = amfe_dir('results/tests/vtk_dummy.vtk')
+        check_dir(filename)
+
+        converter = VtkMeshConverter(filename=filename)
+        # Build nodes
+        converter.build_no_of_nodes(len(self.nodes_input))
+        converter.build_no_of_elements(len(self.elements_input))
+        self.run_build_commands(converter)
+        converter.return_mesh()
+
+    def test_dummy_to_vtk_with_preallocation_too_late(self):
+        self.set_dummy_input()
+
+        filename = amfe_dir('results/tests/vtk_dummy.vtk')
+        check_dir(filename)
+
+        converter = VtkMeshConverter(filename=filename)
+        # Build nodes
+        self.run_build_commands(converter)
+        converter.build_no_of_nodes(len(self.nodes_input))
+        converter.build_no_of_elements(len(self.elements_input))
+        converter.return_mesh()
 
     def test_gmshascii_to_dummy(self):
         # Desired nodes
