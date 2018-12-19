@@ -2,21 +2,13 @@
 TODO: Write introduction to ECSW
 """
 
-import time
-import copy
+import logging
 import numpy as np
-import scipy as sp
-
-from ..mechanical_system import ReducedSystem
-
-__all__ = ['ECSWSystem',
-           'reduce_mechanical_system_ecsw',
-           'sparse_nnls',
-          ]
+from scipy.linalg import solve as linsolve
 
 
 def sparse_nnls(G, b, tau, conv_stats=False, verbose=True):
-    r'''
+    r"""
     Run the sparse NNLS-solver in order to find a sparse vector xi satisfying
 
     .. math::
@@ -30,9 +22,11 @@ def sparse_nnls(G, b, tau, conv_stats=False, verbose=True):
         force contribution vector
     tau : float
         tolerance
-    conv_info : bool
+    conv_stats : bool
         Flag for setting, that more detailed output is produced with
         convergence information.
+    verbose : bool
+        bool for setting verbose flag
 
     Returns
     -------
@@ -54,7 +48,7 @@ def sparse_nnls(G, b, tau, conv_stats=False, verbose=True):
             sampling for the hyper reduction of nonlinear computational models.
             International Journal for Numerical Methods in Engineering, 2016.
 
-    '''
+    """
     no_of_elements = G.shape[1]
     norm_b = np.linalg.norm(b)
     r = b
@@ -75,8 +69,8 @@ def sparse_nnls(G, b, tau, conv_stats=False, verbose=True):
         while True:
             # Trial vector zeta is solved for the sparse solution
             zeta[~active_set] = 0
-            G_red = G[:,active_set]
-            zeta[active_set] = sp.linalg.solve(G_red.T @ G_red, G_red.T @ b)
+            G_red = G[:, active_set]
+            zeta[active_set] = linsolve(G_red.T @ G_red, G_red.T @ b)
 
             # check, if gathered solution is full positive
             if np.min(zeta[active_set]) >= 0:
@@ -100,10 +94,10 @@ def sparse_nnls(G, b, tau, conv_stats=False, verbose=True):
                 # active_set = xi != 0
                 active_set[const_idx] = False
 
-        r = b - G[:,active_set] @ xi[active_set]
+        r = b - G[:, active_set] @ xi[active_set]
         if verbose:
-            print('snnls: residual', np.linalg.norm(r),
-                  'No of active elements:', len(np.where(xi)[0]))
+            logger = logging.getLogger('amfe.hyper_red.ecsw')
+            logger.debug("snnls: residual {} No of active elements: {}".format(np.linalg.norm(r), len(np.where(xi)[0])))
         if conv_stats:
             stats.append((len(np.where(xi)[0]), np.linalg.norm(r)))
 
@@ -114,66 +108,51 @@ def sparse_nnls(G, b, tau, conv_stats=False, verbose=True):
     return indices, xi_red, stats
 
 
-class ECSWSystem(ReducedSystem):
-    '''
-    Hyper Reduced system using ECSW for the redcution.
-    '''
+def reduce_mesh(W_red, tau=0.001, verbose=True):
+    """
+    Compute a reduced mesh using a sparse NNLS solver for gaining the
+    weights.
 
-    def __init__(self, **kwargs):
-        '''
+    Parameters
+    ----------
+    W_red : ndarray, shape(n_red, no_of_snapshots)
+        Snapshot training matrix for which the energy equality is ensured.
+        The n_red is of size of the generalized coordinates of the projected mesh
+    tau : float, optional
+        tolerance for fitting the best solution
 
-        '''
-        super().__init__(self, **kwargs)
-        # values to be computed in reduce_mesh
-        self.weights = None
-        self.weight_idx = None
+    Returns
+    -------
+    weight_indices : ndarray
+        indices of members in the reduced mesh
+    weights : ndarray
+        weights for reduced mesh
+    stats : ndarray
+        statistics about the convergence of the sparse NNLS solver. The
+        first column shows the size of the active set, the secont column
+        the residual. If `verbose=False`, an empty array is returned.
 
-    def reduce_mesh(self, W_red, tau=0.001, verbose=True):
-        '''
-        Compute a reduced mesh using a sparse NNLS solver for gaining the
-        weights.
+    Note
+    ----
+    The indices and weights of the reduced mesh are also internally saved.
+    """
+    W_unconstr = self.V_unconstr @ W_red
+    print('Assemble matrices G and b...')
+    G, b = self.assembly_class.assemble_g_and_b(self.V_unconstr,
+                                                W_unconstr,
+                                                verbose=verbose)
+    print('') # newline as dots are written without newline
+    print('Solve sparse NNLS problem')
+    xi_indices, xi, stats = sparse_nnls(G, b, tau, verbose=verbose,
+                                        conv_stats=verbose)
+    self.weight_idx = xi_indices
+    self.weights = xi
+    t2 = time.time()
 
-        Parameters
-        ----------
-        W_red : ndarray, shape(n_red, no_of_snapshots)
-            Snapshot training matrix for which the energy equality is ensured.
-        tau : float, optional
-            tolerance for fitting the best solution
-
-        Returns
-        -------
-        weight_indices : ndarray
-            indices of members in the reduced mesh
-        weights : ndarray
-            weights for reduced mesh
-        stats : ndarray
-            statistics about the convergence of the sparse NNLS solver. The
-            first column shows the size of the active set, the secont column
-            the residual. If `verbose=False`, an empty array is returned.
-
-        Note
-        ----
-        The indices and weights of the reduced mesh are also internally saved.
-        '''
-        print('Start reducing mesh with tolerance tau={0:3.4}'.format(tau))
-        t1 = time.time()
-        W_unconstr = self.V_unconstr @ W_red
-        print('Assemble matrices G and b...')
-        G, b = self.assembly_class.assemble_g_and_b(self.V_unconstr,
-                                                    W_unconstr,
-                                                    verbose=verbose)
-        print('') # newline as dots are written without newline
-        print('Solve sparse NNLS problem')
-        xi_indices, xi, stats = sparse_nnls(G, b, tau, verbose=verbose,
-                                            conv_stats=verbose)
-        self.weight_idx = xi_indices
-        self.weights = xi
-        t2 = time.time()
-
-        print('Mesh successfully reduced to', len(xi), 'Elements.')
-        print('Full mesh size is', self.mesh_class.no_of_elements, 'Elements.')
-        print('Time taken for mesh reduction: {0:3.4} seconds.'.format(t2-t1))
-        return xi_indices, xi, stats
+    print('Mesh successfully reduced to', len(xi), 'Elements.')
+    print('Full mesh size is', self.mesh_class.no_of_elements, 'Elements.')
+    print('Time taken for mesh reduction: {0:3.4} seconds.'.format(t2-t1))
+    return xi_indices, xi, stats
 
     def K_and_f(self, u=None, t=0):
         if u is None:
