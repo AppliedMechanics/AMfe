@@ -45,7 +45,7 @@ class MeshComponent(ComponentBase):
         elif tag == '_eleids':
             eleids = propertynames
         else:
-            eleids = self._mesh.get_elementids_by_tags(propertynames)
+            eleids = self._mesh.get_elementids_by_tag(tag, propertynames)
         self._assign_material_by_eleids(materialobj, eleids, physics)
 
     def _assign_material_by_eleids(self, materialobj, eleids, physics):
@@ -109,7 +109,7 @@ class MeshComponent(ComponentBase):
         self._mapping.update_mapping(fields, nodeids, connectivities, dofs_by_elements, callbacks, callbackargs)
 
     def write_mapping_key(self, fk, local_id):
-        self._ele_obj_df.loc[local_id, 'fk_mapping'] = fk
+        self._ele_obj_df.at[local_id, 'fk_mapping'] = fk
     # -- GETTER FOR SYSTEM MATRICES ------------------------------------------------------------------------
     #
     # MUST BE IMPLEMENTED IN SUBCLASSES
