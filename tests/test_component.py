@@ -16,10 +16,10 @@ class StructuralComponentTest(TestCase):
             def __init__(self):
                 self.no_of_constrained_dofs = 2
 
-            def unconstrain_u(self, u_constr, t):
+            def unconstrain_vector(self, u_free, u_constr=None):
                 return np.array([0, 0, 0])
 
-            def constrain_k(self, K_unconstr, t=0):
+            def constrain_matrix(self, K_unconstr, t=0):
                 return K_unconstr[0:2, 0:2]
 
         class DummyAssembly:

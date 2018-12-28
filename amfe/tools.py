@@ -25,7 +25,8 @@ __all__ = [
     'principal_angles',
     'query_yes_no',
     'resulting_force',
-    'compare_signals'
+    'compare_signals',
+    'check_float_not_zero'
 ]
 
 
