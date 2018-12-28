@@ -64,8 +64,7 @@ class MeshComponent(ComponentBase):
         self._C_csr = self._assembly.preallocate(self._mapping.no_of_dofs, self._mapping.elements2global)
         self._M_csr = self._C_csr.copy()
         self._f_glob = np.zeros(self._C_csr.shape[1])
-        # TODO: CAREFUL! THE FOLLOWING LINE WILL NOT WORK IT IS JUST FOR THE CURRENT MERGE REQUEST
-        self._constraints.update(self._mapping.no_of_dofs)
+        self._constraints.update_no_of_unconstrained_dofs(self._mapping.no_of_dofs)
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
     def assign_neumann_condition(self, condition, property_names, tag='_groups', name='Unknown'):

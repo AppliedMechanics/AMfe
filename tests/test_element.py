@@ -80,7 +80,6 @@ class ElementTest(unittest.TestCase):
         assert_allclose(self.my_element.E, E)
 
 
-
 class Tri3Test(ElementTest):
     def setUp(self):
         self.initialize_element(Tri3, X_tri3)

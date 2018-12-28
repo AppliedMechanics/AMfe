@@ -5,6 +5,7 @@ from unittest import TestCase
 import numpy as np
 from scipy.linalg import norm
 from numpy.testing import assert_allclose
+from copy import deepcopy
 
 from amfe.tools import amfe_dir
 from amfe.io import GidJsonMeshReader, AmfeMeshConverter
@@ -40,6 +41,6 @@ class StructuralComponentTest(TestCase):
         self.assertEqual(len(locations_not_zero_desired), len(locations_not_zero_actual))
 
         # check if time parameter is propagated:
-        f_ext = self.my_comp.f_ext(t=1.0)
+        f_ext = deepcopy(self.my_comp.f_ext(t=1.0))
         f_ext_2 = self.my_comp.f_ext(t=2.0)
         assert_allclose(2*f_ext, f_ext_2)
