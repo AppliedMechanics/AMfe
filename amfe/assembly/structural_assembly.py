@@ -227,7 +227,7 @@ class StructuralAssembly(Assembly):
             fill_csr_matrix(M_csr.indptr, M_csr.indices, M_csr.data, M_local, globaldofindices)
         return M_csr
 
-    def assemble_k_f_S_E(self, K_csr, f_glob, nodes_df, ele_objects, connectivities, elements2dofs, elements_on_node, dofvalues=None, t=0):
+    def assemble_k_f_S_E(self, nodes_df, ele_objects, connectivities, elements2dofs, elements_on_node, dofvalues=None, t=0, K_csr=None, f_glob=None ):
         """
         Assemble the stiffness matrix with stress recovery of the given mesh and element.
 
