@@ -503,68 +503,6 @@ class Assembly():
 
         return K_csr, f_glob, E_global, S_global
 
-    def assemble_g_and_b(self, V, S, verbose=False):
-        '''
-        Assembles the element contributin matrix G for the given basis V and
-        the snapshots S.
-
-        This function is needed for cubature bases Hyper reduction methods
-        like the ECSW.
-
-        Parameters
-        ----------
-        V : ndarray, shape (N_unconstr, n)
-            Reduction basis
-        S : ndarray, shape (N_unconstr, m)
-            Snapshots gathered as column vectors.
-        verbose : print dots for the
-
-        Returns
-        -------
-        G : ndarray, shape (n*m, no_of_elements)
-            Contribution matrix of internal forces. The columns form the
-            internal force contributions on the basis V for the m snapshots
-            gathered in S.
-        b : ndarray, shape (n*m, )
-            summed force contribution
-
-        Note
-        ----
-        This assembly works on the unconstrained variables, so both, V and S
-        have to contain the unassembled nodal displacements.
-
-        '''
-        # Check the raw dimension
-        assert(V.shape[0] == S.shape[0])
-
-        # n : dimension of reduces basis
-        # m : number of snapshots
-
-        N_unconstr, n = V.shape
-        __, m = S.shape
-
-        if verbose:
-            print('Start building large selection matrix G.',
-                  'In total {0:d} elements are treated:'.format(
-                      len(self.element_indices)))
-        G = np.zeros((n*m, len(self.element_indices)))
-
-        # loop over all elements
-        for i, indices in enumerate(self.element_indices):
-            # node_indices = self.mesh.connectivity[i]
-            X_local = self.nodes_voigt[indices]
-            V_ele = V[indices, :]
-            if verbose:
-                print('.', sep='', end='')
-            # loop over all snapshots
-            for j, u in enumerate(S.T):
-                u_local = u[indices]
-                f = self.mesh.ele_obj[i].f_int(X_local, u_local)
-                G[j*n:(j+1)*n,i] = V_ele.T @ f
-
-        b = np.sum(G, axis=1)
-        return G, b
-
     def assemble_k_and_f_red(self, V, u, t):
         '''
         Assembly routine for reduces systems. Note, that V has to be

@@ -5,6 +5,7 @@ TODO: Write introduction to ECSW
 import logging
 import numpy as np
 from scipy.linalg import solve as linsolve
+from amfe.assembly import EcswAssembly
 
 
 def sparse_nnls(G, b, tau, conv_stats=False, verbose=True):
@@ -106,6 +107,81 @@ def sparse_nnls(G, b, tau, conv_stats=False, verbose=True):
     xi_red = xi[active_set]
     stats = np.array(stats)
     return indices, xi_red, stats
+
+
+def assemble_g_and_b(component, S, timesteps=None):
+    """
+    Assembles the element contribution matrix G for the given snapshots S.
+
+    This function is needed for cubature bases Hyper reduction methods
+    like the ECSW.
+
+    Parameters
+    ----------
+    component : amfe.MeshComponent
+        amfe.Component, if a reduction basis should be used, it should already
+        be the component that is reduced by this reduction basis
+    S : ndarray, shape (no_of_dofs, no_of_snapshots)
+        Snapshots gathered as column vectors.
+    timesteps : ndarray, shape(no_of_snapshots)
+        optional, the timesteps of where the snapshots have been generated can be passed,
+        this is important for systems with certain constraints
+
+    Returns
+    -------
+    G : ndarray, shape (n*m, no_of_elements)
+        Contribution matrix of internal forces. The columns form the
+        internal force contributions on the basis V for the m snapshots
+        gathered in S.
+    b : ndarray, shape (n*m, )
+        summed force contribution
+
+    Note
+    ----
+    This assembly works on constrained variables
+    """
+    # Check the raw dimension
+    # Currently not applicable
+    # assert(component.no_of_dofs == S.shape[0])
+
+    logger = logging.getLogger('ecsw.assemble_g_and_b')
+
+    no_of_dofs, no_of_snapshots = S.shape
+
+    no_of_elements = component.no_of_elements
+    logger.info('Start building large selection matrix G. In total {0:d} elements are treated:'.format(
+                  no_of_elements))
+
+    G = np.zeros((no_of_dofs*no_of_snapshots, no_of_elements))
+
+    # Temporarily replace Assembly of component:
+    old_assembly = component.assembly
+    g_assembly = EcswAssembly([], [])
+    component.assembly = g_assembly
+
+    # Weight only one element by one
+    g_assembly.weights = 1
+
+    # check if timesteps are None:
+    if timesteps is None:
+        timesteps = np.zeros(no_of_snapshots)
+
+    # loop over all elements
+    for element_no in range(no_of_elements):
+        # Change nonzero weighted elements to current element
+        g_assembly.indices = [element_no]
+
+        logger.debug('Assemble element {:10d} / {:10d}'.format(element_no+1, no_of_elements))
+        # loop over all snapshots
+        for snapshot_number, (snapshot_vector, t) in enumerate((S.T, timesteps)):
+            G[snapshot_number*no_of_dofs:(snapshot_number+1)*no_of_dofs, element_no] = component.f_int(snapshot_vector,
+                                                                                                       t)
+
+    b = np.sum(G, axis=1)
+
+    # reset assembly
+    component.assembly = old_assembly
+    return G, b
 
 
 def reduce_mesh(W_red, tau=0.001, verbose=True):
