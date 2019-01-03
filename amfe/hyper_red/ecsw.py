@@ -3,12 +3,15 @@ TODO: Write introduction to ECSW
 """
 
 import logging
+from copy import deepcopy, copy
+
 import numpy as np
 from scipy.linalg import solve as linsolve
+
 from amfe.assembly import EcswAssembly
 
 
-def sparse_nnls(G, b, tau, conv_stats=False, verbose=True):
+def sparse_nnls(G, b, tau, conv_stats=False):
     r"""
     Run the sparse NNLS-solver in order to find a sparse vector xi satisfying
 
@@ -26,8 +29,6 @@ def sparse_nnls(G, b, tau, conv_stats=False, verbose=True):
     conv_stats : bool
         Flag for setting, that more detailed output is produced with
         convergence information.
-    verbose : bool
-        bool for setting verbose flag
 
     Returns
     -------
@@ -96,14 +97,13 @@ def sparse_nnls(G, b, tau, conv_stats=False, verbose=True):
                 active_set[const_idx] = False
 
         r = b - G[:, active_set] @ xi[active_set]
-        if verbose:
-            logger = logging.getLogger('amfe.hyper_red.ecsw')
-            logger.debug("snnls: residual {} No of active elements: {}".format(np.linalg.norm(r), len(np.where(xi)[0])))
+        logger = logging.getLogger('amfe.hyper_red.ecsw')
+        logger.debug("snnls: residual {} No of active elements: {}".format(np.linalg.norm(r), len(np.where(xi)[0])))
         if conv_stats:
             stats.append((len(np.where(xi)[0]), np.linalg.norm(r)))
 
     # sp.optimize.nnls(A, b)
-    indices = np.where(xi)[0] # remove the nasty tupel from np.where()
+    indices = np.where(xi)[0]  # remove the nasty tuple from np.where()
     xi_red = xi[active_set]
     stats = np.array(stats)
     return indices, xi_red, stats
@@ -184,166 +184,64 @@ def assemble_g_and_b(component, S, timesteps=None):
     return G, b
 
 
-def reduce_mesh(W_red, tau=0.001, verbose=True):
+def reduce_with_ecsw(component, S, timesteps, tau=0.001, copymode='overwrite',
+                                   conv_stats=False, tagname=None):
     """
-    Compute a reduced mesh using a sparse NNLS solver for gaining the
-    weights.
+    Reduce the given MeshComponent
 
     Parameters
     ----------
-    W_red : ndarray, shape(n_red, no_of_snapshots)
-        Snapshot training matrix for which the energy equality is ensured.
-        The n_red is of size of the generalized coordinates of the projected mesh
-    tau : float, optional
-        tolerance for fitting the best solution
+    component : instance of MeshComponent
+        MeshComponent
+    S : ndarray, shape (no_of_dofs, no_of_snapshots)
+        Snapshots
+    copymode : str {'ovewrite', 'shallow', 'deep'}
+        Select if the component shall be verwritten, shallow copied or deepcopied
+    conv_stats : bool
+        Flag if conv_stats shall be collected
+    tagname : str
+        optional, if a string is given the weights are written into the mesh as tag values
+        the tagname is the given string
 
     Returns
     -------
-    weight_indices : ndarray
-        indices of members in the reduced mesh
-    weights : ndarray
-        weights for reduced mesh
-    stats : ndarray
-        statistics about the convergence of the sparse NNLS solver. The
-        first column shows the size of the active set, the secont column
-        the residual. If `verbose=False`, an empty array is returned.
-
-    Note
-    ----
-    The indices and weights of the reduced mesh are also internally saved.
+    reduced_system : instance of MeshComponent
+        Reduced system with same properties of the passed Mesh Component
+        but with ECSW reduced mesh
+    stats : list
+        Information about hyperreduction convergence
     """
-    W_unconstr = self.V_unconstr @ W_red
-    print('Assemble matrices G and b...')
-    G, b = self.assembly_class.assemble_g_and_b(self.V_unconstr,
-                                                W_unconstr,
-                                                verbose=verbose)
-    print('') # newline as dots are written without newline
-    print('Solve sparse NNLS problem')
-    xi_indices, xi, stats = sparse_nnls(G, b, tau, verbose=verbose,
-                                        conv_stats=verbose)
-    self.weight_idx = xi_indices
-    self.weights = xi
-    t2 = time.time()
 
-    print('Mesh successfully reduced to', len(xi), 'Elements.')
-    print('Full mesh size is', self.mesh_class.no_of_elements, 'Elements.')
-    print('Time taken for mesh reduction: {0:3.4} seconds.'.format(t2-t1))
-    return xi_indices, xi, stats
-
-    def K_and_f(self, u=None, t=0):
-        if u is None:
-            u = np.zeros(self.V.shape[1])
-
-        if self.assembly_type == 'direct':
-            K, f_int = self.assembly_class.assemble_k_and_f_hyper(
-                          self.V_unconstr,self.weight_idx, self.weights, u, t)
-        elif self.assembly_type == 'indirect':
-            K, f_int = self.assembly_class.assemble_k_and_f_hyper_no_inplace(
-                          self.V_unconstr,self.weight_idx, self.weights, u, t)
-        else:
-            raise ValueError('The given assembly type for a reduced system '
-                             + 'is not valid.')
-        return K, f_int
-
-    def K(self, u=None, t=0):
-        if u is None:
-            u = np.zeros(self.V.shape[1])
-
-        if self.assembly_type == 'direct':
-            K, f_int = self.assembly_class.assemble_k_and_f_hyper(
-                          self.V_unconstr,self.weight_idx, self.weights, u, t)
-        elif self.assembly_type == 'indirect':
-            K, f_int = self.assembly_class.assemble_k_and_f_hyper_no_inplace(
-                          self.V_unconstr,self.weight_idx, self.weights, u, t)
-        else:
-            raise ValueError('The given assembly type for a reduced system '
-                             + 'is not valid.')
-        return K
-
-    def f_int(self, u, t=0):
-        if u is None:
-            u = np.zeros(self.V.shape[1])
-
-        if self.assembly_type == 'direct':
-            K, f_int = self.assembly_class.assemble_k_and_f_hyper(
-                          self.V_unconstr,self.weight_idx, self.weights, u, t)
-        elif self.assembly_type == 'indirect':
-            K, f_int = self.assembly_class.assemble_k_and_f_hyper_no_inplace(
-                          self.V_unconstr,self.weight_idx, self.weights, u, t)
-        else:
-            raise ValueError('The given assembly type for a reduced system '
-                             + 'is not valid.')
-        return f_int
-
-    def export_paraview(self, filename, field_list=None):
-
-        # take care of None field lists
-        if field_list is None:
-            new_field_list = []
-        else:
-            new_field_list = field_list.copy()
-
-        # the h5 dictionary
-        h5_xi_dict = {'ParaView':True,
-             'AttributeType':'Scalar',
-             'Center':'Cell',
-             'Name':'weights_hyper_red',
-             'NoOfComponents':1,
-             }
-
-        xi = np.zeros(self.mesh_class.no_of_elements)
-        xi[self.weight_idx] = self.weights
-
-        new_field_list.append((xi, h5_xi_dict))
-
-        ReducedSystem.export_paraview(self, filename, new_field_list)
-        return
-
-def reduce_mechanical_system_ecsw(mechanical_system, V, overwrite=False,
-                                   assembly='indirect'):
-    '''
-    Reduce the given mechanical system with the linear basis V and the given
-    weights.
-
-    Parameters
-    ----------
-    mechanical_system : instance of MechanicalSystem
-        Mechanical system which will be transformed to a ReducedSystem.
-    V : ndarray, shape (N_constrained, n_red)
-        Reduction Basis for the reduced system
-    overwrite : bool, optional
-        switch, if mechanical system should be overwritten (is less memory
-        intensive for large systems) or not.
-    assembly : str {'direct', 'indirect'}
-        flag setting, if direct or indirect assembly is done. For larger
-        reduction bases, the indirect method is much faster.
-
-    Returns
-    -------
-    reduced_system : instance of ReducedSystem
-        Reduced system with same properties of the mechanical system and
-        reduction basis V
-
-    Example
-    -------
-
-    '''
-
-    if overwrite:
-        reduced_sys = mechanical_system
+    # If overwrite use existent component, else create new one by copying
+    if copymode == 'overwrite':
+        hyperreduced_component = component
+    elif copymode == 'shallow':
+        hyperreduced_component = copy(component)
+    elif copymode == 'deep':
+        hyperreduced_component = deepcopy(component)
     else:
-        reduced_sys = copy.deepcopy(mechanical_system)
-    reduced_sys.__class__ = ECSWSystem
-    reduced_sys.V = V.copy()
-    reduced_sys.V_unconstr = reduced_sys.dirichlet_class.unconstrain_vec(V)
-    reduced_sys.weights = None
-    reduced_sys.weight_idx = None
-    reduced_sys.u_red_output = []
-    reduced_sys.M_constr = None
-    # reduce Rayleigh damping matrix
-    if reduced_sys.D_constr is not None:
-        reduced_sys.D_constr = V.T @ reduced_sys.D_constr @ V
-    reduced_sys.assembly_type = assembly
-    print('The system is hyper reduced now. It still needs to build the ' +
-          'reduced mesh.')
-    return reduced_sys
+        raise ValueError("copymode must be 'overwrite', 'shallow' or 'deep', got {}".format(copymode))
+
+    # Create G and b from snapshots:
+    G, b = assemble_g_and_b(hyperreduced_component, S, timesteps)
+
+    # Calculate indices and weights
+    indices, weights, stats = sparse_nnls(G, b, tau, conv_stats)
+
+    # Create new assembly
+    ecswassembly = EcswAssembly(weights, indices)
+
+    # Assign new assembly got reduced_component
+    hyperreduced_component.assembly = ecswassembly
+
+    # create a new tag for ecsw weights
+    if tagname is not None:
+        # TODO: THIS IS TEMPORARY: AND BAD STYLE
+        elementids = component._ele_obj_df.index.levels[1][indices].values
+        tag_value_dict = {weight: [elementid] for weight, elementid in zip(weights, elementids)}
+        component.mesh.insert_tag(tagname, tag_value_dict)
+
+    if conv_stats:
+        return hyperreduced_component, stats
+    else:
+        return hyperreduced_component
