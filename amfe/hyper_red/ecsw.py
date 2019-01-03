@@ -11,6 +11,11 @@ from scipy.linalg import solve as linsolve
 from amfe.assembly import EcswAssembly
 
 
+__all__ = ['sparse_nnls',
+           'assemble_g_and_b',
+           'reduce_with_ecsw']
+
+
 def sparse_nnls(G, b, tau, conv_stats=False):
     r"""
     Run the sparse NNLS-solver in order to find a sparse vector xi satisfying
