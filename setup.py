@@ -75,7 +75,7 @@ config = {
     'author_email': 'johannes.rutzmoser@tum.de',
     'maintainer': 'Christian Meyer',
     'maintainer_email': 'christian.meyer@tum.de',
-    'python_requires=': '>=3.7',
+    'python_requires': '>=3.7',
     'install_requires': ['numpy>=1.10', 'scipy>=0.17', 'pandas>=0.23',
                          'h5py', 'matplotlib', 'vtk>=8.1.2'],
     'tests_require': ['nose', 'sphinx==1.3.1', 'sphinx_rtd_theme', 'numpydoc'],
