@@ -13,6 +13,7 @@ from pandas.core.indexing import IndexingError
 from amfe.io.amfe_mesh_converter import AmfeMeshConverter
 from amfe.component import StructuralComponent
 from amfe.element import Tri3, Quad4, LineLinearBoundary
+from amfe.assembly.assembly import Assembly
 
 
 class TestMeshComponent(TestCase):
@@ -45,6 +46,23 @@ class TestMeshComponent(TestCase):
 
     def tearDown(self):
         pass
+
+    def test_assembly_getter(self):
+        component = StructuralComponent(self.testmesh)
+        self.assertIsInstance(component.assembly, Assembly)
+
+    def test_assembly_setter(self):
+        component = StructuralComponent(self.testmesh)
+        new_assembly = Assembly()
+        component.assembly = new_assembly
+        self.assertEqual(id(component.assembly), id(new_assembly))
+
+    def test_no_of_elements(self):
+        component = StructuralComponent(self.testmesh)
+        eleids1 = np.array([1, 2], dtype=int)
+        component.assign_material(self.mat1, eleids1, 'S', '_eleids')
+        no_of_elements_actual = component.no_of_elements
+        self.assertEqual(no_of_elements_actual, 2)
 
     def test_assign_material_by_eleids(self):
         component = StructuralComponent(self.testmesh)
