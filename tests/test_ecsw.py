@@ -11,9 +11,10 @@ import numpy as np
 from numpy.testing import assert_, assert_allclose
 from numpy.linalg import norm
 
-from amfe.hyper_red.ecsw import sparse_nnls, assemble_g_and_b
+from amfe.hyper_red.ecsw import sparse_nnls, assemble_g_and_b, reduce_with_ecsw
 from amfe.tools import amfe_dir
 from amfe.io import GidJsonMeshReader, AmfeMeshConverter
+from amfe.assembly import EcswAssembly
 from amfe.component import StructuralComponent
 from amfe.material import KirchhoffMaterial
 
@@ -72,70 +73,78 @@ class TestNnls(TestCase):
         with self.assertRaises(RuntimeError):
             sparse_nnls(a, y, tau)
 
-    def test_assemble_g_b(self):
+
+class TestEcsw(TestCase):
+    def setUp(self):
         # Define input file path
         file = amfe_dir('tests/meshes/gid_json_4_tets.json')
         # Define Reader Object, initialized with AmfeMeshConverter
         reader = GidJsonMeshReader(file, AmfeMeshConverter())
 
         # Initialize component
-        my_mesh = reader.parse()
-        my_component = StructuralComponent(my_mesh)
+        self.my_mesh = reader.parse()
+        self.my_component = StructuralComponent(self.my_mesh)
         my_material = KirchhoffMaterial()
-        my_component.assign_material(my_material, ['left', 'right'], 'S')
+        self.my_component.assign_material(my_material, ['left', 'right'], 'S')
 
         # Get number of dofs for snapshot generation
-        no_of_dofs = my_component._constraints.no_of_constrained_dofs
+        self.no_of_dofs = self.my_component._constraints.no_of_constrained_dofs
         # create 2 random snapshots
-        no_of_snapshots = 2
-        S = np.random.rand(no_of_dofs, no_of_snapshots)*0.05
-        timesteps = np.zeros(no_of_snapshots)
+        self.no_of_snapshots = 2
+        self.S = np.random.rand(self.no_of_dofs, self.no_of_snapshots) * 0.05
+        self.timesteps = np.zeros(self.no_of_snapshots)
+
+    def tearDown(self):
+        pass
+
+    def test_assemble_g_b(self):
+
 
         # store an example for f_int for later comparison to check if the old assembly is recovered
         # after assemble_g_and_b has finished
-        f_old = my_component.f_int(S[:, 0])
+        f_old = self.my_component.f_int(self.S[:, 0])
 
         # run assemble_g_and_b
-        G, b = assemble_g_and_b(my_component, S, timesteps)
+        G, b = assemble_g_and_b(self.my_component, self.S, self.timesteps)
 
         # test shape of G and b
-        no_of_elements = my_component.no_of_elements
-        self.assertEqual(G.shape, (no_of_dofs*no_of_snapshots, no_of_elements))
+        no_of_elements = self.my_component.no_of_elements
+        self.assertEqual(G.shape, (self.no_of_dofs*self.no_of_snapshots, no_of_elements))
 
         # ----------------------------------
         # Check if G is correct
 
         # Test first entry of G
-        g11_actual = G[0:no_of_dofs, 0]
-        connectivity = my_mesh.get_connectivity_by_elementids([1])[0]
-        X_local = my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
-        u_local_indices = my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
-        u_local = S[u_local_indices, 0]
-        fe_local = my_component.ele_obj[0].f_int(X_local, u_local)
-        global_dofs = my_component._mapping.elements2global[0]
-        g11_desired = np.zeros(no_of_dofs)
+        g11_actual = G[0:self.no_of_dofs, 0]
+        connectivity = self.my_mesh.get_connectivity_by_elementids([1])[0]
+        X_local = self.my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
+        u_local_indices = self.my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
+        u_local = self.S[u_local_indices, 0]
+        fe_local = self.my_component.ele_obj[0].f_int(X_local, u_local)
+        global_dofs = self.my_component._mapping.elements2global[0]
+        g11_desired = np.zeros(self.no_of_dofs)
         g11_desired[global_dofs] = fe_local
         assert_allclose(g11_actual, g11_desired)
         # Test second entry of G
-        g21_actual = G[no_of_dofs:, 0]
-        connectivity = my_mesh.get_connectivity_by_elementids([1])[0]
-        X_local = my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
-        u_local_indices = my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
-        u_local = S[u_local_indices, 1]
-        fe_local = my_component.ele_obj[0].f_int(X_local, u_local)
-        global_dofs = my_component._mapping.elements2global[0]
-        g21_desired = np.zeros(no_of_dofs)
+        g21_actual = G[self.no_of_dofs:, 0]
+        connectivity = self.my_mesh.get_connectivity_by_elementids([1])[0]
+        X_local = self.my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
+        u_local_indices = self.my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
+        u_local = self.S[u_local_indices, 1]
+        fe_local = self.my_component.ele_obj[0].f_int(X_local, u_local)
+        global_dofs = self.my_component._mapping.elements2global[0]
+        g21_desired = np.zeros(self.no_of_dofs)
         g21_desired[global_dofs] = fe_local
         assert_allclose(g21_actual, g21_desired)
         # Test third entry of G
-        g12_actual = G[0:no_of_dofs, 1]
-        connectivity = my_mesh.get_connectivity_by_elementids([2])[0]
-        X_local = my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
-        u_local_indices = my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
-        u_local = S[u_local_indices, 0]
-        fe_local = my_component.ele_obj[1].f_int(X_local, u_local)
-        global_dofs = my_component._mapping.elements2global[1]
-        g12_desired = np.zeros(no_of_dofs)
+        g12_actual = G[0:self.no_of_dofs, 1]
+        connectivity = self.my_mesh.get_connectivity_by_elementids([2])[0]
+        X_local = self.my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
+        u_local_indices = self.my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
+        u_local = self.S[u_local_indices, 0]
+        fe_local = self.my_component.ele_obj[1].f_int(X_local, u_local)
+        global_dofs = self.my_component._mapping.elements2global[1]
+        g12_desired = np.zeros(self.no_of_dofs)
         g12_desired[global_dofs] = fe_local
         assert_allclose(g12_actual, g12_desired)
 
@@ -148,6 +157,42 @@ class TestNnls(TestCase):
         # Check if old assembly is recovered
 
         # get f_new for comparison to f_old
-        f_new = my_component.f_int(S[:, 0])
+        f_new = self.my_component.f_int(self.S[:, 0])
         # test if old assembly is recovered in the component
         assert_allclose(f_new, f_old)
+
+    def test_reduce_with_ecsw(self):
+        # store old ids:
+        comp_id_old = id(self.my_component)
+        mesh_id_old = id(self.my_component._mesh)
+
+        # first mode: deepcopy
+        ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01, copymode='deep',
+                                                 conv_stats=True)
+        self.assertNotEqual(id(ecsw_component), comp_id_old)
+        self.assertNotEqual(id(ecsw_component._mesh), mesh_id_old)
+        self.assertIsInstance(ecsw_component.assembly, EcswAssembly)
+
+        # second mode: shallow
+        ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01, copymode='shallow',
+                                                 conv_stats=True)
+        self.assertNotEqual(id(ecsw_component), comp_id_old)
+        self.assertEqual(id(ecsw_component._mesh), mesh_id_old)
+        self.assertIsInstance(ecsw_component.assembly, EcswAssembly)
+
+        # third mode: overwrite
+        ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01, copymode='overwrite',
+                                                 conv_stats=True)
+        self.assertEqual(id(ecsw_component), comp_id_old)
+        self.assertEqual(id(ecsw_component._mesh), mesh_id_old)
+        self.assertIsInstance(ecsw_component.assembly, EcswAssembly)
+
+        # test wrong mode
+        with self.assertRaises(ValueError):
+            ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01, copymode='foo',
+                                                     conv_stats=True)
+
+        # test if function with option stats = false is executable
+        ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01,
+                                                 conv_stats=False)
+        self.assertIsInstance(ecsw_component.assembly, EcswAssembly)

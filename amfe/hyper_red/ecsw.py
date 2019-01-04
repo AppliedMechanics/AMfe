@@ -191,7 +191,7 @@ def assemble_g_and_b(component, S, timesteps=None):
 
 
 def reduce_with_ecsw(component, S, timesteps, tau=0.001, copymode='overwrite',
-                                   conv_stats=False, tagname=None):
+                                   conv_stats=True, tagname=None):
     """
     Reduce the given MeshComponent
 
@@ -244,12 +244,6 @@ def reduce_with_ecsw(component, S, timesteps, tau=0.001, copymode='overwrite',
 
     # create a new tag for ecsw weights
     if tagname is not None:
-        # TODO: THIS IS TEMPORARY: AND BAD STYLE
-        elementids = component._ele_obj_df.index.levels[1][indices].values
-        tag_value_dict = {weight: [elementid] for weight, elementid in zip(weights, elementids)}
-        component.mesh.insert_tag(tagname, tag_value_dict)
-
-    if conv_stats:
-        return hyperreduced_component, stats
-    else:
-        return hyperreduced_component
+        # FIXME: This cannot be done so far because indexing of elements on component level is hard accessible
+        pass
+    return hyperreduced_component, stats
