@@ -15,6 +15,7 @@ from .component_base import ComponentBase
 from amfe.assembly.assembly import Assembly
 from amfe.component.constants import ELEPROTOTYPEHELPERLIST
 from amfe.neumann.neumann_manager import *
+from amfe.constraint.constraint_manager import *
 
 __all__ = ['MeshComponent']
 
@@ -34,6 +35,7 @@ class MeshComponent(ComponentBase):
         self._ele_obj_df = self._ele_obj_df.set_index(['physics', 'fk_mesh'])
         self._neumann = NeumannManager()
         self._assembly = Assembly()
+        self._constraints = ConstraintManager()
 
     # -- PROPERTIES --------------------------------------------------------------------------------------
     @property
@@ -81,22 +83,38 @@ class MeshComponent(ComponentBase):
         self._constraints.update_no_of_unconstrained_dofs(self._mapping.no_of_dofs)
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
-    def assign_neumann_condition(self, condition, property_names, tag='_groups', name='Unknown'):
+    def assign_neumann(self, name, condition, tag_values, tag='_groups'):
         if tag == '_groups':
-            eleids = self._mesh.get_elementids_by_groups(property_names)
+            eleids = self._mesh.get_elementids_by_groups(tag_values)
         elif tag == '_eleids':
-            eleids = property_names
+            eleids = tag_values
         else:
-            eleids = self._mesh.get_elementids_by_tags(property_names)
+            eleids = self._mesh.get_elementids_by_tag(tag, tag_values)
             
         # get ele_shapes of the elements belonging to the passed eleidxes
         ele_shapes = self._mesh.get_ele_shapes_by_elementids(eleids)
             
-        self._neumann.assign_neumann_by_eleids(condition, eleids, ele_shapes, property_names, tag, name)
+        self._neumann.assign_neumann_by_eleids(condition, eleids, ele_shapes, tag_values, tag, name)
         self._update_mapping()
 
     # -- ASSIGN CONSTRAINTS METHODS ------------------------------------------------------------------------
+    def assign_constraint(self, name, constraint, tag_values, tag='_groups', strategy='elim'):
+        if tag == '_dofs':
+            dofids = tag_values
+        else:
+            if tag == '_groups':
+                nodeids = self._mesh.get_nodeids_by_groups(tag_values)
+            elif tag == '_eleids':
+                nodeids = self._mesh.get_nodeids_by_elementids(tag_values)
+            elif tag == '_nodeids':
+                nodeids = tag_values
+            else:
+                raise ValueError('Unsupported tag! Tag must be \'_dofs\', \'_nodeids\', \'_eleids\' or \'_groups\'')
+            
+            dofids = np.reshape(self._mapping.get_dofs_by_nodeids(nodeids), -1)
 
+        self._constraints.add_constraint(name, constraint, dofids, strategy)
+        
     # -- MAPPING METHODS -----------------------------------------------------------------------------------
     def _update_mapping(self):
         # collect parameters for call of update_mapping

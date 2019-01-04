@@ -14,6 +14,7 @@ from amfe.io.amfe_mesh_converter import AmfeMeshConverter
 from amfe.component import StructuralComponent
 from amfe.element import Tri3, Quad4, LineLinearBoundary
 from amfe.assembly.assembly import Assembly
+from amfe.constraint.constraint import DirichletConstraint
 
 
 class TestMeshComponent(TestCase):
@@ -34,8 +35,9 @@ class TestMeshComponent(TestCase):
             converter.build_element(element[0], element[1], element[2])
         for group in groups:
             converter.build_group(group, groups[group]['nodes'], groups[group]['elements'])
+        converter.build_mesh_dimension(2)
 
-        self.testmesh = converter.return_mesh()
+        self.testmesh = converter.return_mesh()          
 
         class DummyMaterial:
             def __init__(self, name):
@@ -168,13 +170,13 @@ class TestMeshComponent(TestCase):
         self.assertEqual(ele_obj_df['ele_obj'].loc['T', 3].material.name, 'steel')
         # check if mapping is proceeded
 
-    def test_assign_neumann_condition_by_eleids(self):
+    def test_assign_neumann_by_eleids(self):
         component = StructuralComponent(self.testmesh)
         eleids = [4, 5]
         time_func = lambda t: 3.0*t
         direction = (1, 0)
         condition = component._neumann.create_fixed_direction_neumann(direction, time_func)
-        component.assign_neumann_condition(condition, tag='_eleids', property_names=eleids, name='TestCondition')
+        component.assign_neumann('TestCondition', condition, tag='_eleids', tag_values=eleids)
         # It must be set:
         #   - neumann_df
         #   - neumann_obj_df
@@ -194,13 +196,13 @@ class TestMeshComponent(TestCase):
         neumann_df_desired = pd.DataFrame.from_dict(df_dict)
         assert_frame_equal(neumann_df_actual, neumann_df_desired, check_like=True)
 
-    def test_assign_neumann_condition_by_groups(self):
+    def test_assign_neumann_by_groups(self):
         component = StructuralComponent(self.testmesh)
         group = 'left_boundary'
         time_func = lambda t: 3.0*t
         direction = (1, 0)
         condition = component._neumann.create_fixed_direction_neumann(direction, time_func)
-        component.assign_neumann_condition(condition, [group], name='TestCondition')
+        component.assign_neumann('TestCondition', condition, [group])
         # It must be set:
         #   - neumann_df
         #   - neumann_obj_df
@@ -219,3 +221,29 @@ class TestMeshComponent(TestCase):
         }
         neumann_df_desired = pd.DataFrame.from_dict(df_dict)
         assert_frame_equal(neumann_df_actual, neumann_df_desired, check_like=True)
+        
+    def test_assign_constraints_by_group(self):
+        component = StructuralComponent(self.testmesh)
+        component.assign_material(self.mat1, np.array([1, 2, 3]), 'S', '_eleids')
+        group = 'left_boundary'
+        dirichlet = component._constraints.create_dirichlet_constraint()
+        component.assign_constraint('TestConstraint', dirichlet, [group], '_groups', 'elim')
+        constraint_df = component._constraints._constraints_df
+
+        self.assertIsInstance(constraint_df['constraint_obj'].values[0], DirichletConstraint)
+        self.assertEqual(constraint_df['name'].values[0], 'TestConstraint')
+        self.assertEqual(constraint_df['strategy'].values[0], 'elim')
+        assert_array_equal(constraint_df['dofids'].values[0], np.array([8, 9, 10, 11]))
+        
+    def test_assign_constraints_by_eleids(self):
+        component = StructuralComponent(self.testmesh)
+        component.assign_material(self.mat1, np.array([1, 2, 3]), 'S', '_eleids')
+        component._update_mapping()
+        dirichlet = component._constraints.create_dirichlet_constraint()
+        component.assign_constraint('TestConstraint', dirichlet, [4], '_eleids', 'elim')
+        constraint_df = component._constraints._constraints_df
+        
+        self.assertIsInstance(constraint_df['constraint_obj'].values[0], DirichletConstraint)
+        self.assertEqual(constraint_df['name'].values[0], 'TestConstraint')
+        self.assertEqual(constraint_df['strategy'].values[0], 'elim')
+        assert_array_equal(constraint_df['dofids'].values[0], np.array([8, 9, 10, 11]))

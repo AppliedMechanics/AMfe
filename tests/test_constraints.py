@@ -13,8 +13,8 @@ class TestDirichletConstraint(TestCase):
     def setUp(self):
         from amfe.constraint import DirichletConstraint
         self.dofs = 4
-        self.constraint_1 = DirichletConstraint(self.dofs, U=lambda t: 0, dU=lambda t: 0, ddU=lambda t: 0)
-        self.constraint_2 = DirichletConstraint(self.dofs, U=lambda t: t ** 2, dU=lambda t: 3 * t, ddU=lambda t: 2)
+        self.constraint_1 = DirichletConstraint(U=lambda t: 0, dU=lambda t: 0, ddU=lambda t: 0)
+        self.constraint_2 = DirichletConstraint(U=lambda t: t ** 2, dU=lambda t: 3 * t, ddU=lambda t: 2)
         # set parameters:
         self.X_local = np.array([5.0, 6.0, 7.0, 8.0], dtype=float)
         self.u_local = np.array([0.1, 0.04, 0.02, 0.01], dtype=float)

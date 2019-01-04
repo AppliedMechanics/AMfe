@@ -23,7 +23,7 @@ class StructuralComponentTest(TestCase):
         my_material = KirchhoffMaterial()
         my_comp.assign_material(my_material, ['left', 'right'], 'S')
         neumann_bc = my_comp._neumann.create_fixed_direction_neumann((1, 0), lambda t: self.amp*t)
-        my_comp.assign_neumann_condition(neumann_bc, ['right_boundary'], name='Right force')
+        my_comp.assign_neumann('Right force', neumann_bc, ['right_boundary'])
         self.my_comp = my_comp
 
     def test_f_ext(self):
