@@ -62,7 +62,7 @@ class ConstraintManager:
         return FixedDistanceConstraint()
 
     @staticmethod
-    def create_dirichlet_constraint(no_of_dofs, U=lambda t: 0., dU=lambda t: 0., ddU=lambda t: 0.):
+    def create_dirichlet_constraint(U=lambda t: 0., dU=lambda t: 0., ddU=lambda t: 0.):
         """
         Create a Dirichlet constraint
 
@@ -81,7 +81,7 @@ class ConstraintManager:
         -------
         constraint: amfe.constraint.DirichletConstraint
         """
-        return DirichletConstraint(no_of_dofs, U, dU, ddU)
+        return DirichletConstraint(U, dU, ddU)
     
     def add_constraint(self, name, constraint_obj, dofids, strategy):
         """
@@ -91,9 +91,9 @@ class ConstraintManager:
         ----------
         name: str
             A string describing the name of the constraint (can be any name)
-        constraint : amfe.constraint.ConstraintBase
+        constraint_obj : amfe.constraint.ConstraintBase
             constraint object, describing the constraint
-        dofsarg : tuple
+        dofids : tuple
             dofs' indices that must be passed to the constraint
         strategy : str {'elim', 'lagrmult'}
             strategy how the constraint shall be applied (e.g. via elimination or lagrange multiplier)
@@ -110,6 +110,7 @@ class ConstraintManager:
         df = pd.DataFrame(
             {'name': name, 'constraint_obj': constraint_obj, 'dofids': [dofids], 'strategy': strategy})
         self._constraints_df = self._constraints_df.append(df, ignore_index=True)
+        constraint_obj.after_assignment(dofids)
         return
     
     def remove_constraint_by_name(self, name):

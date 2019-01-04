@@ -93,10 +93,13 @@ class TestMesh(TestCase):
 
     def test_get_nodeids_by_group(self):
         actual = self.testmesh.get_nodeids_by_groups(['left'])
-        desired = np.array([0, 1, 2, 3], dtype=np.int)
+        desired = np.array([1, 2, 3, 4], dtype=np.int)
         assert_equal(actual, desired)
         actual = set(self.testmesh.get_nodeids_by_groups(['right_boundary']))
-        desired = set(np.array([4, 5, 0, 1]))
+        desired = set(np.array([1, 2, 5, 6]))
+        assert_equal(actual, desired)
+        actual = set(self.testmesh.get_nodeids_by_groups(['left_boundary']))
+        desired = set(np.array([1, 4], dtype=int))
         assert_equal(actual, desired)
 
     def test_get_ele_shapes_by_idxs(self):
@@ -113,6 +116,11 @@ class TestMesh(TestCase):
         actual = self.testmesh.get_nodeidxs_by_all()
         desired = np.array([0, 1, 2, 3, 4, 5], dtype=np.int)
         assert_equal(actual, desired)
+        
+    def test_get_nodeidxs_by_nodeids(self):
+        actual = self.testmesh.get_nodeidxs_by_nodeids(np.array([1, 2, 5, 6]))
+        desired = np.array([0, 1, 4, 5])
+        assert_equal(actual, desired)
 
     def test_get_nodeids_by_nodeidxs(self):
         actual = self.testmesh.get_nodeids_by_nodeidxs([3, 5, 2])
@@ -122,6 +130,11 @@ class TestMesh(TestCase):
         desired = [4]
         assert_equal(actual, desired)
 
+    def test_get_nodeids_by_elementids(self):
+        actual = self.testmesh.get_nodeids_by_elementids(np.array([2, 3], dtype=int))
+        desired = np.array([1, 2, 3, 4, 5], dtype=int)
+        assert_array_equal(actual, desired)
+
     def test_insert_tag(self):
         current_col_num = len(self.testmesh.el_df.columns)
         tag_to_add = 'partition_id'
@@ -129,7 +142,6 @@ class TestMesh(TestCase):
         new_col_num = len(self.testmesh.el_df.columns)
         assert_equal(current_col_num + 1, new_col_num)
         self.assertTrue(tag_to_add in self.testmesh.el_df.columns)
-        
 
     def test_remove_tag(self):
         tag_name = self.testmesh.el_df.columns[1]
@@ -161,14 +173,20 @@ class TestMesh(TestCase):
         assert_equal(desired, actual)
         
     def test_get_elementids_by_tag(self):
-        desired = [1,2]
-        actual = self.testmesh.get_elementids_by_tag('shape','Tri3')
-        assert_equal(desired, actual)
+        desired = np.array([1, 2], dtype=int)
+        actual = self.testmesh.get_elementids_by_tag('shape', 'Tri3')
+        assert_array_equal(desired, actual)
+        
+    def test_get_nodeids_by_tag(self):
+        desired = np.array([1, 4, 5, 6], dtype=int)
+        actual = self.testmesh.get_nodeids_by_tag('shape', 'straight_line')
+        assert_array_equal(desired, actual)
 
     def test_get_elementidxs_by_tag_value(self):
         desired = np.array([0, 1], dtype=int)
         actual = self.testmesh.get_elementidxs_by_tag('shape','Tri3')
         assert_equal(desired, actual)
+
 
 if __name__ == '__main__':
     main()

@@ -29,7 +29,6 @@ class StructuralComponent(MeshComponent):
             self._fields = ('ux', 'uy', 'uz')
         elif mesh.dimension == 2:
             self._fields = ('ux', 'uy')
-        self._constraints = ConstraintManager()
         self._assembly = StructuralAssembly()
         self._M_constr = None
         self._D_constr = None

@@ -20,6 +20,21 @@ Super-class of all constraints
 class ConstraintBase:
     def __init__(self):
         self.no_of_constraints = 0
+
+    def after_assignment(self, dofids):
+        """
+        Method that is called after assignment in Constraint Manager
+
+        Parameters
+        ----------
+        dofids: list or numpy.array
+            list or numpy.array containing the dofids of the dofs which are passed to the constraint
+
+        Returns
+        -------
+        None
+        """
+        pass
     
     def constraint_func(self, X, u, du, ddu, t):
         """
@@ -91,7 +106,6 @@ class ConstraintBase:
     def _J_ddu(self, X, u, du, ddu, t):
         raise NotImplementedError('The Jacobian w.r.t u has not been implemented for this constraint')
 
-
 """
 Dirichlet constraint.
 """
@@ -101,14 +115,27 @@ class DirichletConstraint(ConstraintBase):
     """
     Class to define a Dirichlet constraints on several dofs.
     """
-    def __init__(self, no_of_dofs, U=(lambda t: 0.), dU=(lambda t: 0.), ddU=(lambda t: 0.)):
+    def __init__(self, U=(lambda t: 0.), dU=(lambda t: 0.), ddU=(lambda t: 0.)):
         super().__init__()
-        self._no_of_dofs = no_of_dofs
         self._U = U
         self._dU = dU
         self._ddU = ddU
-        self.no_of_constraints = self._no_of_dofs
         return
+
+    def after_assignment(self, dofids):
+        """
+        In this case the number of constraints is set after assignment because this is unknown before
+
+        Parameters
+        ----------
+        dofids: list or numpy.array
+            list or numpy.array containing the dof-IDs of the dofs that are contrained by this Dirichlet Constraint
+
+        Returns
+        -------
+        None
+        """
+        self.no_of_constraints = len(dofids)
 
     def constraint_func(self, X_local, u_local, du_local, ddu_local, t=0):
         """
@@ -133,8 +160,7 @@ class DirichletConstraint(ConstraintBase):
         -------
         g: ndarray
         """
-
-        return u_local - np.ones(self._no_of_dofs) * self._U(t)
+        return u_local - self._U(t)
     
     def _J_u(self, X_local, u_local, du_local, ddu_local, t=0):
         """
@@ -163,11 +189,12 @@ class DirichletConstraint(ConstraintBase):
         return eyes(len(u_local))
 
     def _J_du(self, X_local, u_local, du_local, ddu_local, t=0):
-        return csr_matrix((self._no_of_dofs, len(u_local)))
+        no_of_dofs = len(u_local)
+        return csr_matrix((no_of_dofs, no_of_dofs))
     
     def _J_ddu(self, X_local, u_local, du_local, ddu_local, t=0):
-        return csr_matrix((self._no_of_dofs, len(u_local)))
-        
+        no_of_dofs = len(u_local)
+        return csr_matrix((no_of_dofs, no_of_dofs))
 
 """
 Fixed distance constraint.
