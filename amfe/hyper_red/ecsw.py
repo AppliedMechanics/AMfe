@@ -7,6 +7,7 @@ from copy import deepcopy, copy
 
 import numpy as np
 from scipy.linalg import solve as linsolve
+from scipy.sparse import csc_matrix
 
 from amfe.assembly import EcswAssembly
 
@@ -16,7 +17,7 @@ __all__ = ['sparse_nnls',
            'reduce_with_ecsw']
 
 
-def sparse_nnls(G, b, tau, conv_stats=False):
+def sparse_nnls(G, b, tau, conv_stats=True):
     r"""
     Run the sparse NNLS-solver in order to find a sparse vector xi satisfying
 
@@ -37,10 +38,8 @@ def sparse_nnls(G, b, tau, conv_stats=False):
 
     Returns
     -------
-    indices : ndarray, shape: (k,)
-        The indices of the non-zero elements.
-    xi_red : ndarray, shape: (k,)
-        The values of the non-zero elements.
+    x : csc_matrix
+        sparse vector containing the weights
     stats : ndarray
         Infos about the convergence of the system. The first column shows the
         size of the active set, the second column the residual. If conv_info is
@@ -71,38 +70,40 @@ def sparse_nnls(G, b, tau, conv_stats=False):
     while np.linalg.norm(r) > tau * norm_b:
         mu = G.T @ r
         idx = np.argmax(mu)
+        if active_set[idx] == True:
+            raise RuntimeError('snnls: The index has {} has already been added and is considered to be the best again.')
         active_set[idx] = True
         print('Added element {}'.format(idx))
         while True:
             # Trial vector zeta is solved for the sparse solution
-            zeta[~active_set] = 0
+            zeta[~active_set] = 0.0
             G_red = G[:, active_set]
             zeta[active_set] = linsolve(G_red.T @ G_red, G_red.T @ b)
 
             # check, if gathered solution is full positive
-            if np.min(zeta[active_set]) >= 0:
+            if np.min(zeta[active_set]) >= 0.0:
                 xi[:] = zeta[:]
                 break
-            else: # remove the negative elements from the active set
-                # Get all elements which violate the constraint, i.e. are in the
-                # active set and are smaller than zero
-                mask = np.logical_and(zeta <= 0, active_set)
+            # remove the negative elements from the active set
+            # Get all elements which violate the constraint, i.e. are in the
+            # active set and are smaller than zero
+            mask = np.logical_and(zeta <= 0.0, active_set)
 
-                ele_const = np.argmin(xi[mask] / (xi[mask] - zeta[mask]))
-                const_idx = np.where(mask)[0][ele_const]
-                print('Remove element {} '.format(const_idx) +
-                       'violating the constraint.')
-                # Amplify xi with the difference of zeta and xi such, that the
-                # largest mismatching negative point becomes zero.
-                alpha = np.min(xi[mask] / (xi[mask] - zeta[mask]))
-                xi += alpha * (zeta - xi)
-                # Set active set manually as otherwise floating point roundoff
-                # errors are not considered.
-                # active_set = xi != 0
-                active_set[const_idx] = False
+            ele_const = np.argmin(xi[mask] / (xi[mask] - zeta[mask]))
+            const_idx = np.where(mask)[0][ele_const]
+            print('Remove element {} '.format(const_idx) +
+                   'violating the constraint.')
+            # Amplify xi with the difference of zeta and xi such, that the
+            # largest mismatching negative point becomes zero.
+            alpha = np.min(xi[mask] / (xi[mask] - zeta[mask]))
+            xi += alpha * (zeta - xi)
+            # Set active set manually as otherwise floating point roundoff
+            # errors are not considered.
+            # active_set = xi != 0
+            active_set[const_idx] = False
 
         r = b - G[:, active_set] @ xi[active_set]
-        logger = logging.getLogger('amfe.hyper_red.ecsw')
+        logger = logging.getLogger('amfe.hyper_red.ecsw.snnls')
         logger.debug("snnls: residual {} No of active elements: {}".format(np.linalg.norm(r), len(np.where(xi)[0])))
         if conv_stats:
             stats.append((len(np.where(xi)[0]), np.linalg.norm(r)))
@@ -110,8 +111,12 @@ def sparse_nnls(G, b, tau, conv_stats=False):
     # sp.optimize.nnls(A, b)
     indices = np.where(xi)[0]  # remove the nasty tuple from np.where()
     xi_red = xi[active_set]
+    indptr = np.array([0, len(xi_red)])
+    x = csc_matrix((xi_red, indices, indptr), shape=(G.shape[1], 1))
+    if conv_stats and not stats:
+        stats.append((0, np.linalg.norm(r)))
     stats = np.array(stats)
-    return indices, xi_red, stats
+    return x, stats
 
 
 def assemble_g_and_b(component, S, timesteps=None):
@@ -149,7 +154,7 @@ def assemble_g_and_b(component, S, timesteps=None):
     # Currently not applicable
     # assert(component.no_of_dofs == S.shape[0])
 
-    logger = logging.getLogger('ecsw.assemble_g_and_b')
+    logger = logging.getLogger('amfe.hyper_red.ecsw.assemble_g_and_b')
 
     no_of_dofs, no_of_snapshots = S.shape
 
@@ -231,7 +236,9 @@ def reduce_with_ecsw(component, S, timesteps, tau=0.001, copymode='overwrite',
     G, b = assemble_g_and_b(hyperreduced_component, S, timesteps)
 
     # Calculate indices and weights
-    indices, weights, stats = sparse_nnls(G, b, tau, conv_stats)
+    x, stats = sparse_nnls(G, b, tau, conv_stats)
+    indices = x.indices
+    weights = x.data
 
     # Create new assembly
     ecswassembly = EcswAssembly(weights, indices)
