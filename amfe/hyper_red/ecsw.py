@@ -134,7 +134,7 @@ def assemble_g_and_b(component, S, timesteps=None):
     S : ndarray, shape (no_of_dofs, no_of_snapshots)
         Snapshots gathered as column vectors.
     timesteps : ndarray, shape(no_of_snapshots)
-        optional, the timesteps of where the snapshots have been generated can be passed,
+        the timesteps of where the snapshots have been generated can be passed,
         this is important for systems with certain constraints
 
     Returns
@@ -170,11 +170,7 @@ def assemble_g_and_b(component, S, timesteps=None):
     component.assembly = g_assembly
 
     # Weight only one element by one
-    g_assembly.weights = 1
-
-    # check if timesteps are None:
-    if timesteps is None:
-        timesteps = np.zeros(no_of_snapshots)
+    g_assembly.weights = [1.0]
 
     # loop over all elements
     for element_no in range(no_of_elements):
@@ -183,7 +179,7 @@ def assemble_g_and_b(component, S, timesteps=None):
 
         logger.debug('Assemble element {:10d} / {:10d}'.format(element_no+1, no_of_elements))
         # loop over all snapshots
-        for snapshot_number, (snapshot_vector, t) in enumerate((S.T, timesteps)):
+        for snapshot_number, (snapshot_vector, t) in enumerate(zip(S.T, timesteps)):
             G[snapshot_number*no_of_dofs:(snapshot_number+1)*no_of_dofs, element_no] = component.f_int(snapshot_vector,
                                                                                                        t)
 
@@ -205,7 +201,7 @@ def reduce_with_ecsw(component, S, timesteps, tau=0.001, copymode='overwrite',
         MeshComponent
     S : ndarray, shape (no_of_dofs, no_of_snapshots)
         Snapshots
-    copymode : str {'ovewrite', 'shallow', 'deep'}
+    copymode : str {'overwrite', 'shallow', 'deep'}
         Select if the component shall be verwritten, shallow copied or deepcopied
     conv_stats : bool
         Flag if conv_stats shall be collected
