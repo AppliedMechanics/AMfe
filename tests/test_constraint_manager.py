@@ -30,9 +30,11 @@ class ConstraintManagerTest(TestCase):
 
         class DummyDirichletConstraint:
             def __init__(self, u_constr):
-                self.no_of_constraints = 1
                 self.u_constr = u_constr
-                
+
+            def after_assignment(self, dofids):
+                self.no_of_constraints = len(dofids)
+
             def constraint_func(self, X_local, u_local, du_local, ddu_local, t):
                 return u_local - self.u_constr
             
@@ -204,7 +206,7 @@ class PendulumConstraintManagerTest(TestCase):
             # Number of dofs before constraint: 4  (x and y of mounting point and pendulum mass)
             self.cm.update_no_of_unconstrained_dofs(4)
             # create constraints (fixation and fixed distance as pendulum)
-            self.constraint_fixation = self.cm.create_dirichlet_constraint(2, U=lambda t: 0.0, dU=lambda t: 0.0,
+            self.constraint_fixation = self.cm.create_dirichlet_constraint(U=lambda t: 0.0, dU=lambda t: 0.0,
                                                                       ddU=lambda t: 0.0)
             self.constraint_pendulum = self.cm.create_fixed_distance_constraint()
 

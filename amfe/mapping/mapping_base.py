@@ -41,7 +41,7 @@ class MappingBase(ABC):
     def get_dofs_by_ids(self, ids):
         return self._elements2global.loc[ids, 'global_dofs'].values
 
-    def get_dofs_by_nodeids(self, nodeids, fields):
+    def get_dofs_by_nodeids(self, nodeids, fields=('all')):
         """
         Returns the global dofs associated with a given node-row-index and a direction x, y or z
 
@@ -59,6 +59,8 @@ class MappingBase(ABC):
         """
         if not isinstance(nodeids, Iterable):
             nodeids = [nodeids]
+        if fields is ('all'):
+            fields = self._nodal2global.keys()
         return self._nodal2global.loc[nodeids, fields].values
 
     def update_mapping(self, fields, nodeids, connectivity, dofs_by_element, callbacks, callbackargs, **kwargs):
