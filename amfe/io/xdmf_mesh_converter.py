@@ -11,7 +11,7 @@ import h5py
 from os.path import basename
 
 from .mesh_converter import MeshConverter
-from .tools import prettify_xml
+from .tools import insert_line_breaks_in_xml
 
 __all__ = [
     'XdmfMeshConverter'
@@ -237,6 +237,6 @@ class XdmfMeshConverter(MeshConverter):
                                                         'Format': 'HDF'})
                         attribute_data.text = relative_hdf5_path + '.hdf5:/mesh/tags/{}/{}'.format(tag, etype)
 
-                prettify_xml(root)
+                insert_line_breaks_in_xml(root)
                 tree = ET.ElementTree(root)
                 tree.write(xdmf_fp, 'UTF-8', True)

@@ -13,7 +13,7 @@ from os import path, makedirs
 
 __all__ = [
     'check_dir',
-    'prettify_xml'
+    'insert_line_breaks_in_xml'
     ]
 
 
@@ -40,7 +40,7 @@ def check_dir(*filenames):
     return
 
 
-def prettify_xml(root, level=0):
+def insert_line_breaks_in_xml(root, level=0):
     i = "\n" + level*"  "
     if len(root):
         if not root.text or not root.text.strip():
@@ -48,7 +48,7 @@ def prettify_xml(root, level=0):
         if not root.tail or not root.tail.strip():
             root.tail = i
         for root in root:
-            prettify_xml(root, level + 1)
+            insert_line_breaks_in_xml(root, level + 1)
         if not root.tail or not root.tail.strip():
             root.tail = i
     else:
