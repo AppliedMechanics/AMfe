@@ -6,6 +6,8 @@
 #
 
 import numpy as np
+import scipy as sp
+from scipy.special import binom
 
 from amfe.linalg.tools import coordinate_transform
 from amfe.parametric.morphing.implementer import MorpherImplementer
@@ -97,7 +99,6 @@ class FfdMorpherImplementer(MorpherImplementer):
         new_mesh_points = self._inverse_transformation(shifted_mesh_points).T + nodes_reference
 
         return new_mesh_points
-
 
 
 class FfdMorpherImplementer2D(MorpherImplementer):

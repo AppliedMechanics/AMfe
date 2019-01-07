@@ -9,9 +9,12 @@ import numpy as np
 
 from .basemorpher import MeshMorpher
 from ..implementer.ffdimplementer import FfdMorpherImplementer2D
+from ..implementer.rbfimplementer import RbfMorpherImplementer
 
 
-__all__ = ['RectangleFfdMorpher']
+__all__ = ['RectangleFfdMorpher',
+           'RectangleRbfMorpher'
+           ]
 
 
 class RectangleFfdMorpher(MeshMorpher):
@@ -42,3 +45,35 @@ class RectangleFfdMorpher(MeshMorpher):
                 mu_y[i, :] = mu_y[i, :] + val
 
         return self._implementer.morph(nodes_reference, mu_x, mu_y)
+
+
+class RectangleRbfMorpher(MeshMorpher):
+    def __init__(self, basis='multi_quadratic_biharmonic_spline', radius=0.1):
+        super().__init__()
+        self._implementer = RbfMorpherImplementer(basis, radius)
+
+    def _writeshifts(self, nodes_boundary_before, scale, direction, nodes_boundary_after):
+        dirdict = {'x': 0, 'y': 1, 'z': 2}
+        origin = np.min(nodes_boundary_before[:, dirdict[direction]])
+        length = np.max(nodes_boundary_before[:, dirdict[direction]]) - origin
+        nodes_boundary_after[:, :] = nodes_boundary_before
+        nodes_boundary_after[:, dirdict[direction]] = origin + scale * (nodes_boundary_before[:, dirdict[direction]] - origin)
+
+    def offline(self, nodes_reference):
+        self._implementer.offline(nodes_reference)
+
+    def get_shifts(self, nodes_boundary, scaleX, scaleY):
+
+        nodes_boundary_after = np.copy(nodes_boundary)
+
+        # x-direction
+        if scaleX and scaleX != 1:
+            self._writeshifts(nodes_boundary_after, scaleX, 'x', nodes_boundary_after)
+        # y-direction
+        if scaleY and scaleY != 1:
+            self._writeshifts(nodes_boundary_after, scaleY, 'y', nodes_boundary_after)
+
+        return nodes_boundary_after
+
+    def morph(self, nodes_reference, nodes_boundary_before, nodes_boundary_after):
+        return self._implementer.morph(nodes_reference, nodes_boundary_before, nodes_boundary_after)
