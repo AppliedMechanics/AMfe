@@ -14,6 +14,15 @@ class FixedDirectionNeumann(NeumannBase):
     Class for a Neumann condition that has a fixed direction and a constant force/area ratio (fixed traction)
     """
     def __init__(self, direction, time_func=lambda t: 1):
+        """
+
+        Parameters
+        ----------
+        direction : ndarray, dtype=float
+            direction of the force
+        time_func : function
+             pointer to function with signature  float func(float: t)
+        """
         super().__init__(direct=direction, time_func=time_func)
         self._direction = direction
         self._time_func = time_func
@@ -31,6 +40,13 @@ class NormalFollowingNeumann(NeumannBase):
     Class for a Neumann condition that follows the normal on a surface
     """
     def __init__(self, time_func=lambda t: 1):
+        """
+
+        Parameters
+        ----------
+        time_func : function
+             pointer to function with signature  float func(float: t)
+        """
         super().__init__(time_func=time_func)
         self._time_func = time_func
 
@@ -49,8 +65,13 @@ class ProjectedAreaNeumann(NeumannBase):
     """
     def __init__(self, direction, time_func=lambda t: 1):
         """
-        direct : numpy.array
-            direct is a vector in which the force should act (with global coordinate system as reference)
+
+        Parameters
+        ----------
+        direction : ndarray, dtype=float
+            direction of the force
+        time_func : function
+             pointer to function with signature  float func(float: t)
         """
         super().__init__(direction=direction, time_func=time_func)
         self._direction = direction

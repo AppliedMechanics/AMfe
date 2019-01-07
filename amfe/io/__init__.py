@@ -27,4 +27,5 @@ from .amfe_mesh_obj_mesh_reader import *
 # --- MESH CONVERTER ---
 # from .mesh_converter import *  # super class
 from .amfe_mesh_converter import *
+from .vtk_mesh_converter import *
 from .xdmf_mesh_converter import *

@@ -8,10 +8,12 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import pandas as pd
 from pandas.testing import assert_frame_equal
+from pandas.core.indexing import IndexingError
 
 from amfe.io.amfe_mesh_converter import AmfeMeshConverter
 from amfe.component import StructuralComponent
 from amfe.element import Tri3, Quad4, LineLinearBoundary
+from amfe.constraint.constraint import DirichletConstraint
 
 
 class TestMeshComponent(TestCase):
@@ -32,8 +34,9 @@ class TestMeshComponent(TestCase):
             converter.build_element(element[0], element[1], element[2])
         for group in groups:
             converter.build_group(group, groups[group]['nodes'], groups[group]['elements'])
+        converter.build_mesh_dimension(2)
 
-        self.testmesh = converter.return_mesh()
+        self.testmesh = converter.return_mesh()          
 
         class DummyMaterial:
             def __init__(self, name):
@@ -49,18 +52,17 @@ class TestMeshComponent(TestCase):
         component = StructuralComponent(self.testmesh)
         eleids1 = np.array([1, 2], dtype=int)
         eleids2 = np.array([3], dtype=int)
-        component.assign_material(self.mat1, eleids1, '_eleids')
+        component.assign_material(self.mat1, eleids1, 'S', '_eleids')
         ele_obj_actual = component.ele_obj
         # check ele_obj is instance array
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
         ele_obj_df = component._ele_obj_df
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc[1], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc[2], Tri3)
-        self.assertEqual(ele_obj_df['ele_obj'].loc[3], None)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 1], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 2], Tri3)
         # check materials
-        self.assertEqual(ele_obj_df['ele_obj'].loc[1].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc[2].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 1].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 2].material.name, 'steel')
         # check mapping
         nodal2global_desired = pd.DataFrame({'ux': {1: -1, 2: 6, 3: 4, 4: -1, 5: 0, 6: 2},
                                              'uy': {1: -1, 2: 7, 3: 5, 4: -1, 5: 1, 6: 3}})
@@ -70,16 +72,16 @@ class TestMeshComponent(TestCase):
             assert_array_equal(actual, desired)
 
         # assign second material
-        component.assign_material(self.mat2, eleids2, '_eleids')
+        component.assign_material(self.mat2, eleids2, 'S', '_eleids')
         ele_obj_df = component._ele_obj_df
         # check each object
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc[1], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc[2], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc[3], Quad4)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 1], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 2], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 3], Quad4)
         # check materials
-        self.assertEqual(ele_obj_df['ele_obj'].loc[1].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc[2].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc[3].material.name, 'rubber')
+        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 1].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 2].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 3].material.name, 'rubber')
         nodal2global_desired = pd.DataFrame({'ux': {1: 8, 2: 6, 3: 4, 4: 10, 5: 0, 6: 2},
                                              'uy': {1: 9, 2: 7, 3: 5, 4: 11, 5: 1, 6: 3}})
         elements2global_desired = [np.array([0, 1, 2, 3, 4, 5], dtype=int),
@@ -91,18 +93,19 @@ class TestMeshComponent(TestCase):
 
         component = StructuralComponent(self.testmesh)
         eleids3 = np.array([3, 1], dtype=int)
-        component.assign_material(self.mat1, eleids3, '_eleids')
+        component.assign_material(self.mat1, eleids3, 'S', '_eleids')
         ele_obj_actual = component.ele_obj
         # check ele_obj is instance array
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
         ele_obj_df = component._ele_obj_df
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc[1], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc[3], Quad4)
-        self.assertEqual(ele_obj_df['ele_obj'].loc[2], None)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 1], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 3], Quad4)
+        with self.assertRaises(IndexingError):
+            temp = ele_obj_df['ele_obj'].loc['S', 2]
         # check materials
-        self.assertEqual(ele_obj_df['ele_obj'].loc[1].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc[3].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 1].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 3].material.name, 'steel')
         nodal2global_desired = pd.DataFrame({'ux': {1: 6, 2: 8, 3: 4, 4: 10, 5: 0, 6: 2},
                                              'uy': {1: 7, 2: 9, 3: 5, 4: 11, 5: 1, 6: 3}})
         elements2global_desired = [np.array([0, 1, 2, 3, 4, 5], dtype=int),
@@ -116,49 +119,51 @@ class TestMeshComponent(TestCase):
         #
         component = StructuralComponent(self.testmesh)
         # assign materials
-        component.assign_material(self.mat1, ['left', 'right'], '_groups')
+        component.assign_material(self.mat1, ['left', 'right'], 'S', '_groups')
         ele_obj_actual = component.ele_obj
         # check ele_obj is instance array
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
         ele_obj_df = component._ele_obj_df
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc[1], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc[2], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc[3], Quad4)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 1], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 2], Tri3)
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 3], Quad4)
         # check materials
-        self.assertEqual(ele_obj_df['ele_obj'].loc[1].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc[2].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc[3].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 1].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 2].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 3].material.name, 'steel')
 
         # 1 Group
         #
         component = StructuralComponent(self.testmesh)
         # assign materials
-        component.assign_material(self.mat1, ['left'])
+        component.assign_material(self.mat1, ['left'], 'T')
         ele_obj_actual = component.ele_obj
         # check ele_obj is instance array
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
         ele_obj_df = component._ele_obj_df
-        self.assertEqual(ele_obj_df['ele_obj'].loc[1], None)
-        self.assertEqual(ele_obj_df['ele_obj'].loc[2], None)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc[3], Quad4)
+        with self.assertRaises(IndexingError):
+            temp = ele_obj_df['ele_obj'].loc['T', 1]
+        with self.assertRaises(IndexingError):
+            temp = ele_obj_df['ele_obj'].loc['T', 2]
+        self.assertIsInstance(ele_obj_df['ele_obj'].loc['T', 3], Quad4)
         # check materials
-        self.assertEqual(ele_obj_df['ele_obj'].loc[3].material.name, 'steel')
+        self.assertEqual(ele_obj_df['ele_obj'].loc['T', 3].material.name, 'steel')
         # check if mapping is proceeded
 
-    def test_assign_neumann_condition_by_eleids(self):
+    def test_assign_neumann_by_eleids(self):
         component = StructuralComponent(self.testmesh)
         eleids = [4, 5]
         time_func = lambda t: 3.0*t
         direction = (1, 0)
         condition = component._neumann.create_fixed_direction_neumann(direction, time_func)
-        component.assign_neumann_condition(condition, tag='_eleids', property_names=eleids, name='TestCondition')
+        component.assign_neumann('TestCondition', condition, tag='_eleids', tag_values=eleids)
         # It must be set:
         #   - neumann_df
         #   - neumann_obj_df
         neumann_obj_df =component._neumann._neumann_obj_df
-        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_elementid']].values
+        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_mesh']].values
         self.assertIsInstance(neumann_obj_array[0, 0]._boundary_element, LineLinearBoundary)
         self.assertEqual(neumann_obj_array[0, 1], 4)
         self.assertIsInstance(neumann_obj_array[1, 0]._boundary_element, LineLinearBoundary)
@@ -173,18 +178,18 @@ class TestMeshComponent(TestCase):
         neumann_df_desired = pd.DataFrame.from_dict(df_dict)
         assert_frame_equal(neumann_df_actual, neumann_df_desired, check_like=True)
 
-    def test_assign_neumann_condition_by_groups(self):
+    def test_assign_neumann_by_groups(self):
         component = StructuralComponent(self.testmesh)
         group = 'left_boundary'
         time_func = lambda t: 3.0*t
         direction = (1, 0)
         condition = component._neumann.create_fixed_direction_neumann(direction, time_func)
-        component.assign_neumann_condition(condition, [group], name='TestCondition')
+        component.assign_neumann('TestCondition', condition, [group])
         # It must be set:
         #   - neumann_df
         #   - neumann_obj_df
         neumann_obj_df = component._neumann._neumann_obj_df
-        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_elementid']].values
+        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_mesh']].values
         self.assertIsInstance(neumann_obj_array[0, 0]._boundary_element, LineLinearBoundary)
         self.assertEqual(neumann_obj_array[0, 1], 4)
         self.assertEqual(neumann_obj_array.shape, (1, 2))
@@ -198,3 +203,29 @@ class TestMeshComponent(TestCase):
         }
         neumann_df_desired = pd.DataFrame.from_dict(df_dict)
         assert_frame_equal(neumann_df_actual, neumann_df_desired, check_like=True)
+        
+    def test_assign_constraints_by_group(self):
+        component = StructuralComponent(self.testmesh)
+        component.assign_material(self.mat1, np.array([1, 2, 3]), 'S', '_eleids')
+        group = 'left_boundary'
+        dirichlet = component._constraints.create_dirichlet_constraint()
+        component.assign_constraint('TestConstraint', dirichlet, [group], '_groups', 'elim')
+        constraint_df = component._constraints._constraints_df
+
+        self.assertIsInstance(constraint_df['constraint_obj'].values[0], DirichletConstraint)
+        self.assertEqual(constraint_df['name'].values[0], 'TestConstraint')
+        self.assertEqual(constraint_df['strategy'].values[0], 'elim')
+        assert_array_equal(constraint_df['dofids'].values[0], np.array([8, 9, 10, 11]))
+        
+    def test_assign_constraints_by_eleids(self):
+        component = StructuralComponent(self.testmesh)
+        component.assign_material(self.mat1, np.array([1, 2, 3]), 'S', '_eleids')
+        component._update_mapping()
+        dirichlet = component._constraints.create_dirichlet_constraint()
+        component.assign_constraint('TestConstraint', dirichlet, [4], '_eleids', 'elim')
+        constraint_df = component._constraints._constraints_df
+        
+        self.assertIsInstance(constraint_df['constraint_obj'].values[0], DirichletConstraint)
+        self.assertEqual(constraint_df['name'].values[0], 'TestConstraint')
+        self.assertEqual(constraint_df['strategy'].values[0], 'elim')
+        assert_array_equal(constraint_df['dofids'].values[0], np.array([8, 9, 10, 11]))

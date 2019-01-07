@@ -42,3 +42,8 @@ class Tri3Boundary(BoundaryElement):
         N = np.array([1/3, 1/3, 1/3])
         f_mat = np.outer(N, n)
         return f_mat
+
+    def dofs(self):
+        return (('N', 0, 'ux'), ('N', 0, 'uy'), ('N', 0, 'uz'),
+                ('N', 1, 'ux'), ('N', 1, 'uy'), ('N', 1, 'uz'),
+                ('N', 2, 'ux'), ('N', 2, 'uy'), ('N', 2, 'uz'))

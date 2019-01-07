@@ -15,12 +15,12 @@ __all__ = ['MappingBase']
 class MappingBase(ABC):
     def __init__(self):
         self._nodal2global = None
-        # TODO: Insert an elemental2global property to store elemental dofs
 
-        self._elements2global = []
+        self._elements2global = pd.DataFrame({'global_dofs': []})
+
     @property
     def no_of_dofs(self):
-        return len(np.unique(np.concatenate(self._elements2global)))
+        return len(np.unique(np.concatenate(self._elements2global['global_dofs'].values)))
 
     @property
     def nodal2global(self):
@@ -32,13 +32,16 @@ class MappingBase(ABC):
 
     @property
     def elements2global(self):
-        return self._elements2global
+        return self._elements2global['global_dofs'].values
 
     @elements2global.setter
     def elements2global(self, elements2global):
         self._elements2global = elements2global
 
-    def get_dofs_by_nodeids(self, nodeids, fields):
+    def get_dofs_by_ids(self, ids):
+        return self._elements2global.loc[ids, 'global_dofs'].values
+
+    def get_dofs_by_nodeids(self, nodeids, fields=('all')):
         """
         Returns the global dofs associated with a given node-row-index and a direction x, y or z
 
@@ -56,9 +59,11 @@ class MappingBase(ABC):
         """
         if not isinstance(nodeids, Iterable):
             nodeids = [nodeids]
+        if fields is ('all'):
+            fields = self._nodal2global.keys()
         return self._nodal2global.loc[nodeids, fields].values
 
-    def update_mapping(self, fields, nodeids, connectivity, dofs_by_element, **kwargs):
+    def update_mapping(self, fields, nodeids, connectivity, dofs_by_element, callbacks, callbackargs, **kwargs):
         """
         Update the mapping (nodal2global and elements2global)
 
@@ -70,10 +75,15 @@ class MappingBase(ABC):
         nodeids : array
             array containing the nodeids that shall be mapped
         connectivity : ndarray
-            iterable containing nodeids of the connectivity in each element
+            iterable containing nodeids of the connectivity in each element (same length as the elementids)
         dofs_by_element : iterable
             iterable containing the dofs as strings per element
             e.g. [(('N', 0, 'ux'), ('N', 0, 'uy'), ('E', 0, 'T'), ('N', 1, 'ux')), ( ..same for 2nd element ), ... )
+        callbacks : list
+            callback function with signature void: callback(int: id, *args) for writing the information about the mapping id
+            that has been inserted in the dataframe of the mapping class
+        callbackargs : list of lists
+            lists containing arguments that are passd to the callbackfunction as *args
         kwargs : dict
             keyword value list for future implementations
 
@@ -81,10 +91,10 @@ class MappingBase(ABC):
         -------
         None
         """
-        self._set_standard_mapping(fields, nodeids, connectivity, dofs_by_element, **kwargs)
+        self._set_standard_mapping(fields, nodeids, connectivity, dofs_by_element, callbacks, callbackargs, **kwargs)
 
     @abstractmethod
-    def _set_standard_mapping(self, fields, nodeids, connectivity, dofs_by_element, **kwargs):
+    def _set_standard_mapping(self, fields, nodeids, connectivity, dofs_by_element, callbacks, callbackargs, **kwargs):
         """
         Computes the mapping according to a certain algorithm.
 
@@ -96,18 +106,23 @@ class MappingBase(ABC):
 
         Parameters
         ----------
-        fields : iterable
-            contains strings that describe the fieldnames
+        fields : tuple
+            tuple with strings that describe the field that shall be mapped, e.g. ('ux', 'uy', 'uz', 'T')
+            for a 3D displacement and Temperature field
         nodeids : array
             array containing the nodeids that shall be mapped
         connectivity : ndarray
-            iterable containing nodeids of the connectivity in each element
+            iterable containing nodeids of the connectivity in each element (same length as the elementids)
         dofs_by_element : iterable
             iterable containing the dofs as strings per element
             e.g. [(('N', 0, 'ux'), ('N', 0, 'uy'), ('E', 0, 'T'), ('N', 1, 'ux')), ( ..same for 2nd element ), ... )
+        callbacks : list
+            callback function with signature void: callback(int: id, *args) for writing the information about the mapping id
+            that has been inserted in the dataframe of the mapping class
+        callbackargs : list of lists
+            lists containing arguments that are passd to the callbackfunction as *args
         kwargs : dict
-            keyword value list for future implementations
-            (important for subclassing if special algorithms need special parameters)
+            keyword value list for future implementations (important for subclassing)
 
         Returns
         -------

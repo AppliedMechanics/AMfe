@@ -216,7 +216,7 @@ class Mesh:
 
     def get_elementids_by_groups(self, groups):
         """
-        Returns elementids bolonging to a group
+        Returns elementids belonging to a group
 
         Parameters
         ----------
@@ -275,23 +275,58 @@ class Mesh:
 
         Returns
         -------
-        nodeidxs : ndarray
-
+        nodeids : ndarray
+        
         """
-        nodeids = []
-        elementids = []
+        # Get nodeids from 'nodes' key
+        nodeids_from_nodes = []
         for group in groups:
-            if self.groups[group]['elements'] is not None:
-                elementids.extend(self.groups[group]['elements'])
-            if self.groups[group]['nodes'] is not None:
-                nodeids.extend(self.groups[group]['nodes'])
+            nodeids_from_nodes.extend(self.groups[group]['nodes'])
+        nodeids_from_nodes = np.array(nodeids_from_nodes, dtype=int)
 
-        nodeids_from_nodes = np.array(nodeids, dtype=int)
-        nodeids_from_elements = np.hstack(self.get_connectivity_by_elementids(elementids))
-        nodeids_from_elements = np.unique(nodeids_from_elements)
+        # Get Nodids from nodes which belong the elements of the group
+        elementids = self.get_elementids_by_groups(groups)
+        nodeids_from_elements = self.get_nodeids_by_elementids(elementids)
+
+        # remove duplicates
         nodes = np.unique(np.hstack((nodeids_from_nodes, np.array(nodeids_from_elements))))
-        nodeiloc = np.array([self.nodes_df.index.get_loc(nodeid) for nodeid in nodes], dtype=int)
-        return nodeiloc
+        return nodes
+    
+    def get_nodeids_by_elementids(self, elementids):
+        """
+        Returns nodeids of the nodes property belonging to elements
+
+        Parameters
+        ----------
+        elementids : ndarray
+            contains the elementids as int
+
+        Returns
+        -------
+        nodeids : ndarray
+        """
+        nodeids = np.hstack(self.get_connectivity_by_elementids(elementids))
+        nodeids = np.unique(nodeids)
+        return nodeids
+    
+    def get_nodeids_by_tag(self, tag_name, tag_value):
+        """
+        Returns nodeids of the nodes property belonging to elements, that are tagged by the assigne tag-value
+
+        Parameters
+        ----------
+        tag_name : str
+            tag name for adding column in el_df 
+        tag_value : str, int, Boolean, float
+            current tag value to select the element ids
+
+        Returns
+        -------
+        nodeids : ndarray
+        """
+        elementids = self.get_elementids_by_tag(tag_name, tag_value)
+        nodeids = self.get_nodeids_by_elementids(elementids)
+        return nodeids
 
     def get_ele_shapes_by_ids(self, elementids):
         """
@@ -351,6 +386,21 @@ class Mesh:
             returns all nodeidxs
         """
         return np.arange(self.no_of_nodes, dtype=np.int)
+    
+    def get_nodeidxs_by_nodeids(self, nodeids):
+        """
+        Parameters
+        ----------
+        nodeids : ndarray
+            nodeids
+            
+        Returns
+        -------
+        nodeidxs: ndarray
+            rowindices of nodes in nodes dataframe
+        """
+        nodeidxs = np.array([self.nodes_df.index.get_loc(nodeid) for nodeid in nodeids], dtype=int)
+        return nodeidxs
 
     def get_nodeids_by_nodeidxs(self, nodeidxs):
         """
@@ -492,7 +542,7 @@ class Mesh:
             elementids_list = testmesh.get_elementids_by_tag('is_boundary','False')   
         """
         
-        return self.el_df[self.el_df[tag_name] == tag_value].index.tolist()
+        return self.el_df[self.el_df[tag_name] == tag_value].index.values
 
     def get_elementidxs_by_tag(self, tag_name, tag_value):
         """

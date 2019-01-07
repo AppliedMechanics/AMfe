@@ -66,3 +66,9 @@ class Quad4Boundary(BoundaryElement):
             n = np.cross(dx_dxi[:,1], dx_dxi[:,0])
             f_mat += np.outer(N, n) * w
         return f_mat
+
+    def dofs(self):
+        return (('N', 0, 'ux'), ('N', 0, 'uy'), ('N', 0, 'uz'),
+                ('N', 1, 'ux'), ('N', 1, 'uy'), ('N', 1, 'uz'),
+                ('N', 2, 'ux'), ('N', 2, 'uy'), ('N', 2, 'uz'),
+                ('N', 3, 'ux'), ('N', 3, 'uy'), ('N', 3, 'uz'))

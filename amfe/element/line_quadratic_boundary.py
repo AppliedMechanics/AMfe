@@ -46,3 +46,11 @@ class LineQuadraticBoundary(BoundaryElement):
         n = self.rot_mat @ v
         f_mat = np.outer(self.N, n)
         return f_mat
+
+    def dofs(self):
+        return (('N', 0, 'ux'),
+                ('N', 0, 'uy'),
+                ('N', 1, 'ux'),
+                ('N', 1, 'uy'),
+                ('N', 2, 'ux'),
+                ('N', 2, 'uy'))
