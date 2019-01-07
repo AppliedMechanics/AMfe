@@ -25,104 +25,7 @@ import numpy as np
 import scipy as sp
 
 from scipy import sparse
-from scipy import linalg
 
-
-# Trying to import the fortran routines
-use_fortran = False
-try:
-    import amfe.f90_assembly
-    use_fortran = True
-except ImportError:
-    print('Python was not able to load the fast fortran assembly routines.')
-#use_fortran = False
-
-
-def get_index_of_csr_data(i,j, indptr, indices):
-    '''Get the value index of the i,j element of a matrix in CSR format.
-
-    Parameters
-    ----------
-    i : int
-        row index which is asked to get the CSR-index for
-    j : int
-        column index which is asked to get the CSR-index for
-    indptr : ndarray
-        index-ptr-Array of the CSR-Matrix.
-    indices : ndarray
-        indices array of CSR-matrix (represents the nonzero column indices)
-
-    Returns
-    -------
-    k : int
-        index of the value array of the CSR-matrix, in which value [i,j] is
-        stored.
-
-    Notes
-    -----
-    This routine works only, if the tuple i,j is acutally a real entry of the
-    Matrix. Otherwise the value k=0 will be returned and an Error Message will
-    be provided.
-    '''
-
-    # indices for row i are stored in indices[indptr[k]:indptr[k+1]]
-    # Thus the indptr marks the start and end of the part of the indices
-    # and val vector where all entries of a row are stored
-    # --
-    # Set k to the start of data of row k:
-    k = indptr[i]
-    # Search for appearance of j in the nonzero column indices which are
-    # stored in indices[k] till indices[k+indptr[i+1]]
-    while j != indices[k]:
-        # while column j not found search for j in next entry
-        k += 1
-        # Check if next search would be in next (wrong) row
-        if k > indptr[i+1]:
-            print('ERROR! The index in the csr matrix is not preallocated!')
-            k = 0
-            break
-    return k
-
-def fill_csr_matrix(indptr, indices, vals, K, k_indices):
-    '''
-    Fill the values of K into the vals-array of a sparse CSR Matrix given the
-    k_indices array.
-
-    Parameters
-    ----------
-    indptr : ndarray
-        indptr-array of a preallocated CSR-Matrix
-    indices : ndarray
-        indices-array of a preallocated CSR-Matrix
-    vals : ndarray
-        vals-array of a preallocated CSR-Marix
-    K : ndarray
-        'small' square array whose values will be distributed into the
-        CSR-Matrix, Shape is (n,n)
-    k_indices : ndarray
-        mapping array of the global indices for the 'small' K array.
-        The (i,j) entry of K has the global indices (k_indices[i], k_indices[j])
-        Shape is (n,)
-
-    Returns
-    -------
-    None
-
-    '''
-    ndof_l = K.shape[0]
-    for i in range(ndof_l):
-        for j in range(ndof_l):
-            l = get_index_of_csr_data(k_indices[i], k_indices[j], indptr, indices)
-            vals[l] += K[i,j]
-    return
-
-
-if use_fortran:
-    ###########################################################################
-    # Fortran routine that will override the functions above for massive speedup.
-    ###########################################################################
-    get_index_of_csr_data = amfe.f90_assembly.get_index_of_csr_data
-    fill_csr_matrix = amfe.f90_assembly.fill_csr_matrix
 
 class Assembly():
     '''
@@ -182,97 +85,6 @@ class Assembly():
         self.C_deim = None
         self._observers = list()
 
-    def add_observer(self, observer, verbose=True):
-        self._observers.append(observer)
-        if verbose:
-            print('Added observer to assembly')
-
-    def remove_observer(self, observer, verbose=True):
-        self._observers.remove(observer)
-        if verbose:
-            print('Removed observer from assembly')
-
-    def notify(self):
-        for observer in self._observers:
-            observer.update()
-
-    @property
-    def nodes_voigt(self):
-        return self._nodes_voigt
-
-    @nodes_voigt.setter
-    def nodes_voigt(self, nodes_voigt):
-        self._nodes_voigt = nodes_voigt
-        self.notify()
-
-    def preallocate_csr(self):
-        '''
-        Compute the sparsity pattern of the assembled matrices and store an
-        empty matrix in self.C_csr.
-
-        The matrix self.C_csr serves as a 'blueprint' matrix which is filled in
-        the assembly process.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-
-
-        Notes
-        -----
-        This preallocation routine can take some while for large matrices. Furthermore it is not implemented memory-efficient, so for large systems and low RAM this might be an issue...
-
-        '''
-        print('Preallocating the stiffness matrix')
-        t1 = time.clock()
-        # computation of all necessary variables:
-        no_of_elements = self.mesh.no_of_elements
-        no_of_dofs = self.mesh.no_of_dofs
-        self.nodes_voigt = self.mesh.nodes.reshape(-1)
-
-        self.compute_element_indices()
-        max_dofs_per_element = np.max([len(i) for i in self.element_indices])
-
-        # Auxiliary Help-Matrix H which is the blueprint of the local
-        # element stiffness matrix
-        H = np.zeros((max_dofs_per_element, max_dofs_per_element))
-
-        # preallocate the CSR-matrix
-
-        # preallocate row_global with maximal possible size for prealloc. C_csr
-        row_global = np.zeros(no_of_elements*max_dofs_per_element**2, dtype=int)
-        # preallocate col_global with maximal possible size for prealloc. C_csr
-        col_global = row_global.copy()
-        # set 'dummy' values
-        vals_global = np.zeros_like(col_global, dtype=bool)
-
-        # calculate row_global and col_global
-        for i, indices_of_one_element in enumerate(self.element_indices):
-            l = len(indices_of_one_element)
-            # insert global-dof-ids in l rows (l rows have equal entries)
-            H[:l,:l] = indices_of_one_element
-            # calculate row_global and col_global such that every possible
-            # combination of indices_of_one_element can be returned by
-            # (row_global[k], col_global[k]) for all k
-            row_global[i*max_dofs_per_element**2:(i+1)*max_dofs_per_element**2] = \
-                H.reshape(-1)
-            col_global[i*max_dofs_per_element**2:(i+1)*max_dofs_per_element**2] = \
-                H.T.reshape(-1)
-
-        # fill C_csr matrix with dummy entries in those places where matrix
-        # will be filled in assembly
-        self.C_csr = sp.sparse.csr_matrix((vals_global, (row_global, col_global)),
-                                          shape=(no_of_dofs, no_of_dofs), dtype=float)
-        t2 = time.clock()
-        print('Done preallocating stiffness matrix with', no_of_elements,
-              'elements and', no_of_dofs, 'dofs.')
-        print('Time taken for preallocation: {0:2.2f} seconds.'.format(t2 - t1))
-
-
     def preallocate_hyper_csr(self, idxs):
         '''
         Preallocate a sparse matrix for a reduced mesh.
@@ -297,273 +109,6 @@ class Assembly():
                             K_ele, indices)
         K_csr.eliminate_zeros()
         self.C_csr_hyper = K_csr * 0
-
-    def compute_element_indices(self):
-        '''
-        Compute the element indices which are the global dofs of every element.
-
-        The element_indices are a list, where every element of the list denotes
-        the dofs of the element in the correct order.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-        '''
-        connectivity = self.mesh.connectivity
-        nm_connectivity = self.mesh.neumann_connectivity
-        no_of_dofs_per_node = self.mesh.no_of_dofs_per_node
-
-        # Explanation of following expression:
-        # for each element in connectivity
-        # and for each node-id of each element
-        # take [0,1] (2D-problem) or [0,1,2] (3D-problem)
-        # and add 2*node_id (2D-problem) or 3*node_id (3D-problem)
-        # and reshape the result...
-        # Result (self.element_indices:)
-        # the rows are the elements, the columns are the local element dofs
-        # the values are the global dofs
-        self.element_indices = \
-        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*node_id)
-                   for node_id in elements], dtype=int).reshape(-1)
-         for elements in connectivity]
-
-        self.neumann_indices = \
-        [np.array([(np.arange(no_of_dofs_per_node) + no_of_dofs_per_node*i)
-                   for i in nodes], dtype=int).reshape(-1)
-         for nodes in nm_connectivity]
-
-        # compute nodes_frequency for stress recovery
-        nodes_vec = np.concatenate(self.mesh.connectivity)
-        self.elements_on_node = np.bincount(nodes_vec)
-
-
-    def assemble_k_and_f(self, u, t):
-        '''
-        Assembles the stiffness matrix of the given mesh and element.
-
-        Parameters
-        -----------
-        u : ndarray
-            nodal displacement of the nodes in Voigt-notation
-        t : float
-            time
-
-        Returns
-        --------
-        K : sparse.csr_matrix
-            unconstrained assembled stiffness matrix in sparse matrix csr format.
-        f : ndarray
-            unconstrained assembled force vector
-        '''
-        if u is None:
-            u = np.zeros_like(self.nodes_voigt)
-
-        # Allocate K and f
-        K_csr = self.C_csr.copy()
-        f_glob = np.zeros(self.mesh.no_of_dofs)
-
-        # Loop over all elements
-        # (i - element index, indices - DOF indices of the element)
-        for i, indices in enumerate(self.element_indices):
-            # X - The undeformed positions of the i-th element
-            X_local = self.nodes_voigt[indices]
-            # the displacements of the i-th element
-            u_local = u[indices]
-            # K computation of the element tangential stiffness matrix and
-            # nonlinear force
-            K, f = self.mesh.ele_obj[i].k_and_f_int(X_local, u_local, t)
-            # adding the local force to the global one
-            f_glob[indices] += f
-
-            # this is equal to
-            # K_csr[indices, indices] += K
-            fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
-
-        return K_csr, f_glob
-
-
-    def assemble_m(self, u=None, t=0):
-        '''
-        Assembles the mass matrix of the given mesh and element.
-
-        Parameters
-        -----------
-        u : ndarray or None, optional
-            nodal displacement of the nodes in Voigt-notation. Default: None.
-        t : float, optional
-            time. Default: 0.
-
-        Returns
-        --------
-        M : sparse.csr_matrix
-            unconstrained assembled mass matrix in sparse matrix csr-format.
-
-        Examples
-        ---------
-        TODO
-        '''
-        if u is None:
-            u = np.zeros_like(self.nodes_voigt)
-
-        M_csr = self.C_csr.copy()
-
-        for i, indices in enumerate(self.element_indices):
-            X_local = self.nodes_voigt[indices]
-            u_local = u[indices]
-            M = self.mesh.ele_obj[i].m_int(X_local, u_local, t)
-            fill_csr_matrix(M_csr.indptr, M_csr.indices, M_csr.data, M, indices)
-
-        return M_csr
-
-
-    def assemble_k_and_f_neumann(self, u=None, t=0):
-        '''
-        Assembles the stiffness matrix and the force of the Neumann skin
-        elements.
-
-        Parameters
-        -----------
-        u : ndarray
-            nodal displacement of the nodes in Voigt-notation
-        t : float
-            time
-
-        Returns
-        --------
-        K : sparse.csr_matrix
-            unconstrained assembled stiffness matrix in sparse matrix csr format.
-        f : ndarray
-            unconstrained assembled force vector
-        '''
-        if u is None:
-            u = np.zeros_like(self.nodes_voigt)
-
-        K_csr = self.C_csr.copy()
-        f_glob = np.zeros(self.mesh.no_of_dofs)
-
-        for i, indices in enumerate(self.neumann_indices):
-            X_local = self.nodes_voigt[indices]
-            u_local = u[indices]
-            K, f = self.mesh.neumann_obj[i].k_and_f_int(X_local, u_local, t)
-            f_glob[indices] += f
-            fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
-
-        return K_csr, f_glob
-
-    def assemble_k_f_S_E(self, u, t):
-        '''
-        Assemble the stiffness matrix with stress recovery of the given mesh
-        and element.
-
-        Parameters
-        -----------
-        u : ndarray
-            nodal displacement of the nodes in Voigt-notation
-        t : float
-            time
-
-        Returns
-        --------
-        K : sparse.csr_matrix
-            unconstrained assembled stiffness matrix in sparse matrix csr format.
-        f : ndarray
-            unconstrained assembled force vector
-        S : ndarray
-            unconstrained assembled stress tensor
-        E : ndarray
-            unconstrained assembled strain tensor
-
-        '''
-
-        K_csr = self.C_csr.copy()
-        f_glob = np.zeros(self.mesh.no_of_dofs)
-        no_of_nodes = len(self.mesh.nodes)
-        E_global = np.zeros((no_of_nodes, 6))
-        S_global = np.zeros((no_of_nodes, 6))
-
-        for i, indices in enumerate(self.element_indices):
-            node_indices = self.mesh.connectivity[i]
-            X_local = self.nodes_voigt[indices]
-            u_local = u[indices]
-            K, f, S, E = self.mesh.ele_obj[i].k_f_S_E_int(X_local, u_local, t)
-
-            # Assembly of force, stiffness, strain and stress
-            f_glob[indices] += f
-            fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, K, indices)
-            E_global[node_indices, :] += E
-            S_global[node_indices, :] += S
-
-        # Correct strains such, that average is taken at the elements
-        E_global = (E_global.T/self.elements_on_node).T
-        S_global = (S_global.T/self.elements_on_node).T
-
-        return K_csr, f_glob, E_global, S_global
-
-    def assemble_g_and_b(self, V, S, verbose=False):
-        '''
-        Assembles the element contributin matrix G for the given basis V and
-        the snapshots S.
-
-        This function is needed for cubature bases Hyper reduction methods
-        like the ECSW.
-
-        Parameters
-        ----------
-        V : ndarray, shape (N_unconstr, n)
-            Reduction basis
-        S : ndarray, shape (N_unconstr, m)
-            Snapshots gathered as column vectors.
-        verbose : print dots for the
-
-        Returns
-        -------
-        G : ndarray, shape (n*m, no_of_elements)
-            Contribution matrix of internal forces. The columns form the
-            internal force contributions on the basis V for the m snapshots
-            gathered in S.
-        b : ndarray, shape (n*m, )
-            summed force contribution
-
-        Note
-        ----
-        This assembly works on the unconstrained variables, so both, V and S
-        have to contain the unassembled nodal displacements.
-
-        '''
-        # Check the raw dimension
-        assert(V.shape[0] == S.shape[0])
-
-        # n : dimension of reduces basis
-        # m : number of snapshots
-
-        N_unconstr, n = V.shape
-        __, m = S.shape
-
-        if verbose:
-            print('Start building large selection matrix G.',
-                  'In total {0:d} elements are treated:'.format(
-                      len(self.element_indices)))
-        G = np.zeros((n*m, len(self.element_indices)))
-
-        # loop over all elements
-        for i, indices in enumerate(self.element_indices):
-            # node_indices = self.mesh.connectivity[i]
-            X_local = self.nodes_voigt[indices]
-            V_ele = V[indices, :]
-            if verbose:
-                print('.', sep='', end='')
-            # loop over all snapshots
-            for j, u in enumerate(S.T):
-                u_local = u[indices]
-                f = self.mesh.ele_obj[i].f_int(X_local, u_local)
-                G[j*n:(j+1)*n,i] = V_ele.T @ f
-
-        b = np.sum(G, axis=1)
-        return G, b
 
     def assemble_k_and_f_red(self, V, u, t):
         '''
@@ -608,7 +153,6 @@ class Assembly():
             K_red += V_ele.T @ K_ele @ V_ele
 
         return K_red, f_red
-
 
     def assemble_k_and_f_hyper(self, V, idxs, xi, u, t):
         '''
@@ -661,7 +205,6 @@ class Assembly():
             K_red += V_ele.T @ K_ele @ V_ele * xi[i]
 
         return K_red, f_red
-
 
     def assemble_k_and_f_hyper_no_inplace(self, V, idxs, xi, u, t):
         '''
@@ -1029,3 +572,53 @@ def fill_B_csr_matrix(indptr, indices, vals, b, i, b_indices):
         l = get_index_of_csr_data(i, b_indices[j], indptr, indices)
         vals[l] += b[j]
     return
+
+
+##############################################################
+# Direct assembly methods for ecsw hyperreduction
+
+
+    def K_and_f(self, u=None, t=0):
+        if u is None:
+            u = np.zeros(self.V.shape[1])
+
+        if self.assembly_type == 'direct':
+            K, f_int = self.assembly_class.assemble_k_and_f_hyper(
+                          self.V_unconstr,self.weight_idx, self.weights, u, t)
+        elif self.assembly_type == 'indirect':
+            K, f_int = self.assembly_class.assemble_k_and_f_hyper_no_inplace(
+                          self.V_unconstr,self.weight_idx, self.weights, u, t)
+        else:
+            raise ValueError('The given assembly type for a reduced system '
+                             + 'is not valid.')
+        return K, f_int
+
+    def K(self, u=None, t=0):
+        if u is None:
+            u = np.zeros(self.V.shape[1])
+
+        if self.assembly_type == 'direct':
+            K, f_int = self.assembly_class.assemble_k_and_f_hyper(
+                          self.V_unconstr,self.weight_idx, self.weights, u, t)
+        elif self.assembly_type == 'indirect':
+            K, f_int = self.assembly_class.assemble_k_and_f_hyper_no_inplace(
+                          self.V_unconstr,self.weight_idx, self.weights, u, t)
+        else:
+            raise ValueError('The given assembly type for a reduced system '
+                             + 'is not valid.')
+        return K
+
+    def f_int(self, u, t=0):
+        if u is None:
+            u = np.zeros(self.V.shape[1])
+
+        if self.assembly_type == 'direct':
+            K, f_int = self.assembly_class.assemble_k_and_f_hyper(
+                          self.V_unconstr,self.weight_idx, self.weights, u, t)
+        elif self.assembly_type == 'indirect':
+            K, f_int = self.assembly_class.assemble_k_and_f_hyper_no_inplace(
+                          self.V_unconstr,self.weight_idx, self.weights, u, t)
+        else:
+            raise ValueError('The given assembly type for a reduced system '
+                             + 'is not valid.')
+        return f_int

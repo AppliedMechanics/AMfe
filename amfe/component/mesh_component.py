@@ -12,6 +12,7 @@ import pandas as pd
 from amfe.mesh import Mesh
 from amfe.mapping import StandardMapping
 from .component_base import ComponentBase
+from amfe.assembly.assembly import Assembly
 from amfe.component.constants import ELEPROTOTYPEHELPERLIST
 from amfe.neumann.neumann_manager import *
 from amfe.constraint.constraint_manager import *
@@ -33,12 +34,25 @@ class MeshComponent(ComponentBase):
         self._ele_obj_df['fk_mesh'] = self._ele_obj_df['fk_mesh'].astype(int)
         self._ele_obj_df = self._ele_obj_df.set_index(['physics', 'fk_mesh'])
         self._neumann = NeumannManager()
+        self._assembly = Assembly()
         self._constraints = ConstraintManager()
 
     # -- PROPERTIES --------------------------------------------------------------------------------------
     @property
     def ele_obj(self):
         return self._ele_obj_df['ele_obj'].values
+
+    @property
+    def no_of_elements(self):
+        return len(self._ele_obj_df.index)
+
+    @property
+    def assembly(self):
+        return self._assembly
+
+    @assembly.setter
+    def assembly(self, assembly):
+        self._assembly = assembly
 
     # -- ASSIGN MATERIAL METHODS -------------------------------------------------------------------------
     def assign_material(self, materialobj, propertynames, physics, tag='_groups'):
