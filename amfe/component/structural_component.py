@@ -55,17 +55,14 @@ class StructuralComponent(MeshComponent):
             Mass matrix with applied constraints in sparse CSC format.
         """
 
-        if self._M_constr is None or force_update:
-            if u is not None:
-                u_unconstr = self._constraints.unconstrain_vector(u)
-            else:
-                u_unconstr = None
+        u_unconstr = self._get_unconstrained_u(u)
+        
+        self._constraints.update_constraints(u=u_unconstr, t=t)
             
-            self._constraints.update_constraints(u=u_unconstr, t=t)
-            self._M_csr = self._assembly.assemble_m(self._mesh.nodes_df, self.ele_obj,
-                                                    self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values,
-                                                    self._mapping.get_dofs_by_ids(self._ele_obj_df['fk_mapping'].values), u_unconstr, t, self._M_csr)
-            self._M_constr = self._constraints.constrain_matrix(self._M_csr)
+        self._M_csr = self._assembly.assemble_m(self._mesh.nodes_df, self.ele_obj,
+                                                self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values,
+                                                self._mapping.get_dofs_by_ids(self._ele_obj_df['fk_mapping'].values), u_unconstr, t, self._M_csr)
+        self._M_constr = self._constraints.constrain_matrix(self._M_csr)
         return self._M_constr
 
     def D(self, u=None, t=0, force_update=False):
@@ -115,13 +112,14 @@ class StructuralComponent(MeshComponent):
             Nonlinear internal force vector after constraints have been applied
         """
 
-        if u is None:
-            u = np.zeros(self._constraints.no_of_constrained_dofs)
+        u_unconstr = self._get_unconstrained_u(u)
+        
+        self._constraints.update_constraints(u=u_unconstr, t=t)
 
         self._f_glob = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
                                                           self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values,
                                                           self._mapping.get_dofs_by_ids(self._ele_obj_df['fk_mapping'].values),
-                                                          self._constraints.unconstrain_vector(u), t,
+                                                          u_unconstr, t,
                                                           self._C_csr, self._f_glob)[1]
         return self._constraints.constrain_vector(self._f_glob)
 
@@ -143,13 +141,14 @@ class StructuralComponent(MeshComponent):
             Stiffness matrix with applied constraints in sparse CSC format.
         """
 
-        if u is None:
-            u = np.zeros(self._constraints.no_of_constrained_dofs)
+        u_unconstr = self._get_unconstrained_u(u)
+        
+        self._constraints.update_constraints(u=u_unconstr, t=t)
 
         self._C_csr, _ = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
                                                          self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values,
                                                          self._mapping.get_dofs_by_ids(
-                                                             self._ele_obj_df['fk_mapping'].values), self._constraints.unconstrain_vector(u), t,
+                                                             self._ele_obj_df['fk_mapping'].values), u_unconstr, t,
                                                          self._C_csr, self._f_glob)
         return self._constraints.constrain_matrix(self._C_csr)
 
@@ -173,16 +172,17 @@ class StructuralComponent(MeshComponent):
             Internal nonlinear force vector after constraints have been applied
         """
 
-        if u is None:
-            u = np.zeros(self._constraints.no_of_constrained_dofs)
+        u_unconstr = self._get_unconstrained_u(u)
+        
+        self._constraints.update_constraints(u=u_unconstr, t=t)
 
         self._C_csr, self._f_glob = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
                                                                     self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values,
-                                                                    self._mapping.get_dofs_by_ids(self._ele_obj_df['fk_mapping'].values), self._constraints.unconstrain_vector(u), t,
+                                                                    self._mapping.get_dofs_by_ids(self._ele_obj_df['fk_mapping'].values), u_unconstr, t,
                                                                     self._C_csr, self._f_glob)
         return self._constraints.constrain_matrix(self._C_csr), self._constraints.constrain_vector(self._f_glob)
 
-    def f_ext(self, u=None, t=0):
+    def f_ext(self, u=None, du=None, t=0):
         """
         Compute and return external force vector
 
@@ -200,13 +200,22 @@ class StructuralComponent(MeshComponent):
             external force vector after contraints have been applied
         """
 
-        if u is None:
-            u = np.zeros(self._constraints.no_of_constrained_dofs)
+        u_unconstr = self._get_unconstrained_u(u)
+        
+        self._constraints.update_constraints(u=u_unconstr, t=t)
 
         neumann_elements, neumann_mesh_fk, neumann_mapping_fk = self._neumann.get_ele_obj_fk_mesh_and_fk_mapping()
         neumann_connectivities = self._mesh.get_connectivity_by_elementids(neumann_mesh_fk)
         neumann_dofs = self._mapping.get_dofs_by_ids(neumann_mapping_fk)
         self._f_glob = self._assembly.assemble_f_ext(self._mesh.nodes_df, neumann_elements,
-                                      neumann_connectivities, neumann_dofs, self._constraints.unconstrain_vector(u), t,
+                                      neumann_connectivities, neumann_dofs, u_unconstr, t,
                                       f_glob=self._f_glob)
         return self._constraints.constrain_vector(self._f_glob)
+    
+    def __get_unconstrained_u(self, u):
+        if u is None:
+            u_unconstr = np.zeros(self._mapping.no_of_dofs)
+        else:
+            u_unconstr = self._constraints.unconstrain_vector(u)
+            
+        return u_unconstr

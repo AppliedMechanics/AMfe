@@ -136,8 +136,7 @@ class ConstraintManager:
             for indx, constr in self._constraints_df.iterrows():
                 if [dof] == constr['dofids']:
                     indices.append(indx)
-                    
-        print(indices)
+
                 
         self._remove_constraint_by_indices(indices)
         
@@ -185,7 +184,7 @@ class ConstraintManager:
     def update_no_of_unconstrained_dofs(self, new_no_of_unconstrained_dofs):
         self._no_of_unconstrained_dofs = new_no_of_unconstrained_dofs
     
-    def update_constraints(self, X=None, u=None, du=None, ddu=None, t=0):
+    def update_constraints(self, X, u, du, ddu, t=0):
         self._update_elim_constraints(X, u, du, ddu, t)
         self._update_lagr_constraints(X, u, du, ddu, t)
         
@@ -279,7 +278,7 @@ class ConstraintManager:
             return self._no_of_unconstrained_dofs - self.C_elim.shape[0]
         
     def _update_elim_constraints(self, X, u, du, ddu, t):
-        self._C_elim, self._L, self._g_elim = self._constraint_assembler.assemble_elim_C_L_and_g(self._no_of_unconstrained_dofs, self._constraints_df, X, u, du, ddu, t)
+        self._C_elim, self._L, self._g_elim = self._constraint_assembler.assemble_elim_C_L_and_g(self._no_of_unconstrained_dofs, self._get_dofids_by_strategy('elim'), self._constraints_df, X, u, du, ddu, t)
         
     def _update_lagr_constraints(self, X, u, du, ddu, t):
         self._C_lagr, self._g_lagr = self._constraint_assembler.assemble_lagr_C_g(self._no_of_unconstrained_dofs, self._constraints_df, X, u, du, ddu, t)
@@ -288,8 +287,12 @@ class ConstraintManager:
         
     def _get_dofids_by_strategy(self, strategy):
         if strategy in self._constraints_df['strategy'].values:
-            dofids_per_strat = self._constraints_df.groupby('strategy')['dofids'].aggregate(lambda dof: dof)
-            dofids = np.unique(np.array(dofids_per_strat[strategy]))
+            dofids = []
+            for row, constr in self._constraints_df.iterrows():
+                if constr['strategy'] is strategy:
+                    dofids = np.append(dofids, constr['dofids'])
+            dofids = np.unique(dofids)
+
         else:
             dofids = np.empty([0,0])
             

@@ -41,6 +41,19 @@ class MeshComponent(ComponentBase):
     @property
     def ele_obj(self):
         return self._ele_obj_df['ele_obj'].values
+    
+    @property
+    def X(self):
+        """
+        Returns the reference-configuration of each dof
+        """
+        X = np.zeros(self._mapping.no_of_dofs)
+        nodeidxs = self._mesh.get_nodeidxs_by_all()
+        nodeids = self._mesh.get_nodeids_by_nodeidxs(nodeidxs)
+        X[self._mapping.get_dofs_by_nodeids(nodeids)] = self._mesh.nodes[nodeidxs]
+        
+        return X
+
 
     @property
     def no_of_elements(self):
@@ -84,6 +97,7 @@ class MeshComponent(ComponentBase):
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
     def assign_neumann(self, name, condition, tag_values, tag='_groups'):
+        print('Assigning Neumann Condition')
         if tag == '_groups':
             eleids = self._mesh.get_elementids_by_groups(tag_values)
         elif tag == '_eleids':
@@ -115,9 +129,13 @@ class MeshComponent(ComponentBase):
 
         self._constraints.add_constraint(name, constraint, dofids, strategy)
         
+    def unconstrain_vector(self, vector):
+        return self._constraints.unconstrain_vector(vector)
+        
     # -- MAPPING METHODS -----------------------------------------------------------------------------------
     def _update_mapping(self):
         # collect parameters for call of update_mapping
+        print('Updating Mapping')
         fields = self._fields
         nodeids = self._mesh.nodes_df.index.values
 

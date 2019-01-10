@@ -10,6 +10,7 @@ Module for assembling the constraint-objects to a set of global constraint-opera
 
 from scipy.sparse import csr_matrix, identity, vstack
 from scipy.linalg import null_space
+from .constraint import DirichletConstraint
 from math import isclose
 import numpy as np
 
@@ -18,7 +19,7 @@ class ConstraintAssembler:
     def __init__(self):
         pass
     
-    def assemble_elim_C_L_and_g(self, no_of_unconstrained_dofs, constraint_df, X, u, du, ddu, t, primary_type='u', C_preset=None, L_preset=None):
+    def assemble_elim_C_L_and_g(self, no_of_unconstrained_dofs, constrained_dofs, constraint_df, X, u, du, ddu, t, primary_type='u', C_preset=None, L_preset=None):
         """
         Update the global constraint-matrices C, L, g
         
@@ -42,20 +43,22 @@ class ConstraintAssembler:
         g: csr-vector
             residual vector for constraints enforced by lagrange-multipliers
         """
-        C, g = self._assemble_constraints(no_of_unconstrained_dofs, constraint_df, X, u, du, ddu, t, 'elim', primary_type, C_preset)
+        C, g, C_is_boolean = self._assemble_constraints(no_of_unconstrained_dofs, constraint_df, X, u, du, ddu, t, 'elim', primary_type, C_preset)
 
         if L_preset is not None:
             L = L_preset
         else:
             if C is not None:
-                L = self._update_l(C)
+                L = self._update_l(C, C_is_boolean, constrained_dofs)
             else:
                 L = None
         
         return C, L, g
     
     def assemble_lagr_C_g(self, no_of_unconstrained_dofs, constraint_df, X, u, du, ddu, t, primary_type='u', C_preset=None):
-        return self._assemble_constraints(no_of_unconstrained_dofs, constraint_df, X, u, du, ddu, t, 'lagrmult', primary_type, C_preset)
+        C, g, C_is_boolean = self._assemble_constraints(no_of_unconstrained_dofs, constraint_df, X, u, du, ddu, t, 'lagrmult', primary_type, C_preset)
+        return C, g
+
     
     def _assemble_constraints(self, no_of_unconstrained_dofs, constraint_df, X, u, du, ddu, t, strategy='elim', primary_type='u', C_preset=None):
         ndof = no_of_unconstrained_dofs
@@ -66,7 +69,7 @@ class ConstraintAssembler:
             C = C_preset
         else:
             if g is not None:
-                C = self._build_C(ndof, constraint_df, g.shape[0], primary_type, X, u, du, ddu, t, strategy)
+                C, C_is_boolean = self._build_C(ndof, constraint_df, g.shape[0], primary_type, X, u, du, ddu, t, strategy)
             else:
                 C = None
         
@@ -74,7 +77,7 @@ class ConstraintAssembler:
             if g.shape[0] is not C.shape[0]:
                 print('Missmatch of g- and C-dimension! Maybe an error in constraint-definition?')
         
-        return C, g
+        return C, g, C_is_boolean
     
     def _build_C(self, ndof, constraint_df, no_constr, primary_type, X, u, du, ddu, t, strategy):
         """
@@ -89,6 +92,9 @@ class ConstraintAssembler:
             C = csr_matrix((0, ndof), dtype=float)
         else:
             C = None
+            
+        C_is_boolean = True
+
 
         for iter, const in constraint_df.iterrows():
             if const['strategy'] == strategy:
@@ -98,7 +104,11 @@ class ConstraintAssembler:
                 C_expanded[:,dofs] = C_helper
                 C = vstack([C, C_expanded])
                 
-        return C
+                if not isinstance(const['constraint_obj'], DirichletConstraint):
+                    C_is_boolean = False
+                
+        return C, C_is_boolean
+
     
     def _build_constraint_func(self, constraint_df, X, u, du, ddu, t, strategy):
         """
@@ -116,7 +126,7 @@ class ConstraintAssembler:
             
         return g
     
-    def _update_l(self, C):
+    def _update_l(self, C, C_is_boolean=None, one_idxs=None):
         """
         Update the L matrix that eliminates the dofs that are eliminated by constraints.
 
@@ -124,7 +134,6 @@ class ConstraintAssembler:
         -------
         csr-matrix
         """
-        C_is_boolean, one_idxs = self._check_c_is_boolean(C)
         if C_is_boolean:
             l = self._get_nullspace_from_identity(C, one_idxs)
         else:
@@ -150,26 +159,6 @@ class ConstraintAssembler:
         col_idxs_not_to_remove = np.arange(0,C.shape[1])
         col_idxs_not_to_remove = np.delete(col_idxs_not_to_remove, col_idxs)
         return L[:,col_idxs_not_to_remove]
-        
-        
-        
-    def _check_c_is_boolean(self, C):
-        tol = 1e-8
-        idxs = np.zeros(C.shape[0])
-        is_boolean = True
-        for row in range(0,C.shape[0]):
-            if isclose(np.sum(C[row,:], axis=1),1,abs_tol=tol):
-                for col in range(0,C.shape[1]):
-                    if not isclose(C[row,col],0,abs_tol=tol) and not isclose(abs(C[row,col]),1,abs_tol=tol):
-                        is_boolean = False
-                        break
-                    elif isclose(abs(C[row,col]),1,abs_tol=tol):
-                        idxs[row] = col
-                else:
-                    continue
-                break
-            else:
-                is_boolean = False
-                        
-        return is_boolean, idxs
-        
+    
+    
+            

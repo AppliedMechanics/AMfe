@@ -29,6 +29,10 @@ class ComponentBase:
         """
         func = getattr(self, matrix_type)
         return func(u, t)
+    
+    def unconstrain_vector(self, vector):
+        return vector
+
         
     def partition(self, no_of_components, element_id_sets):
         """
