@@ -57,7 +57,7 @@ class StructuralComponent(MeshComponent):
 
         u_unconstr = self._get_unconstrained_u(u)
         
-        self._constraints.update_constraints(u=u_unconstr, t=t)
+        self._constraints.update_constraints(self.X, u=u_unconstr, du=u_unconstr, ddu=u_unconstr, t=t)
             
         self._M_csr = self._assembly.assemble_m(self._mesh.nodes_df, self.ele_obj,
                                                 self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values,
@@ -114,7 +114,7 @@ class StructuralComponent(MeshComponent):
 
         u_unconstr = self._get_unconstrained_u(u)
         
-        self._constraints.update_constraints(u=u_unconstr, t=t)
+        self._constraints.update_constraints(self.X, u=u_unconstr, du=u_unconstr, ddu=u_unconstr, t=t)
 
         self._f_glob = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
                                                           self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values,
@@ -143,7 +143,7 @@ class StructuralComponent(MeshComponent):
 
         u_unconstr = self._get_unconstrained_u(u)
         
-        self._constraints.update_constraints(u=u_unconstr, t=t)
+        self._constraints.update_constraints(self.X, u=u_unconstr, du=u_unconstr, ddu=u_unconstr, t=t)
 
         self._C_csr, _ = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
                                                          self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values,
@@ -174,7 +174,7 @@ class StructuralComponent(MeshComponent):
 
         u_unconstr = self._get_unconstrained_u(u)
         
-        self._constraints.update_constraints(u=u_unconstr, t=t)
+        self._constraints.update_constraints(self.X, u=u_unconstr, du=u_unconstr, ddu=u_unconstr, t=t)
 
         self._C_csr, self._f_glob = self._assembly.assemble_k_and_f(self._mesh.nodes_df, self.ele_obj,
                                                                     self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values,
@@ -201,8 +201,6 @@ class StructuralComponent(MeshComponent):
         """
 
         u_unconstr = self._get_unconstrained_u(u)
-        
-        self._constraints.update_constraints(u=u_unconstr, t=t)
 
         neumann_elements, neumann_mesh_fk, neumann_mapping_fk = self._neumann.get_ele_obj_fk_mesh_and_fk_mapping()
         neumann_connectivities = self._mesh.get_connectivity_by_elementids(neumann_mesh_fk)
@@ -212,7 +210,7 @@ class StructuralComponent(MeshComponent):
                                       f_glob=self._f_glob)
         return self._constraints.constrain_vector(self._f_glob)
     
-    def __get_unconstrained_u(self, u):
+    def _get_unconstrained_u(self, u):
         if u is None:
             u_unconstr = np.zeros(self._mapping.no_of_dofs)
         else:
