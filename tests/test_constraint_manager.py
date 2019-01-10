@@ -72,8 +72,10 @@ class ConstraintManagerTest(TestCase):
         assert_frame_equal(self.cm._constraints_df, constraint_df_desired)
         
     def test_update_constraints(self):
-        self.cm.add_constraint('Dirich0', self.diric_constraint, [2], 'elim')
-        self.cm.add_constraint('Dirich1', self.diric_constraint, [1], 'lagrmult')
+        constraint_fixation = self.cm.create_dirichlet_constraint(U=lambda t: 0.0, dU=lambda t: 0.0,
+                                                                      ddU=lambda t: 0.0)
+        self.cm.add_constraint('Dirich0', constraint_fixation, [2], 'elim')
+        self.cm.add_constraint('Dirich1', constraint_fixation, [1], 'lagrmult')
         self.cm.update_constraints(np.array([0, 0, 0]),np.array([0, 0, 0]), np.array([0, 0, 0]), np.array([0, 0, 0]))
         C_elim_desired = np.array([[0.0, 0.0, 1.0]])
         g_elim_desired = np.array([0.0])
@@ -87,7 +89,10 @@ class ConstraintManagerTest(TestCase):
 
     def test_constrain_matrix(self):
         # Constrain third dof
-        self.cm.add_constraint('Dirich0', self.diric_constraint, [2], 'elim')
+        constraint_fixation = self.cm.create_dirichlet_constraint(U=lambda t: 0.0, dU=lambda t: 0.0,
+                                                                      ddU=lambda t: 0.0)
+        self.cm.add_constraint('Dirich0', constraint_fixation, [2], 'elim')
+
         self.cm.update_constraints(np.array([0, 0, 0]),np.array([0, 0, 0]), np.array([0, 0, 0]), np.array([0, 0, 0]))
         M_constr = self.cm.constrain_matrix(self.M_unconstr)
         M_constr_desired = self.M_unconstr[0:2, 0:2]
@@ -102,7 +107,9 @@ class ConstraintManagerTest(TestCase):
         assert_array_equal(D_constr.todense(), D_constr_desired.todense())
 
     def test_constrain_vector(self):
-        self.cm.add_constraint('Dirich0', self.diric_constraint, [2], 'elim')
+        constraint_fixation = self.cm.create_dirichlet_constraint(U=lambda t: 0.0, dU=lambda t: 0.0,
+                                                                      ddU=lambda t: 0.0)
+        self.cm.add_constraint('Dirich0', constraint_fixation, [2], 'elim')
         self.cm.update_constraints(np.array([0, 0, 0]),np.array([0, 0, 0]), np.array([0, 0, 0]), np.array([0, 0, 0]))
         f_int_desired = self.f_int_unconstr[0:2]
         f_int = self.cm.constrain_vector(self.f_int_unconstr)
@@ -117,21 +124,28 @@ class ConstraintManagerTest(TestCase):
         assert_array_equal(u_actual, u_desired)
         
     def test_get_constrained_coupling_quantities(self):
-        self.cm.add_constraint('Dirich0', self.diric_constraint2, [2], 'elim')
+        constraint_fixation = self.cm.create_dirichlet_constraint(U=lambda t: 0.5, dU=lambda t: 0.0,
+                                                                      ddU=lambda t: 0.0)
+        self.cm.add_constraint('Dirich0', constraint_fixation, [2], 'elim')
         self.cm.update_constraints(np.array([0, 0, 0]),np.array([0, 0, 0]), np.array([0, 0, 0]), np.array([0, 0, 0]))
         K_coupling = self.cm.get_constrained_coupling_quantities(self.K_unconstr)
         K_coupling_desired = np.array([[0],[-0.75]])
         assert_array_equal(K_coupling.todense(),K_coupling_desired)
 
     def test_unconstrain_vector(self):
-        self.cm.add_constraint('Dirich0', self.diric_constraint2, [2], 'elim')
+        constraint_fixation = self.cm.create_dirichlet_constraint(U=lambda t: 0.5, dU=lambda t: 0.0,
+                                                                      ddU=lambda t: 0.0)
+        self.cm.add_constraint('Dirich0', constraint_fixation, [2], 'elim')
+
         self.cm.update_constraints(np.array([0, 0, 0]),np.array([0, 0, 0]), np.array([0, 0, 0]), np.array([0, 0, 0]))
         u_actual = self.cm.unconstrain_vector(np.array([0, 0], dtype=float))
         u_desired = np.array([0, 0, 0.5], dtype=float)
         assert_array_equal(u_actual, u_desired)
 
     def test_L(self):
-        self.cm.add_constraint('Dirich0', self.diric_constraint, [2], 'elim')
+        constraint_fixation = self.cm.create_dirichlet_constraint(U=lambda t: 0.0, dU=lambda t: 0.0,
+                                                                      ddU=lambda t: 0.0)
+        self.cm.add_constraint('Dirich0', constraint_fixation, [2], 'elim')
         self.cm.update_constraints(np.array([0, 0, 0]),np.array([0, 0, 0]), np.array([0, 0, 0]), np.array([0, 0, 0]))
         L_desired = csr_matrix(np.array([[1, 0], [0, 1], [0, 0]]))
         L_actual = self.cm.L

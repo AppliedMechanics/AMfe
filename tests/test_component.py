@@ -21,6 +21,10 @@ class StructuralComponentTest(TestCase):
 
             def constrain_matrix(self, K_unconstr, t=0):
                 return K_unconstr[0:2, 0:2]
+            
+            def update_constraints(self, X, u, du, ddu, t):
+                return u
+
 
         class DummyAssembly:
             def __init__(self):
@@ -52,12 +56,38 @@ class StructuralComponentTest(TestCase):
             @property
             def no_of_elements(self):
                 return 0
+            
+            @property
+            def nodes(self):
+                return np.zeros(3)
+            
+            def get_nodeidxs_by_all(self):
+                return np.arange(0, 3)
+            
+            def get_nodeids_by_nodeidxs(self, nodeidxs):
+                return np.arange(0, 3)
+                
+        class DummyMapping:
+            def __init__(self):
+                pass
+            
+            @property
+            def no_of_dofs(self):
+                return 3
+            
+            def get_dofs_by_nodeids(self, nodeids):
+                return np.arange(0, 3)
+            
+            def get_dofs_by_ids(self, ids):
+                return None
+
 
         self.mesh = DummyMesh(2)
         self.assembly = DummyAssembly()
 
         self.structComp = []
         comp = StructuralComponent(self.mesh)
+        comp._mapping = DummyMapping()
         comp._constraints = DummyConstraint()
         comp._assembly = DummyAssembly()
         comp._C_csr = comp._assembly.preallocate(2, None)
