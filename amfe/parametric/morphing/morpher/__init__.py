@@ -6,3 +6,4 @@ from .basemorpher import *
 from .cuboidmorpher import *
 from .cylindermorpher import *
 from .rectanglemorpher import *
+from .shiftmorpher import *
