@@ -26,6 +26,7 @@ __all__ = [
     'query_yes_no',
     'resulting_force',
     'compare_signals',
+    'time_measured',
     'check_float_not_zero'
 ]
 
@@ -494,6 +495,31 @@ def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
         return theta, F1, F2
     else:
         return theta
+
+
+def time_measured(fkt):
+    """
+    Decorator to measure execution time of a function
+
+    It prints out the measured time
+
+    Parameters
+    ----------
+    fkt : function
+        function that shall be measured
+
+    Returns
+    -------
+    None
+
+    """
+    def fkt_wrapper(*args, **kwargs):
+        t1 = time.time()
+        return_vals = fkt(*args, **kwargs)
+        t2 = time.time()
+        print("Job needed: {} seconds".format(t2-t1))
+        return return_vals
+    return fkt_wrapper
 
 
 def eggtimer(fkt):
