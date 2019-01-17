@@ -38,3 +38,6 @@ from .jwh_alpha_nonlinear_dynamics_solver_state_space import *
 #     --- linear ---
 # from .linear_dynamics_solver_state_space import *  # super class
 from .jwh_alpha_linear_dynamics_solver_state_space import *
+
+# --- SOLUTION CLASSES ---
+from .solution import *
