@@ -85,6 +85,12 @@ class Mesh:
         # group dict with names mapping to element ids or node ids, respectively
         self.groups = dict()
 
+        # Flag for lazy evaluation of iconnectivity
+        self._changed_iconnectivity = True
+        # Cache for lazy evaluation of iconnectivity
+        self._iconnectivity_df_cached = pd.DataFrame(columns=('iconnectivity',))
+
+
     @property
     def el_df(self):
         return self._el_df
@@ -92,6 +98,7 @@ class Mesh:
     @el_df.setter
     def el_df(self, df):
         self._el_df = df
+        self._changed_iconnectivity = True
 
     @property
     def no_of_nodes(self):
@@ -108,6 +115,35 @@ class Mesh:
     @property
     def connectivity(self):
         return self._el_df['connectivity'].values
+
+    @property
+    def _iconnectivity_df(self):
+        """
+        Handles the lazy evaluation of the iconnectivity
+        Always access the iconnectivity df by this property
+
+        Returns
+        -------
+        iconnectivity_df : pandas.DataFrame
+            DataFrame containint the iconnectivity inormation of the elements,
+            i.e. the connectivity w.r.t. row indices of a nodes ndarray
+        """
+        if self._changed_iconnectivity:
+            self._update_iconnectivity()
+            self._changed_iconnectivity = False
+        return self._iconnectivity_df_cached
+
+    @property
+    def iconnectivity(self):
+        """
+        Get all iconnectivites, i.e. the row indices in the nodes array of the nodes that belong to the elements
+
+        Returns
+        -------
+        iconnectivity : ndarray
+            iconnectivity
+        """
+        return self._iconnectivity_df['iconnectivity'].values
 
     @property
     def nodes(self):
@@ -193,6 +229,22 @@ class Mesh:
             list containing the connectivity of the desired elements
         """
         return self._el_df.loc[elementids, 'connectivity'].values
+
+    def get_iconnectivity_by_elementids(self, elementids):
+        """
+        Lazy return of iconnectivity of given elementids
+
+        Parameters
+        ----------
+        elementids : iterable(int)
+            elementids for which the connectivity shall be returned
+        Returns
+        -------
+        iconnectivity : list of ndarrays
+            list containing the index based connectivity of the desired elements
+            i.e. the row indices of the nodes ndarray
+        """
+        return self._iconnectivity_df.loc[elementids, 'iconnectivity'].values
 
     def get_elementidxs_by_groups(self, groups):
         """
@@ -570,3 +622,16 @@ class Mesh:
         
         rows = self.get_elementids_by_tag(tag_name, tag_value)
         return np.array([self._el_df.index.get_loc(row) for row in rows], dtype=int)
+
+    def _update_iconnectivity(self):
+        """
+        Triggers update mechanism for the iconnectivity, i.e. the connectivity of the elements
+        but w.r.t to the row indices in a node ndarray instead of the real nodes_df indices
+
+        Returns
+        -------
+        None
+        """
+        self._iconnectivity_df_cached = pd.DataFrame(self._el_df['connectivity'].apply(self.get_nodeidxs_by_nodeids),
+                                                     index=self._el_df.index)
+        self._iconnectivity_df_cached.columns = ['iconnectivity']

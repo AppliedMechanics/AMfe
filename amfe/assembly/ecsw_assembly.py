@@ -56,7 +56,7 @@ class EcswAssembly(StructuralAssembly):
         self.weights = np.array(weights)
         self.indices = np.array(indices, dtype=int)
 
-    def assemble_k_and_f(self, nodes_df, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0., K_csr=None,
+    def assemble_k_and_f(self, nodes, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0., K_csr=None,
                          f_glob=None):
         """
         Assemble the tangential stiffness matrix and nonliner internal or external force vector.
@@ -66,7 +66,7 @@ class EcswAssembly(StructuralAssembly):
 
         Parameters
         ----------
-        nodes_df : pandas.DataFrame
+        nodes : ndarray
             Node Coordinates
         ele_objects : ndarray
             Ndarray with Element objects that shall be assembled
@@ -110,7 +110,7 @@ class EcswAssembly(StructuralAssembly):
         # (i - element index, indices - DOF indices of the element)
         for weight, index in zip(self.weights, self.indices):
             # X - undeformed positions of the i-th element
-            X_local = nodes_df.loc[connectivities[index], :].values.reshape(-1)
+            X_local = nodes[connectivities[index], :].reshape(-1)
             # displacements of the i-th element
             u_local = dofvalues[elements2dofs[index]]
             # computation of the element tangential stiffness matrix and nonlinear force
@@ -121,7 +121,7 @@ class EcswAssembly(StructuralAssembly):
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, weight*K_local, elements2dofs[index])
         return K_csr, f_glob
 
-    def assemble_k_f_S_E(self, nodes_df, ele_objects, connectivities, elements2dofs, elements_on_node, dofvalues=None,
+    def assemble_k_f_S_E(self, nodes, ele_objects, connectivities, elements2dofs, elements_on_node, dofvalues=None,
                          t=0, K_csr=None, f_glob=None):
         """
         Assemble the stiffness matrix with stress recovery of the given mesh and element.
@@ -133,7 +133,7 @@ class EcswAssembly(StructuralAssembly):
         ele_objects : ndarray
             Ndarray with Element objects that shall be assembled
         connectivities : list of ndarrays
-            Connectivity of the elements mapping to the indices of nodes pandas.DataFrame
+            Connectivity of the elements mapping to the indices of nodes ndarray
         elements2dofs : list of ndarrays
             Mapping the elements to their global dofs
         elements_on_node : pandas.DataFrame
@@ -174,17 +174,15 @@ class EcswAssembly(StructuralAssembly):
         f_glob[:] = 0.0
         K_csr.data[:] = 0.0
 
-        no_of_nodes =len(nodes_df.index)
-        S = pd.DataFrame(data=np.zeros((no_of_nodes, 6), dtype=float),
-                         columns=['Sxx', 'Syy', 'Szz', 'Syz', 'Sxz', 'Sxy'], index=nodes_df.index)
-        E = pd.DataFrame(data=np.zeros((no_of_nodes, 6), dtype=float),
-                         columns=['Exx', 'Eyy', 'Ezz', 'Eyz', 'Exz', 'Exy'], index=nodes_df.index)
+        no_of_nodes = nodes.shape[0]
+        S = np.zeros((no_of_nodes, 6))
+        E = np.zeros((no_of_nodes, 6))
 
         # Loop over all elements
         # (i - element index, indices - DOF indices of the element)
         for weight, index in zip(self.weights, self.indices):
             # X - undeformed positions of the i-th element
-            X_local = nodes_df.loc[connectivities[index], :].values.reshape(-1)
+            X_local = nodes[connectivities[index], :].reshape(-1)
             # displacements of the i-th element
             u_local = dofvalues[elements2dofs[index]]
             # computation of the element tangential stiffness matrix and nonlinear force
@@ -193,11 +191,12 @@ class EcswAssembly(StructuralAssembly):
             f_glob[elements2dofs[index]] += weight*f_local
             # this is equal to K_csr[globaldofindices, globaldofindices] += K_local
             fill_csr_matrix(K_csr.indptr, K_csr.indices, K_csr.data, weight*K_local, elements2dofs[index])
-            E.loc[connectivities[index], :] += weight*E_local
+            E[connectivities[index], :] += weight*E_local
             # QUESTION: SHALL THIS BE ALSO WEIGHTED?
-            S.loc[connectivities[index], :] += weight*S_local
+            S[connectivities[index], :] += weight*S_local
 
         # Correct strains such, that average is taken at the elements
-        E = E.divide(E.join(elements_on_node)['elements_on_node'], axis=0)
-        S = S.divide(S.join(elements_on_node)['elements_on_node'], axis=0)
+        E = np.divide(E.T, elements_on_node).T
+        S = np.divide(S.T, elements_on_node).T
+
         return K_csr, f_glob, S, E

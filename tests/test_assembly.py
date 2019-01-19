@@ -91,10 +91,9 @@ class AssemblyToolsTest(TestCase):
 
 class StructuralAssemblyTest(TestCase):
     def setUp(self):
-        self.nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0]], dtype=np.float)
-        self.connectivity = [np.array([4, 5, 2], dtype=np.int), np.array([2, 1, 4], dtype=np.int),
-                             np.array([0, 1, 2, 3], dtype=np.int), np.array([3, 0], dtype=np.int),
-                             np.array([4, 5], dtype=np.int)]
+        self.nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
+        self.iconnectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
+                              np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
 
         self.asm = StructuralAssembly()
 
@@ -148,9 +147,6 @@ class StructuralAssemblyTest(TestCase):
         assert_array_equal(C_csr_actual.indices, C_csr_desired.indices)
 
     def test_assemble_m(self):
-        nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
-        connectivity = [np.array([1, 2, 3], dtype=np.int), np.array([1, 3, 4], dtype=np.int),
-                        np.array([2, 3], dtype=np.int), np.array([3, 4], dtype=np.int)]
 
         asm = StructuralAssembly()
 
@@ -160,7 +156,7 @@ class StructuralAssemblyTest(TestCase):
         M_global = asm.preallocate(8, elements2global)
 
         memory_m_before = id(M_global)
-        asm.assemble_m(nodes_df, ele_obj, connectivity[0:2], elements2global, M_csr=M_global)
+        asm.assemble_m(self.nodes, ele_obj, self.iconnectivity[0:2], elements2global, M_csr=M_global)
         memory_m_after = id(M_global)
         # test if preallocated version works
         self.assertTrue(memory_m_after, memory_m_before)
@@ -180,17 +176,13 @@ class StructuralAssemblyTest(TestCase):
         assert_array_equal(M_global.todense(), M_global_desired)
 
     def test_assemble_k_and_f(self):
-        nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
-        connectivity = [np.array([1, 2, 3], dtype=np.int), np.array([1, 3, 4], dtype=np.int),
-                        np.array([2, 3], dtype=np.int), np.array([3, 4], dtype=np.int)]
-
         asm = StructuralAssembly()
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         element2dofs = np.array([np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)])
         K_global = asm.preallocate(8, element2dofs)
         f_global = np.zeros(K_global.shape[0])
 
-        asm.assemble_k_and_f(nodes_df, ele_obj, connectivity[0:2], element2dofs, K_csr=K_global, f_glob=f_global)
+        asm.assemble_k_and_f(self.nodes, ele_obj, self.iconnectivity[0:2], element2dofs, K_csr=K_global, f_glob=f_global)
         K_global_desired = np.zeros((8, 8), dtype=float)
         f_global_desired = np.zeros(8, dtype=float)
         # element 1
@@ -212,9 +204,6 @@ class StructuralAssemblyTest(TestCase):
         assert_array_equal(f_global, f_global_desired)
 
     def test_assemble_k_and_f_preallocation(self):
-        nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
-        connectivity = [np.array([1, 2, 3], dtype=np.int), np.array([1, 3, 4], dtype=np.int),
-                        np.array([2, 3], dtype=np.int), np.array([3, 4], dtype=np.int)]
 
         asm = StructuralAssembly()
         ele_obj = np.array([self.ele, self.ele], dtype=object)
@@ -225,7 +214,7 @@ class StructuralAssemblyTest(TestCase):
         memory_K_global_data_before = id(K_global.data)
         memory_f_global_before = id(f_global)
 
-        K_global, f_global = asm.assemble_k_and_f(nodes_df, ele_obj, connectivity[0:2], element2dofs, K_csr=K_global)
+        K_global, f_global = asm.assemble_k_and_f(self.nodes, ele_obj, self.iconnectivity[0:2], element2dofs, K_csr=K_global)
 
         memory_K_global_after = id(K_global)
         memory_K_global_data_after = id(K_global.data)
@@ -239,7 +228,7 @@ class StructuralAssemblyTest(TestCase):
         memory_K_global_data_before = memory_K_global_data_after
         memory_f_global_before = memory_f_global_after
 
-        K_global, f_global = asm.assemble_k_and_f(nodes_df, ele_obj, connectivity[0:2], element2dofs, f_glob=f_global)
+        K_global, f_global = asm.assemble_k_and_f(self.nodes, ele_obj, self.iconnectivity[0:2], element2dofs, f_glob=f_global)
 
         memory_K_global_after = id(K_global)
         memory_K_global_data_after = id(K_global.data)
@@ -250,15 +239,10 @@ class StructuralAssemblyTest(TestCase):
         self.assertTrue(memory_f_global_after == memory_f_global_before)
 
     def test_assemble_k_f_S_E(self):
-        nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
-        connectivity = [np.array([1, 2, 3], dtype=np.int), np.array([1, 3, 4], dtype=np.int),
-                        np.array([2, 3], dtype=np.int), np.array([3, 4], dtype=np.int)]
-
         asm = StructuralAssembly()
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
-        elements_on_node = pd.DataFrame({'elements_on_node': np.array([2, 1, 2, 1], dtype=int)},
-                                        index=[1, 2, 3, 4])
+        elements_on_node = np.array([2, 1, 2, 1], dtype=float)
         C_csr = asm.preallocate(8, element2dofs)
         f_global = np.zeros(C_csr.shape[0])
 
@@ -266,7 +250,7 @@ class StructuralAssemblyTest(TestCase):
         memory_K_global_data_before = id(C_csr.data)
         memory_f_global_before = id(f_global)
 
-        C_csr, f_global, S_global, E_global= asm.assemble_k_f_S_E(nodes_df, ele_obj, connectivity[0:2],
+        C_csr, f_global, S_global, E_global= asm.assemble_k_f_S_E(self.nodes, ele_obj, self.iconnectivity[0:2],
                                                                      element2dofs, elements_on_node, K_csr=C_csr, f_glob=f_global, )
 
         memory_K_global_after = id(C_csr)
@@ -281,12 +265,9 @@ class StructuralAssemblyTest(TestCase):
         K_global_desired = np.zeros((8, 8), dtype=float)
         f_global_desired = np.zeros(8, dtype=float)
         # Currently strains and stresses are always 3D (therefore 6 components)
-        S_global_desired = pd.DataFrame(np.ones((4, 6), dtype=float),
-                                        columns=['Sxx', 'Syy', 'Szz', 'Syz', 'Sxz', 'Sxy'],
-                                        index=[1, 2, 3, 4])
-        E_global_desired = pd.DataFrame(2*np.ones((4, 6), dtype=float),
-                                        columns=['Exx', 'Eyy', 'Ezz', 'Eyz', 'Exz', 'Exy'],
-                                        index=[1, 2, 3, 4])
+        S_global_desired = np.ones((4, 6))
+        E_global_desired = np.ones((4, 6))*2
+
         # element 1
         K_global_desired[0:6, 0:6], f_global_desired[0:6], _, _ = self.ele.k_f_S_E_int(None, None)
 
@@ -304,16 +285,15 @@ class StructuralAssemblyTest(TestCase):
 
         assert_array_equal(C_csr.todense(), K_global_desired)
         assert_array_equal(f_global, f_global_desired)
-        assert_frame_equal(S_global, S_global_desired)
-        assert_frame_equal(E_global, E_global_desired)
+        assert_array_equal(S_global, S_global_desired)
+        assert_array_equal(E_global, E_global_desired)
 
 
 class EcswTest(TestCase):
     def setUp(self):
-        self.nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0]], dtype=np.float)
-        self.connectivity = [np.array([4, 5, 2], dtype=np.int), np.array([2, 1, 4], dtype=np.int),
-                             np.array([0, 1, 2, 3], dtype=np.int), np.array([3, 0], dtype=np.int),
-                             np.array([4, 5], dtype=np.int)]
+        self.nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
+        self.iconnectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
+                              np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
 
         self.asm = StructuralAssembly()
 
@@ -352,9 +332,6 @@ class EcswTest(TestCase):
         self.asm = None
 
     def test_assemble_k_and_f_ecsw_test1(self):
-        nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
-        connectivity = [np.array([1, 2, 3], dtype=np.int), np.array([1, 3, 4], dtype=np.int),
-                        np.array([2, 3], dtype=np.int), np.array([3, 4], dtype=np.int)]
 
         weights = [5]
         indices = np.array([1], dtype=int)
@@ -370,7 +347,7 @@ class EcswTest(TestCase):
         memory_f_global_before = id(f_global)
 
         dofvalues = np.array([0.0, 0.1, 0.2, 0.05, 0.0, 0.05, 0.02, 0.04])
-        asm.assemble_k_and_f(nodes_df, ele_obj, connectivity[0:2], element2dofs, dofvalues, K_csr=K_global, f_glob=f_global)
+        asm.assemble_k_and_f(self.nodes, ele_obj, self.iconnectivity[0:2], element2dofs, dofvalues, K_csr=K_global, f_glob=f_global)
         K_global_desired = np.zeros((8, 8), dtype=float)
         f_global_desired = np.zeros(8, dtype=float)
         # element 1
@@ -403,9 +380,6 @@ class EcswTest(TestCase):
         self.assertTrue(memory_f_global_after == memory_f_global_before)
 
     def test_assemble_k_and_f_ecsw_test2(self):
-        nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
-        connectivity = [np.array([1, 2, 3], dtype=np.int), np.array([1, 3, 4], dtype=np.int),
-                        np.array([2, 3], dtype=np.int), np.array([3, 4], dtype=np.int)]
 
         weights = np.array([5.0, 4.0])
         indices = np.array([1, 0], dtype=int)
@@ -413,7 +387,7 @@ class EcswTest(TestCase):
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         element2dofs = np.array([np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)])
 
-        K_global, f_global = asm.assemble_k_and_f(nodes_df, ele_obj, connectivity[0:2], element2dofs, K_csr=None,
+        K_global, f_global = asm.assemble_k_and_f(self.nodes, ele_obj, self.iconnectivity[0:2], element2dofs, K_csr=None,
                                                  f_glob=None)
         K_global_desired = np.zeros((8, 8), dtype=float)
         f_global_desired = np.zeros(8, dtype=float)
@@ -438,9 +412,6 @@ class EcswTest(TestCase):
         assert_array_equal(f_global, f_global_desired)
 
     def test_assemble_k_f_S_E_ecsw(self):
-        nodes_df = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0], 'y': [0.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4])
-        connectivity = [np.array([1, 2, 3], dtype=np.int), np.array([1, 3, 4], dtype=np.int),
-                        np.array([2, 3], dtype=np.int), np.array([3, 4], dtype=np.int)]
 
         weights = [5]
         indices = np.array([1], dtype=int)
@@ -448,8 +419,8 @@ class EcswTest(TestCase):
 
         ele_obj = np.array([self.ele, self.ele], dtype=object)
         element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
-        elements_on_node = pd.DataFrame({'elements_on_node': np.array([weights[0], np.Inf, weights[0], weights[0]])},
-                                        index=[1, 2, 3, 4])
+        elements_on_node = np.array([weights[0], np.Inf, weights[0], weights[0]])
+
         K_global = asm.preallocate(8, element2dofs)
         f_global = np.zeros(K_global.shape[0])
 
@@ -457,7 +428,7 @@ class EcswTest(TestCase):
         memory_K_global_data_before = id(K_global.data)
         memory_f_global_before = id(f_global)
 
-        K_global, f_global, S_global, E_global= asm.assemble_k_f_S_E(nodes_df, ele_obj, connectivity[0:2],
+        K_global, f_global, S_global, E_global= asm.assemble_k_f_S_E(self.nodes, ele_obj, self.iconnectivity[0:2],
                                                                      element2dofs, elements_on_node, K_csr=K_global, f_glob=f_global)
 
         memory_K_global_after = id(K_global)
@@ -490,19 +461,17 @@ class EcswTest(TestCase):
         assert_array_equal(K_global.todense(), K_global_desired)
         assert_array_equal(f_global, f_global_desired)
 
-        S_global_desired = pd.DataFrame(np.ones((4, 6), dtype=float),
-                                        columns=['Sxx', 'Syy', 'Szz', 'Syz', 'Sxz', 'Sxy'],
-                                        index=[1, 2, 3, 4])
 
-        E_global_desired = pd.DataFrame(2*np.ones((4, 6), dtype=float),
-                                        columns=['Exx', 'Eyy', 'Ezz', 'Eyz', 'Exz', 'Exy'],
-                                        index=[1, 2, 3, 4])
+        S_global_desired = np.ones((4, 6))
+
+        E_global_desired = np.ones((4, 6))*2
+
 
         # Set 2nd rows to zero as this node has no element in ecsw assembly:
-        S_global_desired.loc[2, :] = 0.0
-        E_global_desired.loc[2, :] = 0.0
+        S_global_desired[1, :] = 0.0
+        E_global_desired[1, :] = 0.0
 
         assert_array_equal(K_global.todense(), K_global_desired)
         assert_array_equal(f_global, f_global_desired)
-        assert_frame_equal(S_global, S_global_desired)
-        assert_frame_equal(E_global, E_global_desired)
+        assert_array_equal(S_global, S_global_desired)
+        assert_array_equal(E_global, E_global_desired)

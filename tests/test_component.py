@@ -25,12 +25,11 @@ class StructuralComponentTest(TestCase):
             def update_constraints(self, X, u, du, ddu, t):
                 return u
 
-
         class DummyAssembly:
             def __init__(self):
                 pass
 
-            def assemble_k_and_f(self, nodes_df, ele_objects, connectivities, elements2dofs,
+            def assemble_k_and_f(self, nodes, ele_objects, connectivities, elements2dofs,
                                  dofvalues=None, t=0., C_csr=None, f_glob=None):
                 if C_csr is None:
                     C_csr = np.array([[10, -5, 0], [-5, 10, -5], [0, -5, 10]])
@@ -66,6 +65,9 @@ class StructuralComponentTest(TestCase):
             
             def get_nodeids_by_nodeidxs(self, nodeidxs):
                 return np.arange(0, 3)
+
+            def get_iconnectivity_by_elementids(self, elementids):
+                return None
                 
         class DummyMapping:
             def __init__(self):

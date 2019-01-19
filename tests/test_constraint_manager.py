@@ -284,7 +284,7 @@ class PendulumConstraintManagerTest(TestCase):
 
             # Check if g function is zero for different positions
             # -90 deg
-            constrained_u = [-self.L, self.L]
+            constrained_u = np.array([-self.L, self.L], dtype=float)
             self.cm.update_constraints(self.X, self.cm.unconstrain_vector(constrained_u), self.du_0, self.ddu_0,
                                        np.array([0.0], ndmin=2))
             M_2, K_2, f_2, F_2 = self.get_dae(self.X, self.cm.unconstrain_vector(constrained_u), self.du_0, self.ddu_0,

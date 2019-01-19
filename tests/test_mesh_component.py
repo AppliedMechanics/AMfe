@@ -76,11 +76,14 @@ class TestMeshComponent(TestCase):
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
         ele_obj_df = component._ele_obj_df
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 1], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 2], Tri3)
+        mask1 = (ele_obj_df['physics'] == 'S') & (ele_obj_df['fk_mesh'] == 1)
+        mask2 = (ele_obj_df['physics'] == 'S') & (ele_obj_df['fk_mesh'] == 2)
+        self.assertEqual(len(ele_obj_df.loc[mask1, 'ele_obj'].values), 1)
+        self.assertIsInstance(ele_obj_df.loc[mask1, 'ele_obj'].values[0], Tri3)
+        self.assertIsInstance(ele_obj_df.loc[mask2, 'ele_obj'].values[0], Tri3)
         # check materials
-        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 1].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 2].material.name, 'steel')
+        self.assertEqual(ele_obj_df.loc[mask1, 'ele_obj'].values[0].material.name, 'steel')
+        self.assertEqual(ele_obj_df.loc[mask2, 'ele_obj'].values[0].material.name, 'steel')
         # check mapping
         nodal2global_desired = pd.DataFrame({'ux': {1: -1, 2: 6, 3: 4, 4: -1, 5: 0, 6: 2},
                                              'uy': {1: -1, 2: 7, 3: 5, 4: -1, 5: 1, 6: 3}})
@@ -93,13 +96,16 @@ class TestMeshComponent(TestCase):
         component.assign_material(self.mat2, eleids2, 'S', '_eleids')
         ele_obj_df = component._ele_obj_df
         # check each object
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 1], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 2], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 3], Quad4)
+        mask1 = (ele_obj_df['physics'] == 'S') & (ele_obj_df['fk_mesh'] == 1)
+        mask2 = (ele_obj_df['physics'] == 'S') & (ele_obj_df['fk_mesh'] == 2)
+        mask3 = (ele_obj_df['physics'] == 'S') & (ele_obj_df['fk_mesh'] == 3)
+        self.assertIsInstance(ele_obj_df.loc[mask1, 'ele_obj'].values[0], Tri3)
+        self.assertIsInstance(ele_obj_df.loc[mask2, 'ele_obj'].values[0], Tri3)
+        self.assertIsInstance(ele_obj_df.loc[mask3, 'ele_obj'].values[0], Quad4)
         # check materials
-        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 1].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 2].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 3].material.name, 'rubber')
+        self.assertEqual(ele_obj_df.loc[mask1, 'ele_obj'].values[0].material.name, 'steel')
+        self.assertEqual(ele_obj_df.loc[mask2, 'ele_obj'].values[0].material.name, 'steel')
+        self.assertEqual(ele_obj_df.loc[mask3, 'ele_obj'].values[0].material.name, 'rubber')
         nodal2global_desired = pd.DataFrame({'ux': {1: 8, 2: 6, 3: 4, 4: 10, 5: 0, 6: 2},
                                              'uy': {1: 9, 2: 7, 3: 5, 4: 11, 5: 1, 6: 3}})
         elements2global_desired = [np.array([0, 1, 2, 3, 4, 5], dtype=int),
@@ -117,17 +123,21 @@ class TestMeshComponent(TestCase):
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
         ele_obj_df = component._ele_obj_df
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 1], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 3], Quad4)
-        with self.assertRaises(IndexingError):
-            temp = ele_obj_df['ele_obj'].loc['S', 2]
+
+        mask1 = (ele_obj_df['physics'] == 'S') & (ele_obj_df['fk_mesh'] == 1)
+        mask3 = (ele_obj_df['physics'] == 'S') & (ele_obj_df['fk_mesh'] == 3)
+        self.assertIsInstance(ele_obj_df.loc[mask1, 'ele_obj'].values[0], Tri3)
+        self.assertIsInstance(ele_obj_df.loc[mask3, 'ele_obj'].values[0], Quad4)
+        with self.assertRaises(IndexError):
+            mask2 = (ele_obj_df['physics'] == 'S') & (ele_obj_df['fk_mesh'] == 2)
+            temp = ele_obj_df.loc[mask2, 'ele_obj'].values[0]
         # check materials
-        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 1].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 3].material.name, 'steel')
-        nodal2global_desired = pd.DataFrame({'ux': {1: 6, 2: 8, 3: 4, 4: 10, 5: 0, 6: 2},
-                                             'uy': {1: 7, 2: 9, 3: 5, 4: 11, 5: 1, 6: 3}})
-        elements2global_desired = [np.array([0, 1, 2, 3, 4, 5], dtype=int),
-                                   np.array([6,  7,  8,  9,  4,  5, 10, 11], dtype=int)]
+        self.assertEqual(ele_obj_df.loc[mask1, 'ele_obj'].values[0].material.name, 'steel')
+        self.assertEqual(ele_obj_df.loc[mask3, 'ele_obj'].values[0].material.name, 'steel')
+        nodal2global_desired = pd.DataFrame({'ux': {1: 0, 2: 2, 3: 4, 4: 6, 5: 8, 6: 10},
+                                             'uy': {1: 1, 2: 3, 3: 5, 4: 7, 5: 9, 6: 11}})
+        elements2global_desired = [np.array([0,  1,  2,  3,  4,  5, 6, 7], dtype=int),
+                                   np.array([8, 9, 10, 11, 4, 5], dtype=int)]
         assert_frame_equal(component._mapping.nodal2global, nodal2global_desired)
         for actual, desired in zip(component._mapping.elements2global, elements2global_desired):
             assert_array_equal(actual, desired)
@@ -143,13 +153,18 @@ class TestMeshComponent(TestCase):
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
         ele_obj_df = component._ele_obj_df
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 1], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 2], Tri3)
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc['S', 3], Quad4)
+        mask1 = (ele_obj_df['physics'] == 'S') & (ele_obj_df['fk_mesh'] == 1)
+        mask2 = (ele_obj_df['physics'] == 'S') & (ele_obj_df['fk_mesh'] == 2)
+        mask3 = (ele_obj_df['physics'] == 'S') & (ele_obj_df['fk_mesh'] == 3)
+        self.assertIsInstance(ele_obj_df.loc[mask1, 'ele_obj'].values[0], Tri3)
+        self.assertIsInstance(ele_obj_df.loc[mask2, 'ele_obj'].values[0], Tri3)
+        self.assertIsInstance(ele_obj_df.loc[mask3, 'ele_obj'].values[0], Quad4)
+
         # check materials
-        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 1].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 2].material.name, 'steel')
-        self.assertEqual(ele_obj_df['ele_obj'].loc['S', 3].material.name, 'steel')
+        # check materials
+        self.assertEqual(ele_obj_df.loc[mask1, 'ele_obj'].values[0].material.name, 'steel')
+        self.assertEqual(ele_obj_df.loc[mask2, 'ele_obj'].values[0].material.name, 'steel')
+        self.assertEqual(ele_obj_df.loc[mask3, 'ele_obj'].values[0].material.name, 'steel')
 
         # 1 Group
         #
@@ -161,13 +176,16 @@ class TestMeshComponent(TestCase):
         self.assertIsInstance(ele_obj_actual, np.ndarray)
         # check each object
         ele_obj_df = component._ele_obj_df
-        with self.assertRaises(IndexingError):
-            temp = ele_obj_df['ele_obj'].loc['T', 1]
-        with self.assertRaises(IndexingError):
-            temp = ele_obj_df['ele_obj'].loc['T', 2]
-        self.assertIsInstance(ele_obj_df['ele_obj'].loc['T', 3], Quad4)
+        with self.assertRaises(IndexError):
+            mask1 = (ele_obj_df['physics'] == 'T') & (ele_obj_df['fk_mesh'] == 1)
+            temp = ele_obj_df.loc[mask1, 'ele_obj'].values[0]
+        with self.assertRaises(IndexError):
+            mask2 = (ele_obj_df['physics'] == 'T') & (ele_obj_df['fk_mesh'] == 2)
+            temp = ele_obj_df.loc[mask2, 'ele_obj'].values[0]
+        mask3 = (ele_obj_df['physics'] == 'T') & (ele_obj_df['fk_mesh'] == 3)
+        self.assertIsInstance(ele_obj_df.loc[mask3, 'ele_obj'].values[0], Quad4)
         # check materials
-        self.assertEqual(ele_obj_df['ele_obj'].loc['T', 3].material.name, 'steel')
+        self.assertEqual(ele_obj_df.loc[mask3, 'ele_obj'].values[0].material.name, 'steel')
         # check if mapping is proceeded
 
     def test_assign_neumann_by_eleids(self):

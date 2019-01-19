@@ -98,8 +98,6 @@ class TestEcsw(TestCase):
         pass
 
     def test_assemble_g_b(self):
-
-
         # store an example for f_int for later comparison to check if the old assembly is recovered
         # after assemble_g_and_b has finished
         f_old = self.my_component.f_int(self.S[:, 0])

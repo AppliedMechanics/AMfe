@@ -32,7 +32,6 @@ class MeshComponent(ComponentBase):
         self._ele_obj_df = pd.DataFrame([], columns=['physics', 'fk_mesh', 'ele_obj', 'fk_mapping'])
         self._ele_obj_df['fk_mapping'] = self._ele_obj_df['fk_mapping'].astype(int)
         self._ele_obj_df['fk_mesh'] = self._ele_obj_df['fk_mesh'].astype(int)
-        self._ele_obj_df = self._ele_obj_df.set_index(['physics', 'fk_mesh'])
         self._neumann = NeumannManager()
         self._assembly = Assembly()
         self._constraints = ConstraintManager()
@@ -85,10 +84,10 @@ class MeshComponent(ComponentBase):
         new_df = pd.DataFrame({'physics': [physics]*len(ele_shapes), 'fk_mesh': eleids,
                                'ele_obj': [prototypes[ele_shape] for ele_shape in ele_shapes],
                                'fk_mapping': np.ones(len(ele_shapes), dtype=int)*-1})
-        new_df = new_df.set_index(['physics', 'fk_mesh'])
-        self._ele_obj_df = new_df.combine_first(self._ele_obj_df)
+        self._ele_obj_df = self._ele_obj_df.append(new_df, ignore_index=True)
         self._ele_obj_df = self._ele_obj_df.sort_index()
         self._ele_obj_df['fk_mapping'] = self._ele_obj_df['fk_mapping'].astype(int)
+        self._ele_obj_df['fk_mesh'] = self._ele_obj_df['fk_mesh'].astype(int)
         self._update_mapping()
         self._C_csr = self._assembly.preallocate(self._mapping.no_of_dofs, self._mapping.elements2global)
         self._M_csr = self._C_csr.copy()
