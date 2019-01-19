@@ -45,6 +45,15 @@ class TestMesh(TestCase):
     def tearDown(self):
         pass
 
+    def test_constructor(self):
+        from amfe.mesh import Mesh
+        mesh = Mesh(dimension=2)
+        self.assertEqual(mesh.dimension, 2)
+        mesh = Mesh(dimension=3)
+        self.assertEqual(mesh.dimension, 3)
+        with self.assertRaises(ValueError) as err:
+            mesh = Mesh(dimension=1)
+
     def test_no_of_properties(self):
         self.assertEqual(self.testmesh.no_of_nodes, 6)
         self.assertEqual(self.testmesh.no_of_elements, 3)
@@ -186,6 +195,26 @@ class TestMesh(TestCase):
         desired = np.array([0, 1], dtype=int)
         actual = self.testmesh.get_elementidxs_by_tag('shape','Tri3')
         assert_equal(desired, actual)
+
+    def test_get_iconnectivity_by_elementids(self):
+        desired = np.array([np.array([0, 1, 2, 3], dtype=int), np.array([4, 5, 2], dtype=int)])
+        actual = self.testmesh.get_iconnectivity_by_elementids(np.array([3, 1], dtype=int))
+        for actual_arr, desired_arr in zip(actual, desired):
+            assert_array_equal(desired_arr, actual_arr)
+
+        # Ask a second time to test lazy evaluation:
+        actual = self.testmesh.get_iconnectivity_by_elementids(np.array([3, 1], dtype=int))
+        for actual_arr, desired_arr in zip(actual, desired):
+            assert_array_equal(desired_arr, actual_arr)
+
+    def test_iconnectivity(self):
+        actual = self.testmesh.iconnectivity
+        desired = [np.array([4, 5, 2], dtype=np.int), np.array([2, 1, 4], dtype=np.int),
+                        np.array([0, 1, 2, 3], dtype=np.int),
+                        # boundary elements
+                        np.array([3, 0], dtype=np.int), np.array([4, 5], dtype=np.int)]
+        for actual_arr, desired_arr in zip(actual, desired):
+            assert_array_equal(desired_arr, actual_arr)
 
 
 if __name__ == '__main__':
