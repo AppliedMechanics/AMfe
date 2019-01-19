@@ -102,6 +102,7 @@ class ConstraintManager:
         -------
         None
         """
+        print('Adding constraint ', strategy, ' to dofs ', dofids)
 
         if strategy not in self.STRATEGIES:
             raise ValueError('strategy must be \'elim\' or \'lagrmult\'')
@@ -146,8 +147,10 @@ class ConstraintManager:
     
     def constrain_matrix(self, matrix):
         if self.L is None:
+            print('No elimination constraint set')
             return matrix
-        return self.L.T @ matrix @ self.L
+        else:
+            return self.L.T @ matrix @ self.L
     
     def constrain_vector(self, vector):
         if self.L is None:
