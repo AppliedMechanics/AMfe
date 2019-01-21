@@ -36,7 +36,7 @@ class StructuralComponent(MeshComponent):
         self._M_csr = None
         self._f_glob = None
 
-    def M(self, u=None, t=0, force_update=False):
+    def M(self, u=None, t=0):
         """
         Compute and return the mass matrix of the mechanical system.
 
@@ -46,13 +46,11 @@ class StructuralComponent(MeshComponent):
             Array of the displacement.
         t : float
             Time.
-        force_update : bool
-            Flag to force update of M otherwise already calculated M is returned. Default is False.
 
         Returns
         -------
         M : sp.sparse.sparse_matrix
-            Mass matrix with applied constraints in sparse CSC format.
+            Mass matrix with applied constraints in sparse CSR format.
         """
 
         u_unconstr = self._get_unconstrained_u(u)
@@ -66,7 +64,7 @@ class StructuralComponent(MeshComponent):
         self._M_constr = self._constraints.constrain_matrix(self._M_csr)
         return self._M_constr
 
-    def D(self, u=None, t=0, force_update=False):
+    def D(self, u=None, t=0):
         """
         Compute and return the damping matrix of the mechanical system. At the moment either no damping
         (rayleigh_damping = False) or simple Rayleigh damping applied to the system linearized around zero
@@ -79,20 +77,18 @@ class StructuralComponent(MeshComponent):
             Displacement field in voigt notation.
         t : float, optional
             Time.
-        force_update : bool
-            Flag to force update of D otherwise already calculated D is returned. Default is False.
 
         Returns
         -------
         D : scipy.sparse.sparse_matrix
-            Damping matrix with applied constraints in sparse CSC format.
+            Damping matrix with applied constraints in sparse CSR format.
         """
 
-        if self._D_constr is None or force_update:
-            if self.rayleigh_damping:
-                self._D_constr = self.rayleigh_damping[0] * self.M() + self.rayleigh_damping[1] * self.K()
-            else:
-                self._D_constr = csc_matrix(self.M().shape)
+        if self.rayleigh_damping:
+            self._D_constr = self.rayleigh_damping[0] * self.M() + self.rayleigh_damping[1] * self.K()
+        else:
+            self._D_constr = csc_matrix(self.M().shape)
+
         return self._D_constr
 
     def f_int(self, u=None, t=0):
@@ -139,7 +135,7 @@ class StructuralComponent(MeshComponent):
         Returns
         -------
         K : sp.sparse.sparse_matrix
-            Stiffness matrix with applied constraints in sparse CSC format.
+            Stiffness matrix with applied constraints in sparse CSR format.
         """
 
         u_unconstr = self._get_unconstrained_u(u)
@@ -168,7 +164,7 @@ class StructuralComponent(MeshComponent):
         Returns
         -------
         K : sp.sparse.sparse_matrix
-            Stiffness matrix with applied constraints in sparse CSC format.
+            Stiffness matrix with applied constraints in sparse CSR format.
         f : ndarray
             Internal nonlinear force vector after constraints have been applied
         """
