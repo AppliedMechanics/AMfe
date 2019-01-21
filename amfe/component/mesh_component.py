@@ -129,7 +129,32 @@ class MeshComponent(ComponentBase):
         self._constraints.add_constraint(name, constraint, dofids, strategy)
         
     def unconstrain_vector(self, vector):
+        '''
+        Get full vector composed of the parts from the free subspace and the constraint subspace. Hand over the constrained vector, that is part of the free subspace.
+        
+        Parameters
+        ----------
+        vector : ndarray
+        
+        Returns
+        -------
+        full vector : ndarray
+        '''
         return self._constraints.unconstrain_vector(vector)
+    
+    def constrain_vector(self, vector):
+        '''
+        Apply pre-defined constraints to a unconstrained vector and get a vector, which is projected into the free subspace.
+        
+        Parameters
+        ----------
+        vector : ndarray
+        
+        Returns
+        -------
+        free vector : ndarray
+        '''
+        return self._constraints.constrain_vector(vector)
         
     # -- MAPPING METHODS -----------------------------------------------------------------------------------
     def _update_mapping(self):

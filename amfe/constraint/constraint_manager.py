@@ -160,7 +160,20 @@ class ConstraintManager:
             return self.L.T @ vector
     
     def unconstrain_vector(self, free_vector, constrained_vector=None):
-        if self.C_elim is None:
+        '''
+        Get full vector composed of the parts from the free subspace and the constraint subspace. Hand over the free vector, that is part of the free subspace and (optionally) the
+        the constrained vector, that is part of the constraint subspace. If the constrained vector is not given, it is calculated by solving C^T * C * delta_u = g(u)
+        
+        Parameters
+        ----------
+        free_vector : ndarray
+        constrained_vector : ndarray
+        
+        Returns
+        -------
+        full vector : ndarray
+        '''
+        if self.C_elim is None or free_vector.shape[0]==self._no_of_unconstrained_dofs:
             return free_vector
         else:
             if constrained_vector is None:
