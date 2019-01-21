@@ -8,7 +8,7 @@
 Module for assembling the constraint-objects to a set of global constraint-operators
 """
 
-from scipy.sparse import csr_matrix, identity, vstack
+from scipy.sparse import csr_matrix, lil_matrix, identity, vstack
 from scipy.linalg import null_space
 from .constraint import DirichletConstraint
 from math import isclose
@@ -100,8 +100,10 @@ class ConstraintAssembler:
             if const['strategy'] == strategy:
                 dofs = const['dofids']
                 C_helper = csr_matrix(const['constraint_obj'].jacobian(X[dofs], u[dofs], du[dofs], ddu[dofs], t, primary_type))
-                C_expanded = csr_matrix((C_helper.shape[0], ndof), dtype=float)
+                C_expanded = lil_matrix((C_helper.shape[0], ndof), dtype=float)
                 C_expanded[:,dofs] = C_helper
+                C_expanded = csr_matrix(C_expanded)
+
                 C = vstack([C, C_expanded])
                 
                 if not isinstance(const['constraint_obj'], DirichletConstraint):
