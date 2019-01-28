@@ -1,19 +1,38 @@
+# Copyright (c) 2018, Lehrstuhl für Angewandte Mechanik, Technische Universität München.
 #
-# Copyright (c) 2018 TECHNICAL UNIVERSITY OF MUNICH, DEPARTMENT OF MECHANICAL ENGINEERING, CHAIR OF APPLIED MECHANICS,
-# BOLTZMANNSTRASSE 15, 85748 GARCHING/MUNICH, GERMANY, RIXEN@TUM.DE.
-#
-# Distributed under 3-Clause BSD license. See LICENSE file for more information.
+# Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
 
-"""
-Super class of all mesh converter for I/O module.
-"""
 
 import logging
+from abc import ABC, abstractmethod
 
-__all__ = [
-    'MeshConverter'
-    ]
+
+__all__ = ['MeshReader',
+           'MeshConverter']
+
+
+class MeshReader(ABC):
+    """
+    Abstract super class for all mesh readers.
+
+    TASKS
+    -----
+    - Read line by line a stream (or file).
+    - Call mesh converter functions for each line.
+
+    NOTES
+    -----
+    PLEASE FOLLOW THE BUILDER PATTERN!
+    """
+
+    @abstractmethod
+    def __init__(self, *args, **kwargs):
+        return
+
+    @abstractmethod
+    def parse(self, builder):
+        pass
 
 
 class MeshConverter:
@@ -119,13 +138,6 @@ class MeshConverter:
         -------
         None
         """
-
-        pass
-
-    def build_material(self, material):
-        pass
-
-    def build_partition(self, partition):
         pass
 
     def build_mesh_dimension(self, dim):

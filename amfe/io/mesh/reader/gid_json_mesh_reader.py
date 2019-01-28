@@ -11,8 +11,7 @@ GiD json mesh reader for I/O module.
 
 from json import load
 
-from .mesh_reader import MeshReader
-from .amfe_mesh_converter import AmfeMeshConverter
+from amfe.io.mesh.base import MeshReader
 
 __all__ = [
     'GidJsonMeshReader'
@@ -52,18 +51,18 @@ class GidJsonMeshReader(MeshReader):
 
     eletypes_3d = {'Tetrahedra', 'Hexahedra', 'Prism', 'Pyramid'}
 
-    def __init__(self, filename=None, builder=AmfeMeshConverter()):
+    def __init__(self, filename=None):
         super().__init__()
         self._filename = filename
-        self._builder = builder
         return
 
-    def parse(self, verbose=False):
+    def parse(self, builder, verbose=False):
         """
         Parse GiD json file to object specified by the builder (MeshConverter object).
         
         Parameters
         ----------
+        builder : MeshConverter
         verbose : bool
 
         Returns
@@ -76,19 +75,19 @@ class GidJsonMeshReader(MeshReader):
 
             dimflag = set([ele_type['ele_type'] for ele_type in json_tree['elements']]).intersection(self.eletypes_3d)
             if not dimflag:
-                self.builder.build_mesh_dimension(2)
+                builder.build_mesh_dimension(2)
             else:
-                self.builder.build_mesh_dimension(3)
+                builder.build_mesh_dimension(3)
 
             no_of_nodes = json_tree['no_of_nodes']
             no_of_elements = json_tree['no_of_elements']
 
-            self.builder.build_no_of_nodes(no_of_nodes)
-            self.builder.build_no_of_elements(no_of_elements)
+            builder.build_no_of_nodes(no_of_nodes)
+            builder.build_no_of_elements(no_of_elements)
 
             print("Import nodes...")
             for counter, node in enumerate(json_tree['nodes']):
-                self.builder.build_node(node['id'], node['coords'][0], node['coords'][1], node['coords'][2])
+                builder.build_node(node['id'], node['coords'][0], node['coords'][1], node['coords'][2])
                 print("\rImport node no. {} / {}".format(counter, no_of_nodes), end='')
 
             print("\n...finished")
@@ -99,16 +98,16 @@ class GidJsonMeshReader(MeshReader):
                 for counter, element in enumerate(ele_type['elements']):
                     eleid = element['id']
                     nodes = element['connectivity'][:-1]
-                    self.builder.build_element(eleid, current_amfe_eletype, nodes)
+                    builder.build_element(eleid, current_amfe_eletype, nodes)
                     print("\rImport element No. {} / {}".format(counter, no_of_elements), end='')
                 print("\n    ...finished")
             print("\n...finished")
 
             print("Import groups...")
             for group in json_tree['groups']:
-                self.builder.build_group(group, nodeids=json_tree['groups'][group]['nodes'],
+                builder.build_group(group, nodeids=json_tree['groups'][group]['nodes'],
                                          elementids=json_tree['groups'][group]['elements'])
             print("...finished")
 
-        # Finished build, return mesh
-        return self.builder.return_mesh()
+        # Finished build
+        return

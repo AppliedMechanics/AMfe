@@ -260,25 +260,6 @@ def reorder_sparse_matrix(A):
     return A[perm,:][:,perm], perm
 
 
-def amfe_dir(filename=''):
-    '''
-    Return the absolute path of the filename given relative to the amfe directory.
-
-    Parameters
-    ----------
-    filename : string, optional
-        relative path to something inside the amfe directory.
-
-    Returns
-    -------
-    dir : string
-        string of the filename inside the AMFE-directory. Default value is '', so the AMFE-directory is returned.
-    '''
-
-    amfe_abs_path = os.path.dirname(os.path.dirname(__file__))
-    return os.path.join(amfe_abs_path, filename.lstrip('/'))
-
-
 def h5_read_u(h5filename):
     '''
     Extract the displacement field of a given hdf5-file.

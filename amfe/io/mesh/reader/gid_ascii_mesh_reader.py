@@ -11,8 +11,7 @@ GiD ascii mesh reader for I/O module.
 
 from re import search
 
-from .mesh_reader import MeshReader
-from .amfe_mesh_converter import AmfeMeshConverter
+from amfe.io.mesh.base import MeshReader
 
 __all__ = [
     'GidAsciiMeshReader'
@@ -43,13 +42,24 @@ class GidAsciiMeshReader(MeshReader):
         ('Circle', -1): None,
     }
 
-    def __init__(self, filename=None, builder=AmfeMeshConverter()):
+    def __init__(self, filename=None):
         super().__init__()
         self._filename = filename
-        self.builder = builder
         return
 
-    def parse(self, verbose=False):
+    def parse(self, builder, verbose=False):
+        """
+
+        Parameters
+        ----------
+        builder : MeshConverter
+            MeshConverter that is called for building the converted mesh
+        verbose : bool
+            If True, verbose mode is activated
+        Returns
+        -------
+
+        """
         with open(self._filename, 'r') as infile:
             line = next(infile)
             pattern = 'dimension (\d) ElemType\s([A-Za-z0-9]*)\sNnode\s(\d)'
@@ -59,7 +69,7 @@ class GidAsciiMeshReader(MeshReader):
             nnodes = int(match.group(3))  # number of nodes per element
             eletype = None
 
-            self.builder.build_mesh_dimension(dimension)
+            builder.build_mesh_dimension(dimension)
             try:
                 eletype = self.eletypes[(eleshape, nnodes)]
             except Exception:
@@ -84,7 +94,7 @@ class GidAsciiMeshReader(MeshReader):
                                 break
                             else:
                                 raise
-                        self.builder.build_node(nodeid, x, y, z)
+                        builder.build_node(nodeid, x, y, z)
 
                 elif line.strip() == 'Elements':
                     for line in infile:
@@ -97,9 +107,9 @@ class GidAsciiMeshReader(MeshReader):
                                 break
                             else:
                                 raise
-                        self.builder.build_element(eleid, eletype, nodes)
+                        builder.build_element(eleid, eletype, nodes)
                 else:
                     print(line)
 
-        # Finished build, return mesh
-        return self.builder.return_mesh()
+        # Finished build
+        return

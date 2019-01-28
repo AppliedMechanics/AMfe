@@ -12,8 +12,9 @@ from numpy.testing import assert_, assert_allclose
 from numpy.linalg import norm
 
 from amfe.hyper_red.ecsw import sparse_nnls, assemble_g_and_b, reduce_with_ecsw
-from amfe.tools import amfe_dir
-from amfe.io import GidJsonMeshReader, AmfeMeshConverter
+from amfe.io.tools import amfe_dir
+from amfe.io.mesh.reader import GidJsonMeshReader
+from amfe.io.mesh.writer import AmfeMeshConverter
 from amfe.assembly import EcswAssembly
 from amfe.component import StructuralComponent
 from amfe.material import KirchhoffMaterial
@@ -79,10 +80,12 @@ class TestEcsw(TestCase):
         # Define input file path
         file = amfe_dir('tests/meshes/gid_json_4_tets.json')
         # Define Reader Object, initialized with AmfeMeshConverter
-        reader = GidJsonMeshReader(file, AmfeMeshConverter())
+        reader = GidJsonMeshReader(file)
 
         # Initialize component
-        self.my_mesh = reader.parse()
+        converter = AmfeMeshConverter()
+        reader.parse(converter)
+        self.my_mesh = converter.return_mesh()
         self.my_component = StructuralComponent(self.my_mesh)
         my_material = KirchhoffMaterial()
         self.my_component.assign_material(my_material, ['left', 'right'], 'S')

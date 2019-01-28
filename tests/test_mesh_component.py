@@ -8,9 +8,8 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import pandas as pd
 from pandas.testing import assert_frame_equal
-from pandas.core.indexing import IndexingError
 
-from amfe.io.amfe_mesh_converter import AmfeMeshConverter
+from amfe.io.mesh.writer import AmfeMeshConverter
 from amfe.component import StructuralComponent
 from amfe.element import Tri3, Quad4, LineLinearBoundary
 from amfe.assembly.assembly import Assembly
