@@ -7,8 +7,9 @@ from scipy.linalg import norm
 from numpy.testing import assert_allclose
 from copy import deepcopy
 
-from amfe.tools import amfe_dir
-from amfe.io import GidJsonMeshReader, AmfeMeshConverter
+from amfe.io.tools import amfe_dir
+from amfe.io.mesh.reader import GidJsonMeshReader
+from amfe.io.mesh.writer import AmfeMeshConverter
 from amfe.material import KirchhoffMaterial
 from amfe.component.structural_component import StructuralComponent
 
@@ -16,8 +17,10 @@ from amfe.component.structural_component import StructuralComponent
 class StructuralComponentTest(TestCase):
     def setUp(self):
         mesh_input = amfe_dir('tests/meshes/gid_json_4_tets.json')
-        mesh_reader = GidJsonMeshReader(mesh_input, AmfeMeshConverter())
-        self.mesh = mesh_reader.parse()
+        mesh_reader = GidJsonMeshReader(mesh_input)
+        converter = AmfeMeshConverter()
+        mesh_reader.parse(converter)
+        self.mesh = converter.return_mesh()
         self.amp = 1.0
         my_comp = StructuralComponent(self.mesh)
         my_material = KirchhoffMaterial()

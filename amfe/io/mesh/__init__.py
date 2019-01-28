@@ -6,7 +6,11 @@
 #
 
 """
-I/O module.
+Mesh I/O module.
 
-Module handling all input/output operations.
+Module handling Mesh I/O Operations
 """
+
+
+# --- TOOLS ---
+from .constants import *

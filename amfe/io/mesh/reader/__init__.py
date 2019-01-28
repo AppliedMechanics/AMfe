@@ -6,7 +6,15 @@
 #
 
 """
-I/O module.
+Mesh I/O module.
 
-Module handling all input/output operations.
+Module handling Mesh I/O Operations
 """
+
+
+# --- MESH READER --
+from .amfe_mesh_obj_mesh_reader import *
+from .gid_ascii_mesh_reader import *
+from .gid_json_mesh_reader import *
+from .gmsh_ascii_mesh_reader import *
+from .hdf5_mesh_reader import *

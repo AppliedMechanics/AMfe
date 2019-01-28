@@ -9,8 +9,7 @@
 Gmsh ascii mesh reader for I/O module.
 """
 
-from .mesh_reader import MeshReader
-from .amfe_mesh_converter import AmfeMeshConverter
+from amfe.io.mesh.base import MeshReader
 
 __all__ = [
     'GmshAsciiMeshReader'
@@ -69,15 +68,26 @@ class GmshAsciiMeshReader(MeshReader):
     tag_physical_names_start = "$PhysicalNames"
     tag_physical_names_end = "$EndPhysicalNames"
 
-    def __init__(self, filename=None, builder=AmfeMeshConverter()):
+    def __init__(self, filename=None):
         super().__init__()
-        self._builder = builder
         self._filename = filename
         # Default dimension is 2, later (during build of elements) it is checked if mesh is 3D
         self._dimension = 2
         return
 
-    def parse(self):
+    def parse(self, builder):
+        """
+        Parse the Mesh with builder
+
+        Parameters
+        ----------
+        builder : MeshConverter
+            Mesh converter object that builds the mesh
+
+        Returns
+        -------
+        None
+        """
         with open(self._filename, 'r') as infile:
             # Read all lines into data_geometry
             data_geometry = infile.read().splitlines()
@@ -116,8 +126,8 @@ class GmshAsciiMeshReader(MeshReader):
 
         # build number of nodes and elements
         if n_nodes is not None and n_elements is not None:
-            self._builder.build_no_of_nodes(n_nodes)
-            self._builder.build_no_of_elements(n_elements)
+            builder.build_no_of_nodes(n_nodes)
+            builder.build_no_of_elements(n_elements)
         else:
             raise ValueError('Could not read number of nodes and number of elements in File {}'.format(self._filename))
 
@@ -161,7 +171,7 @@ class GmshAsciiMeshReader(MeshReader):
             x = float(nodeinfo[1])
             y = float(nodeinfo[2])
             z = float(nodeinfo[3])
-            self._builder.build_node(nodeid, x, y, z)
+            builder.build_node(nodeid, x, y, z)
 
         # Build elements
         groupentities = dict()
@@ -179,7 +189,7 @@ class GmshAsciiMeshReader(MeshReader):
             connectivity = elementinfo[2+no_of_tags+1:]
             connectivity = [int(node) for node in connectivity]
 
-            self._builder.build_element(elementid, eletype, connectivity)
+            builder.build_element(elementid, eletype, connectivity)
             # Add element to group
             physical_group = int(elementinfo[3])
             if physical_group in groupentities:
@@ -210,14 +220,14 @@ class GmshAsciiMeshReader(MeshReader):
         # Build groups
         for group in groupentities:
             if group in groupnames:
-                self.builder.build_group(groupnames[group], [], groupentities[group])
+                builder.build_group(groupnames[group], [], groupentities[group])
             else:
-                self.builder.build_group(group, [], groupentities[group])
+                builder.build_group(group, [], groupentities[group])
 
         # Build tags
         if has_partitions:
-            self.builder.build_tag(tag_entities)
+            builder.build_tag(tag_entities)
 
-        self.builder.build_mesh_dimension(self._dimension)
+        builder.build_mesh_dimension(self._dimension)
 
-        return self.builder.return_mesh()
+        return

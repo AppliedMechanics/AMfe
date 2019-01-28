@@ -18,8 +18,7 @@ import numpy as np
 from unittest import TestCase
 from numpy.testing import assert_array_equal
 
-from amfe.tools import amfe_dir
-from amfe.io.tools import check_dir
+from amfe.io.tools import amfe_dir, check_dir
 from amfe.solver import AmfeSolution, AmfeSolutionHdf5, solve_async
 
 

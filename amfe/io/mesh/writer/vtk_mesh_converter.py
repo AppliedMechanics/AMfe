@@ -15,7 +15,7 @@ import vtk
 from os.path import splitext
 import logging
 
-from .mesh_converter import MeshConverter
+from amfe.io.mesh.base import MeshConverter
 
 __all__ = [
     'VtkMeshConverter'

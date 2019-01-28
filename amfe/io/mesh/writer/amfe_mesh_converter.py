@@ -12,7 +12,8 @@ AMfe mesh converter for I/O module.
 import numpy as np
 import pandas as pd
 
-from .mesh_converter import MeshConverter
+from amfe.io.mesh.base import MeshConverter
+from amfe.io.mesh.constants import VOLUME_ELEMENTS_2D, VOLUME_ELEMENTS_3D, BOUNDARY_ELEMENTS_2D, BOUNDARY_ELEMENTS_3D
 from amfe.mesh import Mesh
 
 __all__ = [
@@ -28,19 +29,15 @@ class AmfeMeshConverter(MeshConverter):
     --------
     Convert GiD json file to AMfe mesh:
 
-    >>> from amfe.io import GidJsonMeshReader, AmfeMeshConverter
+    >>> from amfe.io.mesh.reader import GidJsonMeshReader
+    >>> from amfe.io.mesh.writer import AmfeMeshConverter
     >>> filename = '/path/to/your/file.json'
     >>> converter = AmfeMeshConverter()
-    >>> reader = GidJsonMeshReader(filename, converter)
-    >>> mymesh = reader.parse()
+    >>> reader = GidJsonMeshReader(filename)
+    >>> reader.parse(converter)
+    >>> converter.return_mesh()
 
     """
-
-    element_2d_set = {'Tri6', 'Tri3', 'Quad4', 'Quad8', }
-    element_3d_set = {'Tet4', 'Tet10', 'Hexa8', 'Hexa20', 'Prism6'}
-
-    boundary_2d_set = {'straight_line', 'quadratic_line'}
-    boundary_3d_set = {'straight_line', 'quadratic_line', 'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8'}
 
     def __init__(self, verbose=False):
         super().__init__()
@@ -113,7 +110,7 @@ class AmfeMeshConverter(MeshConverter):
     def return_mesh(self):
         # Check dimension of model
         if self._dimension is None:
-            if not self.element_3d_set.intersection(set(self._el_df_eleshapes)):
+            if not VOLUME_ELEMENTS_3D.intersection(set(self._el_df_eleshapes)):
                 # No 3D element in eleshapes, thus:
                 self._dimension = 2
             else:
@@ -129,11 +126,11 @@ class AmfeMeshConverter(MeshConverter):
 
         # divide in boundary and volume elements
         if self._dimension == 3:
-            volume_element_set = self.element_3d_set
-            boundary_element_set = self.boundary_3d_set
+            volume_element_set = VOLUME_ELEMENTS_3D
+            boundary_element_set = BOUNDARY_ELEMENTS_3D
         elif self._dimension == 2:
-            volume_element_set = self.element_2d_set
-            boundary_element_set = self.boundary_2d_set
+            volume_element_set = VOLUME_ELEMENTS_2D
+            boundary_element_set = BOUNDARY_ELEMENTS_2D
         else:
             raise ValueError('Dimension must be 2 or 3')
 
