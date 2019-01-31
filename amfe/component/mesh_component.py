@@ -122,8 +122,8 @@ class MeshComponent(ComponentBase):
             elif tag == '_nodeids':
                 nodeids = tag_values
             else:
-                raise ValueError('Unsupported tag! Tag must be \'_dofs\', \'_nodeids\', \'_eleids\' or \'_groups\'')
-            
+                nodeids = self._mesh.get_nodeids_by_tag(tag, tag_values)
+
             dofids = np.reshape(self._mapping.get_dofs_by_nodeids(nodeids), -1)
 
         self._constraints.add_constraint(name, constraint, dofids, strategy)
