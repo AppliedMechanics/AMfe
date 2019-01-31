@@ -11,33 +11,17 @@ Solver module.
 Module for solving systems in AMfe.
 """
 
-# --- ABSTRACT SUPER CLASS ---
-# from .solver import *  # abstract super class
+# --- CENTRAL SOLVER MODULE ---
+from .solver import *
 
+# --- INTEGRATOR MODULE ---
+from .integrator import *
 
-# --- STATICS SOLVERS ---
-from .nonlinear_statics_solver import *
-from .linear_statics_solver import *
+# --- NONLINEAR SOLVERS  ---
+from .nonlinear_solver import *
 
-
-# --- DYNAMICS SOLVERS ---
-#     --- nonlinear ---
-# from .nonlinear_dynamics_solver import *  # super class
-from .generalized_alpha_nonlinear_dynamics_solver import *
-from .jwh_alpha_nonlinear_dynamics_solver import *
-#     --- linear ---
-# from .linear_dynamics_solver import *  # super class
-from .generalized_alpha_linear_dynamics_solver import *
-from .jwh_alpha_linear_dynamics_solver import *
-
-
-# --- STATE-SPACE DYNAMICS SOLVERS ---
-#     --- nonlinear ---
-# from .nonlinear_dynamics_solver_state_space import *  # super class
-from .jwh_alpha_nonlinear_dynamics_solver_state_space import *
-#     --- linear ---
-# from .linear_dynamics_solver_state_space import *  # super class
-from .jwh_alpha_linear_dynamics_solver_state_space import *
+# --- TRANSLATOR MODULE BETWEEN DIFFERENT SYSTEM TYPES AND SOLVERS ---
+from .translators import *
 
 # --- SOLUTION CLASSES ---
 from .solution import *

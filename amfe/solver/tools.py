@@ -1,0 +1,59 @@
+
+
+import numpy as np
+
+__all__ = ['MemoizeJac',
+           'MemoizeStiffness'
+           ]
+
+
+class MemoizeJac(object):
+    """ Decorator that caches the value gradient of function each time it
+    is called. """
+    def __init__(self, fun):
+        self.fun = fun
+        self.jac = None
+        self.x = None
+
+    def __call__(self, x, *args):
+        self.x = np.asarray(x).copy()
+        fg = self.fun(x, *args)
+        self.jac = fg[1]
+        return fg[0]
+
+    def derivative(self, x, *args):
+        if self.jac is not None and np.alltrue(x == self.x):
+            return self.jac
+        else:
+            self(x, *args)
+        return self.jac
+
+
+class MemoizeStiffness(object):
+    """ Decorator that caches the value gradient of function each time it
+    is called. """
+    def __init__(self, K_and_f_fun):
+        self.fun = K_and_f_fun
+        self.K = None
+        self.q = None
+        self.dq = None
+        self.ddq = None
+        self.t = None
+
+    def __call__(self, q, dq, ddq, t, *args):
+        self.q = np.asarray(q).copy()
+        self.dq = np.asarray(dq).copy()
+        self.ddq = np.asarray(ddq).copy()
+        self.t = t
+
+        fg = self.fun(q, dq, ddq, t, *args)
+        self.jac = fg[0]
+        return fg[1]
+
+    def derivative(self, q, dq, ddq, t, *args):
+        if self.jac is not None and t == self.t and np.alltrue(q == self.q)\
+                and np.alltrue(dq == self.dq) and np.alltrue(ddq == self.ddq):
+            return self.jac
+        else:
+            self(q, dq, ddq, t, *args)
+        return self.jac
