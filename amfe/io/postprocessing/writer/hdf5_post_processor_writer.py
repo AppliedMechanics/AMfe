@@ -106,7 +106,8 @@ class Hdf5PostProcessorWriter(PostProcessorWriter):
 
         # Create timesteps if not written before, otherwise check if it is consistent with current timesteps
         if 'timesteps' not in resultsroot:
-            fp.create_array(resultsroot, 'timesteps', np.array(t).astype(float), 'Timesteps', shape=t.shape)
+            timesteps = np.array(t).astype(float)
+            fp.create_array(resultsroot, 'timesteps', timesteps, 'Timesteps', shape=timesteps.shape)
         else:
             if not np.array_equal(fp.get_node(resultsroot, 'timesteps', classname='Array').read(), np.array(t)):
                 raise ValueError('The timesteps of the current field is not compatible with the timesteps of'
@@ -159,15 +160,12 @@ class Hdf5PostProcessorWriter(PostProcessorWriter):
             nodesiloc = self._mesh_container['nodes'].loc[index, 'iloc'].values.astype(int)
             # if vector than change the nodesiloc such because vector has 3 following elements in data array
             if field_type == PostProcessDataType.VECTOR:
-                new_nodesiloc = np.empty((len(nodesiloc), 3), dtype=int)
-                new_nodesiloc[:, 0] = 3*nodesiloc
-                new_nodesiloc[:, 1] = 3*nodesiloc + 1
-                new_nodesiloc[:, 2] = 3*nodesiloc + 2
+                data[nodesiloc, :, :] = data[:, :, :]
+                data = data.reshape(len(nodesiloc)*3, len(t))
             elif field_type == PostProcessDataType.SCALAR:
-                new_nodesiloc = nodesiloc
+                data[nodesiloc, :] = data[:, :]
             else:
                 raise NotImplementedError('Field Data Type {} is not supported for converting'.format(field_type.name))
-            data[new_nodesiloc.reshape(-1), :] = data[:, :]
             dataset = fp.create_array(resultsroot, name, data)
             dataset.attrs.data_type = field_type.name
             dataset.attrs.mesh_entitiy_type = mesh_entity_type.name

@@ -685,6 +685,8 @@ class PostProcessorTest(TestCase):
                                                  'data': s, 'index': volume_indices,
                                                  'mesh_entity_type': MeshEntityType.ELEMENT}
                                }
+        self.fields_no_of_nodes = no_of_nodes
+        self.fields_no_of_timesteps = len(self.timesteps)
 
     def test_hdf5_postprocessor_writer_and_reader(self):
         self._create_fields()
@@ -695,8 +697,12 @@ class PostProcessorTest(TestCase):
         fields = self.fields_desired
         for fieldname in fields:
             field = fields[fieldname]
-            writer.write_field(fieldname, field['data_type'], field['timesteps'], field['data'], field['index'],
-                               field['mesh_entity_type'])
+            if field['data_type'] == PostProcessDataType.VECTOR:
+                data = field['data'].reshape(self.fields_no_of_nodes, 3, self.fields_no_of_timesteps)
+            else:
+                data = field['data']
+            writer.write_field(fieldname, field['data_type'], field['timesteps'],
+                               data, field['index'], field['mesh_entity_type'])
 
         self._create_fields()
 
