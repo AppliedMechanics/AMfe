@@ -103,7 +103,10 @@ class TestEcsw(TestCase):
     def test_assemble_g_b(self):
         # store an example for f_int for later comparison to check if the old assembly is recovered
         # after assemble_g_and_b has finished
-        f_old = self.my_component.f_int(self.S[:, 0])
+        no_of_dofs = self.S.shape[0]
+        dq = ddq = np.zeros(no_of_dofs)
+        t = 0.0
+        f_old = self.my_component.f_int(self.S[:, 0], dq, ddq, t)
 
         # run assemble_g_and_b
         G, b = assemble_g_and_b(self.my_component, self.S, self.timesteps)
@@ -158,7 +161,7 @@ class TestEcsw(TestCase):
         # Check if old assembly is recovered
 
         # get f_new for comparison to f_old
-        f_new = self.my_component.f_int(self.S[:, 0])
+        f_new = self.my_component.f_int(self.S[:, 0], dq, ddq, t)
         # test if old assembly is recovered in the component
         assert_allclose(f_new, f_old)
 

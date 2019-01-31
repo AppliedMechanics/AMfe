@@ -9,7 +9,7 @@ class ComponentBase:
     def __init__(self, *args, **kwargs):
         pass
     
-    def get_mat(self, matrix_type="K", u=None, t=0):
+    def get_mat(self, matrix_type, q, dq, ddq, t):
         """
         Returns a requested matrix dependend on given path
 
@@ -28,7 +28,10 @@ class ComponentBase:
             the requested matrix
         """
         func = getattr(self, matrix_type)
-        return func(u, t)
+        if matrix_type == "M":
+            return func(q, dq, t)
+        else:
+            return func(q, dq, ddq, t)
     
     def unconstrain_vector(self, vector):
         return vector
