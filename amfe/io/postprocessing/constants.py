@@ -46,6 +46,7 @@ XDMFDICT = {'Tri3': {'no_of_nodes': 3, 'xdmf_name': 'Triangle'},
             'Tet10': {'no_of_nodes': 10, 'xdmf_name': 'Tetrahedron_10'},
             'straight_line': {'no_of_nodes': 2, 'xdmf_name': 'Polyline'},
             'quadratic_line': {'no_of_nodes': 3, 'xdmf_name': 'Edge_3'},
+            'point': {'no_of_nodes': 1, 'xdmf_name': 'Polyvertex'},
             }
 
 # Describe Conversion from Mesh Entity Enum to XDMF type
