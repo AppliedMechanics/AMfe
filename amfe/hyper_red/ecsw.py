@@ -172,6 +172,9 @@ def assemble_g_and_b(component, S, timesteps=None):
     # Weight only one element by one
     g_assembly.weights = [1.0]
 
+    # Set dq and ddq = 0
+    ddq = dq = np.zeros(no_of_dofs)
+
     # loop over all elements
     for element_no in range(no_of_elements):
         # Change nonzero weighted elements to current element
@@ -179,9 +182,10 @@ def assemble_g_and_b(component, S, timesteps=None):
 
         logger.debug('Assemble element {:10d} / {:10d}'.format(element_no+1, no_of_elements))
         # loop over all snapshots
+
         for snapshot_number, (snapshot_vector, t) in enumerate(zip(S.T, timesteps)):
             G[snapshot_number*no_of_dofs:(snapshot_number+1)*no_of_dofs, element_no] = component.f_int(snapshot_vector,
-                                                                                                       t)
+                                                                                                       dq, ddq, t)
 
     b = np.sum(G, axis=1)
 
