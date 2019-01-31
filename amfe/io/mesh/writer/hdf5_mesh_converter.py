@@ -64,7 +64,7 @@ class Hdf5MeshConverter(MeshConverter):
         self._nodes_current_row += 1
 
     def build_element(self, eid, etype, nodes):
-        self._connectivity.append(np.array(nodes, ndmin=2, dtype=int))
+        self._connectivity.append(np.array(nodes, dtype=int))
         self._ele_indices.append(eid)
         self._eleshapes.append(etype)
 

@@ -175,9 +175,11 @@ class GmshAsciiMeshReader(MeshReader):
 
         # Build elements
         groupentities = dict()
-        tag_entities = {'no_of_mesh_partitions':{},
-                        'partition_id' : {},
-                        'partitions_neighbors': {}}
+        elemental_tags = dict()
+        tag_entities = {'no_of_mesh_partitions': {},
+                        'partition_id': {},
+                        'partitions_neighbors': {},
+                        }
         has_partitions = False
         for element in list_imported_elements:
             elementinfo = element.split()
@@ -192,10 +194,15 @@ class GmshAsciiMeshReader(MeshReader):
             builder.build_element(elementid, eletype, connectivity)
             # Add element to group
             physical_group = int(elementinfo[3])
+            elemental_tag = int(elementinfo[4])
             if physical_group in groupentities:
                 groupentities[physical_group].append(elementid)
             else:
                 groupentities.update({physical_group: [elementid]})
+            if elemental_tag in elemental_tags:
+                elemental_tags[elemental_tag].append(elementid)
+            else:
+                elemental_tags.update({elemental_tag: [elementid]})
             
             # add element to tags 
             if no_of_tags>3: 
@@ -226,7 +233,11 @@ class GmshAsciiMeshReader(MeshReader):
 
         # Build tags
         if has_partitions:
-            builder.build_tag(tag_entities)
+            tags_dict = tag_entities
+            tags_dict.update({'elemental_group': elemental_tags})
+        else:
+            tags_dict = {'elemental_group': elemental_tags}
+        builder.build_tag(tags_dict)
 
         builder.build_mesh_dimension(self._dimension)
 
