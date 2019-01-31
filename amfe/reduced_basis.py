@@ -7,7 +7,7 @@ import scipy as sp
 from scipy import linalg
 from scipy.sparse.linalg import LinearOperator
 
-from .linalg.linearsolvers import solve_sparse, PardisoSolver
+from .linalg.linearsolvers import solve_sparse, PardisoLinearSolver
 from .linalg.norms import m_normalize
 from .linalg.orth import m_orthogonalize
 
@@ -67,7 +67,7 @@ def krylov_subspace(M, K, b, omega=0, no_of_moments=3, mass_orth=True):
     no_of_inputs = b.size//ndim
     f = b.copy()
     V = np.zeros((ndim, no_of_moments*no_of_inputs))
-    LU_object = PardisoSolver(K - omega**2 * M)
+    LU_object = PardisoLinearSolver(K - omega**2 * M)
 
     for i in np.arange(no_of_moments):
         b_new = LU_object.solve(f)
@@ -134,8 +134,8 @@ def compute_modes_pardiso(mechanical_system, n=10, u_eq=None,
     k_diag = K.diagonal().sum()
 
     # factorizing
-    K_mat = PardisoSolver(K)
-    K_mat.factorize()
+    K_mat = PardisoLinearSolver()
+    K_mat.factorize(K)
 
     # build up Krylov sequence
     n_rand = n
@@ -429,7 +429,7 @@ def modal_derivatives(V, omega, K_func, M, h=1.0, verbose=True,
         if verbose:
             print('Factorizing the dynamic stiffness matrix for eigenfrequency',
                   '{0:d} with {1:4.2f} rad/s.'.format(i, omega[i]) )
-        LU_object = PardisoSolver(K_dyn_i)
+        LU_object = PardisoLinearSolver(K_dyn_i)
 
         for j in range(no_of_modes): # looping over the rows
             x_j = V[:,j]
@@ -505,7 +505,7 @@ def static_derivatives(V, K_func, M=None, omega=0, h=1.0,
         K_dyn = K - omega**2 * M
     else:
         K_dyn = K
-    LU_object = PardisoSolver(K_dyn)
+    LU_object = PardisoLinearSolver(K_dyn)
     for i in range(no_of_modes):
         if verbose:
             print('Computing finite difference K-matrix')
@@ -588,7 +588,7 @@ def shifted_modal_derivatives(V, K_func, M, omega, h=1.0,
     Theta_tilde = np.zeros((no_of_dofs, no_of_modes, no_of_modes))
 
     K = K_func(np.zeros(no_of_dofs))
-    solver = PardisoSolver(K, mtype='sid')
+    solver = PardisoLinearSolver(K, mtype='sid')
 
     if verbose:
         print('Compute Theta')
