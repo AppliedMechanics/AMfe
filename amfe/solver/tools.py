@@ -34,7 +34,7 @@ class MemoizeStiffness(object):
     is called. """
     def __init__(self, K_and_f_fun):
         self.fun = K_and_f_fun
-        self.K = None
+        self.jac = None
         self.q = None
         self.dq = None
         self.ddq = None
