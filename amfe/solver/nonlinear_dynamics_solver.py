@@ -15,7 +15,7 @@ from time import time
 
 from .solver import abort_statement, Solver
 from ..linalg.norms import vector_norm
-from ..linalg.linearsolvers import PardisoSolver
+from ..linalg.linearsolvers import PardisoLinearSolver
 
 __all__ = [
     'NonlinearDynamicsSolver'
@@ -72,10 +72,10 @@ class NonlinearDynamicsSolver(Solver):
             self.linear_solver = options['linear_solver']
         else:
             print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-            self.linear_solver = PardisoSolver(A=None, mtype='sid')
+            self.linear_solver = PardisoLinearSolver()
             if 'constrained' in options:
                 if options['constrained']:
-                    self.linear_solver = PardisoSolver(A=None, mtype='sid', saddle_point=True)
+                    self.linear_solver = PardisoLinearSolver()
         if ('initial_conditions' in options) and ('q0' in options['initial_conditions']):
             q0 = options['initial_conditions']['q0']
             # TODO: The following section is commented out because this prevents solving reduced mechanical systems,

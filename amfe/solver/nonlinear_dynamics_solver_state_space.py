@@ -15,7 +15,7 @@ from time import time
 
 from .solver import abort_statement, Solver
 from ..linalg.norms import vector_norm
-from ..linalg.linearsolvers import PardisoSolver
+from ..linalg.linearsolvers import PardisoLinearSolver
 
 __all__ = [
     'NonlinearDynamicsSolverStateSpace'
@@ -74,7 +74,7 @@ class NonlinearDynamicsSolverStateSpace(Solver):
         else:
             # TODO: What is a good choice for constrained systems in state space?
             print('Attention: No linear solver object was given, setting linear_solver = PardisoSolver(...).')
-            self.linear_solver = PardisoSolver(A=None, mtype='nonsym')
+            self.linear_solver = PardisoLinearSolver()
 
         if ('initial_conditions' in options) and ('x0' in options['initial_conditions']):
             x0 = options['initial_conditions']['x0']
