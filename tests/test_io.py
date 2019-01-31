@@ -153,9 +153,22 @@ def create_amfe_obj():
     return meshobj
 
 
+def clean_test_outputs():
+    directory = amfe_dir('results/.tests/')
+    check_dir(directory + 'test.txt')
+    directory = amfe_dir('results/.tests/')
+    for f in os.listdir(directory):
+        if f == 'hdf5_dummy.hdf5' or f == 'hdf5postprocessing.hdf5':
+            return
+        filename = directory + f
+        if os.path.isfile(filename):
+            os.remove(filename)
+    return
+
+
 class IOTest(TestCase):
     def setUp(self):
-        pass
+        clean_test_outputs()
 
     def tearDown(self):
         pass
@@ -395,11 +408,14 @@ class IOTest(TestCase):
     def test_dummy_to_hdf5_and_xdmf(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/tests/hdf5_dummy')
-        if not os.path.exists(amfe_dir('results/tests')):
-            os.makedirs(amfe_dir('results/tests'))
+        filename = amfe_dir('results/.tests/hdf5_dummy')
+        if not os.path.exists(amfe_dir('results/.tests')):
+            os.makedirs(amfe_dir('results/.tests'))
+        hdf5filename = filename + '.hdf5'
+        if os.path.isfile(hdf5filename):
+            os.remove(hdf5filename)
 
-        converter = Hdf5MeshConverter(filename + '.hdf5')
+        converter = Hdf5MeshConverter(hdf5filename)
         self.run_build_commands(converter)
         converter.return_mesh()
 
@@ -408,7 +424,8 @@ class IOTest(TestCase):
     def test_hdf5_to_dummy(self):
 
         self.set_dummy_input()
-        h5filename = amfe_dir('results/tests/hdf5_dummy.hdf5')
+
+        h5filename = amfe_dir('results/.tests/hdf5_dummy.hdf5')
 
         meshreader = Hdf5MeshReader(h5filename, '/mesh')
         builder = DummyMeshConverter()
@@ -436,7 +453,7 @@ class IOTest(TestCase):
     def test_dummy_to_vtu(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/tests/vtk_dummy.vtu')
+        filename = amfe_dir('results/.tests/vtk_dummy.vtu')
         check_dir(filename)
 
         converter = VtkMeshConverter(filename=filename)
@@ -447,7 +464,7 @@ class IOTest(TestCase):
     def test_dummy_to_vtk(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/tests/vtk_dummy.vtk')
+        filename = amfe_dir('results/.tests/vtk_dummy.vtk')
         check_dir(filename)
 
         converter = VtkMeshConverter(filename=filename)
@@ -458,7 +475,7 @@ class IOTest(TestCase):
     def test_dummy_to_vtk_wrong_fileextension(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/tests/vtk_dummy.abc')
+        filename = amfe_dir('results/.tests/vtk_dummy.abc')
         check_dir(filename)
 
         converter = VtkMeshConverter(filename=filename)
@@ -469,7 +486,7 @@ class IOTest(TestCase):
     def test_dummy_to_vtk_with_preallocation(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/tests/vtk_dummy.vtk')
+        filename = amfe_dir('results/.tests/vtk_dummy.vtk')
         check_dir(filename)
 
         converter = VtkMeshConverter(filename=filename)
@@ -482,7 +499,7 @@ class IOTest(TestCase):
     def test_dummy_to_vtk_with_preallocation_too_late(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/tests/vtk_dummy.vtk')
+        filename = amfe_dir('results/.tests/vtk_dummy.vtk')
         check_dir(filename)
 
         converter = VtkMeshConverter(filename=filename)
@@ -650,7 +667,7 @@ class IOTest(TestCase):
 
 class PostProcessorTest(TestCase):
     def setUp(self):
-        pass
+        clean_test_outputs()
 
     def tearDown(self):
         pass
@@ -691,7 +708,10 @@ class PostProcessorTest(TestCase):
     def test_hdf5_postprocessor_writer_and_reader(self):
         self._create_fields()
 
-        filename = amfe_dir('results/tests/hdf5postprocessing.hdf5')
+        filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
+
+        if os.path.isfile(filename):
+            os.remove(filename)
 
         writer = Hdf5PostProcessorWriter(self.meshreader, filename, '/myresults')
         fields = self.fields_desired
@@ -706,7 +726,7 @@ class PostProcessorTest(TestCase):
 
         self._create_fields()
 
-        h5filename = amfe_dir('results/tests/hdf5postprocessing.hdf5')
+        h5filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
 
         postprocessorreader = AmfeHdf5PostProcessorReader(h5filename,
                                                           meshrootpath='/mesh',
@@ -729,9 +749,9 @@ class PostProcessorTest(TestCase):
 
     def test_write_xdmf_from_hdf5(self):
         self._create_fields()
-        filename = amfe_dir('results/tests/hdf5postprocessing.hdf5')
+        filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
         with h5py.File(filename, mode='r') as hdf5_fp:
-            filename = amfe_dir('results/tests/hdf5postprocessing.xdmf')
+            filename = amfe_dir('results/.tests/hdf5postprocessing.xdmf')
             with open(filename, 'wb') as xdmf_fp:
                 fielddict = self.fields_desired
                 for key in fielddict:
