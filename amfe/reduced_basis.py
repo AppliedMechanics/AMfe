@@ -5,7 +5,8 @@ Reduced basis methods...
 import numpy as np
 import scipy as sp
 from scipy import linalg
-from scipy.sparse.linalg import LinearOperator
+from scipy.sparse.linalg import LinearOperator, factorized
+from scipy.linalg import cho_factor, cho_solve
 
 from .linalg.linearsolvers import solve_sparse, PardisoLinearSolver
 from .linalg.norms import m_normalize
@@ -189,20 +190,19 @@ def compute_modes_pardiso(mechanical_system, n=10, u_eq=None,
     return omega, V
 
 
-def vibration_modes(mechanical_system, n=10, save=False):
-    '''
+def vibration_modes(K, M, n=10, sigma=0, which='LM', maxiter=100):
+    """
     Compute the n first vibration modes of the given mechanical system using
     a power iteration method.
 
     Parameters
     ----------
-    mechanical_system : instance of MechanicalSystem
-        Mechanical system to be analyzed.
+    K : {ndarray, matrix}
+        Stiffness Matrix
+    M : {ndarray, matrix}
+        Mass Matrix
     n : int
         number of modes to be computed.
-    save : bool
-        Flag for saving the modes in mechanical_system for ParaView export.
-        Default: False.
 
     Returns
     -------
@@ -226,21 +226,14 @@ def vibration_modes(mechanical_system, n=10, save=False):
     If the squared eigenvalue omega**2 is negative, as it might happen due to
     round-off errors with rigid body modes, the negative sign is traveled to
     the eigenfrequency omega, though this makes physically no sense...
-    '''
-    K = mechanical_system.K()
-    M = mechanical_system.M()
+    """
 
-    lambda_, V = sp.sparse.linalg.eigsh(K, M=M, k=n, sigma=0, which='LM',
-                                        maxiter=100)
+    lambda_, V = sp.sparse.linalg.eigsh(K, M=M, k=n, sigma=sigma, which=which,
+                                        maxiter=maxiter)
     omega = np.sqrt(abs(lambda_))
     # Little bit of sick hack: The negative sign is transferred to the
     # eigenfrequencies
-    omega[lambda_ < 0] *= -1
-
-    if save:
-        mechanical_system.clear_timesteps()
-        for i, om in enumerate(omega):
-            mechanical_system.write_timestep(om, V[:, i])
+    # omega[lambda_ < 0] *= -1
 
     return omega, V
 
@@ -453,9 +446,8 @@ def modal_derivatives(V, omega, K_func, M, h=1.0, verbose=True,
         Theta = 1/2*(Theta + Theta.transpose((0,2,1)))
     return Theta
 
-def static_derivatives(V, K_func, M=None, omega=0, h=1.0,
-                            verbose=True, symmetric=True,
-                            finite_diff='central'):
+
+def static_derivatives(V, K_func, M=None, omega=0, h=1.0, verbose=True, symmetric=True, finite_diff='central'):
     '''
     Compute the static correction derivatives for the given basis V.
 
@@ -505,7 +497,9 @@ def static_derivatives(V, K_func, M=None, omega=0, h=1.0,
         K_dyn = K - omega**2 * M
     else:
         K_dyn = K
-    LU_object = PardisoLinearSolver(K_dyn)
+    # LU_object = PardisoLinearSolver()
+    solve_func = factorized(K)
+
     for i in range(no_of_modes):
         if verbose:
             print('Computing finite difference K-matrix')
@@ -520,14 +514,15 @@ def static_derivatives(V, K_func, M=None, omega=0, h=1.0,
         b = - dK_dx_i @ V
         if verbose:
             print('Solving linear system #', i)
-        Theta[:,:,i] = LU_object.solve(b)
+        #Theta[:,:,i] = LU_object.solve(b)
+        Theta[:, :, i] = solve_func(b)
         if verbose:
             print('Done solving linear system #', i)
     if verbose:
         residual = np.linalg.norm(Theta - Theta.transpose(0,2,1)) / \
                    np.linalg.norm(Theta)
         print('The residual, i.e. the unsymmetric values, are', residual)
-    LU_object.clear()
+    # LU_object.clear()
     if symmetric:
         # make Theta symmetric
         Theta = 1/2*(Theta + Theta.transpose(0,2,1))
