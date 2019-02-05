@@ -16,7 +16,6 @@ __all__ = [
     'read_hbmat',
     'append_interactively',
     'matshow_3d',
-    'amfe_dir',
     'h5_read_u',
     'test',
     'reorder_sparse_matrix',
