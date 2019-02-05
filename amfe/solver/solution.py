@@ -13,6 +13,7 @@
 #
 
 import asyncio
+from os.path import isfile
 from tables import *
 
 from amfe.io.tools import check_dir
@@ -284,7 +285,10 @@ class AmfeSolutionHdf5(AmfeSolutionBase):
 
         opens a file and returns itself
         """
-        self._fp = open_file(self._filename, 'w')
+        if isfile(self._filename):
+            self._fp = open_file(self._filename, 'a')
+        else:
+            self._fp = open_file(self._filename, 'w')
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
