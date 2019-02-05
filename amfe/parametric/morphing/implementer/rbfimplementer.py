@@ -187,7 +187,7 @@ class RbfMorpherImplementer(MorpherImplementer):
         """
         pass
 
-    def morph(self, nodes_original, control_points_before, control_points_after):
+    def morph(self, nodes_original, control_points_before, control_points_after, n, callback=None):
         """
 
         Parameters
@@ -202,19 +202,28 @@ class RbfMorpherImplementer(MorpherImplementer):
         morphed nodes : ndarray
             node coordinates of the morphed nodes
         """
-        self.weights = self._get_weights(
-            control_points_before,
-            control_points_after)
+        delta_control_points = control_points_after - control_points_before
         n_mesh_points, dim = nodes_original.shape
         n_control_points = control_points_before.shape[0]
         H = np.zeros((n_mesh_points, n_control_points + dim + 1))
-        H[:, :n_control_points] = self.basis(
-            cdist(nodes_original,
-                  control_points_before),
-            self.radius)
-        H[:, n_control_points] = 1.0
-        H[:, -dim:] = nodes_original
-        return np.asarray(np.dot(H, self.weights))
+
+        for i in range(n):
+            control_points_after_current_iteration = control_points_before + 1/n*delta_control_points
+            self.weights = self._get_weights(
+                control_points_before,
+                control_points_after_current_iteration)
+
+            H[:, :n_control_points] = self.basis(
+                cdist(nodes_original,
+                      control_points_before),
+                self.radius)
+            H[:, n_control_points] = 1.0
+            H[:, -dim:] = nodes_original
+            nodes_original = np.dot(H, self.weights)
+            control_points_before = control_points_after_current_iteration
+            if callback is not None:
+                callback(i+1, nodes_original)
+        return nodes_original
 
     def _get_weights(self, X, Y):
         """

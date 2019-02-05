@@ -7,3 +7,4 @@ from .cuboidmorpher import *
 from .cylindermorpher import *
 from .rectanglemorpher import *
 from .shiftmorpher import *
+from .tapermorpher import *
