@@ -75,7 +75,7 @@ class StandardMapping(MappingBase):
                                                                                                     callbacks,
                                                                                                     callbackargs)):
 
-            print('Added element {:10d} of {:10d}'.format(index, no_of_elements))
+            # print('Added element {:10d} of {:10d}'.format(index, no_of_elements))
             # iterate over dofs of element
             global_dofs_for_element = []
             for localdofnumber, dofinfo in enumerate(element_dofinfos):

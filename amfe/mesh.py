@@ -316,6 +316,27 @@ class Mesh:
         """
         return self._el_df.iloc[elementidxs].index.values
 
+    def get_nodeid_by_coordinates(self, x, y, z=None):
+        if self.dimension == 2:
+            if z is not None:
+                print('Warning: z coordinate is ignored in get_nodeid_by_coordinates')
+            nodeid = (self.nodes_df[['x', 'y']] - (x, y)).apply(np.linalg.norm, axis=1).idxmin()
+        else:
+            nodeid = (self.nodes_df[['x', 'y', 'z']] - (x, y, z)).apply(np.linalg.norm, axis=1).idxmin()
+        return nodeid
+
+    def get_nodeids_by_x_coordinates(self, x, epsilon):
+        nodeids = self.nodes_df.index[((self.nodes_df['x'] - x).abs() - epsilon) < 0].tolist()
+        return nodeids
+
+    def get_nodeids_by_lesser_equal_x_coordinates(self, x, epsilon):
+        nodeids = self.nodes_df.index[(self.nodes_df['x'] - (x + epsilon)) < 0].tolist()
+        return nodeids
+
+    def get_nodeids_by_greater_equal_x_coordinates(self, x, epsilon):
+        nodeids = self.nodes_df.index[(self.nodes_df['x'] - (x - epsilon)) > 0].tolist()
+        return nodeids
+
     def get_nodeids_by_groups(self, groups):
         """
         Returns nodeids of the nodes property belonging to a group

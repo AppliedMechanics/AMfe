@@ -6,7 +6,6 @@ import numpy as np
 import scipy as sp
 from scipy import linalg
 from scipy.sparse.linalg import LinearOperator, factorized
-from scipy.linalg import cho_factor, cho_solve
 
 from .linalg.linearsolvers import solve_sparse, PardisoLinearSolver
 from .linalg.norms import m_normalize
@@ -26,6 +25,7 @@ __all__ = ['krylov_subspace',
            'ifpks',
            'ifpks_modified',
            'update_modes',
+           'state_space_derivatives',
            ]
 
 
@@ -422,7 +422,7 @@ def modal_derivatives(V, omega, K_func, M, h=1.0, verbose=True,
         if verbose:
             print('Factorizing the dynamic stiffness matrix for eigenfrequency',
                   '{0:d} with {1:4.2f} rad/s.'.format(i, omega[i]) )
-        LU_object = PardisoLinearSolver(K_dyn_i)
+        solve_func = factorized(K_dyn_i)
 
         for j in range(no_of_modes): # looping over the rows
             x_j = V[:,j]
@@ -437,11 +437,95 @@ def modal_derivatives(V, omega, K_func, M, h=1.0, verbose=True,
             d_omega_2_d_x_i = x_i @ dK_dx_j @ x_i
             F_i = (d_omega_2_d_x_i*M - dK_dx_j) @ x_i
             F_i[fix_idx] = 0
-            v_i = LU_object.solve(F_i)
+            v_i = solve_func(F_i)
             c_i = - v_i @ M @ x_i
             Theta[:,i,j] = v_i + c_i*x_i
 
-    LU_object.clear()
+    if symmetric:
+        Theta = 1/2*(Theta + Theta.transpose((0,2,1)))
+    return Theta
+
+
+def state_space_derivatives(R, lambda_, A_func, E, h=1.0, verbose=True,
+                           symmetric=True, finite_diff='central'):
+    r'''
+    Compute the basis theta based on real modal derivatives.
+
+    Parameters
+    ----------
+    R : ndarray
+        array containing the linear basis
+    lambda_ : ndarray
+        eigenvalues of the system in rad/s.
+    A_func : function
+        function returning the A matrix
+        displacement. Has to work like A = A_func(r).
+    E : ndarray or sparse matrix
+        E matrix of the system.
+    h : float, optional
+        step width for finite difference scheme. Default value is 1.0
+    verbose : bool, optional
+        flag for verbosity. Default value: True
+    symmetric : bool, optional
+        flag for making the modal derivative matrix theta symmetric. Default is
+        `True`.
+    finite_diff : str {'central', 'upwind'}
+        Method for finite difference scheme. 'central' computes the finite difference
+        based on a central difference scheme, 'upwind' based on an upwind scheme. Note
+        that the upwind scheme can cause severe distortions of the modal derivative.
+
+    Returns
+    -------
+    Theta : ndarray
+        three dimensional array of modal derivatives. Theta[:,i,j] contains
+        the modal derivative 1/2 * dx_i / dx_j. The basis Theta is made symmetric, so
+        that `Theta[:,i,j] == Theta[:,j,i]` if `symmetic=True`.
+
+    See Also
+    --------
+    static_derivatives : modal derivative with mass neglection but much faster in computation.
+    '''
+    no_of_dofs = R.shape[0]
+    no_of_modes = R.shape[1]
+    Theta = np.zeros((no_of_dofs, no_of_modes, no_of_modes), dtype=np.complex128)
+
+    # Check, if V is mass normalized:
+    if not np.allclose(np.eye(no_of_modes), R.T @ E @ R, rtol=1E-5, atol=1E-8):
+        Exception('The given modes are not E normalized!')
+
+    A = A_func(np.zeros(no_of_dofs))
+
+    for i in range(no_of_modes): # looping over the columns
+        r_i = R[:,i]
+        A_dyn_i = A - lambda_[i] * E
+
+        # fix the point with the maximum displacement of the vibration mode
+        fix_idx = np.argmax(abs(r_i))
+        A_dyn_i[:,fix_idx], A_dyn_i[fix_idx,:], A_dyn_i[fix_idx, fix_idx] = 0, 0, 1
+
+        # factorization of the dynamic stiffness matrix
+        if verbose:
+            print('Factorizing the dynamic stiffness matrix for eigenvalue',
+                  '{0:d} with {1:4.2f} rad/s.'.format(i, lambda_[i]) )
+        solve_func = factorized(A_dyn_i)
+
+        for j in range(no_of_modes): # looping over the rows
+            r_j = R[:,j]
+            # finite difference scheme
+            if finite_diff == 'central':
+                dA_dr_j = (A_func(h*r_j.real) - A_func(-h*r_j.real))/(2*h) + 1j * (A_func(h*r_j.imag) - A_func(-h*r_j.imag))/(2*h)
+            elif finite_diff == 'upwind':
+                dA_dr_j = (A_func(h*r_j.real) - A)/h + 1j * (A_func(h*r_j.imag) - A)/h
+            else:
+                raise ValueError('Finite difference scheme is not valid.')
+
+            d_lambda_d_r_i = r_i @ dA_dr_j @ r_i
+            F_i = (d_lambda_d_r_i*E - dA_dr_j) @ r_i
+            F_i[fix_idx] = 0
+            v_i = solve_func(F_i)
+            c_i = - v_i @ E @ r_i
+            Theta[:,i,j] = v_i + c_i*r_i
+
     if symmetric:
         Theta = 1/2*(Theta + Theta.transpose((0,2,1)))
     return Theta
@@ -646,7 +730,6 @@ def shifted_modal_derivatives(V, K_func, M, omega, h=1.0,
     return Theta, Theta_tilde
 
 
-
 def augment_with_derivatives(V=None, theta=None, M=None, tol=1E-8, symm=True, deflate=True):
     '''
     Make a linear basis containing the subspace spanned by V and theta by
@@ -674,6 +757,7 @@ def augment_with_derivatives(V=None, theta=None, M=None, tol=1E-8, symm=True, de
         linear basis containing the subspace spanned by V and theta.
 
     '''
+    zeroidx = list()
     if V is None:
         ndof = theta.shape[0]
         n = 0
@@ -700,7 +784,11 @@ def augment_with_derivatives(V=None, theta=None, M=None, tol=1E-8, symm=True, de
                     theta_norm = np.sqrt(theta[:,i,j].T @ theta[:,i,j])
                 else:
                     theta_norm = np.sqrt(theta[:,i,j].T @ M @ theta[:,i,j])
-                V_raw[:,idx] = theta[:,i,j] / theta_norm
+                if theta_norm < 1e-14:
+                    # skip this vector because it probably is zero
+                    zeroidx.append(idx)
+                else:
+                    V_raw[:,idx] = theta[:,i,j] / theta_norm
     else:
         for i in range(l):
             for j in range(m):
@@ -709,8 +797,13 @@ def augment_with_derivatives(V=None, theta=None, M=None, tol=1E-8, symm=True, de
                     theta_norm = np.sqrt(theta[:,i,j].T @ theta[:,i,j])
                 else:
                     theta_norm = np.sqrt(theta[:,i,j].T @ M @ theta[:,i,j])
-                V_raw[:,idx] = theta[:,i,j] / theta_norm
-
+                if theta_norm < 1e-14:
+                    # skip this vector because it probably is zero
+                    zeroidx.append(idx)
+                else:
+                    V_raw[:,idx] = theta[:,i,j] / theta_norm
+    # Remove zeros
+    V_raw = np.delete(V_raw, zeroidx, axis=1)
     # Deflation algorithm
     if deflate:
         U, s, V_svd = sp.linalg.svd(V_raw, full_matrices=False)

@@ -67,13 +67,13 @@ class RectangleRbfMorpher(MeshMorpher):
         nodes_boundary_after = np.copy(nodes_boundary)
 
         # x-direction
-        if scaleX and scaleX != 1:
+        if scaleX and scaleX != 1.0:
             self._writeshifts(nodes_boundary_after, scaleX, 'x', nodes_boundary_after)
         # y-direction
-        if scaleY and scaleY != 1:
+        if scaleY and scaleY != 1.0:
             self._writeshifts(nodes_boundary_after, scaleY, 'y', nodes_boundary_after)
 
         return nodes_boundary_after
 
-    def morph(self, nodes_reference, nodes_boundary_before, nodes_boundary_after):
-        return self._implementer.morph(nodes_reference, nodes_boundary_before, nodes_boundary_after)
+    def morph(self, nodes_reference, nodes_boundary_before, nodes_boundary_after, n=1, callback=None):
+        return self._implementer.morph(nodes_reference, nodes_boundary_before, nodes_boundary_after, n, callback)

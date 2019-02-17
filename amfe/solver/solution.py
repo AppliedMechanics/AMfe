@@ -91,6 +91,17 @@ class AmfeSolution(AmfeSolutionBase):
         self.q = []
         self.dq = []
         self.ddq = []
+        self._write_each = 1
+        self.counter = 1
+
+    @property
+    def write_each(self):
+        return self._write_each
+
+    @write_each.setter
+    def write_each(self, no):
+        self._write_each = no
+        self.counter = no
 
     def write_timestep(self, t, q, dq=None, ddq=None):
         """
@@ -112,10 +123,13 @@ class AmfeSolution(AmfeSolutionBase):
         None
         """
         # Append t, q, dq, ddq to the lists
-        self.t.append(t)
-        self.q.append(q)
-        self.dq.append(dq)
-        self.ddq.append(ddq)
+        if self.counter == self.write_each:
+            self.t.append(t)
+            self.q.append(q)
+            self.dq.append(dq)
+            self.ddq.append(ddq)
+            self.counter = 0
+        self.counter += 1
 
 
 class AmfeSolutionAsync(AmfeSolutionBase):

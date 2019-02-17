@@ -47,10 +47,11 @@ class Solver:
 
 
 class TransientSolver(Solver):
-    def __init__(self, integrator, accelerationinitializer):
+    def __init__(self, integrator, accelerationinitializer, timestepadaptor=None):
         super().__init__()
         self._integrator = integrator
         self._accelerationinitializer = accelerationinitializer
+        self._timestepadaptor = timestepadaptor
 
     def solve(self, write_callback, t0, q0, dq0, t_end, t_eval=None):
 
@@ -65,6 +66,8 @@ class TransientSolver(Solver):
         t_clock_start = time()
         # Run Loop
         while t < t_end:
+            if self._timestepadaptor is not None:
+                self._integrator.dt = self._timestepadaptor(t)
             t, q, dq, ddq = self._integrator.step(t, q, dq, ddq)
             write_callback(t, q, dq, ddq)
         # end time measurement
@@ -257,6 +260,7 @@ class SolverFactory:
         nonlinear_solver, nonlinear_solver_options = self._create_newton_solver(linear_solver, linear_solver_kwargs)
         integrator.nonlinear_solver_func = nonlinear_solver.solve
         integrator.nonlinear_solver_options = nonlinear_solver_options
+        integrator.dt = self._dt_initial
         accelerationinitializer = AccelerationInitializer()
         # Create Solver Object
         return TransientSolver(integrator, accelerationinitializer)
