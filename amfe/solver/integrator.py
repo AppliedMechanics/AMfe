@@ -344,7 +344,7 @@ class GeneralizedAlpha(NonlinearIntegrator):
 
         self._q_p = self._q_n + self.dt * dq_n + self.dt ** 2 * (0.5 - self.beta) * ddq_n
         self._dq_p = self._dq_n + self.dt * (1 - self.gamma) * ddq_n
-        self._ddq_p = 0
+        self._ddq_p = np.zeros_like(self._q_p)
         self._t_p = t_n + self.dt
 
         self._rtol_scaling_cache = vector_norm(self.f_ext(self._q_p, self._dq_p, self._ddq_p, self._t_p))
