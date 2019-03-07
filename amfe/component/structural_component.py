@@ -89,7 +89,7 @@ class StructuralComponent(MeshComponent):
         """
 
         if self.rayleigh_damping:
-            self._D_constr = self.rayleigh_damping[0] * self.M(q, dq, ddq, t) + self.rayleigh_damping[1] * self.K(q, dq,
+            self._D_constr = self.rayleigh_damping[0] * self.M(q, dq, t) + self.rayleigh_damping[1] * self.K(q, dq,
                                                                                                                   ddq,
                                                                                                                   t)
         else:
