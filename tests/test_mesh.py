@@ -144,6 +144,11 @@ class TestMesh(TestCase):
         desired = np.array([1, 2, 3, 4, 5], dtype=int)
         assert_array_equal(actual, desired)
 
+        # test zero list:
+        actual = self.testmesh.get_nodeids_by_elementids(np.array([], dtype=int))
+        desired = np.array([], dtype=int)
+        assert_array_equal(actual, desired)
+
     def test_insert_tag(self):
         current_col_num = len(self.testmesh.el_df.columns)
         tag_to_add = 'partition_id'

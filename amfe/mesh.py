@@ -357,6 +357,8 @@ class Mesh:
         -------
         nodeids : ndarray
         """
+        if len(elementids) == 0:
+            return np.array([], dtype=int)
         nodeids = np.hstack(self.get_connectivity_by_elementids(elementids))
         nodeids = np.unique(nodeids)
         return nodeids
