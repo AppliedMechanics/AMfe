@@ -12,6 +12,8 @@ This module provides a mesh class that handles the mesh information: nodes, mesh
 
 import numpy as np
 import pandas as pd
+from collections.abc import Iterable
+
 
 __all__ = [
     'Mesh'
@@ -624,6 +626,44 @@ class Mesh:
         
         rows = self.get_elementids_by_tag(tag_name, tag_value)
         return np.array([self._el_df.index.get_loc(row) for row in rows], dtype=int)
+    
+    def get_groups_by_nodeids_and_elementids(self, nodeids, eleids):
+        groups_ele = self.get_groups_by_elementids(eleids)
+        groups_nodes = self.get_groups_by_nodeids(nodeids)
+        
+        for elekey in groups_ele:
+            if elekey not in groups_nodes:
+                groups_ele[elekey].update({'nodes' : []})
+        
+        for nodekey in groups_nodes:
+            if nodekey in groups_ele:
+                groups_ele[nodekey].update(groups_nodes[nodekey])
+            else:
+                groups_ele[nodekey] = {'elements' : []}
+                groups_ele[nodekey].update(groups_nodes[nodekey])
+                
+        return groups_ele
+        
+    def get_groups_by_elementids(self, eleids, secondary_key = 'elements'):
+        if not isinstance(eleids, Iterable):
+            eleids = [eleids]
+        
+        groups_selection = dict()
+        for key in self.groups:
+            for eleid in eleids:
+                if eleid in self.groups[key][secondary_key]:
+                    if key in groups_selection:
+                        elements = groups_selection[key]
+                        elements[secondary_key].append(eleid)
+                        groups_selection[key] = elements
+                    else:                                        
+                        groups_selection.update({key : {secondary_key: [eleid]}})
+                    
+        return groups_selection
+    
+    def get_groups_by_nodeids(self, nodeids):
+        return self.get_groups_by_elementids(nodeids, 'nodes')                 
+        
 
     def _update_iconnectivity(self):
         """

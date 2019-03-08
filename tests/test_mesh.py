@@ -211,6 +211,40 @@ class TestMesh(TestCase):
         actual = self.testmesh.get_iconnectivity_by_elementids(np.array([3, 1], dtype=int))
         for actual_arr, desired_arr in zip(actual, desired):
             assert_array_equal(desired_arr, actual_arr)
+            
+    def test_get_groups_by_elementids(self):
+        groups_actual = self.testmesh.get_groups_by_elementids([1, 2, 4])
+        groups_desired = {'right': {'elements': [1, 2]}, 'left_boundary': {'elements': [4]}}
+        
+        assert_equal(groups_actual, groups_desired)
+        
+        self.testmesh.groups = {'left': {'elements': [3], 'nodes': []},
+                  'right': {'elements': [1, 2], 'nodes': [2, 3, 5, 6]},
+                  'left_boundary': {'elements': [4], 'nodes': []},
+                  'right_boundary': {'elements': [5, 2], 'nodes': [1, 2]}
+                  }
+        
+        groups_actual = self.testmesh.get_groups_by_elementids([1, 2, 4])
+        groups_desired = {'right': {'elements': [1, 2]}, 'left_boundary': {'elements': [4]}, 'right_boundary': {'elements': [2]}}
+        
+        assert_equal(groups_actual, groups_desired)
+        
+    def test_get_groups_by_nodeids(self):
+        groups_actual = self.testmesh.get_groups_by_nodeids([1, 2, 6])
+        groups_desired = {'right': {'nodes': [2, 6]},
+                  'right_boundary': {'nodes': [1, 2]}
+                  }
+        
+        assert_equal(groups_actual, groups_desired)
+        
+    def test_get_groups_by_nodeids_and_elementids(self):
+        groups_actual = self.testmesh.get_groups_by_nodeids_and_elementids([3, 5],[3, 4])
+        groups_desired = {'left': {'elements': [3], 'nodes': []},
+                  'right': {'elements': [], 'nodes': [3, 5]},
+                  'left_boundary': {'elements': [4], 'nodes': []}
+                  }
+        
+        assert_equal(groups_actual, groups_desired)
 
     def test_iconnectivity(self):
         actual = self.testmesh.iconnectivity
