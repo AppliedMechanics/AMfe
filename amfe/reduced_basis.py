@@ -5,9 +5,9 @@ Reduced basis methods...
 import numpy as np
 import scipy as sp
 from scipy import linalg
-from scipy.sparse.linalg import LinearOperator
+from scipy.sparse.linalg import LinearOperator, eigsh
 
-from .linalg.linearsolvers import solve_sparse, PardisoLinearSolver
+from .linalg.linearsolvers import PardisoLinearSolver, ScipySparseLinearSolver
 from .linalg.norms import m_normalize
 from .linalg.orth import m_orthogonalize
 
@@ -245,95 +245,114 @@ def vibration_modes(mechanical_system, n=10, save=False):
     return omega, V
 
 
-def craig_bampton(M, K, b, no_of_modes=5, one_basis=True):
-    '''
-    Computes the Craig-Bampton basis for the System M and K with the input
-    Matrix b.
+def craig_bampton(K, M, interface_dofs, no_of_modes=5,
+                  linsolvefunc=None, linsolvekwargs=None, omega_spurious=1.0, shift=0.0):
+    """
+    Computes the Craig-Bampton basis for the System K and M with the interface dofs given at
+    the passed dof indices
 
     Parameters
     ----------
-    M : ndarray
-        Mass matrix of the system.
     K : ndarray
         Stiffness matrix of the system.
-    b : ndarray
-        Input vector of the system
+    M : ndarray
+        Mass matrix of the system
+    interface_dofs : list or ndarray
+        list containing the dof numbers (zero indexed) that are the interface dofs
     no_of_modes : int, optional
-        Number of internal vibration modes for the reduction of the system.
+        Number of fixed interface modes
         Default is 5.
-    one_basis : bool, optional
-        Flag for setting, if one Craig-Bampton basis should be returned or if
-        the static and the dynamic basis is chosen separately
+    linsolvefunc : function
+        linear solver function with signature x = func(A, b) for solving Ax=b
+        This solve is called for the static part of the basis
+    linsolvekwargs : dict
+        keyword arguments for the linear solver
+    omega_spurious : float
+        During the solution of the fixed interface modes, spurious modes are introduced which are removed afterwards
+        These spurious modes have a frequency of omega_spurious. They are removed by identifying these modes
+        by their eigenfrquency. This could cause problems if a real eigenfrquency is nearly the eigenfrequency of the
+        spurious modes. If this is the case one can shift the eigenfrquency of th spurious modes by setting this
+        parameter.
+    shift : float, optional
+        Pass the shift for the fixed interface modes. This makes the eigensolver find frequencies near this shift.
+        Default is 0.0 which means the lowest eigenfrequencies are searched for.
 
     Returns
     -------
-    if `one_basis=True` is chosen:
+    V : ndarray
+        Basis consisting of static displacement modes and fixed interface modes
 
-    V : array
-        Basis consisting of static displacement modes and internal vibration
-        modes
-
-    if `one_basis=False` is chosen:
-
-    V_static : ndarray
-        Static displacement modes corresponding to the input vectors b with
-        V_static[:,i] being the corresponding static displacement vector to
-        b[:,i].
-    V_dynamic : ndarray
-        Internal vibration modes with the boundaries fixed.
     omega : ndarray
-        eigenfrequencies of the internal vibration modes.
+        eigenfrequencies of the fixed interface modes.
 
     Examples
     --------
-    TODO
-
-    Notes
-    -----
-    There is a filter-out command to remove the interface eigenvalues of the
-    system.
+        >>> V, omega = craig_bampton(K, M, [0, 1, 105, 106], 10)
 
     References
     ----------
-    TODO
+    [1] Géradin, M., & Rixen, D. J. (2014). Mechanical vibrations: theory and application to structural dynamics.
+        John Wiley & Sons.
 
-    '''
-    # boundaries
-    ndof = M.shape[0]
-    b_internal = b.reshape((ndof, -1))
-    indices = sp.nonzero(b)
-    boundary_indices = list(set(indices[0])) # indices
-    no_of_inputs = b_internal.shape[-1]
-    V_static_tmp = np.zeros((ndof, len(boundary_indices)))
+    """
+    # Check if linear solve function is passed else create default solver
+    if linsolvefunc is None:
+        linearsolver = ScipySparseLinearSolver()
+        linsolvefunc = linearsolver.solve
+    if linsolvekwargs is None:
+        linsolvekwargs = dict()
+
+    # Number of dofs of the full system
+    ndof = K.shape[0]
+
+    # ---------------------------------------------------------------------------
+    # Static modes (Guyan part)
+    #
+    # Preallocate Static basis (Guyan Basis)
+    V_static = np.zeros((ndof, len(interface_dofs)))
+    # Copy the K array to not overwrite the passed by referenced K
     K_tmp = K.copy()
-    K_tmp[:, boundary_indices] *= 0
-    K_tmp[boundary_indices, :] *= 0
-    K_tmp[boundary_indices, boundary_indices] = 1
-    for i, index  in enumerate(boundary_indices):
-        f = - K[:,index]
-        f[boundary_indices] = 0
-        f[index] = 1
-        V_static_tmp[:,i] = solve_sparse(K_tmp, f, matrix_type='symm')
-    # Static Modes:
-    V_static = np.zeros((ndof, no_of_inputs))
-    for i in range(no_of_inputs):
-        V_static[:,i] = V_static_tmp.dot(b_internal[boundary_indices, [i,]])
+    # Set the rows and columns of interface dofs to zero
+    K_tmp[:, interface_dofs] *= 0
+    K_tmp[interface_dofs, :] *= 0
+    # Set the diagonal of interface dofs to 1
+    K_tmp[interface_dofs, interface_dofs] = 1
 
-    # inner modes
+    # For each interface dof solve the static problem
+    # For better understanding: The following problem is solved:
+    #
+    #  -           - -      -     -      -
+    #  | 1    0    | | v_bk |  =  | 1_k  |
+    #  | 0    K_ii | | v_ik |     | -K_ik|
+    #  -           - –      -     -      -
+    #
+    # This leads to v_bk = 1_k (first line of the linear equation
+    # and second line K_ii v_ik = - K_ik     <=>    v_ik = K_ii^(-1) K_ik
+    #
+    for i, index in enumerate(interface_dofs):
+        f = - K[:, index]
+        f[interface_dofs] = 0
+        f[index] = 1
+        V_static[:, i] = linsolvefunc(K_tmp, f, **linsolvekwargs)
+
+    # --------------------------------------------------------------------------
+    # fixed interface modes
+    #
     M_tmp = M.copy()
-    # Attention: introducing eigenvalues of magnitude 1 into the system
-    M_tmp[:, boundary_indices] *= 0
-    M_tmp[boundary_indices, :] *= 0
-    M_tmp[boundary_indices, boundary_indices] = 1E0
-    K_tmp[boundary_indices, boundary_indices] = 1E0
-    omega, V_dynamic = linalg.eigh(K_tmp, M_tmp)
-    indexlist = np.nonzero(np.round(omega - 1, 3))[0]
+    # Attention: introducing eigenvalues of magnitude omega_spurious into the system
+    M_tmp[:, interface_dofs] *= 0
+    M_tmp[interface_dofs, :] *= 0
+    M_tmp[interface_dofs, interface_dofs] = 1E0
+    K_tmp[interface_dofs, interface_dofs] = omega_spurious**2
+    # Solve eigenvalue problem
+    omega, V_dynamic = eigsh(K_tmp, no_of_modes+len(interface_dofs), M_tmp, sigma=shift)
+    # Find spurious modes if any
+    indexlist = np.nonzero(np.round(omega - omega_spurious**2, 3))[0]
+    # Remove spuious modes
     omega = np.sqrt(omega[indexlist])
     V_dynamic = V_dynamic[:, indexlist]
-    if one_basis:
-        return sp.hstack((V_static, V_dynamic[:, :no_of_modes]))
-    else:
-        return V_static, V_dynamic[:, :no_of_modes], omega[:no_of_modes]
+
+    return np.concatenate((V_static, V_dynamic[:, :no_of_modes]), axis=1), omega[:no_of_modes]
 
 
 def pod(mechanical_system, n=None):
