@@ -316,6 +316,88 @@ class Mesh:
         """
         return self._el_df.iloc[elementidxs].index.values
 
+    def get_nodeid_by_coordinates(self, x, y, z=None, epsilon=1e-12):
+        """
+
+        Parameters
+        ----------
+        x : float
+            x-coordinate
+        y : float
+            y-coordinate
+        z : float
+            z-coordinate
+        epsilon : float (optional, default 1e-12)
+            Allowed tolerance (distance), default
+
+        Returns
+        -------
+        nodeid : int
+            nodeid with the given coordinates
+        """
+        if self.dimension == 2:
+            if z is not None:
+                print('Warning: z coordinate is ignored in get_nodeid_by_coordinates')
+            nodeid = (self.nodes_df[['x', 'y']] - (x, y)).apply(np.linalg.norm, axis=1).idxmin()
+            if np.linalg.norm(self.nodes_df.loc[nodeid, ['x', 'y']] - (x, y)) > epsilon:
+                nodeid = None
+        else:
+            nodeid = (self.nodes_df[['x', 'y', 'z']] - (x, y, z)).apply(np.linalg.norm, axis=1).idxmin()
+            if np.linalg.norm(self.nodes_df.loc[nodeid, ['x', 'y', 'z']] - (x, y, z)) > epsilon:
+                nodeid = None
+        return nodeid
+
+    def get_nodeids_by_x_coordinates(self, x, epsilon):
+        """
+
+        Parameters
+        ----------
+        x : float
+            x-coordinate where the searched node is located at
+        epsilon : float
+            radius that acceptable as tolerance for the location
+        Returns
+        -------
+        nodeids : ndarray
+            ndarray the nodeids that fulfill the condition
+        """
+        nodeids = self.nodes_df.index[((self.nodes_df['x'] - x).abs() - epsilon) <= 0].tolist()
+        return np.array(nodeids, dtype=int)
+
+    def get_nodeids_by_lesser_equal_x_coordinates(self, x, epsilon):
+        """
+
+        Parameters
+        ----------
+        x : float
+            maximum x coordinate of the desired nodes
+        epsilon : float
+            radius that acceptable as tolerance for the x location
+        Returns
+        -------
+        nodeids : ndarray
+            ndarray the nodeids that fulfill the condition
+        """
+        nodeids = self.nodes_df.index[(self.nodes_df['x'] - (x + epsilon)) <= 0].tolist()
+        return np.array(nodeids, dtype=int)
+
+    def get_nodeids_by_greater_equal_x_coordinates(self, x, epsilon):
+        """
+
+        Parameters
+        ----------
+        x : float
+            minimum x coordinate of the desired nodes
+        epsilon : float
+            radius that acceptable as tolerance for the x location
+        Returns
+        -------
+        nodeids : ndarray
+            ndarray the nodeids that fulfill the condition
+        """
+        nodeids = self.nodes_df.index[(self.nodes_df['x'] - (x - epsilon)) >= 0].tolist()
+        return np.array(nodeids, dtype=int)
+
     def get_nodeids_by_groups(self, groups):
         """
         Returns nodeids of the nodes property belonging to a group

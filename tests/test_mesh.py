@@ -7,6 +7,7 @@ from unittest import TestCase, main
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_equal, assert_array_equal
+from copy import deepcopy
 
 
 class TestMesh(TestCase):
@@ -41,6 +42,17 @@ class TestMesh(TestCase):
         self.testmesh.nodes_df = nodes_df
         self.testmesh.groups = groups
         self.testmesh._el_df = el_df
+
+        self.testmesh3d = deepcopy(self.testmesh)
+        nodes3d = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0],
+                            [1.0, 1.0, 0.0], [0.0, 1.0, 0.0],
+                            [2.0, 0.0, 1.0], [2.0, 1.0, 1.0]], dtype=np.float)
+        self.testmesh3d.dimension = 3
+        x = nodes3d[:, 0]
+        y = nodes3d[:, 1]
+        z = nodes3d[:, 2]
+        nodes_df3d = pd.DataFrame({'x': x, 'y': y, 'z': z}, index=nodeids)
+        self.testmesh3d.nodes_df = nodes_df3d
 
     def tearDown(self):
         pass
@@ -99,6 +111,80 @@ class TestMesh(TestCase):
         actual = self.testmesh.get_elementids_by_groups(['right', 'left_boundary'])
         desired = np.array([1, 2, 4], dtype=int)
         assert_array_equal(actual, desired)
+
+    def test_get_nodeid_by_coordinates(self):
+        # 2d case
+        x, y = 2.0, 0.0
+        desired = 5
+        actual = self.testmesh.get_nodeid_by_coordinates(x, y)
+        self.assertEqual(actual, desired)
+
+        # 3d Case
+        z = 1.0
+        actual = self.testmesh3d.get_nodeid_by_coordinates(x, y, z)
+        self.assertEqual(actual, desired)
+
+        # big tolerance
+        x = 500.0
+        epsilon = np.inf
+        actual = self.testmesh.get_nodeid_by_coordinates(x, y, epsilon=epsilon)
+        self.assertEqual(actual, desired)
+
+        actual = self.testmesh3d.get_nodeid_by_coordinates(x, y, z, epsilon=epsilon)
+        self.assertEqual(actual, desired)
+
+        # zero return
+        x = 500.0
+        desired = None
+        actual = self.testmesh.get_nodeid_by_coordinates(x, y)
+        self.assertEqual(actual, desired)
+
+        actual = self.testmesh3d.get_nodeid_by_coordinates(x, y, z)
+        self.assertEqual(actual, desired)
+
+    def test_get_nodeids_by_x_coordinates(self):
+        x = 2.0
+        epsilon = 0.1
+        desired = {5, 6}
+        actual = set(self.testmesh.get_nodeids_by_x_coordinates(x, epsilon))
+        self.assertEqual(actual, desired)
+
+        epsilon = 1.1
+        desired = {2, 3, 5, 6}
+        actual = set(self.testmesh.get_nodeids_by_x_coordinates(x, epsilon))
+        self.assertEqual(actual, desired)
+
+    def test_get_nodeids_by_lesser_equal_x_coordinates(self):
+        x = 1.0
+        epsilon = 0.1
+        desired = {1, 2, 3, 4}
+        actual = set(self.testmesh.get_nodeids_by_lesser_equal_x_coordinates(x, epsilon))
+        self.assertEqual(actual, desired)
+
+        x = 0.9
+        actual = set(self.testmesh.get_nodeids_by_lesser_equal_x_coordinates(x, epsilon))
+        self.assertEqual(actual, desired)
+
+        epsilon = 0.01
+        desired = {1, 4}
+        actual = set(self.testmesh.get_nodeids_by_lesser_equal_x_coordinates(x, epsilon))
+        self.assertEqual(actual, desired)
+
+    def test_get_nodeids_by_greater_equal_x_coordinates(self):
+        x = 1.0
+        epsilon = 0.1
+        desired = {2, 3, 5, 6}
+        actual = set(self.testmesh.get_nodeids_by_greater_equal_x_coordinates(x, epsilon))
+        self.assertEqual(actual, desired)
+
+        x = 1.1
+        actual = set(self.testmesh.get_nodeids_by_greater_equal_x_coordinates(x, epsilon))
+        self.assertEqual(actual, desired)
+
+        epsilon = 0.01
+        desired = {5, 6}
+        actual = set(self.testmesh.get_nodeids_by_greater_equal_x_coordinates(x, epsilon))
+        self.assertEqual(actual, desired)
 
     def test_get_nodeids_by_group(self):
         actual = self.testmesh.get_nodeids_by_groups(['left'])
