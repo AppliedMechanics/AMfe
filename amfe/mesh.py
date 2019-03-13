@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 from collections.abc import Iterable
 
-
 __all__ = [
     'Mesh'
 ]
@@ -91,7 +90,6 @@ class Mesh:
         self._changed_iconnectivity = True
         # Cache for lazy evaluation of iconnectivity
         self._iconnectivity_df_cached = pd.DataFrame(columns=('iconnectivity',))
-
 
     @property
     def el_df(self):
@@ -230,7 +228,12 @@ class Mesh:
         connectivity : list of ndarrays
             list containing the connectivity of the desired elements
         """
-        return self._el_df.loc[elementids, 'connectivity'].values
+        if not isinstance(elementids, Iterable):
+            elementids = [elementids]
+        
+        connectivities = np.hstack(self._el_df.loc[elementids, 'connectivity'].values)
+
+        return connectivities
 
     def get_iconnectivity_by_elementids(self, elementids):
         """
@@ -447,22 +450,25 @@ class Mesh:
         nodeids = np.unique(nodeids)
         return nodeids
     
-    def get_nodeids_by_tag(self, tag_name, tag_value):
+    def get_nodeids_by_tags(self, tag_name, tag_value, opt_larger=None):
         """
         Returns nodeids of the nodes property belonging to elements, that are tagged by the assigne tag-value
 
         Parameters
         ----------
-        tag_name : str
+        tag_name : list of str
             tag name for adding column in el_df 
-        tag_value : str, int, Boolean, float
+        tag_value : list of str, int, Boolean, float
             current tag value to select the element ids
+        opt_larger : list of boolean
+            optional parameter for selection by a larger-than-boolean operation for the specified tag 
+
 
         Returns
         -------
         nodeids : ndarray
         """
-        elementids = self.get_elementids_by_tag(tag_name, tag_value)
+        elementids = self.get_elementids_by_tags(tag_name, tag_value, opt_larger)
         nodeids = self.get_nodeids_by_elementids(elementids)
         return nodeids
 
@@ -656,7 +662,7 @@ class Mesh:
         self._el_df = self._el_df.replace({tag_name : current_tag_value}, new_tag_value)
         return None
 
-    def get_elementids_by_tag(self, tag_name, tag_value):
+    def get_elementids_by_tags(self, tag_names, tag_values, opt_larger=None):
         """
         This function returns a list with the element ids given a "tag_name" 
         and the tag value associated with it. 
@@ -664,10 +670,12 @@ class Mesh:
 
         Parameters
         ----------
-        tag_name : str
+        tag_names : list of str
             tag name for adding column in el_df 
-        tag_value : str, int, Boolean, float
+        tag_values : list of str, int, Boolean, float
             current tag value to select the element ids
+        opt_larger : list of boolean
+            optional parameter for selection by a larger-than-boolean operation for the specified tag 
     
         Returns
         -------
@@ -677,12 +685,23 @@ class Mesh:
         Example
         -------
             testmesh = amfe.mesh.Mesh()
-            elementids_list = testmesh.get_elementids_by_tag('is_boundary','False')   
+            elementids_list = testmesh.get_elementids_by_tags('is_boundary','False')   
         """
         
-        return self.el_df[self.el_df[tag_name] == tag_value].index.values
+        if not isinstance(tag_names, Iterable) or isinstance(tag_names, str):
+            tag_names = [tag_names]
+            tag_values = [tag_values]
+            
+        ele = self.el_df
+        for itag, tagname in enumerate(tag_names):
+            if opt_larger is not None and opt_larger[itag]:
+                ele = ele[ele[tagname] > tag_values[itag]]
+            else:
+                ele = ele[ele[tagname] == tag_values[itag]]
+        return ele.index.values
 
-    def get_elementidxs_by_tag(self, tag_name, tag_value):
+
+    def get_elementidxs_by_tags(self, tag_names, tag_values, opt_larger=None):
         """
         This function returns a list with the elementidxs in connectivity array
         given a "tag_name" and the tag value associated with it. 
@@ -690,10 +709,13 @@ class Mesh:
 
         Parameters
         ----------
-        tag_name : str
+        tag_names : list of str
             tag name for adding column in el_df 
-        tag_value : str, int, Boolean, float
+        tag_values : list of str, int, Boolean, float
             current tag value to select the element idxs
+        opt_larger : list of boolean
+            optional parameter for selection by a larger-than-boolean operation for the specified tag 
+
     
         Returns
         -------
@@ -706,7 +728,7 @@ class Mesh:
             elementidxs_list = testmesh.get_elementidxs_by_tag('is_boundary','False')                
         """
         
-        rows = self.get_elementids_by_tag(tag_name, tag_value)
+        rows = self.get_elementids_by_tags(tag_names, tag_values, opt_larger)
         return np.array([self._el_df.index.get_loc(row) for row in rows], dtype=int)
     
     def merge_into_groups(self, groups):        
@@ -729,8 +751,7 @@ class Mesh:
                 for secondary_key in ['elements', 'nodes']:
                     if secondary_key in groups[key]:
                         for list_entry in groups[key][secondary_key]:
-                            if list_entry not in self.groups[key][secondary_key]:
-                                self.groups[key][secondary_key].append(list_entry)
+                            self.add_element_to_groups(list_entry, [key], secondary_key)
             else:
                 self.groups[key] = groups[key]
                 
@@ -783,7 +804,7 @@ class Mesh:
             group-names of the specified nodes
         """
 
-        return self.get_groups_by_elementids(nodeids, 'nodes')         
+        return self.get_groups_by_elementids(nodeids, 'nodes')
     
     def get_groups_dict_by_elementids(self, eleids, secondary_key = 'elements'):
         """
@@ -833,8 +854,69 @@ class Mesh:
         groups : dict
             subdictionary of the mesh's groups with the given nodes only
         """
-        return self.get_groups_dict_by_elementids(nodeids, 'nodes')        
+        return self.get_groups_dict_by_elementids(nodeids, 'nodes')
+    
+    def add_element_to_groups(self, new_ele, groups_ele, secondary_key = 'elements'):
+        for key in groups_ele:
+            if new_ele not in self.groups[key][secondary_key]:
+                self.groups[key][secondary_key].append(new_ele)
+
+    def add_node_to_groups(self, new_node, groups_node):
+        self.add_element_to_groups(new_node, groups_node, 'nodes')
+    
+    def get_nodes_and_elements_by_partition_id(self, partition_id):
+        """
+        Provides dataframes with all nodes and elements, which belong to the requested partition.
         
+        Parameters
+        ----------
+        partition_id : int
+            id of the requested partition
+            
+        Returns
+        -------
+        nodes : pandas.DataFrame
+            all and only nodes, that belong to selected partition
+            
+        elements : pandas.DataFrame
+            all and only elements, that belong to selected partition
+        """
+
+        ele_ids = self.get_elementids_by_tags('partition_id', partition_id)
+        elements = self._el_df.loc[ele_ids]
+        node_ids = np.unique(self.get_connectivity_by_elementids(ele_ids))
+        nodes = self.nodes_df.loc[node_ids]
+        
+        return nodes, elements
+    
+    def copy_node_by_id(self, node_id):
+        return self.add_node(self.nodes_df.loc[node_id])
+    
+    def add_node(self, node_coordinates, node_id=None):
+        """
+        Copy node with its coordinates and append it at the node-list's end.
+        
+        Parameters
+        ----------
+        node_id : int
+            id of that node, which is to be copied
+            
+        Returns
+        -------
+        new_node_id : int
+            id of the new, copied node
+        """
+        if node_id is None or node_id in self.nodes_df.index.tolist():
+            node_id = max(self.nodes_df.index.tolist())+1
+            
+        if isinstance(node_coordinates, pd.Series):
+            new_node = node_coordinates.rename(node_id)
+        else:
+            new_node = pd.DataFrame(node_coordinates, index=[node_id])
+            
+        self.nodes_df = self.nodes_df.append(new_node, ignore_index=False)
+        return node_id
+
 
     def _update_iconnectivity(self):
         """

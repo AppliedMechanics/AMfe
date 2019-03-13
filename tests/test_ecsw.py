@@ -120,7 +120,7 @@ class TestEcsw(TestCase):
 
         # Test first entry of G
         g11_actual = G[0:self.no_of_dofs, 0]
-        connectivity = self.my_mesh.get_connectivity_by_elementids([1])[0]
+        connectivity = self.my_mesh.get_connectivity_by_elementids([1])
         X_local = self.my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
         u_local_indices = self.my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
         u_local = self.S[u_local_indices, 0]
@@ -131,7 +131,7 @@ class TestEcsw(TestCase):
         assert_allclose(g11_actual, g11_desired)
         # Test second entry of G
         g21_actual = G[self.no_of_dofs:, 0]
-        connectivity = self.my_mesh.get_connectivity_by_elementids([1])[0]
+        connectivity = self.my_mesh.get_connectivity_by_elementids([1])
         X_local = self.my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
         u_local_indices = self.my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
         u_local = self.S[u_local_indices, 1]
@@ -142,7 +142,7 @@ class TestEcsw(TestCase):
         assert_allclose(g21_actual, g21_desired)
         # Test third entry of G
         g12_actual = G[0:self.no_of_dofs, 1]
-        connectivity = self.my_mesh.get_connectivity_by_elementids([2])[0]
+        connectivity = self.my_mesh.get_connectivity_by_elementids([2])
         X_local = self.my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
         u_local_indices = self.my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
         u_local = self.S[u_local_indices, 0]

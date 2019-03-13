@@ -7,6 +7,7 @@ from unittest import TestCase, main
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_equal, assert_array_equal
+from pandas.testing import assert_frame_equal
 from copy import deepcopy
 
 
@@ -84,8 +85,8 @@ class TestMesh(TestCase):
 
     def test_get_connectivity_by_elementids(self):
         desireds = [np.array([5, 6, 3], dtype=int), np.array([4, 1], dtype=int)]
-        for actual, desired in zip(self.testmesh.get_connectivity_by_elementids([1, 4]), desireds):
-            assert_array_equal(actual, desired)
+        for idx, ele in enumerate([1, 4]):
+            assert_array_equal(self.testmesh.get_connectivity_by_elementids(ele), desireds[idx])
 
     def test_get_elementidxs_by_group(self):
         actual = self.testmesh.get_elementidxs_by_groups(['right'])
@@ -272,19 +273,19 @@ class TestMesh(TestCase):
         actual = self.testmesh.el_df[self.testmesh.el_df[tag_name] == new_key].index.tolist()
         assert_equal(desired, actual)
         
-    def test_get_elementids_by_tag(self):
+    def test_get_elementids_by_tags(self):
         desired = np.array([1, 2], dtype=int)
-        actual = self.testmesh.get_elementids_by_tag('shape', 'Tri3')
+        actual = self.testmesh.get_elementids_by_tags('shape', 'Tri3')
         assert_array_equal(desired, actual)
         
     def test_get_nodeids_by_tag(self):
         desired = np.array([1, 4, 5, 6], dtype=int)
-        actual = self.testmesh.get_nodeids_by_tag('shape', 'straight_line')
+        actual = self.testmesh.get_nodeids_by_tags('shape', 'straight_line')
         assert_array_equal(desired, actual)
 
-    def test_get_elementidxs_by_tag_value(self):
+    def test_get_elementidxs_by_tags(self):
         desired = np.array([0, 1], dtype=int)
-        actual = self.testmesh.get_elementidxs_by_tag('shape','Tri3')
+        actual = self.testmesh.get_elementidxs_by_tags('shape','Tri3')
         assert_equal(desired, actual)
 
     def test_get_iconnectivity_by_elementids(self):
@@ -364,6 +365,32 @@ class TestMesh(TestCase):
                   }
         
         assert_equal(self.testmesh.groups, groups_desired)
+            
+    def test_add_node(self):
+        nodes_df_old = deepcopy(self.testmesh.nodes_df)
+        nodes_df_desired = deepcopy(nodes_df_old)
+        nodes_df_desired.loc[7] = {'x': 1.0, 'y': 0.5}
+        
+        self.testmesh.add_node({'x': 1.0, 'y': 0.5})
+        
+        assert_frame_equal(self.testmesh.nodes_df, nodes_df_desired)
+        assert_equal(self.testmesh.no_of_nodes, 7)
+        
+        self.testmesh.nodes_df = nodes_df_old
+        nodes_df_desired = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0, 2.0, 2.0, 1.0], 'y': [0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.5]}, index=[1, 2, 3, 4, 5, 6, 7])
+        
+        self.testmesh.add_node({'x': 1.0, 'y': 0.5}, 3)
+        
+        assert_frame_equal(self.testmesh.nodes_df, nodes_df_desired)
+        assert_equal(self.testmesh.no_of_nodes, 7)
+        
+    def test_copy_node_by_id(self):
+        nodes_df_old = deepcopy(self.testmesh.nodes_df)
+        nodes_df_desired = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0, 2.0, 2.0, 1.0], 'y': [0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4, 5, 6, 7])
+        
+        self.testmesh.copy_node_by_id(3)
+
+        assert_frame_equal(self.testmesh.nodes_df, nodes_df_desired)
 
     def test_iconnectivity(self):
         actual = self.testmesh.iconnectivity
@@ -373,6 +400,82 @@ class TestMesh(TestCase):
                         np.array([3, 0], dtype=np.int), np.array([4, 5], dtype=np.int)]
         for actual_arr, desired_arr in zip(actual, desired):
             assert_array_equal(desired_arr, actual_arr)
+            
+class TestPartitionedMesh(TestCase):
+    def setUp(self):
+        from amfe.mesh import Mesh
+        self.testmesh = Mesh(dimension=2)
+        '''
+        Testmesh:                Partition:
+        
+                                    9---10--11   11--12
+        9---10--11--12              |  *3*  |    |*4*|
+        |   |   |   |               |       |    |   |
+        |   |   |   |               4---3---6    6---7
+        4---3---6---7            
+        |   |\  |  /|               4---3---6    6---7
+        |   |  \| / |               |  *1*  |    |*2*|
+        1---2---5---8               |       |    |   |
+                                    1---2---5    5---8
+        '''
+        nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0], [3.0, 1.0], [3.0, 0.0], [0.0, 2.0], [1.0, 2.0], [2.0, 2.0], [3.0, 2.0]], dtype=np.float)
+        connectivity = [np.array([5, 6, 3], dtype=np.int), np.array([3, 2, 5], dtype=np.int),
+                        np.array([1, 2, 3, 4], dtype=np.int), np.array([5, 7, 8], dtype=np.int), np.array([6, 7, 5], dtype=np.int),
+                        np.array([3, 4, 9, 10], dtype=np.int), np.array([6, 7, 11, 12], dtype=np.int), np.array([3, 6, 10, 11], dtype=np.int),
+                        # boundary elements
+                        np.array([4, 1], dtype=np.int), np.array([4, 9], dtype=np.int), np.array([7, 8], dtype=np.int), np.array([7, 12], dtype=np.int)]
+
+        self._connectivity = connectivity
+
+        data = {'shape': ['Tri3', 'Tri3', 'Quad4', 'Tri3', 'Tri3', 'Quad4', 'Quad4', 'Quad4', 'straight_line', 'straight_line', 'straight_line', 'straight_line'],
+                'is_boundary': [False, False, False, False, False, False, False, False, True, True, True, True],
+                'connectivity': connectivity,
+                'no_of_mesh_partitions': [4, 3, 2, 3, 4, 2, 4, 4, 2, 2, 2, 2],
+                'partition_id': [1, 1, 1, 2, 2, 3, 4, 3, 1, 3, 2, 4],
+                'partitions_neighbors': [(-2, -3, -4), (-2, -3), -3, (-1, -4), (-1, -3, -4), -1, (-1, -2, -3), (-1, -2, -4), -3, -1, -4, -2]
+                }
+        indices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        el_df = pd.DataFrame(data, index=indices)
+
+        x = nodes[:, 0]
+        y = nodes[:, 1]
+        nodeids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        nodes_df = pd.DataFrame({'x': x, 'y': y}, index=nodeids)
+
+        groups = {'left': {'elements': [3], 'nodes': []},
+                  'right': {'elements': [1, 2], 'nodes': [2, 3, 5, 6]},
+                  'left_boundary': {'elements': [9, 10], 'nodes': [1, 4]},
+                  'right_boundary': {'elements': [11, 12], 'nodes': [7, 8]}
+                  }
+
+        self.testmesh.nodes_df = nodes_df
+        self.testmesh.groups = groups
+        self.testmesh._el_df = el_df
+        
+    def test_get_nodes_and_elements_by_partition_id(self):
+        nodes_coord_desired = np.array([[2.0, 0.0], [2.0, 1.0], [3.0, 1.0], [3.0, 0.0]], dtype=np.float)
+        x = nodes_coord_desired[:, 0]
+        y = nodes_coord_desired[:, 1]
+        nodeids = [5, 6, 7, 8]
+        nodes_desired = pd.DataFrame({'x': x, 'y': y}, index=nodeids)
+        
+        connectivity_desired = [np.array([5, 7, 8], dtype=np.int), np.array([6, 7, 5], dtype=np.int), np.array([7, 8], dtype=np.int)]
+        data = {'shape': ['Tri3', 'Tri3', 'straight_line'],
+                'is_boundary': [False, False, True],
+                'connectivity': connectivity_desired,
+                'no_of_mesh_partitions': [3, 4, 2],
+                'partition_id': [2, 2, 2],
+                'partitions_neighbors': [(-1, -4), (-1, -3, -4), -4]
+                }
+        indices = [4, 5, 11]
+        elements_desired = pd.DataFrame(data, index=indices)
+        
+        nodes, elements = self.testmesh.get_nodes_and_elements_by_partition_id(2)
+        
+        assert_frame_equal(nodes, nodes_desired)
+        assert_frame_equal(elements, elements_desired)
+
+        
 
 
 if __name__ == '__main__':

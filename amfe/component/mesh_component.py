@@ -73,7 +73,7 @@ class MeshComponent(ComponentBase):
         elif tag == '_eleids':
             eleids = propertynames
         else:
-            eleids = self._mesh.get_elementids_by_tag(tag, propertynames)
+            eleids = self._mesh.get_elementids_by_tags(tag, propertynames)
         self._assign_material_by_eleids(materialobj, eleids, physics)
 
     def _assign_material_by_eleids(self, materialobj, eleids, physics):
