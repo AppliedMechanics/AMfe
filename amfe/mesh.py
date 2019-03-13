@@ -627,41 +627,80 @@ class Mesh:
         rows = self.get_elementids_by_tag(tag_name, tag_value)
         return np.array([self._el_df.index.get_loc(row) for row in rows], dtype=int)
     
-    def get_groups_by_nodeids_and_elementids(self, nodeids, eleids):
-        groups_ele = self.get_groups_by_elementids(eleids)
-        groups_nodes = self.get_groups_by_nodeids(nodeids)
+    def merge_into_groups(self, groups):        
+        """
+        Merge a dictionary of groups with node- and element-ids into the mesh's 'groups'-dictionary. The additional dictionary has to be of format
         
-        for elekey in groups_ele:
-            if elekey not in groups_nodes:
-                groups_ele[elekey].update({'nodes' : []})
+        groups = {*groupname* : {'nodes' : [*node-ids*], 'elements' : [*element-ids*]}}
         
-        for nodekey in groups_nodes:
-            if nodekey in groups_ele:
-                groups_ele[nodekey].update(groups_nodes[nodekey])
+        Parameters
+        ----------
+        groups : dict
+            additional dictionary, which is to be merged into the mesh's 'groups'
+            
+        Returns
+        -------
+        None
+        """
+        for key in groups:
+            if key in self.groups:
+                for secondary_key in ['elements', 'nodes']:
+                    if secondary_key in groups[key]:
+                        for list_entry in groups[key][secondary_key]:
+                            if list_entry not in self.groups[key][secondary_key]:
+                                self.groups[key][secondary_key].append(list_entry)
             else:
-                groups_ele[nodekey] = {'elements' : []}
-                groups_ele[nodekey].update(groups_nodes[nodekey])
+                self.groups[key] = groups[key]
                 
-        return groups_ele
+                for secondary_key in ['elements', 'nodes']:
+                    if secondary_key not in groups[key]:
+                        self.groups[key].update({secondary_key : []})
         
     def get_groups_by_elementids(self, eleids, secondary_key = 'elements'):
+        """
+        Provides a selection of groups, where the given elements belong to.
+        
+        Parameters
+        ----------
+        eleids : list of int
+            list of elements, which group-belongings shall be returned
+        secondary_key : string
+            optional argument, which defines, whether 'elements' or 'nodes' shall be searched in self.groups. Do not use this, to search for nodes though. 
+            Rather use the 'get_groups_by_nodeids'-method for clearer code-structure instead. 
+
+        
+        Returns
+        -------
+        groups : list of str
+            group-names of the specified elements
+        """
         if not isinstance(eleids, Iterable):
             eleids = [eleids]
         
-        groups_selection = dict()
+        groups_selection = []
         for key in self.groups:
             for eleid in eleids:
                 if eleid in self.groups[key][secondary_key]:
-                    if key in groups_selection:
-                        elements = groups_selection[key]
-                        elements[secondary_key].append(eleid)
-                        groups_selection[key] = elements
-                    else:                                        
-                        groups_selection.update({key : {secondary_key: [eleid]}})
+                    if key not in groups_selection:
+                        groups_selection.append(key)
                     
         return groups_selection
     
     def get_groups_by_nodeids(self, nodeids):
+        """
+        Provides a selection of groups, where the given nodes belong to.
+        
+        Parameters
+        ----------
+        nodeids : list of int
+            list of nodes, which group-belongings shall be returned
+        
+        Returns
+        -------
+        groups : list of str
+            group-names of the specified nodes
+        """
+
         return self.get_groups_by_elementids(nodeids, 'nodes')                 
         
 
