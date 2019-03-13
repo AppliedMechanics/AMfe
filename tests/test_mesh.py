@@ -235,6 +235,32 @@ class TestMesh(TestCase):
         
         assert_equal(groups_actual, groups_desired)
         
+    def test_get_groups_dict_by_elementids(self):
+        groups_actual = self.testmesh.get_groups_dict_by_elementids([1, 2, 4])
+        groups_desired = {'right': {'elements': [1, 2]}, 'left_boundary': {'elements': [4]}}
+        
+        assert_equal(groups_actual, groups_desired)
+        
+        self.testmesh.groups = {'left': {'elements': [3], 'nodes': []},
+                  'right': {'elements': [1, 2], 'nodes': [2, 3, 5, 6]},
+                  'left_boundary': {'elements': [4], 'nodes': []},
+                  'right_boundary': {'elements': [5, 2], 'nodes': [1, 2]}
+                  }
+        
+        groups_actual = self.testmesh.get_groups_dict_by_elementids([1, 2, 4])
+        groups_desired = {'right': {'elements': [1, 2]}, 'left_boundary': {'elements': [4]}, 'right_boundary': {'elements': [2]}}
+        
+        assert_equal(groups_actual, groups_desired)
+        
+    def test_get_groups_dict_by_nodeids(self):
+        groups_actual = self.testmesh.get_groups_dict_by_nodeids([1, 2, 6])
+        groups_desired = {'right': {'nodes': [2, 6]},
+                  'right_boundary': {'nodes': [1, 2]}
+                  }
+        
+        assert_equal(groups_actual, groups_desired)
+
+        
     def test_merge_into_groups(self):
         add_groups = {'left': {'elements': [3], 'nodes': [1, 4]},
                   'right': {'elements': [1, 2]},

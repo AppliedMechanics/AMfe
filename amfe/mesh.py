@@ -701,7 +701,57 @@ class Mesh:
             group-names of the specified nodes
         """
 
-        return self.get_groups_by_elementids(nodeids, 'nodes')                 
+        return self.get_groups_by_elementids(nodeids, 'nodes')         
+    
+    def get_groups_dict_by_elementids(self, eleids, secondary_key = 'elements'):
+        """
+        Provides a selection of groups as a sub-dictionary, where the given elements belong to.
+        
+        Parameters
+        ----------
+        eleids : list of int
+            list of elements, which group-belongings shall be returned
+        secondary_key : string
+            optional argument, which defines, whether 'elements' or 'nodes' shall be searched in self.groups. Do not use this, to search for nodes though. 
+            Rather use the 'get_groups_by_nodeids'-method for clearer code-structure instead. 
+
+        
+        Returns
+        -------
+        groups : dict
+            subdictionary of the mesh's groups with the given nodes only
+        """
+        if not isinstance(eleids, Iterable):
+            eleids = [eleids]
+        
+        groups_selection = dict()
+        for key in self.groups:
+            for eleid in eleids:
+                if eleid in self.groups[key][secondary_key]:
+                    if key in groups_selection:
+                        elements = groups_selection[key]
+                        elements[secondary_key].append(eleid)
+                        groups_selection[key] = elements
+                    else:                                        
+                        groups_selection.update({key : {secondary_key: [eleid]}})
+                    
+        return groups_selection
+    
+    def get_groups_dict_by_nodeids(self, nodeids):
+        """
+        Provides a selection of groups as a sub-dictionary, where the given nodes belong to.
+        
+        Parameters
+        ----------
+        nodeids : list of int
+            list of nodes, which group-belongings shall be returned
+        
+        Returns
+        -------
+        groups : dict
+            subdictionary of the mesh's groups with the given nodes only
+        """
+        return self.get_groups_dict_by_elementids(nodeids, 'nodes')        
         
 
     def _update_iconnectivity(self):
