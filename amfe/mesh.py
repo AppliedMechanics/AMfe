@@ -686,17 +686,15 @@ class Mesh:
         if not isinstance(tag_names, Iterable) or isinstance(tag_names, str):
             tag_names = [tag_names]
             tag_values = [tag_values]
-            
-        eleids = []
+        
+        eleids = np.array([], dtype=int)
         for itag, tagname in enumerate(tag_names):
             if opt_larger is not None and opt_larger[itag]:
-                eleids += self._el_df[self._el_df[tagname] > tag_values[itag]].index.tolist()
+                eleids = np.hstack((eleids, self._el_df[self._el_df[tagname] > tag_values[itag]].index.values))
             else:
-                eleids += self._el_df[self._el_df[tagname] == tag_values[itag]].index.tolist()
+                eleids = np.hstack((eleids, self._el_df[self._el_df[tagname] == tag_values[itag]].index.values))
         
-        eleids = list(set(eleids))
-        eleids.sort()
-        return eleids
+        return np.unique(eleids)
 
 
     def get_elementidxs_by_tags(self, tag_names, tag_values, opt_larger=None):
@@ -912,9 +910,6 @@ class Mesh:
         return nodes, elements
     
     def copy_node_by_id(self, node_id):
-        return self.add_node(self.nodes_df.loc[node_id])
-    
-    def add_node(self, node_coordinates, node_id=None):
         """
         Copy node with its coordinates and append it at the node-list's end.
         
@@ -928,13 +923,43 @@ class Mesh:
         new_node_id : int
             id of the new, copied node
         """
+        return self.add_node(self.nodes_df.loc[node_id])
+    
+    def add_node(self, node_coordinates, node_id=None):
+        """
+        Add new node to mesh with given coordinates. In case of 2D-mesh the z-coordinate is not needed.
+        It is optional to give a node-id as well. If the given node-id is reserved already or no node-id is given, the next larger one is set.
+        
+        Parameters
+        ----------
+        node_coordinates : ndarray, pandas.Series 
+            x, y, z coordinates of new node. In case of a pandas.Series, it has to consist of columns 'x', 'y' and maybe 'z'
+        node_id : int
+            id of that node, which is to be copied
+            
+        Returns
+        -------
+        new_node_id : int
+            id of the new, added node
+        """
+        
         if node_id is None or node_id in self.nodes_df.index.tolist():
             node_id = self.nodes_df.last_valid_index() + 1
             
         if isinstance(node_coordinates, pd.Series):
+            if 'z' in node_coordinates:
+                print('WARNING: To many coordinates were given. Droping the z-coordinate.')
+                node_coordinates.drop('z', axis=1)
+                
             new_node = node_coordinates.rename(node_id)
         else:
-            new_node = pd.DataFrame(node_coordinates, index=[node_id])
+            if self.dimension == 2:
+                if node_coordinates.shape[0] > self.dimension:
+                    print('WARNING: To many coordinates were given. Droping the last ', node_coordinates.shape[0]-self.dimension, ' entries.')
+
+                new_node = pd.Series({'x' : node_coordinates[0], 'y' : node_coordinates[1]}, name=node_id)
+            elif self.dimension == 3:
+                new_node = pd.Series({'x' : node_coordinates[0], 'y' : node_coordinates[1], 'z' : node_coordinates[2]}, name=node_id)
             
         self.nodes_df = self.nodes_df.append(new_node, ignore_index=False)
         return node_id

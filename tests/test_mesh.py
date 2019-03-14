@@ -375,7 +375,7 @@ class TestMesh(TestCase):
         nodes_df_desired = deepcopy(nodes_df_old)
         nodes_df_desired.loc[7] = {'x': 1.0, 'y': 0.5}
         
-        self.testmesh.add_node({'x': 1.0, 'y': 0.5})
+        self.testmesh.add_node(pd.Series({'x': 1.0, 'y': 0.5}))
         
         assert_frame_equal(self.testmesh.nodes_df, nodes_df_desired)
         assert_equal(self.testmesh.no_of_nodes, 7)
@@ -383,7 +383,7 @@ class TestMesh(TestCase):
         self.testmesh.nodes_df = nodes_df_old
         nodes_df_desired = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0, 2.0, 2.0, 1.0], 'y': [0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.5]}, index=[1, 2, 3, 4, 5, 6, 7])
         
-        self.testmesh.add_node({'x': 1.0, 'y': 0.5}, 3)
+        self.testmesh.add_node(np.array([1.0, 0.5, 4.0]), 3)
         
         assert_frame_equal(self.testmesh.nodes_df, nodes_df_desired)
         assert_equal(self.testmesh.no_of_nodes, 7)
