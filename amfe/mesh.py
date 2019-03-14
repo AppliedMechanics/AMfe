@@ -12,6 +12,8 @@ This module provides a mesh class that handles the mesh information: nodes, mesh
 
 import numpy as np
 import pandas as pd
+from collections.abc import Iterable
+
 
 __all__ = [
     'Mesh'
@@ -706,6 +708,154 @@ class Mesh:
         
         rows = self.get_elementids_by_tag(tag_name, tag_value)
         return np.array([self._el_df.index.get_loc(row) for row in rows], dtype=int)
+    
+    def merge_into_groups(self, groups):        
+        """
+        Merge a dictionary of groups with node- and element-ids into the mesh's 'groups'-dictionary. The additional dictionary has to be of format
+        
+        groups = {*groupname* : {'nodes' : [*node-ids*], 'elements' : [*element-ids*]}}
+        
+        Parameters
+        ----------
+        groups : dict
+            additional dictionary, which is to be merged into the mesh's 'groups'
+            
+        Returns
+        -------
+        None
+        """
+        for key in groups:
+            if key in self.groups:
+                for secondary_key in ['elements', 'nodes']:
+                    if secondary_key in groups[key]:
+                        self.groups[key][secondary_key] = list(set(self.groups[key][secondary_key]).union(set(groups[key][secondary_key])))
+            else:
+                self.groups.update({key: {'elements': groups[key].get('elements', []),
+                                          'nodes': groups[key].get('nodes', [])}})
+
+    def _get_groups_by_secondary_key(self, values, secondary_key):
+        """
+        Private method returning list of groups where the given entities are associcated with.
+
+        Parameters
+        ----------
+        values : list
+            list containing the ids of the subset for which the associated groups shall be returned
+        secondary_key : str ('elements' or 'nodes')
+            mesh entity which is described by the ids of the values parameter
+
+        Returns
+        -------
+        groups : list
+            list containing the groups which are associated with the given entities
+        """
+        if not isinstance(values, Iterable):
+            values = [values]
+
+        groups_selection = []
+        for key in self.groups:
+            for value in values:
+                if value in self.groups[key][secondary_key]:
+                    if key not in groups_selection:
+                        groups_selection.append(key)
+
+        return groups_selection
+
+    def get_groups_by_elementids(self, eleids):
+        """
+        Provides a selection of groups, where the given elements belong to.
+        
+        Parameters
+        ----------
+        eleids : list of int
+            list of elements, which group-belongings shall be returned
+        
+        Returns
+        -------
+        groups : list of str
+            group-names of the specified elements
+        """
+        return self._get_groups_by_secondary_key(eleids, 'elements')
+    
+    def get_groups_by_nodeids(self, nodeids):
+        """
+        Provides a selection of groups, where the given nodes belong to.
+        
+        Parameters
+        ----------
+        nodeids : list of int
+            list of nodes, which group-belongings shall be returned
+        
+        Returns
+        -------
+        groups : list of str
+            group-names of the specified nodes
+        """
+        return self._get_groups_by_secondary_key(nodeids, 'nodes')
+
+    def _get_groups_dict_by_secondary_key(self, values, secondary_key):
+        """
+        Private method returning groups dict for a subset of values and desired mesh entity (elements or nodes)
+
+        Parameters
+        ----------
+        values : list
+            list containing the ids of the subset the groups dict shall be generated for
+        secondary_key : str ('elements' or 'nodes')
+            mesh entity which is described by the ids of the values parameter
+
+        Returns
+        -------
+        groups : dict
+            A dictionary containing the groups of the given subset.
+        """
+        if not isinstance(values, Iterable):
+            values = [values]
+
+        groups_selection = dict()
+        for key in self.groups:
+            for eleid in values:
+                if eleid in self.groups[key][secondary_key]:
+                    if key in groups_selection:
+                        elements = groups_selection[key]
+                        elements[secondary_key].append(eleid)
+                        groups_selection[key] = elements
+                    else:
+                        groups_selection.update({key: {secondary_key: [eleid]}})
+
+        return groups_selection
+
+    def get_groups_dict_by_elementids(self, eleids):
+        """
+        Provides a selection of groups as a sub-dictionary, where the given elements belong to.
+        
+        Parameters
+        ----------
+        eleids : list of int
+            list of elements, which group-belongings shall be returned
+
+        Returns
+        -------
+        groups : dict
+            subdictionary of the mesh's groups with the given nodes only
+        """
+        return self._get_groups_dict_by_secondary_key(eleids, 'elements')
+    
+    def get_groups_dict_by_nodeids(self, nodeids):
+        """
+        Provides a selection of groups as a sub-dictionary, where the given nodes belong to.
+        
+        Parameters
+        ----------
+        nodeids : list of int
+            list of nodes, which group-belongings shall be returned
+        
+        Returns
+        -------
+        groups : dict
+            subdictionary of the mesh's groups with the given nodes only
+        """
+        return self._get_groups_dict_by_secondary_key(nodeids, 'nodes')
 
     def _update_iconnectivity(self):
         """
