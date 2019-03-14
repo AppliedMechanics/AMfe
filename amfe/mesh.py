@@ -228,12 +228,7 @@ class Mesh:
         connectivity : list of ndarrays
             list containing the connectivity of the desired elements
         """
-        if not isinstance(elementids, Iterable):
-            elementids = [elementids]
-        
-        connectivities = np.hstack(self._el_df.loc[elementids, 'connectivity'].values)
-
-        return connectivities
+        return self._el_df.loc[elementids, 'connectivity'].values
 
     def get_iconnectivity_by_elementids(self, elementids):
         """
@@ -692,13 +687,16 @@ class Mesh:
             tag_names = [tag_names]
             tag_values = [tag_values]
             
-        ele = self.el_df
+        eleids = []
         for itag, tagname in enumerate(tag_names):
             if opt_larger is not None and opt_larger[itag]:
-                ele = ele[ele[tagname] > tag_values[itag]]
+                eleids += self._el_df[self._el_df[tagname] > tag_values[itag]].index.tolist()
             else:
-                ele = ele[ele[tagname] == tag_values[itag]]
-        return ele.index.values
+                eleids += self._el_df[self._el_df[tagname] == tag_values[itag]].index.tolist()
+        
+        eleids = list(set(eleids))
+        eleids.sort()
+        return eleids
 
 
     def get_elementidxs_by_tags(self, tag_names, tag_values, opt_larger=None):
@@ -884,7 +882,7 @@ class Mesh:
 
         ele_ids = self.get_elementids_by_tags('partition_id', partition_id)
         elements = self._el_df.loc[ele_ids]
-        node_ids = np.unique(self.get_connectivity_by_elementids(ele_ids))
+        node_ids = self.get_nodeids_by_elementids(ele_ids)
         nodes = self.nodes_df.loc[node_ids]
         
         return nodes, elements
@@ -907,7 +905,7 @@ class Mesh:
             id of the new, copied node
         """
         if node_id is None or node_id in self.nodes_df.index.tolist():
-            node_id = max(self.nodes_df.index.tolist())+1
+            node_id = self.nodes_df.last_valid_index() + 1
             
         if isinstance(node_coordinates, pd.Series):
             new_node = node_coordinates.rename(node_id)

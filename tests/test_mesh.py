@@ -85,8 +85,8 @@ class TestMesh(TestCase):
 
     def test_get_connectivity_by_elementids(self):
         desireds = [np.array([5, 6, 3], dtype=int), np.array([4, 1], dtype=int)]
-        for idx, ele in enumerate([1, 4]):
-            assert_array_equal(self.testmesh.get_connectivity_by_elementids(ele), desireds[idx])
+        for actual, desired in zip(self.testmesh.get_connectivity_by_elementids([1, 4]), desireds):
+            assert_array_equal(actual, desired)
 
     def test_get_elementidxs_by_group(self):
         actual = self.testmesh.get_elementidxs_by_groups(['right'])
@@ -274,8 +274,8 @@ class TestMesh(TestCase):
         assert_equal(desired, actual)
         
     def test_get_elementids_by_tags(self):
-        desired = np.array([1, 2], dtype=int)
-        actual = self.testmesh.get_elementids_by_tags('shape', 'Tri3')
+        desired = np.array([1, 2, 4, 5], dtype=int)
+        actual = self.testmesh.get_elementids_by_tags(['shape', 'shape'], ['Tri3', 'straight_line'])
         assert_array_equal(desired, actual)
         
     def test_get_nodeids_by_tag(self):

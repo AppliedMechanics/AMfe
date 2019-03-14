@@ -326,7 +326,7 @@ class IOTest(TestCase):
         # CHECK CONNECTIVITIES
         # connectivity_desired = [np.array(element[2]) for element in elements_input[:]]
         for element in elements_input:
-            assert_array_equal(mesh.get_connectivity_by_elementids([element[0]]), np.array(element[2], dtype=int))
+            assert_array_equal(mesh.get_connectivity_by_elementids([element[0]])[0], np.array(element[2], dtype=int))
 
         # CHECK DIMENSION
         self.assertEqual(mesh.dimension, 2)
