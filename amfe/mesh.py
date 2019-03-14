@@ -748,16 +748,40 @@ class Mesh:
             if key in self.groups:
                 for secondary_key in ['elements', 'nodes']:
                     if secondary_key in groups[key]:
-                        for list_entry in groups[key][secondary_key]:
-                            self.add_element_to_groups(list_entry, [key], secondary_key)
+                        self.groups[key][secondary_key] = list(set(self.groups[key][secondary_key]).union(set(groups[key][secondary_key])))
             else:
-                self.groups[key] = groups[key]
+                self.groups.update({key: {'elements': groups[key].get('elements', []),
+                                          'nodes': groups[key].get('nodes', [])}})
                 
-                for secondary_key in ['elements', 'nodes']:
-                    if secondary_key not in groups[key]:
-                        self.groups[key].update({secondary_key : []})
+    def _get_groups_by_secondary_key(self, values, secondary_key):
+        """
+        Private method returning list of groups where the given entities are associcated with.
+
+        Parameters
+        ----------
+        values : list
+            list containing the ids of the subset for which the associated groups shall be returned
+        secondary_key : str ('elements' or 'nodes')
+            mesh entity which is described by the ids of the values parameter
+
+        Returns
+        -------
+        groups : list
+            list containing the groups which are associated with the given entities
+        """
+        if not isinstance(values, Iterable):
+            values = [values]
+
+        groups_selection = []
+        for key in self.groups:
+            for value in values:
+                if value in self.groups[key][secondary_key]:
+                    if key not in groups_selection:
+                        groups_selection.append(key)
+
+        return groups_selection
         
-    def get_groups_by_elementids(self, eleids, secondary_key = 'elements'):
+    def get_groups_by_elementids(self, eleids):
         """
         Provides a selection of groups, where the given elements belong to.
         
@@ -765,27 +789,13 @@ class Mesh:
         ----------
         eleids : list of int
             list of elements, which group-belongings shall be returned
-        secondary_key : string
-            optional argument, which defines, whether 'elements' or 'nodes' shall be searched in self.groups. Do not use this, to search for nodes though. 
-            Rather use the 'get_groups_by_nodeids'-method for clearer code-structure instead. 
-
         
         Returns
         -------
         groups : list of str
             group-names of the specified elements
         """
-        if not isinstance(eleids, Iterable):
-            eleids = [eleids]
-        
-        groups_selection = []
-        for key in self.groups:
-            for eleid in eleids:
-                if eleid in self.groups[key][secondary_key]:
-                    if key not in groups_selection:
-                        groups_selection.append(key)
-                    
-        return groups_selection
+        return self._get_groups_by_secondary_key(eleids, 'elements')
     
     def get_groups_by_nodeids(self, nodeids):
         """
@@ -802,9 +812,41 @@ class Mesh:
             group-names of the specified nodes
         """
 
-        return self.get_groups_by_elementids(nodeids, 'nodes')
+        return self._get_groups_by_secondary_key(nodeids, 'nodes')
     
-    def get_groups_dict_by_elementids(self, eleids, secondary_key = 'elements'):
+    def _get_groups_dict_by_secondary_key(self, values, secondary_key):
+        """
+        Private method returning groups dict for a subset of values and desired mesh entity (elements or nodes)
+
+        Parameters
+        ----------
+        values : list
+            list containing the ids of the subset the groups dict shall be generated for
+        secondary_key : str ('elements' or 'nodes')
+            mesh entity which is described by the ids of the values parameter
+
+        Returns
+        -------
+        groups : dict
+            A dictionary containing the groups of the given subset.
+        """
+        if not isinstance(values, Iterable):
+            values = [values]
+
+        groups_selection = dict()
+        for key in self.groups:
+            for eleid in values:
+                if eleid in self.groups[key][secondary_key]:
+                    if key in groups_selection:
+                        elements = groups_selection[key]
+                        elements[secondary_key].append(eleid)
+                        groups_selection[key] = elements
+                    else:
+                        groups_selection.update({key: {secondary_key: [eleid]}})
+
+        return groups_selection
+    
+    def get_groups_dict_by_elementids(self, eleids):
         """
         Provides a selection of groups as a sub-dictionary, where the given elements belong to.
         
@@ -812,31 +854,13 @@ class Mesh:
         ----------
         eleids : list of int
             list of elements, which group-belongings shall be returned
-        secondary_key : string
-            optional argument, which defines, whether 'elements' or 'nodes' shall be searched in self.groups. Do not use this, to search for nodes though. 
-            Rather use the 'get_groups_by_nodeids'-method for clearer code-structure instead. 
 
-        
         Returns
         -------
         groups : dict
             subdictionary of the mesh's groups with the given nodes only
         """
-        if not isinstance(eleids, Iterable):
-            eleids = [eleids]
-        
-        groups_selection = dict()
-        for key in self.groups:
-            for eleid in eleids:
-                if eleid in self.groups[key][secondary_key]:
-                    if key in groups_selection:
-                        elements = groups_selection[key]
-                        elements[secondary_key].append(eleid)
-                        groups_selection[key] = elements
-                    else:                                        
-                        groups_selection.update({key : {secondary_key: [eleid]}})
-                    
-        return groups_selection
+        return self._get_groups_dict_by_secondary_key(eleids, 'elements')
     
     def get_groups_dict_by_nodeids(self, nodeids):
         """
@@ -852,7 +876,7 @@ class Mesh:
         groups : dict
             subdictionary of the mesh's groups with the given nodes only
         """
-        return self.get_groups_dict_by_elementids(nodeids, 'nodes')
+        return self._get_groups_dict_by_secondary_key(nodeids, 'nodes')
     
     def add_element_to_groups(self, new_ele, groups_ele, secondary_key = 'elements'):
         for key in groups_ele:

@@ -350,21 +350,25 @@ class TestMesh(TestCase):
         
     def test_merge_into_groups(self):
         add_groups = {'left': {'elements': [3], 'nodes': [1, 4]},
-                  'right': {'elements': [1, 2]},
-                  'left_boundary': {'elements': [4], 'nodes': []},
-                  'right_boundary': {'elements': [5, 2], 'nodes': []},
-                  'new_node_group' : {'nodes' : [1, 2, 3, 4]}
-                  }
+                      'right': {'elements': [1, 2]},
+                      'left_boundary': {'elements': [4], 'nodes': []},
+                      'right_boundary': {'elements': [5, 2], 'nodes': []},
+                      'new_node_group': {'nodes': [1, 2, 3, 4]}
+                      }
         
         self.testmesh.merge_into_groups(add_groups)
         groups_desired = {'left': {'elements': [3], 'nodes': [1, 4]},
-                  'right': {'elements': [1, 2], 'nodes': [2, 3, 5, 6]},
-                  'left_boundary': {'elements': [4], 'nodes': []},
-                  'right_boundary': {'elements': [5, 2], 'nodes': [1, 2]},
-                  'new_node_group' : {'elements' : [], 'nodes' : [1, 2, 3, 4]}
-                  }
+                          'right': {'elements': [1, 2], 'nodes': [2, 3, 5, 6]},
+                          'left_boundary': {'elements': [4], 'nodes': []},
+                          'right_boundary': {'elements': [5, 2], 'nodes': [1, 2]},
+                          'new_node_group': {'elements': [], 'nodes': [1, 2, 3, 4]}
+                          }
         
-        assert_equal(self.testmesh.groups, groups_desired)
+        for group_desired in groups_desired:
+            for secondary_group in ['elements', 'nodes']:
+                assert_equal(set(self.testmesh.groups[group_desired][secondary_group]),
+                             set(groups_desired[group_desired][secondary_group]))
+        self.assertEqual(len(self.testmesh.groups), len(groups_desired))
             
     def test_add_node(self):
         nodes_df_old = deepcopy(self.testmesh.nodes_df)
