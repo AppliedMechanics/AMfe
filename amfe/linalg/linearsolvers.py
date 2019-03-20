@@ -11,12 +11,16 @@ from scipy.linalg import solve as scipysolve
 from scipy.sparse import csr_matrix, issparse
 from scipy.sparse.linalg import spsolve, cg
 from .lib import PardisoWrapper
+from copy import deepcopy
+import numpy as np
+import logging
 
 
 __all__ = [
     'ScipySparseLinearSolver',
     'ScipyConjugateGradientLinearSolver',
     'PardisoLinearSolver',
+    'ResidualbasedConjugateGradient',
     'solve_sparse'
 ]
 
@@ -45,7 +49,7 @@ class LinearSolverBase:
         """
         pass
 
-
+# Wrappers for third-party linear solvers
 class ScipySparseLinearSolver(LinearSolverBase):
     """
     Scipy Sparse Solver
@@ -184,6 +188,90 @@ class PardisoLinearSolver(LinearSolverBase):
 
     def _parse_iparms(self, iparms):
         return dict([(self.IPARM_DICT[key], iparms[key]) for key in iparms])
+    
+# Own solvers
+class ResidualbasedConjugateGradient:
+    '''
+    Conjugate Gradient-solver, which solves a linear system of equations
+    
+    A*x = b
+    
+    for x. Instead of handing over A and b, a callback of the linear problem's current residual is required, i.e. res = A*x-b.
+    This might be more convenient in certain cases, where it's more implementation-friendly to evaluate the residual instead of 
+    building A and b explicitly.
+    '''
+    
+    def __init__(self):
+        super().__init__()
+        self.logger = logging.getLogger('amfe.linalg.linearsolvers.ResidualbasedConjugateGradient')
+        
+    def solve(self, residual_callback, x0, tol=1e-05, maxiter=None):
+        """
+        Solver-method of the residual-based Conjugate-Gradient iterative solver. 
+        
+        Parameters
+        ----------
+        residual_callback : method
+            callback-method of the linear system's residual, which is updated by the solution 'x'. Hence the method has to be of the form 'residual(x)'.
+        x0 : ndarray
+            starting guess for the solution
+        tol: float, optional
+            Tolerance for convergence norm(residual) <= max(tol*norm(b), atol)
+        maxiter : int
+            maximum number of iterations
+
+        Returns
+        -------
+        x : {array, matrix}
+            solution vector
+        """
+        
+        sol = x0
+        d = residual_callback(np.zeros(sol.shape))
+        res = residual_callback(sol)
+        
+        precon = np.identity(res.shape[0])
+        
+        w = deepcopy(res)
+
+        #Standard Conjugate Gradient
+        conv_crit = np.linalg.norm(res)
+
+        cg_iter = 1
+        converged = False
+        if conv_crit <= tol:
+            converged = True
+            self.logger.debug("CG converged due to initial residual=0")
+        while not converged:
+            q = -residual_callback(w) + d
+                            
+            alpha = np.dot(res.T, res) / np.dot(w.T, q)
+            
+            sol += alpha * w
+            
+            res_old = deepcopy(res)
+            res -= alpha * q
+            
+            conv_crit = np.linalg.norm(res)
+            if conv_crit <= tol:
+                converged = True
+                self.logger.debug(["CG converged at iteration ", cg_iter, ";  Residual: ", conv_crit])
+                break
+            
+            if cg_iter >= maxiter or conv_crit > 1e6:
+                self.logger.debug(["WARNING: CG not converged at iteration ", cg_iter, ";  Residual: ", conv_crit])
+                break
+            
+            beta = np.dot(res.T, res) / np.dot(res_old.T, res_old)
+            
+            w = res + beta * w
+
+            cg_iter += 1
+            self.logger.debug(["CG iteration ", cg_iter, ";  Residual: ", conv_crit])
+            
+        residual_callback(sol)
+            
+        return sol, converged, cg_iter
 
 
 def solve_sparse(A, b, matrix_type='sid'):
