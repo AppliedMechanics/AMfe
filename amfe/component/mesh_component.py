@@ -16,6 +16,7 @@ from amfe.assembly.assembly import Assembly
 from amfe.component.constants import ELEPROTOTYPEHELPERLIST
 from amfe.neumann.neumann_manager import *
 from amfe.constraint.constraint_manager import *
+from amfe.tools import make_input_iterable
 
 __all__ = ['MeshComponent']
 
@@ -183,6 +184,33 @@ class MeshComponent(ComponentBase):
 
     def write_mapping_key(self, fk, local_id):
         self._ele_obj_df.at[local_id, 'fk_mapping'] = fk
+        
+    def get_physics(self):
+        return self._ele_obj_df['physics'].unique()
+    
+    def get_materials(self):
+        elements = self._ele_obj_df['ele_obj'].unique()
+        material = []
+        for element in elements:
+            material.append(element.material)
+        return material
+    
+    @make_input_iterable
+    def get_elementids_by_physics(self, physics):
+        elements = np.array([])
+        for phys in physics: 
+            elements = np.append(elements, self._ele_obj_df['fk_mesh'][self._ele_obj_df['physics'] == phys])
+        return elements
+    
+    @make_input_iterable
+    def get_elementids_by_materials(self, material_obj):
+        ele_ids = np.array([])
+        for mat in material_obj:
+            for eleid, element in self._ele_obj_df.iterrows():
+                if element['ele_obj'].material is mat:
+                    ele_ids = np.append(ele_ids, element['fk_mesh'])
+        return ele_ids
+
     # -- GETTER FOR SYSTEM MATRICES ------------------------------------------------------------------------
     #
     # MUST BE IMPLEMENTED IN SUBCLASSES

@@ -6,8 +6,8 @@
 from unittest import TestCase, main
 import numpy as np
 import pandas as pd
-from numpy.testing import assert_equal, assert_array_equal
-from pandas.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal, assert_series_equal
+from numpy.testing import assert_equal, assert_array_equal, assert_allclose
 from copy import deepcopy
 
 
@@ -274,8 +274,8 @@ class TestMesh(TestCase):
         assert_equal(desired, actual)
         
     def test_get_elementids_by_tags(self):
-        desired = np.array([1, 2, 4, 5], dtype=int)
-        actual = self.testmesh.get_elementids_by_tags(['shape', 'shape'], ['Tri3', 'straight_line'])
+        desired = np.array([1, 2], dtype=int)
+        actual = self.testmesh.get_elementids_by_tags(['shape', 'is_boundary'], ['Tri3', False])
         assert_array_equal(desired, actual)
         
     def test_get_nodeids_by_tag(self):
@@ -478,6 +478,32 @@ class TestPartitionedMesh(TestCase):
         
         assert_frame_equal(nodes, nodes_desired)
         assert_frame_equal(elements, elements_desired)
+        
+    def test_get_neighbor_partitions(self):
+        neighbors_desired = [2, 3]
+        
+        neighbors_actual = self.testmesh.get_neighbor_partitions(2)
+        
+        assert_array_equal(neighbors_actual, neighbors_desired)
+        
+    def test_update_connectivity_with_new_node(self):
+        connectivity_desired = np.array([np.array([5, 6, 3], dtype=np.int), np.array([3, 2, 5], dtype=np.int),
+                        np.array([1, 2, 3, 4], dtype=np.int), np.array([5, 13, 8], dtype=np.int), np.array([6, 7, 5], dtype=np.int),
+                        np.array([3, 4, 9, 10], dtype=np.int), np.array([6, 13, 11, 12], dtype=np.int), np.array([3, 6, 10, 11], dtype=np.int),
+                        # boundary elements
+                        np.array([4, 1], dtype=np.int), np.array([4, 9], dtype=np.int), np.array([7, 8], dtype=np.int), np.array([7, 12], dtype=np.int)])
+        
+        self.testmesh.update_connectivity_with_new_node(7, 13, [4, 7])
+        connectivity_actual = self.testmesh.get_connectivity_by_elementids([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+
+        for i in range(connectivity_desired.shape[0]):
+            assert_array_equal(connectivity_actual[i], connectivity_desired[i])
+            
+    def test_get_elementids_by_tags(self):
+        desired = np.array([1, 2, 4, 5, 7, 8], dtype=int)
+        actual = self.testmesh.get_elementids_by_tags('no_of_mesh_partitions', 2, True)
+        assert_array_equal(desired, actual)
+
 
         
 

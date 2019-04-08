@@ -92,6 +92,13 @@ class Mesh:
         self._iconnectivity_df_cached = pd.DataFrame(columns=('iconnectivity',))
 
     @property
+    def partitions(self):
+        if 'partition_id' in self._el_df:
+            return self._el_df['partition_id'].unique()
+        else:
+            return [0]
+
+    @property
     def el_df(self):
         return self._el_df
 
@@ -439,6 +446,8 @@ class Mesh:
         -------
         nodeids : ndarray
         """
+        if not isinstance(elementids, Iterable):
+            elementids = [elementids]
         if len(elementids) == 0:
             return np.array([], dtype=int)
         nodeids = np.hstack(self.get_connectivity_by_elementids(elementids))
@@ -660,7 +669,7 @@ class Mesh:
     def get_elementids_by_tags(self, tag_names, tag_values, opt_larger=None):
         """
         This function returns a list with the element ids given a "tag_name" 
-        and the tag value associated with it. 
+        and the tag value associated with it.
         
 
         Parameters
@@ -686,15 +695,16 @@ class Mesh:
         if not isinstance(tag_names, Iterable) or isinstance(tag_names, str):
             tag_names = [tag_names]
             tag_values = [tag_values]
+            opt_larger = [opt_larger]
         
-        eleids = np.array([], dtype=int)
+        selected_elements = self._el_df
         for itag, tagname in enumerate(tag_names):
             if opt_larger is not None and opt_larger[itag]:
-                eleids = np.hstack((eleids, self._el_df[self._el_df[tagname] > tag_values[itag]].index.values))
+                selected_elements = selected_elements[selected_elements[tagname] > tag_values[itag]]
             else:
-                eleids = np.hstack((eleids, self._el_df[self._el_df[tagname] == tag_values[itag]].index.values))
+                selected_elements = selected_elements[selected_elements[tagname] == tag_values[itag]]
         
-        return np.unique(eleids)
+        return selected_elements.index.values
 
 
     def get_elementidxs_by_tags(self, tag_names, tag_values, opt_larger=None):
@@ -750,7 +760,7 @@ class Mesh:
             else:
                 self.groups.update({key: {'elements': groups[key].get('elements', []),
                                           'nodes': groups[key].get('nodes', [])}})
-                
+        
     def _get_groups_by_secondary_key(self, values, secondary_key):
         """
         Private method returning list of groups where the given entities are associcated with.
@@ -932,8 +942,9 @@ class Mesh:
         
         Parameters
         ----------
-        node_coordinates : ndarray, pandas.Series 
+        node_coordinates : ndarray, pandas.Series
             x, y, z coordinates of new node. In case of a pandas.Series, it has to consist of columns 'x', 'y' and maybe 'z'
+
         node_id : int
             id of that node, which is to be copied
             
@@ -942,9 +953,11 @@ class Mesh:
         new_node_id : int
             id of the new, added node
         """
-        
-        if node_id is None or node_id in self.nodes_df.index.tolist():
-            node_id = self.nodes_df.last_valid_index() + 1
+        if self.no_of_nodes > 0:
+            if node_id is None or node_id in self.nodes_df.index.tolist():
+                node_id = self.nodes_df.last_valid_index() + 1
+        else:
+            node_id = 1
             
         if isinstance(node_coordinates, pd.Series):
             if 'z' in node_coordinates:
@@ -960,9 +973,53 @@ class Mesh:
                 new_node = pd.Series({'x' : node_coordinates[0], 'y' : node_coordinates[1]}, name=node_id)
             elif self.dimension == 3:
                 new_node = pd.Series({'x' : node_coordinates[0], 'y' : node_coordinates[1], 'z' : node_coordinates[2]}, name=node_id)
+
             
         self.nodes_df = self.nodes_df.append(new_node, ignore_index=False)
         return node_id
+    
+    def update_connectivity_with_new_node(self, old_node, new_node, target_eleids):
+        """
+        Updates a node-id in the connectivity of a certain element with a new node-id.
+        
+        Parameters
+        ----------
+        old_node : int
+            node-id which shall be replaced
+        new_node : int
+            new node-id, which replaced the 'old_node'
+        target_eleids : list of int
+            element-ids, which connectivities shall be updated
+            
+        Returns
+        -------
+        None
+        """
+        if new_node != old_node:
+            for n_ele in target_eleids:
+                nodes = self.get_connectivity_by_elementids([n_ele])[0]
+                nodes[nodes == old_node] = int(new_node)
+                self._el_df.set_value(n_ele,'connectivity',nodes)   
+            
+                
+    def get_neighbor_partitions(self, ele_id):
+        """
+        Getter for the neighboring partitions of a element.
+        
+        Parameters
+        ----------
+        ele_id : int
+            element-id
+            
+        Returns
+        -------
+        neighbor_partitions : list of int
+            ids of the neighboring partitions. If there is no neighboring partition, 'None' is returned.
+        """
+        neighbor_part_ids = self._el_df.loc[ele_id,'partitions_neighbors']
+        if not isinstance(neighbor_part_ids, Iterable):
+            neighbor_part_ids = [neighbor_part_ids]
+        return list(map(abs, neighbor_part_ids))
 
 
     def _update_iconnectivity(self):
