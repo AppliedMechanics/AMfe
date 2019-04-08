@@ -22,6 +22,7 @@ __all__ = [
     'query_yes_no',
     'compare_signals',
     'time_measured',
+    'make_input_iterable'
 ]
 
 import numpy as np
@@ -37,6 +38,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from amfe.linalg import signal_norm, vector_norm
 from amfe.structural_dynamics import modal_assurance
+from collections.abc import Iterable
 
 
 def read_hbmat(filename):
@@ -631,4 +633,12 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
     else:
         raise ValueError('Invalid method. Chose either \'norm\', \'angle\', \'mac\' or \'correlation\' with ' \
                          + 'appropriate **kwargs.')
+        
+def make_input_iterable(method):
+    def makeiterable(self, argument):
+        if not isinstance(argument, Iterable):
+            argument = [argument]
+        return method(self, argument)
+    return makeiterable
+
 
