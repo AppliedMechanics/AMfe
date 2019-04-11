@@ -633,13 +633,15 @@ class Mesh:
         """
         for tag_value, elem_list in tag_value_dict.items():
             try:
-                self.el_df.loc[elem_list, (tag_name)] = tag_value
+                self._el_df.loc[elem_list, (tag_name)] = tag_value
             except:
-                temp_list = self.el_df[tag_name].tolist()
+                temp_list = self._el_df[tag_name].tolist()
+                temp_ele_ids = self._el_df.index.tolist()
                 for elem in elem_list:
-                    temp_list[elem] = tag_value 
-                self.el_df[tag_name] = temp_list
-        
+                    temp_list[temp_ele_ids.index(elem)] = tag_value
+
+                self._el_df[tag_name] = temp_list
+
         return None
 
     def replace_tag_values(self, tag_name, current_tag_value, new_tag_value):
