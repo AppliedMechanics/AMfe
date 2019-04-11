@@ -19,6 +19,7 @@ Core-Modules of the AMfe-Package
 
    amfe.assembly
    amfe.boundary
+   amfe.constraint
    amfe.element
    amfe.material
    amfe.mechanical_system

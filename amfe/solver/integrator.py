@@ -98,11 +98,11 @@ class NonlinearIntegrator(IntegratorBase):
         self._additional_callbacks = ()
         self._rtol = 0.0
         self._atol = 1e-8
-        self._rtol_scaling_cache = 0.0
+        self._rtol_scaling = 0.0
 
     @property
     def nonlinear_solver_options(self):
-        atol = self._atol + self._rtol * self._rtol_scaling_cache
+        atol = self._atol + self._rtol * self._rtol_scaling
         nonlinear_solver_options = copy(self._nonlinear_solver_options)
         nonlinear_solver_options.update({'atol': atol})
         return nonlinear_solver_options
@@ -188,12 +188,12 @@ class NonlinearStaticIntegrator(NonlinearIntegrator):
         
     def residual(self, q_p):
         zero_array = np.zeros_like(q_p)
-        f_ext = self._f_ext(q_p, zero_array, zero_array, self._t_p)
-        res = - self._f_int(q_p, zero_array, zero_array, self._t_p) + f_ext
+        f_ext = self._f_ext(q_p, zero_array, self._t_p)
+        res = - self._f_int(q_p, zero_array, self._t_p) + f_ext
         return res
         
     def jacobian(self, q_p):
-        return -self._K(q_p, self._dq_p, self._ddq_p, self._t_p)
+        return -self._K(q_p, self._dq_p, self._t_p)
     
     def set_prediction(self, q_n, dq_n, ddq_n, t_n):
         zero_array = np.zeros_like(q_n)
@@ -207,7 +207,7 @@ class NonlinearStaticIntegrator(NonlinearIntegrator):
         self._dq_p = zero_array
         self._ddq_p = zero_array
 
-        self._rtol_scaling_cache = vector_norm(self._f_ext(self._q_p, self._dq_p, self._ddq_p, self._t_p))
+        self._rtol_scaling = vector_norm(self._f_int(self._q_p, self._dq_p, self._t_p))
         return
     
     def set_correction(self, q_p):
@@ -224,15 +224,15 @@ class GeneralizedAlpha(NonlinearIntegrator):
     
         Parameters
         ----------
-        M : function
+        M : callable
             Mass Matrix function, signature M(q, dq, ddq, t)
-        f_int : function
+        f_int : callable
             Internal restoring force function, signature f_int(q, dq, ddq, t)
-        f_ext : function
+        f_ext : callable
             External force function, signature, f_ext(q, dq, ddq, t)
-        K : function
+        K : callable
             Jacobian of f_int, signature K(q, dq, ddq, t)
-        D : function
+        D : callable
             Linear viscous damping matrix, signature D(q, dq, ddq, t)
         alpha_m : float
             Mass-type matrix shifting-factor. Default value is calculated from rho_inf.
@@ -300,14 +300,12 @@ class GeneralizedAlpha(NonlinearIntegrator):
         t_f = self._get_midstep(self.alpha_f, self._t_n, self._t_p)
         q_f = self._get_midstep(self.alpha_f, self._q_n, q_p)
         dq_f = self._get_midstep(self.alpha_f, self._dq_n, self._dq_p)
-        ddq_f = self._get_midstep(self.alpha_f, self._ddq_n, self._ddq_p)
 
         M = self.M(q_m, dq_m, t_m)
-        D = self.D(q_f, dq_f, ddq_f, t_f)
-        f_int_f = self.f_int(q_f, dq_f, ddq_f, t_f)
-        f_ext_f = self.f_ext(q_f, dq_f, ddq_f, t_f)
+        D = self.D(q_f, dq_f, t_f)
+        f_int_f = self.f_int(q_f, dq_f, t_f)
+        f_ext_f = self.f_ext(q_f, dq_f, t_f)
 
-        self._rtol_scaling_cache = vector_norm(f_ext_f)
         res = f_ext_f - M @ ddq_m - D @ dq_f - f_int_f
         return res
 
@@ -322,11 +320,10 @@ class GeneralizedAlpha(NonlinearIntegrator):
         t_f = self._get_midstep(self.alpha_f, self._t_n, self._t_p)
         q_f = self._get_midstep(self.alpha_f, self._q_n, q_p)
         dq_f = self._get_midstep(self.alpha_f, self._dq_n, self._dq_p)
-        ddq_f = self._get_midstep(self.alpha_f, self._ddq_n, self._ddq_p)
 
         M = self.M(q_m, dq_m, t_m)
-        D = self.D(q_f, dq_f, ddq_f, t_f)
-        K = self.K(q_f, dq_f, ddq_f, t_f)
+        D = self.D(q_f, dq_f, t_f)
+        K = self.K(q_f, dq_f, t_f)
 
         Jac = -(1 - self.alpha_m) / (self.beta * self.dt ** 2) * M - (1 - self.alpha_f) * self.gamma / (
                 self.beta * self.dt) * D - (1 - self.alpha_f) * K
@@ -347,7 +344,7 @@ class GeneralizedAlpha(NonlinearIntegrator):
         self._ddq_p = np.zeros_like(self._q_p)
         self._t_p = t_n + self.dt
 
-        self._rtol_scaling_cache = vector_norm(self.f_ext(self._q_p, self._dq_p, self._ddq_p, self._t_p))
+        self._rtol_scaling = vector_norm(self.f_int(self._q_p, self._dq_p, self._t_p))
         return
     
     def set_correction(self, q_p):
@@ -406,15 +403,15 @@ class WBZAlpha(GeneralizedAlpha):
         Parameters
         ----------
         M : function
-            Mass Matrix function, signature M(q, dq, ddq, t)
+            Mass Matrix function, signature M(q, dq, t)
         f_int : function
-            Internal restoring force function, signature f_int(q, dq, ddq, t)
+            Internal restoring force function, signature f_int(q, dq, t)
         f_ext : function
-            External force function, signature, f_ext(q, dq, ddq, t)
+            External force function, signature, f_ext(q, dq, t)
         K : function
-            Jacobian of f_int, signature K(q, dq, ddq, t)
+            Jacobian of f_int, signature K(q, dq, t)
         D : function
-            Linear viscous damping matrix, signature D(q, dq, ddq, t)
+            Linear viscous damping matrix, signature D(q, dq, t)
         rho_inf : float
             High frequency spectral radius. 0 <= rho_inf <= 1. Default value rho_inf = 0.9. For alternative
             parametrization via alpha_m set rho_inf = (1 + alpha_m)/(1 - alpha_m) with -1 <= alpha_m <= 0.

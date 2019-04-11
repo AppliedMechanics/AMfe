@@ -8,159 +8,182 @@
 Module for assembling the constraint-objects to a set of global constraint-operators
 """
 
-from scipy.sparse import csr_matrix, lil_matrix, identity, vstack
-from scipy.linalg import null_space
-from .constraint import DirichletConstraint
-from math import isclose
+from scipy.sparse import csr_matrix
 import numpy as np
 
 
 class ConstraintAssembler:
     def __init__(self):
-        pass
-    
-    def assemble_elim_C_L_and_g(self, no_of_unconstrained_dofs, constrained_dofs, constraint_df, X, u, du, ddu, t, primary_type='u', C_preset=None, L_preset=None):
+        return
+
+    @staticmethod
+    def preallocate_g_and_B(no_of_dofs_unconstrained, dofs_by_object, no_of_constraints_by_object):
         """
-        Update the global constraint-matrices C, L, g
-        
+        Preallocates B array and g vector for given dofs concerning constraints
+
         Parameters
         ----------
-        no_of_unconstrained_dofs: int
-            number of dofs without any constraints applied
-        constraint_df: pandas dataframe
-            dataframe containing all necessary information on constraint-types and constraint-objects themselves
-        primary_type: string
-            defines the primary type and therefore the chosen jacobian and residual 
-                default value: underived primary 'u' 
-                other choices: derived primary 'du', double derived primary 'ddu'
+        no_of_dofs_unconstrained : int
+            number of dofs of the unconstrained system (number of columns of B)
+        dofs_by_object : list of ndarrays with dtype int
+            list containing indices (position based) of dofs that are concerned by constraints
+            dofs[i] = np.array([dof1, dof2, ...], dtype=int)
+            where dof1, dof2,... are all dofs that are concerned by the i-th constraint
+        no_of_constraints_by_object : tuple
+            containing the number of constraints by later passed constraint object
 
         Returns
         -------
-        C: csr-matrix
-            matrix containing jacobians of constraint functions
-        L: csr-matrix
-            nullspace of C_elim and containing all information on how to eliminate dofs and changing their relations
-        g: csr-vector
-            residual vector for constraints enforced by lagrange-multipliers
+        g : ndarray
+            ndarray for storing the holonomic constraint function
+        B : csr_matrix
+            csr_matrix for storing the Jacobian of the holonomic constraint function g(x) = 0
         """
-        C, g, C_is_boolean = self._assemble_constraints(no_of_unconstrained_dofs, constraint_df, X, u, du, ddu, t, 'elim', primary_type, C_preset)
+        # Initialize indptr and indices
+        indptr = [0]
+        indices = list()
 
-        if L_preset is not None:
-            L = L_preset
-        else:
-            if C is not None:
-                L = self._update_l(C, C_is_boolean, constrained_dofs)
-            else:
-                L = None
-        
-        return C, L, g
-    
-    def assemble_lagr_C_g(self, no_of_unconstrained_dofs, constraint_df, X, u, du, ddu, t, primary_type='u', C_preset=None):
-        C, g, C_is_boolean = self._assemble_constraints(no_of_unconstrained_dofs, constraint_df, X, u, du, ddu, t, 'lagrmult', primary_type, C_preset)
-        return C, g
+        # Generate indptr and indices values
+        for dofs, no_of_constraints in zip(dofs_by_object, no_of_constraints_by_object):
+            for _ in np.arange(no_of_constraints):
+                indptr.append(indptr[-1] + len(dofs))
+                indices.extend(dofs.tolist())
 
-    
-    def _assemble_constraints(self, no_of_unconstrained_dofs, constraint_df, X, u, du, ddu, t, strategy='elim', primary_type='u', C_preset=None):
-        ndof = no_of_unconstrained_dofs
-        
-        g = self._build_constraint_func(constraint_df, X, u, du, ddu, t, strategy)
+        # Make empty data array of correct size
+        data = np.zeros(len(indices))
 
-        if C_preset is not None:
-            C = C_preset
-        else:
-            if g is not None:
-                C, C_is_boolean = self._build_C(ndof, constraint_df, g.shape[0], primary_type, X, u, du, ddu, t, strategy)
-            else:
-                C = None
-        
-        if g is not None and C is not None:        
-            if g.shape[0] is not C.shape[0]:
-                print('Missmatch of g- and C-dimension! Maybe an error in constraint-definition?')
-        
-        return C, g, C_is_boolean
-    
-    def _build_C(self, ndof, constraint_df, no_constr, primary_type, X, u, du, ddu, t, strategy):
+        no_of_constraint_rows = len(indptr) - 1
+        B = csr_matrix((data, indices, indptr), shape=(no_of_constraint_rows, no_of_dofs_unconstrained))
+        g = np.zeros(no_of_constraint_rows)
+        return g, B
+
+    def assemble_g(self, residuals, dofs, args, g):
         """
-        Update the assembled jacobians of constraint-functions
+        Assemble the holonomic constraint function
+
+        Parameters
+        ----------
+        residuals: list
+            list of function handles returning the residual for each constraint
+        dofs : list
+            list of coordinate indices that must be picked from the global arrays in args for each residual function
+        args : list
+            list of full global arrays whose local coordinates needs to be passed to the residuals
+        g : ndarray
+            preallocated ndarray where the result shall be written to
 
         Returns
         -------
-        csr-matrix
+        g : ndarray
+            assembled holonomic constraint function
+
         """
+        return self._build_g(residuals, dofs, args, g)
 
-        if no_constr > 0:
-            C = csr_matrix((0, ndof), dtype=float)
-        else:
-            C = None
-            
-        C_is_boolean = True
-
-
-        for iter, const in constraint_df.iterrows():
-            if const['strategy'] == strategy:
-                dofs = const['dofids']
-                C_helper = csr_matrix(const['constraint_obj'].jacobian(X[dofs], u[dofs], du[dofs], ddu[dofs], t, primary_type))
-                C_expanded = lil_matrix((C_helper.shape[0], ndof), dtype=float)
-                C_expanded[:,dofs] = C_helper
-                C_expanded = csr_matrix(C_expanded)
-
-                C = vstack([C, C_expanded])
-                
-                if not isinstance(const['constraint_obj'], DirichletConstraint):
-                    C_is_boolean = False
-                
-        return C, C_is_boolean
-
-    
-    def _build_constraint_func(self, constraint_df, X, u, du, ddu, t, strategy):
+    def assemble_B(self, jacobians, dofs, args, B):
         """
-        Update the residual of constraints for dual enforcement of constraints with Lagrange-multipliers
+        Assembles the Jacobians of a holonomic constraint function
+
+        Parameters
+        ----------
+        jacobians : list
+            list of function handles that return the local B for each constraint
+        dofs : list
+            list of ndarrays (dtype int) containing the indices of the dofs that are passed to the B functions
+        args : list
+            list of full global arrays whose local coordinates needs to be passed to the jacobians
+        B : csr_matrix
+            preallocated ndarray where the result shall be written to
 
         Returns
         -------
-        ndarray
+        B : csr_matrix
+            assembled B
         """
-        g = np.array([])       
-        for iter, const in constraint_df.iterrows():
-            if const['strategy'] == strategy:
-                dofs = const['dofids']
-                g = np.append(g, const['constraint_obj'].constraint_func(X[dofs], u[dofs], du[dofs], ddu[dofs], t))
-            
+        return self._build_B(jacobians, dofs, args, B)
+
+    def assemble_g_and_B(self, residuals, jacobians, dofs, args, g, B):
+        """
+        Assemble the holonomic constraint function
+
+        Parameters
+        ----------
+        residuals: list
+            list of function handles returning the residual for each constraint
+        jacobians : list
+            list of function handles that return the local B for each constraint
+        dofs : list
+            list of coordinate indices that must be picked from the global arrays in args for each residual function
+        args : list
+            list of full global arrays whose local coordinates needs to be passed to the residuals
+        g : ndarray
+            preallocated ndarray where the assembled residual shall be written to
+        B : csr_matrix
+            preallocated csr_matrix where the assembled B shall be written to
+
+        Returns
+        -------
+        g : ndarray
+            assembled holonomic constraint function
+        B : csr_matrix
+            assembled B
+
+        """
+        # Assemble B
+        self._build_B(jacobians, dofs, args, B)
+
+        # Assemble holonomic constraint function
+        self._build_g(residuals, dofs, args, g)
+
+        return g, B
+
+    @staticmethod
+    def _build_B(jacobians, dofs, args, B):
+        """
+        Assembles the Jacobians of a holonomic constraint function
+
+        Parameters
+        ----------
+        jacobians : list
+            list of function handles that return the local B for each constraint
+        dofs : list
+            list of ndarrays (dtype int) containing the indices of the dofs that are passed to the B functions
+        args : list
+            list of full global arrays whose local coordinates needs to be passed to the jacobians
+        B : csr_matrix
+            preallocated ndarray where the result shall be written to
+
+        Returns
+        -------
+        B : csr_matrix
+            assembled B
+        """
+        B.data *= 0
+        B.data = np.concatenate([jac(*(arg[dofs_i] for arg in args)).reshape(-1) for jac, dofs_i in zip(jacobians,
+                                                                                                        dofs)])
+        return B
+
+    @staticmethod
+    def _build_g(residuals, dofs, args, g):
+        """
+        Assemble the holonomic constraint function
+
+        Parameters
+        ----------
+        residuals: list
+            list of function handles returning the residual for each constraint
+        dofs : list
+            list of coordinate indices that must be picked from the global arrays in args for each residual function
+        args : list
+            list of full global arrays whose local coordinates needs to be passed to the residuals
+        g : ndarray
+            preallocated ndarray where the result shall be written to
+
+        Returns
+        -------
+        g : ndarray
+            assembled holonomic constraint function
+
+        """
+        g[:] = np.concatenate([res(*(arg[dofs_i] for arg in args)) for res, dofs_i in zip(residuals, dofs)])
         return g
-    
-    def _update_l(self, C, C_is_boolean=None, one_idxs=None):
-        """
-        Update the L matrix that eliminates the dofs that are eliminated by constraints.
-
-        Returns
-        -------
-        csr-matrix
-        """
-        if C_is_boolean:
-            l = self._get_nullspace_from_identity(C, one_idxs)
-        else:
-            l = csr_matrix(null_space(C.todense()))
-        return l
-    
-    def _get_nullspace_from_identity(self, C, col_idxs):
-        """
-        Calculates a(!) nullspace of C if C is boolean by deleting the rows of C from an identity matrix
-        
-        Parameters
-        ----------
-        C: csr_matrix
-        col_idxs: ndarray
-            Indices of ones in C-matrix => provides columns, which have to be deleted from L-matrix
-        
-        Returns
-        -------
-        L: csr_matrix
-        """
-        L = identity(C.shape[1])
-        L = L.tocsr()
-        col_idxs_not_to_remove = np.arange(0,C.shape[1])
-        col_idxs_not_to_remove = np.delete(col_idxs_not_to_remove, col_idxs)
-        return L[:,col_idxs_not_to_remove]
-    
-    
-            

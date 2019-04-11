@@ -21,9 +21,6 @@ class StructuralComponentTest(TestCase):
 
             def constrain_matrix(self, K_unconstr, t=0):
                 return K_unconstr[0:2, 0:2]
-            
-            def update_constraints(self, X, u, du, ddu, t):
-                return u
 
         class DummyAssembly:
             def __init__(self):
@@ -93,7 +90,7 @@ class StructuralComponentTest(TestCase):
         comp._constraints = DummyConstraint()
         comp._assembly = DummyAssembly()
         comp._C_csr = comp._assembly.preallocate(2, None)
-        comp._f_glob = np.zeros(comp._C_csr.shape[0])
+        comp._f_glob_int = np.zeros(comp._C_csr.shape[0])
         self.structComp.append(comp)
 
     def tearDown(self):
@@ -103,16 +100,16 @@ class StructuralComponentTest(TestCase):
         pass
 
     def test_k(self):
-        desiredK=np.array([[10, -5], [-5, 10]])
-        q = dq = ddq = np.zeros(3)
+        desiredK=np.array([[10, -5, 0], [-5, 10, -5], [0, -5, 10]])
+        q = dq = np.zeros(3)
         t = 0.0
-        assert_array_equal(self.structComp[0].K(q, dq, ddq, t), desiredK)
+        assert_array_equal(self.structComp[0].K(q, dq, t), desiredK)
 
     def test_get_mat(self):
-        desiredK = np.array([[10, -5], [-5, 10]])
-        q = dq = ddq = np.zeros(3)
+        desiredK = np.array([[10, -5, 0], [-5, 10, -5], [0, -5, 10]])
+        q = dq = np.zeros(3)
         t = 0.0
-        assert_array_equal(self.structComp[0].get_mat('K', q, dq, ddq, t), desiredK)
+        assert_array_equal(self.structComp[0].get_mat('K', q, dq, t), desiredK)
 
 
 class ComponentCompositeTest(TestCase):

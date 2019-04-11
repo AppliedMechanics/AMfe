@@ -33,7 +33,14 @@ class StructuralComponent(MeshComponent):
         self._D_constr = None
         self._C_csr = None
         self._M_csr = None
-        self._f_glob = None
+        self._f_glob_int = None
+        self._f_glob_ext = None
+
+    def g_holo(self, q, t):
+        return self._constraints.g(self._mesh.nodes, q, t)
+
+    def B(self, q, t):
+        return self._constraints.B(self._mesh.nodes, q, t)
 
     def M(self, q, dq, t):
         """
@@ -49,26 +56,20 @@ class StructuralComponent(MeshComponent):
         Returns
         -------
         M : sp.sparse.sparse_matrix
-            Mass matrix with applied constraints in sparse CSR format.
+            Mass matrix without applied constraints in sparse CSR format.
 
         Notes
         -----
             M is by definition independent of ddq
         """
-
-        u_unconstr = self._get_unconstrained_u(q)
-
-        self._constraints.update_constraints(self.X, u=u_unconstr, du=u_unconstr, ddu=u_unconstr, t=t)
-
         self._M_csr = self._assembly.assemble_m(self._mesh.nodes, self.ele_obj,
                                                 self._mesh.get_iconnectivity_by_elementids(
                                                     self._ele_obj_df['fk_mesh'].values),
                                                 self._mapping.get_dofs_by_ids(self._ele_obj_df['fk_mapping'].values),
-                                                u_unconstr, t, self._M_csr)
-        self._M_constr = self._constraints.constrain_matrix(self._M_csr)
-        return self._M_constr
+                                                q, t, self._M_csr)
+        return self._M_csr
 
-    def D(self, q, dq, ddq, t):
+    def D(self, q, dq, t):
         """
         Compute and return the damping matrix of the mechanical system. At the moment either no damping
         (rayleigh_damping = False) or simple Rayleigh damping applied to the system linearized around zero
@@ -87,18 +88,15 @@ class StructuralComponent(MeshComponent):
         D : scipy.sparse.sparse_matrix
             Damping matrix with applied constraints in sparse CSR format.
         """
-
         if self.rayleigh_damping:
-            self._D_constr = self.rayleigh_damping[0] * self.M(q, dq, t) + self.rayleigh_damping[1] * self.K(q, dq,
-                                                                                                                  ddq,
-                                                                                                                  t)
+            self._D_constr = self.rayleigh_damping[0] * self.M(q, dq, t) + self.rayleigh_damping[1] * self.K(q, dq, t)
         else:
             self._D_constr = csc_matrix(
-                (self._constraints.no_of_constrained_dofs, self._constraints.no_of_constrained_dofs))
+                (self._constraints.no_of_dofs_unconstrained, self._constraints.no_of_dofs_unconstrained))
 
         return self._D_constr
 
-    def f_int(self, q, dq, ddq, t):
+    def f_int(self, q, dq, t):
         """
         Compute and return the nonlinear internal force vector of the structural component.
 
@@ -115,21 +113,16 @@ class StructuralComponent(MeshComponent):
         f_int : ndarray
             Nonlinear internal force vector after constraints have been applied
         """
-
-        u_unconstr = self._get_unconstrained_u(q)
-
-        self._constraints.update_constraints(self.X, u=u_unconstr, du=u_unconstr, ddu=u_unconstr, t=t)
-
-        self._f_glob = self._assembly.assemble_k_and_f(self._mesh.nodes, self.ele_obj,
-                                                       self._mesh.get_iconnectivity_by_elementids(
+        self._f_glob_int = self._assembly.assemble_k_and_f(self._mesh.nodes, self.ele_obj,
+                                                           self._mesh.get_iconnectivity_by_elementids(
                                                            self._ele_obj_df['fk_mesh'].values),
-                                                       self._mapping.get_dofs_by_ids(
+                                                           self._mapping.get_dofs_by_ids(
                                                            self._ele_obj_df['fk_mapping'].values),
-                                                       u_unconstr, t,
-                                                       self._C_csr, self._f_glob)[1]
-        return self._constraints.constrain_vector(self._f_glob)
+                                                           q, t,
+                                                           self._C_csr, self._f_glob_int)[1]
+        return self._f_glob_int
 
-    def K(self, q, dq, ddq, t):
+    def K(self, q, dq, t):
         """
         Compute and return the stiffness matrix of the structural component
 
@@ -146,20 +139,15 @@ class StructuralComponent(MeshComponent):
         K : sp.sparse.sparse_matrix
             Stiffness matrix with applied constraints in sparse CSR format.
         """
-
-        u_unconstr = self._get_unconstrained_u(q)
-
-        self._constraints.update_constraints(self.X, u=u_unconstr, du=u_unconstr, ddu=u_unconstr, t=t)
-
         self._C_csr = self._assembly.assemble_k_and_f(self._mesh.nodes, self.ele_obj,
                                                       self._mesh.get_iconnectivity_by_elementids(
                                                           self._ele_obj_df['fk_mesh'].values),
                                                       self._mapping.get_dofs_by_ids(
-                                                          self._ele_obj_df['fk_mapping'].values), u_unconstr, t,
-                                                      self._C_csr, self._f_glob)[0]
-        return self._constraints.constrain_matrix(self._C_csr)
+                                                          self._ele_obj_df['fk_mapping'].values), q, t,
+                                                      self._C_csr, self._f_glob_int)[0]
+        return self._C_csr
 
-    def K_and_f_int(self, q, dq, ddq, t):
+    def K_and_f_int(self, q, dq, t):
         """
         Compute and return the tangential stiffness matrix and internal force vector of the structural component.
 
@@ -178,27 +166,22 @@ class StructuralComponent(MeshComponent):
         f : ndarray
             Internal nonlinear force vector after constraints have been applied
         """
-
-        u_unconstr = self._get_unconstrained_u(q)
-
-        self._constraints.update_constraints(self.X, u=u_unconstr, du=u_unconstr, ddu=u_unconstr, t=t)
-
-        self._C_csr, self._f_glob = self._assembly.assemble_k_and_f(self._mesh.nodes, self.ele_obj,
-                                                                    self._mesh.get_iconnectivity_by_elementids(
+        self._C_csr, self._f_glob_int = self._assembly.assemble_k_and_f(self._mesh.nodes, self.ele_obj,
+                                                                        self._mesh.get_iconnectivity_by_elementids(
                                                                         self._ele_obj_df['fk_mesh'].values),
-                                                                    self._mapping.get_dofs_by_ids(
+                                                                        self._mapping.get_dofs_by_ids(
                                                                         self._ele_obj_df['fk_mapping'].values),
-                                                                    u_unconstr, t,
-                                                                    self._C_csr, self._f_glob)
-        return self._constraints.constrain_matrix(self._C_csr), self._constraints.constrain_vector(self._f_glob)
+                                                                        q, t,
+                                                                        self._C_csr, self._f_glob_int)
+        return self._C_csr, self._f_glob_int
 
-    def f_ext(self, q, dq, ddq, t):
+    def f_ext(self, q, dq, t):
         """
         Compute and return external force vector
 
         Parameters
         ----------
-        u : ndarray
+        q : ndarray
             displacement field in voigt noation. len(u)  is equal to the number of dofs after constraints have been
             applied
         t : float, optional
@@ -209,21 +192,10 @@ class StructuralComponent(MeshComponent):
         f_ext : ndarray
             external force vector after contraints have been applied
         """
-
-        u_unconstr = self._get_unconstrained_u(q)
-
         neumann_elements, neumann_mesh_fk, neumann_mapping_fk = self._neumann.get_ele_obj_fk_mesh_and_fk_mapping()
         neumann_connectivities = self._mesh.get_iconnectivity_by_elementids(neumann_mesh_fk)
         neumann_dofs = self._mapping.get_dofs_by_ids(neumann_mapping_fk)
-        self._f_glob = self._assembly.assemble_f_ext(self._mesh.nodes, neumann_elements,
-                                                     neumann_connectivities, neumann_dofs, u_unconstr, t,
-                                                     f_glob=self._f_glob)
-        return self._constraints.constrain_vector(self._f_glob)
-
-    def _get_unconstrained_u(self, u):
-        if u is None:
-            u_unconstr = np.zeros(self._mapping.no_of_dofs)
-        else:
-            u_unconstr = self._constraints.unconstrain_vector(u)
-
-        return u_unconstr
+        self._f_glob_ext = self._assembly.assemble_f_ext(self._mesh.nodes, neumann_elements,
+                                                         neumann_connectivities, neumann_dofs, q, t,
+                                                         f_glob=self._f_glob_ext)
+        return self._f_glob_ext

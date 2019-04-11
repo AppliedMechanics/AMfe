@@ -257,7 +257,8 @@ class SolverFactory:
         nonlinear_solver, nonlinear_solver_options = self._create_newton_solver(linear_solver, linear_solver_kwargs)
         integrator.nonlinear_solver_func = nonlinear_solver.solve
         integrator.nonlinear_solver_options = nonlinear_solver_options
-        accelerationinitializer = AccelerationInitializer()
+        integrator.dt = self._dt_initial
+        accelerationinitializer = NullAccelerationInitializer()
         # Create Solver Object
         return TransientSolver(integrator, accelerationinitializer)
 
@@ -309,7 +310,7 @@ class SolverFactory:
     def _create_acceleration_initializer(self, linear_solver, linear_solver_kwargs):
         if self._acceleration_initializer is not None:
             if self._acceleration_initializer == 'zero':
-                return AccelerationInitializer()
+                return NullAccelerationInitializer()
             elif self._acceleration_initializer == 'linear':
                 lin_solver_func = linear_solver.solve
                 return LinearAccelerationInitializer(self._system.M, self._system.f_int, self._system.f_ext,

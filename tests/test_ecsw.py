@@ -91,7 +91,7 @@ class TestEcsw(TestCase):
         self.my_component.assign_material(my_material, ['left', 'right'], 'S')
 
         # Get number of dofs for snapshot generation
-        self.no_of_dofs = self.my_component._constraints.no_of_constrained_dofs
+        self.no_of_dofs = self.my_component._mapping.no_of_dofs
         # create 2 random snapshots
         self.no_of_snapshots = 2
         self.S = np.random.rand(self.no_of_dofs, self.no_of_snapshots) * 0.05
@@ -106,7 +106,7 @@ class TestEcsw(TestCase):
         no_of_dofs = self.S.shape[0]
         dq = ddq = np.zeros(no_of_dofs)
         t = 0.0
-        f_old = self.my_component.f_int(self.S[:, 0], dq, ddq, t)
+        f_old = self.my_component.f_int(self.S[:, 0], dq, t)
 
         # run assemble_g_and_b
         G, b = assemble_g_and_b(self.my_component, self.S, self.timesteps)
@@ -161,7 +161,7 @@ class TestEcsw(TestCase):
         # Check if old assembly is recovered
 
         # get f_new for comparison to f_old
-        f_new = self.my_component.f_int(self.S[:, 0], dq, ddq, t)
+        f_new = self.my_component.f_int(self.S[:, 0], dq, t)
         # test if old assembly is recovered in the component
         assert_allclose(f_new, f_old)
 

@@ -40,20 +40,19 @@ class MemoizeStiffness(object):
         self.ddq = None
         self.t = None
 
-    def __call__(self, q, dq, ddq, t, *args):
+    def __call__(self, q, dq, t, *args):
         self.q = np.asarray(q).copy()
         self.dq = np.asarray(dq).copy()
-        self.ddq = np.asarray(ddq).copy()
         self.t = t
 
-        fg = self.fun(q, dq, ddq, t, *args)
+        fg = self.fun(q, dq, t, *args)
         self.jac = fg[0]
         return fg[1]
 
-    def derivative(self, q, dq, ddq, t, *args):
+    def derivative(self, q, dq, t, *args):
         if self.jac is not None and t == self.t and np.alltrue(q == self.q)\
-                and np.alltrue(dq == self.dq) and np.alltrue(ddq == self.ddq):
+                and np.alltrue(dq == self.dq):
             return self.jac
         else:
-            self(q, dq, ddq, t, *args)
+            self(q, dq, t, *args)
         return self.jac
