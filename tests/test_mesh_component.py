@@ -238,32 +238,6 @@ class TestMeshComponent(TestCase):
         }
         neumann_df_desired = pd.DataFrame.from_dict(df_dict)
         assert_frame_equal(neumann_df_actual, neumann_df_desired, check_like=True)
-        
-    def test_assign_constraints_by_group(self):
-        component = StructuralComponent(self.testmesh)
-        component.assign_material(self.mat1, np.array([1, 2, 3]), 'S', '_eleids')
-        group = 'left_boundary'
-        dirichlet = component._constraints.create_dirichlet_constraint()
-        component.assign_constraint('TestConstraint', dirichlet, [group], '_groups', 'elim')
-        constraint_df = component._constraints._constraints_df
-
-        self.assertIsInstance(constraint_df['constraint_obj'].values[0], DirichletConstraint)
-        self.assertEqual(constraint_df['name'].values[0], 'TestConstraint')
-        self.assertEqual(constraint_df['strategy'].values[0], 'elim')
-        assert_array_equal(constraint_df['dofids'].values[0], np.array([8, 9, 10, 11]))
-        
-    def test_assign_constraints_by_eleids(self):
-        component = StructuralComponent(self.testmesh)
-        component.assign_material(self.mat1, np.array([1, 2, 3]), 'S', '_eleids')
-        component._update_mapping()
-        dirichlet = component._constraints.create_dirichlet_constraint()
-        component.assign_constraint('TestConstraint', dirichlet, [4], '_eleids', 'elim')
-        constraint_df = component._constraints._constraints_df
-        
-        self.assertIsInstance(constraint_df['constraint_obj'].values[0], DirichletConstraint)
-        self.assertEqual(constraint_df['name'].values[0], 'TestConstraint')
-        self.assertEqual(constraint_df['strategy'].values[0], 'elim')
-        assert_array_equal(constraint_df['dofids'].values[0], np.array([8, 9, 10, 11]))
 
     def test_get_elementids_by_physics(self):
         component = StructuralComponent(self.testmesh)

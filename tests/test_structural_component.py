@@ -30,8 +30,8 @@ class StructuralComponentTest(TestCase):
         self.my_comp = my_comp
 
     def test_f_ext(self):
-        q = dq = ddq = np.zeros(self.my_comp._constraints.no_of_constrained_dofs)
-        f_ext = self.my_comp.f_ext(q, dq, ddq, 1.0)
+        q = dq = ddq = np.zeros(self.my_comp._constraints.no_of_dofs_unconstrained)
+        f_ext = self.my_comp.f_ext(q, dq, 1.0)
 
         summed_force_actual = np.sum(f_ext)
         length_right = norm(self.mesh.nodes_df.loc[15] - self.mesh.nodes_df.loc[13])
@@ -45,7 +45,7 @@ class StructuralComponentTest(TestCase):
         self.assertEqual(len(locations_not_zero_desired), len(locations_not_zero_actual))
 
         # check if time parameter is propagated:
-        f_ext = deepcopy(self.my_comp.f_ext(q, dq, ddq, t=1.0))
-        f_ext_2 = self.my_comp.f_ext(q, dq, ddq, t=2.0)
+        f_ext = deepcopy(self.my_comp.f_ext(q, dq, t=1.0))
+        f_ext_2 = self.my_comp.f_ext(q, dq, t=2.0)
 
         assert_allclose(2*f_ext, f_ext_2)

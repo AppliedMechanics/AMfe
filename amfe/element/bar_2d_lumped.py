@@ -52,7 +52,7 @@ class Bar2Dlumped(Element):
         l = np.linalg.norm(X_mat[1,:]-X_mat[0,:])
 
         # Element stiffnes matrix
-        k_el_loc = self.material.E*self.material.crossec/l*np.array([[1, -1],
+        k_el_loc = self.material.E_modulus*self.material.crosssec/l*np.array([[1, -1],
                                                           [-1, 1]])
         temp = (X_mat[1,:]-X_mat[0,:])/l
         A = np.array([[temp[0], temp[1], 0,       0],

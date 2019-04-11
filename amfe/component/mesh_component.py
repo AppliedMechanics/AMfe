@@ -54,7 +54,6 @@ class MeshComponent(ComponentBase):
         
         return X
 
-
     @property
     def no_of_elements(self):
         return len(self._ele_obj_df.index)
@@ -66,6 +65,10 @@ class MeshComponent(ComponentBase):
     @assembly.setter
     def assembly(self, assembly):
         self._assembly = assembly
+
+    @property
+    def constraints(self):
+        return self._constraints
 
     # -- ASSIGN MATERIAL METHODS -------------------------------------------------------------------------
     def assign_material(self, materialobj, propertynames, physics, tag='_groups'):
@@ -92,8 +95,7 @@ class MeshComponent(ComponentBase):
         self._update_mapping()
         self._C_csr = self._assembly.preallocate(self._mapping.no_of_dofs, self._mapping.elements2global)
         self._M_csr = self._C_csr.copy()
-        self._f_glob = np.zeros(self._C_csr.shape[1])
-        self._constraints.update_no_of_unconstrained_dofs(self._mapping.no_of_dofs)
+        self._f_glob_int = np.zeros(self._C_csr.shape[1])
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
     def assign_neumann(self, name, condition, tag_values, tag='_groups'):
@@ -103,7 +105,7 @@ class MeshComponent(ComponentBase):
         elif tag == '_eleids':
             eleids = tag_values
         else:
-            eleids = self._mesh.get_elementids_by_tag(tag, tag_values)
+            eleids = self._mesh.get_elementids_by_tags(tag, tag_values)
             
         # get ele_shapes of the elements belonging to the passed eleidxes
         ele_shapes = self._mesh.get_ele_shapes_by_elementids(eleids)
@@ -112,50 +114,8 @@ class MeshComponent(ComponentBase):
         self._update_mapping()
 
     # -- ASSIGN CONSTRAINTS METHODS ------------------------------------------------------------------------
-    def assign_constraint(self, name, constraint, tag_values, tag='_groups', strategy='elim'):
-        if tag == '_dofs':
-            dofids = tag_values
-        else:
-            if tag == '_groups':
-                nodeids = self._mesh.get_nodeids_by_groups(tag_values)
-            elif tag == '_eleids':
-                nodeids = self._mesh.get_nodeids_by_elementids(tag_values)
-            elif tag == '_nodeids':
-                nodeids = tag_values
-            else:
-                nodeids = self._mesh.get_nodeids_by_tag(tag, tag_values)
-
-            dofids = np.reshape(self._mapping.get_dofs_by_nodeids(nodeids), -1)
-
-        self._constraints.add_constraint(name, constraint, dofids, strategy)
-        
-    def unconstrain_vector(self, vector):
-        '''
-        Get full vector composed of the parts from the free subspace and the constraint subspace. Hand over the constrained vector, that is part of the free subspace.
-        
-        Parameters
-        ----------
-        vector : ndarray
-        
-        Returns
-        -------
-        full vector : ndarray
-        '''
-        return self._constraints.unconstrain_vector(vector)
-    
-    def constrain_vector(self, vector):
-        '''
-        Apply pre-defined constraints to a unconstrained vector and get a vector, which is projected into the free subspace.
-        
-        Parameters
-        ----------
-        vector : ndarray
-        
-        Returns
-        -------
-        free vector : ndarray
-        '''
-        return self._constraints.constrain_vector(vector)
+    def assign_constraint(self, name, constraint, dofidxs, nodeidxs):
+        self._constraints.add_constraint(name, constraint, dofidxs, nodeidxs)
         
     # -- MAPPING METHODS -----------------------------------------------------------------------------------
     def _update_mapping(self):
@@ -181,6 +141,7 @@ class MeshComponent(ComponentBase):
 
         # call update_mapping
         self._mapping.update_mapping(fields, nodeids, connectivities, dofs_by_elements, callbacks, callbackargs)
+        self._constraints.no_of_dofs_unconstrained = self._mapping.no_of_dofs
 
     def write_mapping_key(self, fk, local_id):
         self._ele_obj_df.at[local_id, 'fk_mapping'] = fk

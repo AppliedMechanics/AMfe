@@ -9,7 +9,7 @@ class ComponentBase:
     def __init__(self, *args, **kwargs):
         pass
     
-    def get_mat(self, matrix_type, q, dq, ddq, t):
+    def get_mat(self, matrix_type, q, dq, t):
         """
         Returns a requested matrix dependend on given path
 
@@ -28,15 +28,11 @@ class ComponentBase:
             the requested matrix
         """
         func = getattr(self, matrix_type)
-        if matrix_type == "M":
-            return func(q, dq, t)
-        else:
-            return func(q, dq, ddq, t)
+        return func(q, dq, t)
     
     def unconstrain_vector(self, vector):
         return vector
 
-        
     def partition(self, no_of_components, element_id_sets):
         """
         TODO: Implement subroutines to split up component

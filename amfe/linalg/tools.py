@@ -3,11 +3,13 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
 
-from numpy import tensordot
+from numpy import tensordot, array_equal
 from scipy.linalg import inv
+from scipy.sparse import issparse
 
 
-__all__ = ['coordinate_transform']
+__all__ = ['coordinate_transform',
+           'isboolean']
 
 
 def coordinate_transform(to, h_from):
@@ -23,3 +25,26 @@ def coordinate_transform(to, h_from):
         return tensordot(Ainv, x, (Ainv.ndim-1, 0))
 
     return transform, inverse_transform
+
+
+def isboolean(A):
+    """
+    Checks if ndarray or sparse matrix A is Boolean
+
+    Parameters
+    ----------
+    A : ndarray or csr_matrix or csc_matrix or lil_matrix
+        matrix to check
+
+    Returns
+    -------
+    flag : bool
+        Flag if A is boolean. Returns True or False
+    """
+    if issparse(A):
+        if not array_equal(A.data, A.data.astype(bool)):
+            return False
+    else:
+        if not array_equal(A, A.astype(bool)):
+            return False
+    return True

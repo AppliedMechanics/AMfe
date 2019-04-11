@@ -5,29 +5,51 @@
 # Distributed under 3-Clause BSD license. See LICENSE file for more information.
 #
 """
-Module having a base class for ConstraintManager
+Module providing a ConstraintManager
 
 On constraint-implementation see literature:
-Gould, N.I.M. e.a. (1998) - On the Solution of Equality Constrained Quadratic Programming Problems Arising in Optimization
+Gould, N.I.M. e.a. (1998) - On the Solution of Equality Constrained Quadratic Programming Problems Arising in
+Optimization
 """
 
-import pandas as pd
+import logging
 import numpy as np
-from scipy.sparse.linalg import spsolve
-from scipy.sparse import csr_matrix
+import pandas as pd
 
 from .constraint_assembler import ConstraintAssembler
 from .constraint import DirichletConstraint, FixedDistanceConstraint
-    
+
+
 class ConstraintManager:
-    
-    # Strategies to apply constraints
-    # currently: elimination and lagrange multiplier
-    STRATEGIES = [
-        'elim',
-        'lagrmult'
-    ]
-    
+    """
+    The Constraint Manager couples constraint objects based from HolonomicConstraintClass
+    with the Assembler.
+    It thus provides functions:
+        - creation methods to create constraint objects that can be passed to the add method of the manager
+        - to add and remove constraint objects
+        - to ask for global vectors/matrices coming from algebraic constraint equations
+        - general state properties to ask the state of the constraint manager, e.g. no_of_constraints
+
+    Attributes
+    ----------
+    logger: logging.Logger
+        logging class to log events coming from constraint manager
+    _no_of_dofs_unconstrained: int
+        number of dofs of the unconstrained system (length of global vectors that are provided when an entity is asked
+        for
+    _constraints_df: pandas.DataFrame
+        pandas DataFrame containing information about applied constraints: name, objects, nodeidxs to be passed,
+        dofidxs to be passed
+    _constraint_assembler: amfe.constraint_assembler.ConstraintAssembler
+        an assembler object that is able to assemble the global entities
+    _B: csr_matrix
+        preallocated csr_matrix to assemble global B
+    _g: numpy.array
+        preallocated numpy.array to assemble global g (holonomic constraint function)
+    _update_flag: bool
+        internal flag that indicates if some things must be updated when they are asked for or not
+    """
+
     def __init__(self, ndof_unconstrained_system=0):
         """
         Parameters
@@ -36,19 +58,74 @@ class ConstraintManager:
             number of dofs of the unconstrained system.
         """
         super().__init__()
-        self._no_of_unconstrained_dofs = ndof_unconstrained_system
-        self._constraints_df = pd.DataFrame(columns=['name', 'constraint_obj', 'dofids', 'strategy'])
+        self.logger = logging.getLogger('amfe.constraint.constraint_manager.ConstraintManager')
+        self._no_of_dofs_unconstrained = ndof_unconstrained_system
+        self._update_flag = True
+        self._constraints_df = pd.DataFrame(columns=['name', 'constraint_obj', 'nodeidxs', 'dofidxs'])
         self._constraints_df['name'] = self._constraints_df['name'].astype('object')
-        self._constraints_df['dofids'] = self._constraints_df['dofids'].astype('int64')
-        self._constraints_df['strategy'] = self._constraints_df['strategy'].astype('object')
+        self._constraints_df['nodeidxs'] = self._constraints_df['nodeidxs'].astype('object')
+        self._constraints_df['dofidxs'] = self._constraints_df['dofidxs'].astype('object')
         
         self._constraint_assembler = ConstraintAssembler()
-        self._L = None
-        self._C_elim = None
-        self._C_lagr = None
-        self._g_elim = None
-        self._g_lagr = None
+
+        self._B = None
+        self._g = None
+        self._update_flag = True
         return
+
+    @property
+    def no_of_constraint_definitions(self):
+        """
+        Returns the number of constraints that have different names
+
+        Returns
+        -------
+        n: int
+            number of constraints that have different names
+        """
+        return len(self._constraints_df['name'].unique())
+
+    @property
+    def no_of_constraints(self):
+        """
+        Returns the total number of degrees of freedom that will be constrained by all constraints together
+
+        Returns
+        -------
+        n: int
+            number of degrees of freedom that will be constrained by all constraints
+        """
+        return np.sum(self._no_of_constraints_by_object())
+
+    @property
+    def no_of_dofs_unconstrained(self):
+        """
+        Returns the number of dofs of the unconstrained system, i.e. this defines the length of the global vectors
+        that are passed to the global vector and matrix getter functions
+
+        Returns
+        -------
+        n: int
+            number of dofs of the unconstrained system that is assumed
+        """
+        return self._no_of_dofs_unconstrained
+
+    @no_of_dofs_unconstrained.setter
+    def no_of_dofs_unconstrained(self, new_no_of_dofs_unconstrained):
+        """
+        Setter for number of dofs of the unconstrained system that is assumed
+
+        Parameters
+        ----------
+        new_no_of_dofs_unconstrained: int
+            new number of dofs of the unconstrained system that is assumed
+
+        Returns
+        -------
+        None
+        """
+        self._no_of_dofs_unconstrained = new_no_of_dofs_unconstrained
+        self._update_flag = True
     
     @staticmethod
     def create_fixed_distance_constraint():
@@ -68,8 +145,6 @@ class ConstraintManager:
 
         Parameters
         ----------
-        no_of_dofs: int
-            number of dofs that shall be constrained
         U: func
             function f(t) describing the prescribed field
         dU: func
@@ -82,8 +157,8 @@ class ConstraintManager:
         constraint: amfe.constraint.DirichletConstraint
         """
         return DirichletConstraint(U, dU, ddU)
-    
-    def add_constraint(self, name, constraint_obj, dofids, strategy):
+
+    def add_constraint(self, name, constraint_obj, dofidxs, nodeidxs=()):
         """
         Method for adding a constraint
 
@@ -93,223 +168,318 @@ class ConstraintManager:
             A string describing the name of the constraint (can be any name)
         constraint_obj : amfe.constraint.ConstraintBase
             constraint object, describing the constraint
-        dofids : tuple
+        dofidxs : tuple
             dofs' indices that must be passed to the constraint
-        strategy : str {'elim', 'lagrmult'}
-            strategy how the constraint shall be applied (e.g. via elimination or lagrange multiplier)
+        nodeidxs : tuple
+            nodes' indices that must be passed to the constraint
 
-        Returns
-        -------
-        None
         """
-        print('Adding constraint ', strategy, ' to dofs ', dofids)
-
-        if strategy not in self.STRATEGIES:
-            raise ValueError('strategy must be \'elim\' or \'lagrmult\'')
+        self.logger.info('Adding constraint {} to dofs {} and nodes {}'.format(name, dofidxs, nodeidxs))
 
         # Create new rows for constraints_df
         df = pd.DataFrame(
-            {'name': name, 'constraint_obj': constraint_obj, 'dofids': [dofids], 'strategy': strategy})
+            {'name': name, 'constraint_obj': constraint_obj,
+             'dofidxs': [np.array([dofidxs], dtype=int).reshape(-1)],
+             'nodeidxs': [np.array([nodeidxs], dtype=int).reshape(-1)]},
+            )
+
         self._constraints_df = self._constraints_df.append(df, ignore_index=True)
-        constraint_obj.after_assignment(dofids)
+        constraint_obj.after_assignment(dofidxs)
+
+        self._update_flag = True
         return
     
     def remove_constraint_by_name(self, name):
+        """
+        Removes a constraint by its given name
+
+        Parameters
+        ----------
+        name : str
+            name of the constraint
+        """
         indices = self._constraints_df.index[self._constraints_df['name'] == name].tolist()
         self._remove_constraint_by_indices(indices)
+        self._update_flag = True
         
-    def remove_constraint_by_dofids(self, dofids):
+    def remove_constraint_by_dofidxs(self, dofidxs):
         """
         Removes constraints from dataframe, that are applied to chosen dofs
-        WARNING: This removes the whole row! So if the constraint is applied to further dofs, where you want to keep the constraint, 
+        WARNING: This removes the whole row! So if the constraint is applied to further dofs, where you want to keep the
+        constraint,
         you have to reapply the constraint 
          
         Parameters
         ----------
-        dofids: int64 list
+        dofidxs: int64 list
         
         Returns
         -------
         None
         """
         indices = []
-        for dof in dofids:
+        for dof in dofidxs:
             for indx, constr in self._constraints_df.iterrows():
-                if [dof] == constr['dofids']:
+                if [dof] == constr['dofidxs']:
                     indices.append(indx)
 
-                
         self._remove_constraint_by_indices(indices)
+        self._update_flag = True
         
     def _remove_constraint_by_indices(self, indices):
         self._constraints_df = self._constraints_df.drop(indices)
         self._constraints_df = self._constraints_df.reset_index(drop=True)
-    
-    def constrain_matrix(self, matrix):
-        if self.L is None:
-            print('No elimination constraint set')
-            return matrix
-        else:
-            return self.L.T @ matrix @ self.L
-    
-    def constrain_vector(self, vector):
-        if self.L is None:
-            print('No elimination constraint set')
-            return vector
-        else:
-            return self.L.T @ vector
-    
-    def unconstrain_vector(self, free_vector, constrained_vector=None):
-        '''
-        Get full vector composed of the parts from the free subspace and the constraint subspace. Hand over the free vector, that is part of the free subspace and (optionally) the
-        the constrained vector, that is part of the constraint subspace. If the constrained vector is not given, it is calculated by solving C^T * C * delta_u = g(u)
-        
-        Parameters
-        ----------
-        free_vector : ndarray
-        constrained_vector : ndarray
-        
-        Returns
-        -------
-        full vector : ndarray
-        '''
-        if self.C_elim is None or free_vector.shape[0]==self._no_of_unconstrained_dofs:
-            return free_vector
-        else:
-            if constrained_vector is None:
-                constrained_vector = self.constrained_dofs
-                
-            return self.L @ free_vector + self.C_elim.T @ constrained_vector
-        
-    def get_constrained_coupling_quantities(self, matrix):
-        """
-        Calculate coupling terms of off-diagonals in system matrix, which couples constraints and free unknowns
-        
-        Parameters
-        ----------
-        matrix: csr-matrix
-            tangent system-matrix of unconstrained linearized system of equations
-            
-        Returns
-        -------
-        coupling-forces: csr-matrix
-            forces of system-matrix caused by constraints projected into free solution-space of L
-        """
-        return csr_matrix((self.L.T @ matrix @ self.C_elim.T) @ self.constrained_dofs).T
-    
-    def update_no_of_unconstrained_dofs(self, new_no_of_unconstrained_dofs):
-        self._no_of_unconstrained_dofs = new_no_of_unconstrained_dofs
-    
-    def update_constraints(self, X, u, du, ddu, t=0):
-        self._update_elim_constraints(X, u, du, ddu, t)
-        self._update_lagr_constraints(X, u, du, ddu, t)
-        
-    @property
-    def constrained_dofs(self):
-        """
-        Values of eliminated dofs
-        
-        Parameters
-        ----------
-        var: ndarray
-            the whole unconstrained vector of primary solution
-        
-        Returns
-        -------
-        constrained_dofs: ndarray
-            the part of the solution in the constrained subspace
-        """
-        self._constrained_dofs = spsolve(self.C_elim @ self.C_elim.T, -self._g_elim)
-        return self._constrained_dofs
 
-    @property
-    def L(self):
+    def update(self):
         """
-        Returns
-        -------
-        L : ndarray
-            Retuns the L matrix that eliminates the dofs that are eliminated by constraints
-        """
+        Function that is called by observers or called internally when something is asked and the update flag is True
 
-        return self._L
-    
-    @property
-    def C_elim(self):
-        """
         Returns
         -------
-        C : ndarray
-            Retuns the C matrix containing linearized constraints for applying lagrange multipliers
+        None
         """
-        return self._C_elim
-    
-    def residual_elim(self, var):
+        self._g, self._B = self._constraint_assembler.preallocate_g_and_B(self._no_of_dofs_unconstrained,
+                                                                          self._dofidxs(),
+                                                                          self._no_of_constraints_by_object())
+
+    def _no_of_constraints_by_object(self):
+        """
+        Returns the number of dofs that are constrained the constraint objects defined in the DataFrame
+
+        Returns
+        -------
+        no_of_constraints_by_object: list
+            list of ints that containt the number of dofs 'removed' by the constrained
+        """
+        return [const['constraint_obj'].NO_OF_CONSTRAINTS for i, const in self._constraints_df.iterrows()]
+
+    def _dofidxs(self):
+        """
+        Returns a list with ndarrays containing the local dofidxs that must be passed to the constraints
+
+        Returns
+        -------
+        dofidxs: list
+            list of ndarrays containing the local dofidxs that must be passed to the constraints
+        """
+        return [const['dofidxs'] for i, const in self._constraints_df.iterrows()]
+
+    def _Bs(self, X, t):
+        """
+        Returns the B functions that now only have u as input function because u must be separated to local dofs
+        defined by the dofidxs
+
+        Parameters
+        ----------
+        X: numpy.array
+            numpy.array containing the coordinates of the nodes of the system
+        t: float
+            time
+
+        Returns
+        -------
+        jacs: generator
+            generator object that yields the B function with correct signature for the assembler
+        """
+        for i, const in self._constraints_df.iterrows():
+            nodeidxs = const['nodeidxs']
+            X_local = X[nodeidxs, :].reshape(-1)
+
+            def B(u):
+                return const['constraint_obj'].B(X_local, u, t)
+            yield B
+
+    def _gs(self, X, t):
+        """
+        Returns the holonomic g functions that now only have u as input function because u must be separated to local
+        dofs defined by the dofidxs
+
+        Parameters
+        ----------
+        X: numpy.array
+            numpy.array containing the coordinates of the nodes of the system
+        t: float
+            time
+
+        Returns
+        -------
+        ress: generator
+            generator object that yields the g functions with correct signature for the assembler
+        """
+        for i, const in self._constraints_df.iterrows():
+            nodeidxs = const['nodeidxs']
+            X_local = X[nodeidxs, :].reshape(-1)
+
+            def g(u):
+                return const['constraint_obj'].g(X_local, u, t)
+
+            yield g
+
+    def _as(self, X, t):
+        """
+        Returns the a functions that now only have u and du as input function because these must be separated to local
+        dofs defined by the dofidxs
+
+        Parameters
+        ----------
+        X: numpy.array
+            numpy.array containing the coordinates of the nodes of the system
+        t: float
+            time
+
+        Returns
+        -------
+        ress: generator
+            generator object that yields the g functions with correct signature for the assembler
+        """
+        for i, const in self._constraints_df.iterrows():
+            nodeidxs = const['nodeidxs']
+            X_local = X[nodeidxs, :].reshape(-1)
+
+            def a(u, du):
+                return const['constraint_obj'].a(X_local, u, du, t)
+
+            yield a
+
+    def _bs(self, X, t):
+        """
+        Returns the b functions that now only have u as input function because u must be separated to local
+        dofs defined by the dofidxs
+
+        Parameters
+        ----------
+        X: numpy.array
+            numpy.array containing the coordinates of the nodes of the system
+        t: float
+            time
+
+        Returns
+        -------
+        ress: generator
+            generator object that yields the g functions with correct signature for the assembler
+        """
+        for i, const in self._constraints_df.iterrows():
+            nodeidxs = const['nodeidxs']
+            X_local = X[nodeidxs, :].reshape(-1)
+
+            def b(u):
+                return const['constraint_obj'].b(X_local, u, t)
+
+            yield b
+
+    def g_and_B(self, X, u, t):
         """
         Parameters
         ----------
-        var: ndarray
-            Full, unconstrained dof-values
-            
+        X: numpy.array
+            numpy.array containing the coordinates of the nodes of the system
+        u: numpy.array
+            numpy.array containing the global displacements of the dofs of the system
+        t: float
+            time
+
         Returns
         -------
         g : ndarray
-            Retuns the g vector containing the constraint-residuals when applying lagrange multipliers
+            the global holonomic constraint function residual
+        B : csr_matrix
+            Returns the B matrix containing linearized constraints for applying lagrange multipliers
         """
-        return self.C_elim @ var - self._g_elim
-    
-    @property
-    def C_lagr(self):
-        """
-        Returns
-        -------
-        C : ndarray
-            Retuns the C matrix containing linearized constraints for applying lagrange multipliers
+        if self._update_flag:
+            self.update()
+        g, B = self._constraint_assembler.assemble_g_and_B(self._gs(X, t), self._Bs(X, t),
+                                                           self._dofidxs(), (u,), self._g, self._B)
+        return g, B
+
+    def B(self, X, u, t):
         """
 
-        return self._C_lagr
-    
-    def residual_lagr(self, var):
+        Parameters
+        ----------
+        X: numpy.array
+            numpy.array containing the coordinates of the nodes of the system
+        u: numpy.array
+            numpy.array containing the global displacements of the dofs of the system
+        t: float
+            time
+
+        Returns
+        -------
+        B : csr_matrix
+            Returns the B matrix containing linearized constraints for applying lagrange multipliers
         """
+        if self._update_flag:
+            self.update()
+        return self._constraint_assembler.assemble_B(self._Bs(X, t, ), self._dofidxs(), (u,),
+                                                     self._B)
+
+    def g(self, X, u, t):
+        """
+
+        Parameters
+        ----------
+        X: numpy.array
+            numpy.array containing the coordinates of the nodes of the system
+        u: numpy.array
+            numpy.array containing the global displacements of the dofs of the system
+        t: float
+            time
+
         Returns
         -------
         g : ndarray
-            Retuns the g vector containing the constraint-residuals when applying lagrange multipliers
+            the global holonomic constraint function residual
+        """
+        if self._update_flag:
+            self.update()
+        return self._constraint_assembler.assemble_g(self._gs(X, t), self._dofidxs(), (u,), self._g)
+
+    def a(self, X, u, du, t):
         """
 
-        return self.C_lagr @ var - self._g_lagr
-
-    @property
-    def no_of_constrained_dofs(self):
-        """
-        Gives the number of dofs of the constrained system
+        Parameters
+        ----------
+        X: numpy.array
+            numpy.array containing the coordinates of the nodes of the system
+        u: numpy.array
+            numpy.array containing the global displacements of the dofs of the system
+        du: numpy.array
+            numpy.array containing the global velocities of the dofs of the system
+        t: float
+            time
 
         Returns
         -------
-        no_of_constrained_dofs : int
-            Number of dofs of the constrained system
+        a : ndarray
+            the inhomogeneous part of the constraint function on acceleration level
         """
-        if self.C_elim is None:
-            return self._no_of_unconstrained_dofs
-        else:
-            return self._no_of_unconstrained_dofs - self.C_elim.shape[0]
-        
-    def _update_elim_constraints(self, X, u, du, ddu, t):
-        self._C_elim, self._L, self._g_elim = self._constraint_assembler.assemble_elim_C_L_and_g(self._no_of_unconstrained_dofs, self._get_dofids_by_strategy('elim'), self._constraints_df, X, u, du, ddu, t)
-        
-    def _update_lagr_constraints(self, X, u, du, ddu, t):
-        self._C_lagr, self._g_lagr = self._constraint_assembler.assemble_lagr_C_g(self._no_of_unconstrained_dofs, self._constraints_df, X, u, du, ddu, t)
-        if self._L is not None and self._C_lagr is not None:
-            self._C_lagr = self._C_lagr @ self._L
-        
-    def _get_dofids_by_strategy(self, strategy):
-        if strategy in self._constraints_df['strategy'].values:
-            dofids = []
-            for row, constr in self._constraints_df.iterrows():
-                if constr['strategy'] is strategy:
-                    dofids = np.append(dofids, constr['dofids'])
-            dofids = np.unique(dofids)
+        if self._update_flag:
+            self.update()
+        a = self._g.copy()
+        a *= 0.0
+        a = self._constraint_assembler.assemble_g(self._as(X, t), self._dofidxs(), (u, du), a)
+        return a
 
-        else:
-            dofids = np.empty([0,0])
-            
-        return dofids
+    def b(self, X, u, t):
+        """
+
+        Parameters
+        ----------
+        X: numpy.array
+            numpy.array containing the coordinates of the nodes of the system
+        u: numpy.array
+            numpy.array containing the global displacements of the dofs of the system
+        t: float
+            time
+
+        Returns
+        -------
+        b : ndarray
+            the inhomogeneous part of the constraint function on velocity level
+        """
+        if self._update_flag:
+            self.update()
+        b = self._g.copy()
+        b *= 0.0
+        b = self._constraint_assembler.assemble_g(self._bs(X, t), self._dofidxs(), (u, ), b)
+        return b
