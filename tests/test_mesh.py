@@ -436,7 +436,7 @@ class TestPartitionedMesh(TestCase):
                 'connectivity': connectivity,
                 'no_of_mesh_partitions': [4, 3, 2, 3, 4, 2, 4, 4, 2, 2, 2, 2],
                 'partition_id': [1, 1, 1, 2, 2, 3, 4, 3, 1, 3, 2, 4],
-                'partitions_neighbors': [(-2, -3, -4), (-2, -3), -3, (-1, -4), (-1, -3, -4), -1, (-1, -2, -3), (-1, -2, -4), -3, -1, -4, -2]
+                'partitions_neighbors': [(2, 3, 4), (2, 3), 3, (1, 4), (1, 3, 4), 1, (1, 2, 3), (1, 2, 4), 3, 1, 4, 2]
                 }
         indices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         el_df = pd.DataFrame(data, index=indices)
@@ -469,7 +469,7 @@ class TestPartitionedMesh(TestCase):
                 'connectivity': connectivity_desired,
                 'no_of_mesh_partitions': [3, 4, 2],
                 'partition_id': [2, 2, 2],
-                'partitions_neighbors': [(-1, -4), (-1, -3, -4), -4]
+                'partitions_neighbors': [(1, 4), (1, 3, 4), 4]
                 }
         indices = [4, 5, 11]
         elements_desired = pd.DataFrame(data, index=indices)

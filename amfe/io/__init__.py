@@ -10,3 +10,5 @@ I/O module.
 
 Module handling all input/output operations.
 """
+
+from .tools import *

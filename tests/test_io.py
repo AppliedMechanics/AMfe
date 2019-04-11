@@ -631,7 +631,31 @@ class IOTest(TestCase):
         
         desired_list_1 = [1,1,2,2]
         desired_list_2 = [1,1,1,2]
-        desired_list_3 = [None,None,-2,-1]
+        desired_list_3 = [None, None, 2, 1]
+        actual_list_1 = mesh_obj.el_df['no_of_mesh_partitions'].tolist()
+        actual_list_2 = mesh_obj.el_df['partition_id'].tolist()
+        actual_list_3 = mesh_obj.el_df['partitions_neighbors'].tolist()
+
+        self.assertListEqual(actual_list_1, desired_list_1)
+        self.assertListEqual(actual_list_2, desired_list_2)
+        self.assertListEqual(actual_list_3, desired_list_3)
+
+    def test_gmsh_parser_with_2_partitions_splitboundary(self):
+
+        msh_filename = amfe_dir('tests/meshes/2_partitions_2quad_mesh_splitboundary.msh')
+        reader_obj = GmshAsciiMeshReader(msh_filename)
+        converter = AmfeMeshConverter()
+        reader_obj.parse(converter)
+        mesh_obj = converter.return_mesh()
+
+        self.assertTrue('no_of_mesh_partitions' in mesh_obj.el_df)
+        self.assertTrue('partition_id' in mesh_obj.el_df)
+        self.assertTrue('partitions_neighbors' in mesh_obj.el_df)
+
+        desired_list_1 = [2, 2, 2, 2]
+        desired_list_2 = [1, 2, 1, 2]
+        desired_list_3 = [2, 1, 2, 1]
+
         actual_list_1 = mesh_obj.el_df['no_of_mesh_partitions'].tolist()
         actual_list_2 = mesh_obj.el_df['partition_id'].tolist()
         actual_list_3 = mesh_obj.el_df['partitions_neighbors'].tolist()
