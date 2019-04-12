@@ -106,25 +106,5 @@ class ComponentComposite(ComponentBase):
             for master_id, master_comp in enumerate(self.components): 
                 if master_id is not slave_id:
                     self.component_connector.apply_compatibility_constraint(master_id, master_comp, slave_id, slave_comp)
-        '''
-        print('Connectors:')      
-        print(self.component_connector.constraints)
-
-        for iconnec in self.component_connector.constraints.keys():
-            opposite_connec = iconnec[3]+'to'+iconnec[0]
-            print(iconnec, ' and ', opposite_connec)
-            if iconnec not in ['7to1', '3to2', '9to3', '5to4', '8to4', '6to5', '7to6', '9to8']:
-                glo_B = np.concatenate((self.component_connector.constraints[iconnec].todense(),-self.component_connector.constraints[opposite_connec].todense()),axis=1)
-                print(np.sum(glo_B, axis=1))
-        '''
-    
-    def assign_dirichlet_constraint(self, name, tag_values, tag='_groups', strategy='elim', U=lambda t: 0., dU=lambda t: 0., ddU=lambda t: 0.):
-        for component in self.components:
-            constraint = component._constraints.create_dirichlet_constraint(U, dU, ddU)
-            component.assign_constraint(name, constraint, tag_values, tag, strategy)
-            
-    def assign_neumann(self, name, condition, tag_values, tag='_groups'):
-        for component in self.components:
-            component.assign_neumann(name, condition, tag_values, tag)
 
 

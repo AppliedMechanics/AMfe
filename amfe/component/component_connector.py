@@ -51,21 +51,20 @@ class ComponentConnector:
             slave_constraints = ConstraintManager(slave_component._mapping.no_of_dofs)
             constraint = slave_constraints.create_dirichlet_constraint()
             name = 'Compatibility' + str(loc_master_id) + str(loc_slave_id)
-            slave_constraints.add_constraint(name, constraint, slave_dofids, 'lagrmult')
+            slave_constraints.add_constraint(name, constraint, np.array([slave_dofids], dtype=int), np.array([], dtype=int))
             X = slave_component.X
             u = np.zeros(X.shape)
-            slave_constraints.update_constraints(X, u , du=u, ddu=u)
+            
+            self.constraints[slave_key] = -slave_constraints.B(X, u , 0)
             
             master_constraints = ConstraintManager(master_component._mapping.no_of_dofs)
             constraint = master_constraints.create_dirichlet_constraint()
             name = 'Compatibility' + str(loc_slave_id) + str(loc_master_id)
-            master_constraints.add_constraint(name, constraint, master_dofids, 'lagrmult')
+            master_constraints.add_constraint(name, constraint, np.array([master_dofids], dtype=int), np.array([], dtype=int))
             X = master_component.X
             u = np.zeros(X.shape)
-            master_constraints.update_constraints(X, u , du=u, ddu=u)
             
-            self.constraints[master_key] = master_constraints._C_lagr
-            self.constraints[slave_key] = -slave_constraints._C_lagr
+            self.constraints[master_key] = master_constraints.B(X, u , 0)
             
         elif master_key in self.constraints or slave_key in self.constraints:
             self.delete_connection(master_key)
