@@ -279,6 +279,7 @@ class ListElement:
             hexa8_gmsh_swap = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 9, 16, 18, 19,
                                         17, 10, 12, 14, 15], dtype=int)
             self.connectivity[:] = self.connectivity[hexa8_gmsh_swap]
+        self.connectivity = self.connectivity.tolist()
 
         self.physical_group = int(elementinfo[3])
         self.tag = int(elementinfo[4])
