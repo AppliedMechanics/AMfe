@@ -60,7 +60,7 @@ class GmshAsciiMeshReader(MeshReader):
         93: None
     }
 
-    eletypes_3d = [4, 5, 6, 11, 17]
+    eletypes_3d = ['Tet4', 'Hexa8', 'Prism6', 'Tet10', 'Hexa20']
 
     tag_format_start = "$MeshFormat"
     tag_format_end = "$EndMeshFormat"
@@ -74,6 +74,7 @@ class GmshAsciiMeshReader(MeshReader):
     def __init__(self, filename=None):
         super().__init__()
         self._filename = filename
+        self._dimension = 2
         return
 
     def parse(self, builder):
@@ -184,6 +185,8 @@ class GmshAsciiMeshReader(MeshReader):
         has_partitions = False
         for ele_string in list_imported_elements:
             element = ListElement(ele_string, self.eletypes)
+            if element.type in self.eletypes_3d:
+                self._dimension = 3
 
             builder.build_element(element.id, element.type, element.connectivity)
             # Add element to group
@@ -244,6 +247,7 @@ class GmshAsciiMeshReader(MeshReader):
 
         builder.build_tag(tags_dict)
 
+        builder.build_mesh_dimension(self._dimension)
         return
 
 

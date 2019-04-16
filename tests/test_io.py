@@ -566,7 +566,7 @@ class IOTest(TestCase):
         element_57_desired = (57, 'Hexa20', [5, 42, 60, 30, 21, 45, 75, 65, 44, 63, 64,
                                               32, 49, 77, 78, 66, 22, 47, 76, 67])
 
-
+        dimension_desired = 3
         # Define input file path
         file = amfe_dir('tests/meshes/gmsh_ascii_v2_hexa20.msh')
         # Define Reader Object, initialized with AmfeMeshConverter
@@ -581,10 +581,12 @@ class IOTest(TestCase):
         # Check mesh dimension
         self.assertEqual(mesh._no_of_nodes, 81)
         self.assertEqual(mesh._no_of_elements, 64)
+        self.assertEqual(mesh._dimension, dimension_desired)
 
     def test_gmshascii_to_dummy_tet10(self):
 
         element_65_desired = (65, 'Tet10', [61, 9, 45, 72, 84, 85, 86, 87, 79, 88])
+        dimension_desired = 3
         # Define input file path
         file = amfe_dir('tests/meshes/gmsh_ascii_v2_tet10.msh')
         # Define Reader Object, initialized with AmfeMeshConverter
@@ -599,6 +601,7 @@ class IOTest(TestCase):
         # Check mesh dimension
         self.assertEqual(mesh._no_of_nodes, 113)
         self.assertEqual(mesh._no_of_elements, 112)
+        self.assertEqual(mesh._dimension, dimension_desired)
 
     def test_amfemeshobj_to_dummy(self):
         # Desired nodes
