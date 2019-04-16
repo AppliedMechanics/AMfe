@@ -80,7 +80,7 @@ class PendulumConstraintTest(TestCase):
         self.cm.add_constraint('Fixation', self.constraint_fixation, np.array([0], dtype=int), ())
         self.cm.add_constraint('Fixation', self.constraint_fixation, np.array([1], dtype=int), ())
         self.cm.add_constraint('Pendulum', self.constraint_fixed_distance, np.array([0, 1, 2, 3], dtype=int),
-                               np.array([0, 1], dtype=int))
+                               np.array([0, 1, 2, 3], dtype=int))
 
         def g_func(u, t):
             return self.cm.g(self.X, u, t)

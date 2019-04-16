@@ -157,7 +157,7 @@ class PendulumConstraintManagerTest(TestCase):
             # Mass of the pendulum
             self.m = 1.0
             # X coordinates in reference configuration
-            self.X = np.array([0.0, 0.0, 0.0, -self.L], dtype=float).reshape(-1, 2)
+            self.X = np.array([0.0, 0.0, 0.0, -self.L], dtype=float)
             # initial condition u_0: 90deg to the right
             self.u_0 = np.array([0.0, 0.0, self.L, self.L])
             # other initial conditions:
@@ -198,7 +198,7 @@ class PendulumConstraintManagerTest(TestCase):
                                    np.array([], dtype=int))
             self.cm.add_constraint('Pendulum', self.constraint_pendulum,
                                    np.array([0, 1, 2, 3], dtype=int),
-                                   np.array([0, 1], dtype=int))
+                                   np.array([0, 1, 2, 3], dtype=int))
             # set time to zero
             t = 0.0
 
