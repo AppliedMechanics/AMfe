@@ -12,6 +12,7 @@ This module provides a mesh class that handles the mesh information: nodes, mesh
 
 import numpy as np
 import pandas as pd
+import logging
 from collections.abc import Iterable
 
 __all__ = [
@@ -27,6 +28,8 @@ element_3d_set = {'Tet4', 'Tet10', 'Hexa8', 'Hexa20', 'Prism6'}
 boundary_2d_set = {'straight_line', 'quadratic_line'}
 # 3D boundary elements
 boundary_3d_set = {'straight_line', 'quadratic_line', 'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8'}
+
+SHAPES = element_2d_set.union(element_3d_set, boundary_2d_set, boundary_3d_set)
 
 
 class Mesh:
@@ -44,6 +47,8 @@ class Mesh:
         DataFrame with element information
     groups : list
         List of groups containing ids (not row indices!)
+    logger: Logger
+        Python logger instance to log events from the mesh
 
     Notes
     -----
@@ -69,6 +74,9 @@ class Mesh:
         mesh : Mesh
             a new mesh object
         """
+        # -- INSTANTIATE A LOGGER --
+        self.logger = logging.getLogger('amfe.mesh.Mesh')
+
         # -- GENERAL INFORMATION --
         self._dimension = dimension
 
@@ -708,7 +716,6 @@ class Mesh:
         
         return selected_elements.index.values
 
-
     def get_elementidxs_by_tags(self, tag_names, tag_values, opt_larger=None):
         """
         This function returns a list with the elementidxs in connectivity array
@@ -944,15 +951,15 @@ class Mesh:
         
         Parameters
         ----------
-        node_coordinates : ndarray, pandas.Series
+        node_coordinates: ndarray, pandas.Series
             x, y, z coordinates of new node. In case of a pandas.Series, it has to consist of columns 'x', 'y' and maybe 'z'
 
-        node_id : int
+        node_id: int
             id of that node, which is to be copied
             
         Returns
         -------
-        new_node_id : int
+        new_node_id: int
             id of the new, added node
         """
         if self.no_of_nodes > 0:
@@ -963,22 +970,74 @@ class Mesh:
             
         if isinstance(node_coordinates, pd.Series):
             if 'z' in node_coordinates:
-                print('WARNING: To many coordinates were given. Droping the z-coordinate.')
+                print('WARNING: To many coordinates were given. Dropping the z-coordinate.')
                 node_coordinates.drop('z', axis=1)
                 
             new_node = node_coordinates.rename(node_id)
         else:
             if self.dimension == 2:
-                if node_coordinates.shape[0] > self.dimension:
-                    print('WARNING: To many coordinates were given. Droping the last ', node_coordinates.shape[0]-self.dimension, ' entries.')
+                if len(node_coordinates) > self.dimension:
+                    print('WARNING: To many coordinates were given. Dropping the last ', node_coordinates.shape[0]-self.dimension, ' entries.')
 
-                new_node = pd.Series({'x' : node_coordinates[0], 'y' : node_coordinates[1]}, name=node_id)
+                new_node = pd.Series({'x': node_coordinates[0], 'y': node_coordinates[1]}, name=node_id)
             elif self.dimension == 3:
-                new_node = pd.Series({'x' : node_coordinates[0], 'y' : node_coordinates[1], 'z' : node_coordinates[2]}, name=node_id)
+                new_node = pd.Series({'x': node_coordinates[0], 'y': node_coordinates[1], 'z': node_coordinates[2]}, name=node_id)
+            else:
+                raise ValueError('Node can only be added for mesh dimension equals 2 or 3')
 
-            
         self.nodes_df = self.nodes_df.append(new_node, ignore_index=False)
         return node_id
+
+    def add_element(self, shape, connectivity, index=None, overwrite=False):
+        """
+        Adds a new element to the mesh
+
+        Parameters
+        ----------
+        shape: str
+            Element shape of the new element. Can be
+            'straight_line', 'quadratic_line', 'Tri6', 'Tri3', 'Quad4', 'Quad8', 'Tet4', 'Tet10', 'Hexa8', 'Hexa20',
+            'Prism6'
+        connectivity: numpy.array
+            numpy array with dtype integer, defining the connectivity of the element. It references the node ids
+            in the right order for the given shape
+        index: int
+            ID of the element, If None is given (default) the class takes the first free value for the index
+        overwrite: bool
+            If True the element with the given index will be overwritten if it does exist (default is False)
+
+        Returns
+        -------
+        index: int
+            The new index of the element that has been added
+        """
+        # Check if connectivity is numpy array dtype int otherwise convert to this data type
+        try:
+            dtype = connectivity.dtype
+            if dtype != np.int:
+                connectivity = connectivity.astype(int)
+        except AttributeError:
+            connectivity = np.array(connectivity).astype(int)
+
+        # Check shapes
+        if shape not in SHAPES:
+            raise ValueError('shape {} not valid'.format(shape))
+
+        if index is None:
+            if self.no_of_elements > 0:
+                index = self._el_df.last_valid_index() + 1
+            else:
+                index = 0
+            self._el_df.set_value(index, 'connectivity', connectivity)
+
+        else:
+            if index in self._el_df.index.values and not overwrite:
+                    self.logger.error('Element can not be added because elementid already exists.'
+                                      'Pass overwrite=True to overwrite the index or choose another one')
+                    return
+
+        self._el_df.set_value(index, 'connectivity', connectivity)
+        return index
     
     def update_connectivity_with_new_node(self, old_node, new_node, target_eleids):
         """
@@ -1002,8 +1061,7 @@ class Mesh:
                 nodes = self.get_connectivity_by_elementids([n_ele])[0]
                 nodes[nodes == old_node] = int(new_node)
                 self._el_df.set_value(n_ele,'connectivity',nodes)   
-            
-                
+
     def get_neighbor_partitions(self, ele_id):
         """
         Getter for the neighboring partitions of a element.
