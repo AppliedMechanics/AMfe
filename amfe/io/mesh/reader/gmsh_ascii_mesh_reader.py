@@ -9,6 +9,8 @@
 Gmsh ascii mesh reader for I/O module.
 """
 
+import numpy as np
+
 from amfe.io.mesh.base import MeshReader
 from collections.abc import Iterable
 
@@ -27,7 +29,7 @@ class GmshAsciiMeshReader(MeshReader):
         2: 'Tri3',
         3: 'Quad4',
         4: 'Tet4',
-        5: 'Hex8',
+        5: 'Hexa8',
         6: 'Prism6',
         7: None,  # Pyramid
         8: 'quadratic_line',
@@ -39,7 +41,7 @@ class GmshAsciiMeshReader(MeshReader):
         14: None,  # 2nd order pyramid
         15: 'point',
         16: 'Quad8',
-        17: 'Hex20',
+        17: 'Hexa20',
         18: None,  # 15node 2nd order prism
         19: None,  # 13 node pyramid
         20: None,  # 9 node triangle
@@ -58,7 +60,7 @@ class GmshAsciiMeshReader(MeshReader):
         93: None
     }
 
-    eletypes_3d = [4, 5, 6, 11, 17]
+    eletypes_3d = ['Tet4', 'Hexa8', 'Prism6', 'Tet10', 'Hexa20']
 
     tag_format_start = "$MeshFormat"
     tag_format_end = "$EndMeshFormat"
@@ -72,7 +74,6 @@ class GmshAsciiMeshReader(MeshReader):
     def __init__(self, filename=None):
         super().__init__()
         self._filename = filename
-        # Default dimension is 2, later (during build of elements) it is checked if mesh is 3D
         self._dimension = 2
         return
 
@@ -184,6 +185,8 @@ class GmshAsciiMeshReader(MeshReader):
         has_partitions = False
         for ele_string in list_imported_elements:
             element = ListElement(ele_string, self.eletypes)
+            if element.type in self.eletypes_3d:
+                self._dimension = 3
 
             builder.build_element(element.id, element.type, element.connectivity)
             # Add element to group
@@ -245,7 +248,6 @@ class GmshAsciiMeshReader(MeshReader):
         builder.build_tag(tags_dict)
 
         builder.build_mesh_dimension(self._dimension)
-
         return
 
 
@@ -269,7 +271,19 @@ class ListElement:
 
         self.no_of_tags = int(elementinfo[2])
         self.connectivity = elementinfo[2 + self.no_of_tags + 1:]
-        self.connectivity = [int(node) for node in self.connectivity]
+        self.connectivity = np.array([int(node) for node in self.connectivity])
+
+        # Change the indices of Tet10-elements, as they are numbered differently
+        # from the numbers used in AMFE and ParaView (last two indices permuted)
+        if self.type == 'Tet10':
+            self.connectivity[np.array([9, 8], dtype=int)] = \
+                self.connectivity[np.array([8, 9], dtype=int)]
+        # Same node numbering issue with Hexa20
+        if self.type == 'Hexa20':
+            hexa8_gmsh_swap = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 9, 16, 18, 19,
+                                        17, 10, 12, 14, 15], dtype=int)
+            self.connectivity[:] = self.connectivity[hexa8_gmsh_swap]
+        self.connectivity = self.connectivity.tolist()
 
         self.physical_group = int(elementinfo[3])
         self.tag = int(elementinfo[4])
