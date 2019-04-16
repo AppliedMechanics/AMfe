@@ -10,10 +10,11 @@ from pandas.testing import assert_frame_equal, assert_series_equal
 from numpy.testing import assert_equal, assert_array_equal, assert_allclose
 from copy import deepcopy
 
+from amfe.mesh import Mesh
+
 
 class TestMesh(TestCase):
     def setUp(self):
-        from amfe.mesh import Mesh
         self.testmesh = Mesh(dimension=2)
         nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0]], dtype=np.float)
         connectivity = [np.array([5, 6, 3], dtype=np.int), np.array([3, 2, 5], dtype=np.int),
@@ -21,17 +22,24 @@ class TestMesh(TestCase):
                         # boundary elements
                         np.array([4, 1], dtype=np.int), np.array([5, 6], dtype=np.int)]
 
-        self._connectivity = connectivity
+        shapes = ['Tri3', 'Tri3', 'Quad4', 'straight_line', 'straight_line']
 
-        data = {'shape': ['Tri3', 'Tri3', 'Quad4', 'straight_line', 'straight_line'],
+        data = {'shape': shapes,
                 'is_boundary': [False, False, False, True, True],
                 'connectivity': connectivity}
         indices = [1, 2, 3, 4, 5]
+
         el_df = pd.DataFrame(data, index=indices)
 
         x = nodes[:, 0]
         y = nodes[:, 1]
         nodeids = [1, 2, 3, 4, 5, 6]
+        self._nodeids = nodeids
+        self._nodes = nodes
+        self._eleids = indices
+        self._connectivity = connectivity
+        self._connectivity = connectivity
+        self._shapes = shapes
         nodes_df = pd.DataFrame({'x': x, 'y': y}, index=nodeids)
 
         groups = {'left': {'elements': [3], 'nodes': []},
@@ -347,7 +355,6 @@ class TestMesh(TestCase):
         
         assert_equal(groups_actual, groups_desired)
 
-        
     def test_merge_into_groups(self):
         add_groups = {'left': {'elements': [3], 'nodes': [1, 4]},
                       'right': {'elements': [1, 2]},
@@ -387,7 +394,69 @@ class TestMesh(TestCase):
         
         assert_frame_equal(self.testmesh.nodes_df, nodes_df_desired)
         assert_equal(self.testmesh.no_of_nodes, 7)
-        
+
+    def test_add_element(self):
+        mesh = Mesh(2)
+        for nodeid, coords in zip(self._nodeids, self._nodes):
+            mesh.add_node(coords, nodeid)
+
+        conn_desired = np.array([5, 6, 3], dtype=np.int)
+        shape_desired = 'Tri3'
+        new_id = mesh.add_element(shape_desired, conn_desired)
+        shape_actual = mesh.get_ele_shapes_by_elementids([new_id])[0]
+        conn_actual = mesh.get_connectivity_by_elementids([new_id])[0]
+        self.assertEqual(shape_actual, shape_desired)
+        assert_array_equal(conn_actual, conn_desired)
+
+        conn_desired = np.array([4, 1], dtype=np.int)
+        shape_desired = 'straight_line'
+        new_id = mesh.add_element(shape_desired, conn_desired)
+        shape_actual = mesh.get_ele_shapes_by_elementids([new_id])[0]
+        conn_actual = mesh.get_connectivity_by_elementids([new_id])[0]
+        self.assertEqual(shape_actual, shape_desired)
+        assert_array_equal(conn_actual, conn_desired)
+
+        conn_desired = np.array([3, 2, 5], dtype=np.int)
+        shape_desired = 'Tri3'
+        new_id = mesh.add_element(shape_desired, np.array([3, 2, 5], dtype=np.int), 5)
+        shape_actual = mesh.get_ele_shapes_by_elementids([new_id])[0]
+        conn_actual = mesh.get_connectivity_by_elementids([new_id])[0]
+        self.assertEqual(shape_actual, shape_desired)
+        assert_array_equal(conn_actual, conn_desired)
+        self.assertEqual(new_id, 5)
+
+        with self.assertRaises(ValueError):
+            mesh.add_element('Quad4', np.array([1, 2, 3, 4], dtype=np.int), 5)
+
+        conn_desired = np.array([1, 2, 3, 4], dtype=np.int)
+        shape_desired = 'Quad4'
+        new_id = mesh.add_element('Quad4', np.array([1, 2, 3, 4], dtype=np.int), 5, overwrite=True)
+        shape_actual = mesh.get_ele_shapes_by_elementids([new_id])[0]
+        conn_actual = mesh.get_connectivity_by_elementids([new_id])[0]
+        self.assertEqual(shape_actual, shape_desired)
+        assert_array_equal(conn_actual, conn_desired)
+        self.assertEqual(new_id, 5)
+
+        # Test wrong dtype
+        new_id = mesh.add_element('Quad4', np.array([1, 2, 3, 4], dtype=np.float), 6)
+        shape_actual = mesh.get_ele_shapes_by_elementids([new_id])[0]
+        conn_actual = mesh.get_connectivity_by_elementids([new_id])[0]
+        self.assertEqual(shape_actual, shape_desired)
+        assert_array_equal(conn_actual, conn_desired)
+        self.assertEqual(new_id, 6)
+
+        # Test with tuple instead of array
+        new_id = mesh.add_element('Quad4', (1, 2, 3, 4), 7)
+        shape_actual = mesh.get_ele_shapes_by_elementids([new_id])[0]
+        conn_actual = mesh.get_connectivity_by_elementids([new_id])[0]
+        self.assertEqual(shape_actual, shape_desired)
+        assert_array_equal(conn_actual, conn_desired)
+        self.assertEqual(new_id, 7)
+
+        # Test wrong shape
+        with self.assertRaises(ValueError):
+            mesh.add_element('wrong_shape', np.array([1, 2, 3, 4], dtype=np.int), 8)
+
     def test_copy_node_by_id(self):
         nodes_df_old = deepcopy(self.testmesh.nodes_df)
         nodes_df_desired = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0, 2.0, 2.0, 1.0], 'y': [0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0]}, index=[1, 2, 3, 4, 5, 6, 7])
@@ -404,7 +473,8 @@ class TestMesh(TestCase):
                         np.array([3, 0], dtype=np.int), np.array([4, 5], dtype=np.int)]
         for actual_arr, desired_arr in zip(actual, desired):
             assert_array_equal(desired_arr, actual_arr)
-            
+
+
 class TestPartitionedMesh(TestCase):
     def setUp(self):
         from amfe.mesh import Mesh
