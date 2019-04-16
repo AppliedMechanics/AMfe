@@ -63,7 +63,7 @@ class PendulumConstraintTest(TestCase):
         self.dh_ddq = jac_du
 
         # X coordinates in reference configuration
-        self.X = np.array([[0.0, 0.0], [0.0, -self.L]], dtype=float)
+        self.X = np.array([0.0, 0.0, 0.0, -self.L], dtype=float)
         # initial condition u_0: 90deg to the right
         self.u_0 = np.array([0.0, 0.0, self.L, self.L])
         # other initial conditions:

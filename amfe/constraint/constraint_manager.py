@@ -38,7 +38,7 @@ class ConstraintManager:
         number of dofs of the unconstrained system (length of global vectors that are provided when an entity is asked
         for
     _constraints_df: pandas.DataFrame
-        pandas DataFrame containing information about applied constraints: name, objects, nodeidxs to be passed,
+        pandas DataFrame containing information about applied constraints: name, objects, Xidxs to be passed,
         dofidxs to be passed
     _constraint_assembler: amfe.constraint_assembler.ConstraintAssembler
         an assembler object that is able to assemble the global entities
@@ -61,9 +61,9 @@ class ConstraintManager:
         self.logger = logging.getLogger('amfe.constraint.constraint_manager.ConstraintManager')
         self._no_of_dofs_unconstrained = ndof_unconstrained_system
         self._update_flag = True
-        self._constraints_df = pd.DataFrame(columns=['name', 'constraint_obj', 'nodeidxs', 'dofidxs'])
+        self._constraints_df = pd.DataFrame(columns=['name', 'constraint_obj', 'Xidxs', 'dofidxs'])
         self._constraints_df['name'] = self._constraints_df['name'].astype('object')
-        self._constraints_df['nodeidxs'] = self._constraints_df['nodeidxs'].astype('object')
+        self._constraints_df['Xidxs'] = self._constraints_df['Xidxs'].astype('object')
         self._constraints_df['dofidxs'] = self._constraints_df['dofidxs'].astype('object')
         
         self._constraint_assembler = ConstraintAssembler()
@@ -158,7 +158,7 @@ class ConstraintManager:
         """
         return DirichletConstraint(U, dU, ddU)
 
-    def add_constraint(self, name, constraint_obj, dofidxs, nodeidxs=()):
+    def add_constraint(self, name, constraint_obj, dofidxs, Xidxs=()):
         """
         Method for adding a constraint
 
@@ -170,17 +170,19 @@ class ConstraintManager:
             constraint object, describing the constraint
         dofidxs : tuple
             dofs' indices that must be passed to the constraint
-        nodeidxs : tuple
-            nodes' indices that must be passed to the constraint
+        Xidxs : tuple
+            indices of the reference coordinates that might have to be passed to the constraint
 
+            ATTENTION: Whether this is needed or not depends on the constraint's type. Take a look at the constraint-
+            classes' documentation!
         """
-        self.logger.info('Adding constraint {} to dofs {} and nodes {}'.format(name, dofidxs, nodeidxs))
+        self.logger.info('Adding constraint {} to dofs {} and nodes {}'.format(name, dofidxs, Xidxs))
 
         # Create new rows for constraints_df
         df = pd.DataFrame(
             {'name': name, 'constraint_obj': constraint_obj,
              'dofidxs': [np.array([dofidxs], dtype=int).reshape(-1)],
-             'nodeidxs': [np.array([nodeidxs], dtype=int).reshape(-1)]},
+             'Xidxs': [np.array([Xidxs], dtype=int).reshape(-1)]},
             )
 
         self._constraints_df = self._constraints_df.append(df, ignore_index=True)
@@ -282,8 +284,7 @@ class ConstraintManager:
             generator object that yields the B function with correct signature for the assembler
         """
         for i, const in self._constraints_df.iterrows():
-            nodeidxs = const['nodeidxs']
-            X_local = X[nodeidxs, :].reshape(-1)
+            X_local = self._get_local_X(X, const['Xidxs'])
 
             def B(u):
                 return const['constraint_obj'].B(X_local, u, t)
@@ -307,10 +308,10 @@ class ConstraintManager:
             generator object that yields the g functions with correct signature for the assembler
         """
         for i, const in self._constraints_df.iterrows():
-            nodeidxs = const['nodeidxs']
-            X_local = X[nodeidxs, :].reshape(-1)
-
+            X_local = self._get_local_X(X, const['Xidxs'])
+            print(X_local)
             def g(u):
+                print(u)
                 return const['constraint_obj'].g(X_local, u, t)
 
             yield g
@@ -333,8 +334,7 @@ class ConstraintManager:
             generator object that yields the g functions with correct signature for the assembler
         """
         for i, const in self._constraints_df.iterrows():
-            nodeidxs = const['nodeidxs']
-            X_local = X[nodeidxs, :].reshape(-1)
+            X_local = self._get_local_X(X, const['Xidxs'])
 
             def a(u, du):
                 return const['constraint_obj'].a(X_local, u, du, t)
@@ -359,8 +359,7 @@ class ConstraintManager:
             generator object that yields the g functions with correct signature for the assembler
         """
         for i, const in self._constraints_df.iterrows():
-            nodeidxs = const['nodeidxs']
-            X_local = X[nodeidxs, :].reshape(-1)
+            X_local = self._get_local_X(X, const['Xidxs'])
 
             def b(u):
                 return const['constraint_obj'].b(X_local, u, t)
@@ -410,7 +409,8 @@ class ConstraintManager:
         """
         if self._update_flag:
             self.update()
-        return self._constraint_assembler.assemble_B(self._Bs(X, t, ), self._dofidxs(), (u,),
+
+        return self._constraint_assembler.assemble_B(self._Bs(X, t), self._dofidxs(), (u,),
                                                      self._B)
 
     def g(self, X, u, t):
@@ -430,6 +430,8 @@ class ConstraintManager:
         g : ndarray
             the global holonomic constraint function residual
         """
+        print(X)
+        print(u)
         if self._update_flag:
             self.update()
         return self._constraint_assembler.assemble_g(self._gs(X, t), self._dofidxs(), (u,), self._g)
@@ -483,3 +485,10 @@ class ConstraintManager:
         b *= 0.0
         b = self._constraint_assembler.assemble_g(self._bs(X, t), self._dofidxs(), (u, ), b)
         return b
+
+    def _get_local_X(self, X, Xidxs):
+        if Xidxs.size == 0:
+            X_local = X
+        else:
+            X_local = X[Xidxs]
+        return X_local

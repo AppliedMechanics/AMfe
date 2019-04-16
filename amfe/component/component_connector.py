@@ -51,16 +51,18 @@ class ComponentConnector:
             slave_constraints = ConstraintManager(slave_component._mapping.no_of_dofs)
             constraint = slave_constraints.create_dirichlet_constraint()
             name = 'Compatibility' + str(loc_master_id) + str(loc_slave_id)
-            slave_constraints.add_constraint(name, constraint, np.array([slave_dofids], dtype=int), np.array([], dtype=int))
+            for dof in slave_dofids:
+                slave_constraints.add_constraint(name, constraint, np.array([dof], dtype=int))
             X = slave_component.X
             u = np.zeros(X.shape)
-            
+
             self.constraints[slave_key] = -slave_constraints.B(X, u , 0)
             
             master_constraints = ConstraintManager(master_component._mapping.no_of_dofs)
             constraint = master_constraints.create_dirichlet_constraint()
             name = 'Compatibility' + str(loc_slave_id) + str(loc_master_id)
-            master_constraints.add_constraint(name, constraint, np.array([master_dofids], dtype=int), np.array([], dtype=int))
+            for dof in master_dofids:
+                master_constraints.add_constraint(name, constraint, np.array([dof], dtype=int))
             X = master_component.X
             u = np.zeros(X.shape)
             
