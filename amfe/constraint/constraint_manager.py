@@ -309,9 +309,8 @@ class ConstraintManager:
         """
         for i, const in self._constraints_df.iterrows():
             X_local = self._get_local_X(X, const['Xidxs'])
-            print(X_local)
+
             def g(u):
-                print(u)
                 return const['constraint_obj'].g(X_local, u, t)
 
             yield g
@@ -409,8 +408,7 @@ class ConstraintManager:
         """
         if self._update_flag:
             self.update()
-
-        return self._constraint_assembler.assemble_B(self._Bs(X, t), self._dofidxs(), (u,),
+        return self._constraint_assembler.assemble_B(self._Bs(X, t, ), self._dofidxs(), (u,),
                                                      self._B)
 
     def g(self, X, u, t):
@@ -430,8 +428,6 @@ class ConstraintManager:
         g : ndarray
             the global holonomic constraint function residual
         """
-        print(X)
-        print(u)
         if self._update_flag:
             self.update()
         return self._constraint_assembler.assemble_g(self._gs(X, t), self._dofidxs(), (u,), self._g)
@@ -492,3 +488,4 @@ class ConstraintManager:
         else:
             X_local = X[Xidxs]
         return X_local
+

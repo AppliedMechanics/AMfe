@@ -11,7 +11,6 @@
 *~
 
 # ignore mesh files because they can be large
-*.msh
 
 # saved numpy-arrays
 *.npy
@@ -28,7 +27,6 @@ dist/
 private/
 experiments/
 amfe.egg-info/
-meshes/gid/
 experiments/paper_icoev
 .idea/
 .spyproject/

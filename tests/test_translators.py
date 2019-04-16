@@ -5,7 +5,7 @@ Test for testing the translator-module
 from unittest import TestCase
 import numpy as np
 from amfe.solver.translators import *
-from numpy.testing import assert_array_equal, assert_raises, assert_allclose
+from numpy.testing import assert_array_equal
 
 
 class TranslatorsTest(TestCase):
@@ -18,13 +18,13 @@ class TranslatorsTest(TestCase):
                 return np.array([0.1, 0.2, 0.3])
 
             def K(self, q, dq, t):
-                return np.array([[1, 0.5, 0],[0.5, 1, 0.5],[0, 0.5, 1]])
+                return np.array([[1, 0.5, 0], [0.5, 1, 0.5], [0, 0.5, 1]])
 
             def M(self, q, dq, t):
-                return np.array([[0.5, 0, 0],[0, 0.5, 0],[0, 0, 0.5]])
+                return np.array([[0.5, 0, 0], [0, 0.5, 0], [0, 0, 0.5]])
 
             def D(self, q, dq, t):
-                return np.array([[0.3, 0, 0],[0, 0.3, 0],[0, 0.3, 0]])
+                return np.array([[0.3, 0, 0], [0, 0.3, 0], [0, 0.3, 0]])
 
             def f_int(self, q, dq, t):
                 return self.K(q, dq, t) @ q
@@ -40,8 +40,8 @@ class TranslatorsTest(TestCase):
     def tearDown(self):
         pass
     
-    def testMechanicalTranslator(self):
-        translator = MechanicalSystem(self.structural_component)
+    def testMechanicalTranslatorBase(self):
+        translator = MechanicalSystemBase(self.structural_component)
         
         u = np.array([0.05, 0.1, 0.15])
         du = np.zeros_like(u)

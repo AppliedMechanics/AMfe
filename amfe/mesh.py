@@ -12,6 +12,7 @@ This module provides a mesh class that handles the mesh information: nodes, mesh
 
 import numpy as np
 import pandas as pd
+import logging
 from collections.abc import Iterable
 
 __all__ = [
@@ -27,6 +28,8 @@ element_3d_set = {'Tet4', 'Tet10', 'Hexa8', 'Hexa20', 'Prism6'}
 boundary_2d_set = {'straight_line', 'quadratic_line'}
 # 3D boundary elements
 boundary_3d_set = {'straight_line', 'quadratic_line', 'Tri6', 'Tri3', 'Tri10', 'Quad4', 'Quad8'}
+
+SHAPES = element_2d_set.union(element_3d_set, boundary_2d_set, boundary_3d_set)
 
 
 class Mesh:
@@ -44,6 +47,8 @@ class Mesh:
         DataFrame with element information
     groups : list
         List of groups containing ids (not row indices!)
+    logger: Logger
+        Python logger instance to log events from the mesh
 
     Notes
     -----
@@ -69,6 +74,9 @@ class Mesh:
         mesh : Mesh
             a new mesh object
         """
+        # -- INSTANTIATE A LOGGER --
+        self.logger = logging.getLogger('amfe.mesh.Mesh')
+
         # -- GENERAL INFORMATION --
         self._dimension = dimension
 
@@ -90,14 +98,7 @@ class Mesh:
         self._changed_iconnectivity = True
         # Cache for lazy evaluation of iconnectivity
         self._iconnectivity_df_cached = pd.DataFrame(columns=('iconnectivity',))
-
-    @property
-    def partitions(self):
-        if 'partition_id' in self._el_df:
-            return self._el_df['partition_id'].unique()
-        else:
-            return [0]
-
+        
     @property
     def el_df(self):
         return self._el_df
@@ -232,7 +233,7 @@ class Mesh:
             elementids for which the connectivity shall be returned
         Returns
         -------
-        connectivity : list of ndarrays
+        connectivity : List[ndarray]
             list containing the connectivity of the desired elements
         """
         return self._el_df.loc[elementids, 'connectivity'].values
@@ -266,11 +267,7 @@ class Mesh:
         -------
             indices of the elements in the connectivity array
         """
-        elementids = list()
-        for group in groups:
-            elementids.extend(self.groups[group]['elements'])
-        elementids = np.array(elementids)
-        elementids = np.unique(elementids)
+        elementids = self.get_elementids_by_groups(groups)
         return np.array([self._el_df.index.get_loc(elementid) for elementid in elementids], dtype=int)
 
     def get_elementids_by_groups(self, groups):
@@ -514,12 +511,12 @@ class Mesh:
 
         Parameters
         ----------
-        elementids : list
+        elementids : Iterable[int]
             contains indices of the desired elements in connectivity array
 
         Returns
         -------
-        ele_shapes : list
+        ele_shapes : List[int]
             list of element_shapes as string
         """
         return self._el_df.loc[elementids]['shape'].values
@@ -589,7 +586,7 @@ class Mesh:
         self.el_df[tag_name] = None
 
         if tag_value_dict is not None:
-            self.change_tag_values_by_dict(tag_name, tag_value_dict)
+            self._change_tag_values_by_dict(tag_name, tag_value_dict)
 
         return None
 
@@ -611,7 +608,7 @@ class Mesh:
         self._el_df = self.el_df.drop(columns=tag_name)
         return None
 
-    def change_tag_values_by_dict(self, tag_name, tag_value_dict):
+    def _change_tag_values_by_dict(self, tag_name, tag_value_dict):
         """
         This function changes the values of the el_df column
         with name equal to the "tag_name" paramenter . By default 
@@ -708,7 +705,6 @@ class Mesh:
         
         return selected_elements.index.values
 
-
     def get_elementidxs_by_tags(self, tag_names, tag_values, opt_larger=None):
         """
         This function returns a list with the elementidxs in connectivity array
@@ -739,6 +735,25 @@ class Mesh:
         rows = self.get_elementids_by_tags(tag_names, tag_values, opt_larger)
         return np.array([self._el_df.index.get_loc(row) for row in rows], dtype=int)
     
+    def get_uniques_by_tag(self, tag):
+        """
+        This method returns all unique values from the elements under the given tag.
+
+        Parameters
+        ----------
+        tag : string
+            tag-name of the elements
+
+        Returns
+        -------
+        uniques : ndarray
+            all unique entries in the elements under the given tag
+        """
+        if tag in self._el_df:
+            return self._el_df[tag].unique()
+        else:
+            return None
+
     def merge_into_groups(self, groups):        
         """
         Merge a dictionary of groups with node- and element-ids into the mesh's 'groups'-dictionary. The additional dictionary has to be of format
@@ -896,25 +911,24 @@ class Mesh:
     def add_node_to_groups(self, new_node, groups_node):
         self.add_element_to_groups(new_node, groups_node, 'nodes')
     
-    def get_nodes_and_elements_by_partition_id(self, partition_id):
+    def get_submesh_by_elementids(self, ele_ids):
         """
-        Provides dataframes with all nodes and elements, which belong to the requested partition.
+        Provides dataframes with all nodes and elements, which belong to the requested element-ids.
         
         Parameters
         ----------
-        partition_id : int
-            id of the requested partition
+        elementids : int
+            ids of the requested elements
             
         Returns
         -------
         nodes : pandas.DataFrame
-            all and only nodes, that belong to selected partition
+            all and only nodes, that belong to selected elements
             
         elements : pandas.DataFrame
-            all and only elements, that belong to selected partition
+            all and only elements, that belong to selected element-ids
         """
 
-        ele_ids = self.get_elementids_by_tags('partition_id', partition_id)
         elements = self._el_df.loc[ele_ids]
         node_ids = self.get_nodeids_by_elementids(ele_ids)
         nodes = self.nodes_df.loc[node_ids]
@@ -944,15 +958,15 @@ class Mesh:
         
         Parameters
         ----------
-        node_coordinates : ndarray, pandas.Series
+        node_coordinates: ndarray, pandas.Series
             x, y, z coordinates of new node. In case of a pandas.Series, it has to consist of columns 'x', 'y' and maybe 'z'
 
-        node_id : int
+        node_id: int
             id of that node, which is to be copied
             
         Returns
         -------
-        new_node_id : int
+        new_node_id: int
             id of the new, added node
         """
         if self.no_of_nodes > 0:
@@ -963,22 +977,76 @@ class Mesh:
             
         if isinstance(node_coordinates, pd.Series):
             if 'z' in node_coordinates:
-                print('WARNING: To many coordinates were given. Droping the z-coordinate.')
+                print('WARNING: To many coordinates were given. Dropping the z-coordinate.')
                 node_coordinates.drop('z', axis=1)
                 
             new_node = node_coordinates.rename(node_id)
         else:
             if self.dimension == 2:
-                if node_coordinates.shape[0] > self.dimension:
-                    print('WARNING: To many coordinates were given. Droping the last ', node_coordinates.shape[0]-self.dimension, ' entries.')
+                if len(node_coordinates) > self.dimension:
+                    print('WARNING: To many coordinates were given. Dropping the last ', node_coordinates.shape[0]-self.dimension, ' entries.')
 
-                new_node = pd.Series({'x' : node_coordinates[0], 'y' : node_coordinates[1]}, name=node_id)
+                new_node = pd.Series({'x': node_coordinates[0], 'y': node_coordinates[1]}, name=node_id)
             elif self.dimension == 3:
-                new_node = pd.Series({'x' : node_coordinates[0], 'y' : node_coordinates[1], 'z' : node_coordinates[2]}, name=node_id)
+                new_node = pd.Series({'x': node_coordinates[0], 'y': node_coordinates[1], 'z': node_coordinates[2]}, name=node_id)
+            else:
+                raise ValueError('Node can only be added for mesh dimension equals 2 or 3')
 
-            
         self.nodes_df = self.nodes_df.append(new_node, ignore_index=False)
         return node_id
+
+    def add_element(self, shape, connectivity, index=None, overwrite=False):
+        """
+        Adds a new element to the mesh
+
+        Parameters
+        ----------
+        shape: str {'straight_line', 'quadratic_line', 'Tri6', 'Tri3', 'Quad4', 'Quad8', 'Tet4', 'Tet10', 'Hexa8', 'Hexa20',
+            'Prism6'}
+            Element shape of the new element. Can be
+
+        connectivity: numpy.array
+            numpy array with dtype integer, defining the connectivity of the element. It references the node ids
+            in the right order for the given shape
+        index: int, optional
+            ID of the element, If None is given (default) the class takes the first free value for the index
+        overwrite: bool, optional
+            If True the element with the given index will be overwritten if it does exist (default is False)
+
+        Returns
+        -------
+        index: int
+            The new index of the element that has been added
+        """
+        # Check if connectivity is numpy array dtype int otherwise convert to this data type
+        try:
+            dtype = connectivity.dtype
+            if dtype != np.int:
+                connectivity = connectivity.astype(int)
+        except AttributeError:
+            connectivity = np.array(connectivity).astype(int)
+
+        # Check shapes
+        if shape not in SHAPES:
+            raise ValueError('shape {} not valid'.format(shape))
+
+        if index is None:
+            if self.no_of_elements > 0:
+                index = self._el_df.last_valid_index() + 1
+            else:
+                index = 0
+
+        else:
+            if index in self._el_df.index.values and not overwrite:
+                    self.logger.error('Element can not be added because elementid already exists.'
+                                      'Pass overwrite=True to overwrite the index or choose another one')
+                    raise ValueError('Index in mesh already used. Try overwrite=True flag or choose another index')
+
+        self._el_df.at[index, 'connectivity'] = connectivity
+        self._el_df.at[index, 'shape'] = shape
+        self._changed_iconnectivity = True
+
+        return index
     
     def update_connectivity_with_new_node(self, old_node, new_node, target_eleids):
         """
@@ -1001,28 +1069,27 @@ class Mesh:
             for n_ele in target_eleids:
                 nodes = self.get_connectivity_by_elementids([n_ele])[0]
                 nodes[nodes == old_node] = int(new_node)
-                self._el_df.set_value(n_ele,'connectivity',nodes)   
-            
-                
-    def get_neighbor_partitions(self, ele_id):
+                self._el_df.set_value(n_ele, 'connectivity', nodes)
+        self._changed_iconnectivity = True
+
+    def get_value_by_elementid_and_tag(self, ele_id, tag):
         """
-        Getter for the neighboring partitions of a element.
+        Getter for the value assigned to a element under the given tag.
         
         Parameters
         ----------
         ele_id : int
             element-id
             
+        tag : string
+            tag-name of the element
+            
         Returns
         -------
         neighbor_partitions : list of int
             ids of the neighboring partitions. If there is no neighboring partition, 'None' is returned.
         """
-        neighbor_part_ids = self._el_df.loc[ele_id,'partitions_neighbors']
-        if not isinstance(neighbor_part_ids, Iterable):
-            neighbor_part_ids = [neighbor_part_ids]
-        return list(map(abs, neighbor_part_ids))
-
+        return self._el_df.loc[ele_id,tag]
 
     def _update_iconnectivity(self):
         """

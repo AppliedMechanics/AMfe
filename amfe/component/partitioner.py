@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from amfe.mesh import Mesh
+from collections.abc import Iterable
+from numpy import partition
 
 
 class PartitionerBase:
@@ -15,7 +17,7 @@ class PartitionerBase:
         pass
     
     def partition(self):
-        raise NotImplementedError('Partitioning was not implemented for subclass!')
+        raise NotImplementedError('Partitioning is not implemented for subclass!')
     
 class MetisPartitioner(PartitionerBase):
     def __init__(self):
@@ -65,7 +67,7 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
         new_components_list = []
         materials = component.get_materials()
         physics = component.get_physics()
-        for partition_id in mesh.partitions:
+        for partition_id in mesh.get_uniques_by_tag('partition_id'):
             submesh = self._get_submesh_by_partition_id(partition_id, mesh)
             
             new_component = component.__class__(submesh)
@@ -96,7 +98,8 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
         """
         submesh = Mesh(mesh.dimension)
         
-        nodes_df, el_df = mesh.get_nodes_and_elements_by_partition_id( partition_id )
+        ele_ids = mesh.get_elementids_by_tags('partition_id', partition_id)
+        nodes_df, el_df = mesh.get_submesh_by_elementids(ele_ids)
         ele_groups = mesh.get_groups_dict_by_elementids(el_df.index.tolist())
         node_groups = mesh.get_groups_dict_by_nodeids(nodes_df.index.tolist())
         submesh.nodes_df = deepcopy(nodes_df)
@@ -122,14 +125,15 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
         -------
         mesh : Mesh
         """
-        mesh = deepcopy(mesh)       
-        copied_nodes = pd.DataFrame(columns=('partition_id', 'old_node', 'new_node')) 
+        mesh = deepcopy(mesh)
+        copied_nodes = pd.DataFrame(columns=('partition_id', 'old_node', 'new_node'))
 
-        for partition_id in mesh.partitions:
+        for partition_id in mesh.get_uniques_by_tag('partition_id'):
             ele_ids = mesh.get_elementids_by_tags(['no_of_mesh_partitions', 'partition_id'], [1 ,partition_id], [True, False])
             for ele_id in ele_ids:
-                neighbor_part_ids = mesh.get_neighbor_partitions(ele_id)
-                
+                neighbor_part_ids = mesh.get_value_by_elementid_and_tag(ele_id, 'partitions_neighbors')
+                if not isinstance(neighbor_part_ids, Iterable):
+                    neighbor_part_ids = [neighbor_part_ids]
                 for inode in mesh.get_nodeids_by_elementids(ele_id):
                     for i_n_part in neighbor_part_ids:
                         neighbor_eleids = mesh.get_elementids_by_tags(['no_of_mesh_partitions', 'partition_id'], [1 ,i_n_part], [True, False])
