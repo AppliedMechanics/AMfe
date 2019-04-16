@@ -240,7 +240,7 @@ class Mesh:
             elementids for which the connectivity shall be returned
         Returns
         -------
-        connectivity : list of ndarrays
+        connectivity : List[ndarray]
             list containing the connectivity of the desired elements
         """
         return self._el_df.loc[elementids, 'connectivity'].values
@@ -522,12 +522,12 @@ class Mesh:
 
         Parameters
         ----------
-        elementids : list
+        elementids : Iterable[int]
             contains indices of the desired elements in connectivity array
 
         Returns
         -------
-        ele_shapes : list
+        ele_shapes : List[int]
             list of element_shapes as string
         """
         return self._el_df.loc[elementids]['shape'].values
@@ -994,16 +994,16 @@ class Mesh:
 
         Parameters
         ----------
-        shape: str
+        shape: str {'straight_line', 'quadratic_line', 'Tri6', 'Tri3', 'Quad4', 'Quad8', 'Tet4', 'Tet10', 'Hexa8', 'Hexa20',
+            'Prism6'}
             Element shape of the new element. Can be
-            'straight_line', 'quadratic_line', 'Tri6', 'Tri3', 'Quad4', 'Quad8', 'Tet4', 'Tet10', 'Hexa8', 'Hexa20',
-            'Prism6'
+
         connectivity: numpy.array
             numpy array with dtype integer, defining the connectivity of the element. It references the node ids
             in the right order for the given shape
-        index: int
+        index: int, optional
             ID of the element, If None is given (default) the class takes the first free value for the index
-        overwrite: bool
+        overwrite: bool, optional
             If True the element with the given index will be overwritten if it does exist (default is False)
 
         Returns
@@ -1028,15 +1028,17 @@ class Mesh:
                 index = self._el_df.last_valid_index() + 1
             else:
                 index = 0
-            self._el_df.set_value(index, 'connectivity', connectivity)
 
         else:
             if index in self._el_df.index.values and not overwrite:
                     self.logger.error('Element can not be added because elementid already exists.'
                                       'Pass overwrite=True to overwrite the index or choose another one')
-                    return
+                    raise ValueError('Index in mesh already used. Try overwrite=True flag or choose another index')
 
-        self._el_df.set_value(index, 'connectivity', connectivity)
+        self._el_df.at[index, 'connectivity'] = connectivity
+        self._el_df.at[index, 'shape'] = shape
+        self._changed_iconnectivity = True
+
         return index
     
     def update_connectivity_with_new_node(self, old_node, new_node, target_eleids):
@@ -1080,7 +1082,6 @@ class Mesh:
         if not isinstance(neighbor_part_ids, Iterable):
             neighbor_part_ids = [neighbor_part_ids]
         return list(map(abs, neighbor_part_ids))
-
 
     def _update_iconnectivity(self):
         """
