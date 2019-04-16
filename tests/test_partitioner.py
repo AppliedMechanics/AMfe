@@ -44,7 +44,7 @@ class TestPartitioner(TestCase):
                 'connectivity': connectivity,
                 'no_of_mesh_partitions': [4, 3, 2, 3, 4, 2, 4, 4, 2, 2, 2, 2],
                 'partition_id': [1, 1, 1, 2, 2, 3, 4, 3, 1, 3, 2, 4],
-                'partitions_neighbors': [(-2, -3, -4), (-2, -3), -3, (-1, -4), (-1, -3, -4), -1, (-1, -2, -3), (-1, -2, -4), -3, -1, -4, -2]
+                'partitions_neighbors': [(2, 3, 4), (2, 3), 3, (1, 4), (1, 3, 4), 1, (1, 2, 3), (1, 2, 4), 3, 1, 4, 2]
                 }
         indices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         el_df = pd.DataFrame(data, index=indices)
@@ -63,7 +63,7 @@ class TestPartitioner(TestCase):
         self.testmesh.nodes_df = nodes_df
         self.testmesh.groups = groups
         self.testmesh._el_df = el_df
-        self.no_of_partitions = len(self.testmesh.partitions)
+        self.no_of_partitions = len(self.testmesh.get_uniques_by_tag('partition_id'))
         
         self.testcomponent = MeshComponent(self.testmesh)
         self.partitioner = PartitionedMeshComponentSeparator()
@@ -156,7 +156,7 @@ class TestPartitioner(TestCase):
         
         for icomp in new_components:
             self.assertTrue(isinstance(icomp, MeshComponent))
-            assert_equal(len(icomp._mesh.partitions), 1)
+            assert_equal(len(icomp._mesh.get_uniques_by_tag('partition_id')), 1)
             
         assert_equal(len(new_components), self.no_of_partitions)
 
