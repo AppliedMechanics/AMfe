@@ -189,20 +189,20 @@ def compute_modes_pardiso(mechanical_system, n=10, u_eq=None,
     return omega, V
 
 
-def vibration_modes(mechanical_system, n=10, save=False):
-    '''
-    Compute the n first vibration modes of the given mechanical system using
-    a power iteration method.
+def vibration_modes(K, M, n=10, shift=0.0):
+    """
+    Compute the n first vibration modes of the given stiffness and mass matrix using the ARPACK Lanczos solver
 
     Parameters
     ----------
-    mechanical_system : instance of MechanicalSystem
-        Mechanical system to be analyzed.
-    n : int
+    K: ndarray or csr_matrix
+        Stiffness Matrix
+    M: ndarray or csr_matrix
+        Mass Matrix
+    n: int
         number of modes to be computed.
-    save : bool
-        Flag for saving the modes in mechanical_system for ParaView export.
-        Default: False.
+    shift: float
+        shift the eigenvalue probem such that the eigenfrequencies around the shift (omega) are found
 
     Returns
     -------
@@ -215,6 +215,7 @@ def vibration_modes(mechanical_system, n=10, save=False):
 
     Examples
     --------
+    omega, Phi = vibration_modes(K, M, 10)
 
     Notes
     -----
@@ -226,21 +227,15 @@ def vibration_modes(mechanical_system, n=10, save=False):
     If the squared eigenvalue omega**2 is negative, as it might happen due to
     round-off errors with rigid body modes, the negative sign is traveled to
     the eigenfrequency omega, though this makes physically no sense...
-    '''
-    K = mechanical_system.K()
-    M = mechanical_system.M()
+    """
+    sigma = shift**2
 
-    lambda_, V = sp.sparse.linalg.eigsh(K, M=M, k=n, sigma=0, which='LM',
+    lambda_, V = sp.sparse.linalg.eigsh(K, M=M, k=n, sigma=sigma, which='LM',
                                         maxiter=100)
     omega = np.sqrt(abs(lambda_))
     # Little bit of sick hack: The negative sign is transferred to the
     # eigenfrequencies
     omega[lambda_ < 0] *= -1
-
-    if save:
-        mechanical_system.clear_timesteps()
-        for i, om in enumerate(omega):
-            mechanical_system.write_timestep(om, V[:, i])
 
     return omega, V
 
