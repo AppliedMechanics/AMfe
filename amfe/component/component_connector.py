@@ -9,7 +9,8 @@ from amfe.constraint.constraint_manager import *
 
 class ComponentConnector:
     """
-    The connector-class is a manager for all constraints and connections between components and has the according constraint-matrices. Constraint-matrices are stored in the
+    The connector-class is a manager for all constraints and connections between components and has the according
+    constraint-matrices. Constraint-matrices are stored in the
     constraints-dictionary with a pair of keys for each interface of the form '[slave-id]to[master-id]' and vice versa.
     """
     def __init__(self):
@@ -18,8 +19,10 @@ class ComponentConnector:
     
     def apply_compatibility_constraint(self, loc_master_id, master_component, loc_slave_id, slave_component):
         """
-        Method to check compatibility of mesh-components and construct compatibility-constraints. It distinguishes between Master- and Slave-side of the interface.
-        This determines currently the sign of the constraint-matrix only. The given local ids determine the corresponding keys in the constraints.
+        Method to check compatibility of mesh-components and construct compatibility-constraints. It distinguishes
+        between Master- and Slave-side of the interface.
+        This determines currently the sign of the constraint-matrix only. The given local ids determine the
+        corresponding keys in the constraints.
         The constraints are assumed to be enforced by Lagrange-multipliers.
 
         Parameters
@@ -40,7 +43,8 @@ class ComponentConnector:
         -------
         None
         """
-        slave_nodeids, master_nodeids = self.mesh_tying.check_node_compatibility(slave_component, master_component)
+        slave_nodeids, master_nodeids = self.mesh_tying.check_node_compatibility(slave_component._mesh,
+                                                                                 master_component._mesh)
         
         master_key = str(loc_slave_id) + 'to' + str(loc_master_id)
         slave_key = str(loc_master_id) + 'to' + str(loc_slave_id)
@@ -97,19 +101,21 @@ class MeshTying:
     """
     def __init__(self):
         pass
-            
-    def check_node_compatibility(self, component_a, component_b):
+
+    @staticmethod
+    def check_node_compatibility(mesh_a, mesh_b, tol=1e-12):
         """
-        Method, that checks, if nodes of two components with meshes are approximately at the same position. This is only based on the reference-coordinates.
-        So no check during a simulation is yet supported.
+        Method, that checks, if nodes of two components with meshes are approximately at the same position. This is only
+        based on the reference-coordinates. So no check during a simulation is yet supported.
 
         Parameters
         ----------
-        component_a : MeshComponent
-            first component
-
-        component_b : MeshComponent
-            second component
+        mesh_a : Mesh
+            first mesh
+        mesh_b : Mesh
+            second mesh
+        tol: float
+            tolerated distance between nodes that are assumed to match
 
         Returns
         -------
@@ -119,23 +125,23 @@ class MeshTying:
         nodeids_b : ndarray
             node-ids of component_b, that match nodeids_a of component_a
         """
-        nodeids_a_full = component_a._mesh.nodes_df.index.values
+        nodeids_a_full = mesh_a.nodes_df.index.values
         nodeids_a = np.array([], dtype=int)
         nodeids_b = np.array([], dtype=int)
 
         for node_a in nodeids_a_full:
-            node_a_coord = component_a._mesh.nodes_df.loc[node_a]
-            if component_a._mesh.dimension == 2:
-                matching_nodeid_b = component_b._mesh.get_nodeid_by_coordinates(node_a_coord['x'], node_a_coord['y'])
-            elif component_a._mesh.dimension == 3:
-                matching_nodeid_b = component_b._mesh.get_nodeid_by_coordinates(node_a_coord['x'], node_a_coord['y'], node_a_coord['z'])
+            node_a_coord = mesh_a.nodes_df.loc[node_a]
+            if mesh_a.dimension == 2:
+                matching_nodeid_b = mesh_b.get_nodeid_by_coordinates(node_a_coord['x'], node_a_coord['y'],
+                                                                     epsilon=tol)
+            elif mesh_a.dimension == 3:
+                matching_nodeid_b = mesh_b.get_nodeid_by_coordinates(node_a_coord['x'], node_a_coord['y'],
+                                                                     node_a_coord['z'], epsilon=tol)
+            else:
+                raise ValueError('Mesh must be dimension 2 or 3')
             
             if matching_nodeid_b is not None:
                 nodeids_b = np.append(nodeids_b, matching_nodeid_b)
                 nodeids_a = np.append(nodeids_a, node_a)
                 
         return nodeids_a, nodeids_b
-            
-            
-            
-        

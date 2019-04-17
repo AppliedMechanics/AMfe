@@ -1,17 +1,21 @@
+#
+# Copyright (c) 2018 TECHNICAL UNIVERSITY OF MUNICH, DEPARTMENT OF MECHANICAL ENGINEERING, CHAIR OF APPLIED MECHANICS,
+# BOLTZMANNSTRASSE 15, 85748 GARCHING/MUNICH, GERMANY, RIXEN@TUM.DE.
+#
+# Distributed under 3-Clause BSD license. See LICENSE file for more information.
+#
 """Test Routine for component-connector"""
 
 
 from unittest import TestCase
-import numpy as np
-import pandas as pd
 from numpy.testing import assert_array_equal
 
 from amfe.component.component_connector import *
-from amfe.component.mesh_component import MeshComponent
+
 
 class DummyMesh:
     def __init__(self, dimension):
-        '''
+        """
         Testmesh:                Partition:
 
                                     9---10--11   11--12
@@ -41,7 +45,7 @@ class DummyMesh:
 
         data = {'connectivity': connectivity_desired}
         indices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        '''
+        """
         nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0]], dtype=np.float)
         x = nodes[:, 0]
         y = nodes[:, 1]
@@ -76,10 +80,11 @@ class DummyMesh:
             nodeid = None
         return nodeid
 
+
 class DummyMesh2(DummyMesh):
     def __init__(self, dimension):
         super().__init__(dimension)
-        '''
+        """
         Testmesh:                Partition:
 
                                     9---10--11   11--12
@@ -91,7 +96,7 @@ class DummyMesh2(DummyMesh):
         |   |  \| / |               |  *1*  |    |*2*|
         1---2---5---8               |       |    |   |
                                     1---2---5    5---8
-        '''
+        """
         nodes_desired = np.array([[3.0, 1.0], [3.0, 0.0], [2.0, 0.0], [2.0, 1.0]], dtype=np.float)
         x = nodes_desired[:, 0]
         y = nodes_desired[:, 1]
@@ -111,10 +116,11 @@ class DummyMesh2(DummyMesh):
         indices = [1, 2, 3]
         self._el_df = pd.DataFrame(data, index=indices)
 
+
 class DummyMesh5(DummyMesh):
     def __init__(self, dimension):
         super().__init__(dimension)
-        '''
+        """
         Testmesh:                Partition:
 
                                     9---10--11   11--12
@@ -126,7 +132,7 @@ class DummyMesh5(DummyMesh):
         |   |  \| / |               |  *1*  |    |*2*|
         1---2---5---8               |       |    |   |
                                     1---2---5    5---8
-        '''
+        """
         nodes_desired = np.array([[4.0, 1.0], [4.0, 0.0], [3.0, 0.0], [3.0, 1.0]], dtype=np.float)
         x = nodes_desired[:, 0]
         y = nodes_desired[:, 1]
@@ -146,6 +152,7 @@ class DummyMesh5(DummyMesh):
         indices = [1, 2, 3]
         self._el_df = pd.DataFrame(data, index=indices)
 
+
 class DummyMeshComponent:
     def __init__(self, mesh):
         self._mesh = mesh
@@ -157,8 +164,6 @@ class DummyMeshComponent:
         for node in self._mesh.nodes_df.itertuples():
             pos = np.append(pos, np.array([node.x, node.y]))
         return pos
-
-
 
 
 class ComponentConnectorTest(TestCase):
@@ -202,8 +207,12 @@ class ComponentConnectorTest(TestCase):
         pass
 
     def test_apply_compatibility_constraint_interf(self):
-        C_master_desired = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
-        C_slave_desired = np.array([[0, 0, 0, 0, -1, 0, 0, 0],[0, 0, 0, 0, 0, -1, 0, 0],[0, 0, 0, 0, 0, 0, -1, 0],[0, 0, 0, 0, 0, 0, 0, -1]])
+        C_master_desired = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]],
+                                    dtype=int)
+        C_slave_desired = np.array([[0, 0, 0, 0, -1, 0, 0, 0], [0, 0, 0, 0, 0, -1, 0, 0],
+                                    [0, 0, 0, 0, 0, 0, -1, 0],[0, 0, 0, 0, 0, 0, 0, -1]],
+                                   dtype=int)
 
         self.TestConnector.apply_compatibility_constraint(1, self.TestComponent_Master, 2, self.TestComponent_Slave)
 
@@ -216,15 +225,14 @@ class ComponentConnectorTest(TestCase):
         assert_array_equal(self.TestConnector.constraints['1to2'].todense(), -C_slave_desired)
 
     def test_apply_compatibility_constraint_nointerf(self):
-        self.TestConnector.constraints['5to1'] = np.array([[1, 0, 0, 0],[0, 1, 0, 0]])
+        self.TestConnector.constraints['5to1'] = np.array([[1, 0, 0, 0], [0, 1, 0, 0]])
 
         self.TestConnector.apply_compatibility_constraint(1, self.TestComponent_Master, 5, self.TestComponent_nointerf)
 
         self.assertTrue(not self.TestConnector.constraints)
 
-
     def test_delete_connection(self):
-        self.TestConnector.constraints['testkey'] = np.array([[0, 1, 0],[0, 0, 1],[1, 0, 0]])
+        self.TestConnector.constraints['testkey'] = np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]])
 
         self.assertTrue('testkey' in self.TestConnector.constraints)
 
@@ -235,15 +243,11 @@ class ComponentConnectorTest(TestCase):
         self.assertRaises(KeyError, self.TestConnector.delete_connection('wrong_key'))
 
 
-
-
 class MeshTyingTest(TestCase):
     def setUp(self):
         self.mesh_master = DummyMesh(2)
         self.mesh_slave = DummyMesh2(2)
-        self.TestComponent_Master = MeshComponent(self.mesh_master)
-        self.TestComponent_Slave = MeshComponent(self.mesh_slave)
-        
+
     def tearDown(self):
         pass
     
@@ -252,7 +256,7 @@ class MeshTyingTest(TestCase):
         nodeids_master_desired = np.array([5, 6])
         
         mesh_tying = MeshTying()
-        nodeids_slave, nodeids_master = mesh_tying.check_node_compatibility(self.TestComponent_Slave, self.TestComponent_Master)
+        nodeids_slave, nodeids_master = mesh_tying.check_node_compatibility(self.mesh_slave, self.mesh_master)
         
         assert_array_equal(nodeids_slave, nodeids_slave_desired)
         assert_array_equal(nodeids_master, nodeids_master_desired)
