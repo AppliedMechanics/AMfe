@@ -14,8 +14,6 @@ strain tensor E. This computation is carried out in this module.
 """
 
 import numpy as np
-import abc
-
 
 __all__ = ['Material',
            'HyperelasticMaterial',
@@ -23,6 +21,8 @@ __all__ = ['Material',
            'LinearMaterial',
            'NeoHookean',
            'MooneyRivlin',
+           'ShellMaterial',
+           'BeamMaterial',
            ]
 
 
@@ -31,7 +31,7 @@ use_fortran = False
 try:
     import amfe.f90_material as f90_material
     use_fortran = True
-except Exception:
+except ModuleNotFoundError:
     print('''
 Python was not able to load the fast fortran material routines.
 ''')
@@ -56,6 +56,66 @@ class Material:
     def notify(self):
         for observer in self._observers:
             observer.update()
+
+
+class ShellMaterial(Material):
+    """
+    Base class for Elements that have kinematic constraints between rotation and displacement dofs
+    e.g. for shells, beams, membranes etc.
+    """
+    def __init__(self):
+        super().__init__()
+
+
+class BeamMaterial(ShellMaterial):
+    """
+    Material class to define Beam properties
+    """
+    def __init__(self, E=210E9, G=80E9, rho=1E4, A=1.0, I_y=1.0, I_z=1.0, J_x=1.0,
+                 X3=(0.0, 0.0, 1E21)):
+        """
+        Constructor for Beam Material
+        Parameters
+        ----------
+        E: float
+            Young's modulus
+        G: float
+            Shear modulus
+        rho: float
+            density
+        A: float
+            crosssection of the beam
+        I_y: float
+            second moment of inertia around local y-axis
+        I_z: float
+            second moment of inertia around local z-axis
+        J_x: float
+            Torsional momentum
+        X3: tuple
+            tuple describing the coordinates of a third nodes within the XZ-plane of the beam
+            This makes it possible to rotate the local coordinate system of the beam
+        """
+        super().__init__()
+        self.crosssec = A
+        self.E_modulus = E
+        self.G_modulus = G
+        self.rho = rho
+        self.I_y = I_y
+        self.I_z = I_z
+        self.J_x = J_x
+        self.X3 = np.array(X3, dtype=float)
+
+    @property
+    def I_p(self):
+        """
+        Polar second moment of inertia
+
+        Returns
+        -------
+        I_p: float
+            polar second moment of inertia
+        """
+        return self.I_y + self.I_z
 
 
 class HyperelasticMaterial(Material):

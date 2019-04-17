@@ -9,10 +9,11 @@ import scipy as sp
 import nose
 
 from numpy.testing import assert_allclose, assert_almost_equal
-from amfe.element import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10, Hexa8, Hexa20
+from amfe.element import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10, Hexa8, Hexa20, LinearBeam3D
 from amfe.element import Tri3Boundary, Tri6Boundary, Quad4Boundary, Quad8Boundary, LineLinearBoundary
 from amfe.element import compute_B_matrix
-from amfe.material import KirchhoffMaterial, NeoHookean, MooneyRivlin
+from amfe.material import KirchhoffMaterial, NeoHookean, MooneyRivlin, BeamMaterial
+
 
 def jacobian(func, X, u, t):
     '''
@@ -30,6 +31,8 @@ def jacobian(func, X, u, t):
         jac[:,i] = (f_tmp - f) / h
     return jac
 
+
+X_linear_beam = np.array([0, 0, 0, 2, 1, 0], dtype=float)
 X_tri3 = np.array([0,0,3,1,2,2], dtype=float)
 X_tri6 = np.array([0,0,3,1,2,2,1.5,0.5,2.5,1.5,1,1], dtype=float)
 X_quad4 = np.array([0,0,1,0,1,1,0,1], dtype=float)
@@ -80,6 +83,43 @@ class ElementTest(unittest.TestCase):
         assert_allclose(self.my_element.E, E)
 
 
+class LinearBeam3DTest(ElementTest):
+    def setUp(self):
+        no_of_dofs = 12
+        self.X = X_linear_beam
+        self.u = sp.rand(no_of_dofs)
+        self.my_material = BeamMaterial(120, 80, 1000.0, 4.0, 23.0, 34.0, 132.0, (0.0, 0.0, 1E23))
+        self.my_element = LinearBeam3D(self.my_material)
+
+    def test_mass(self):
+        # tests if the beam has the correct mass (tested with unit translation)
+        X = X_linear_beam
+        u = np.zeros(12)
+        M = self.my_element.m_int(X, u)
+
+        L = np.linalg.norm(X_linear_beam[3:6] - X_linear_beam[0:3])
+        mass_theoretic = self.my_material.rho * self.my_material.crosssec * L
+        # x translation:
+        u[0] = 1.0
+        u[6] = 1.0
+        mass = u.T.dot(M).dot(u)
+        assert_allclose(mass, mass_theoretic)
+
+        # y translation:
+        u = np.zeros(12)
+        u[1] = 1.0
+        u[7] = 1.0
+        mass = u.T.dot(M).dot(u)
+        assert_allclose(mass, mass_theoretic)
+
+        # z translation:
+        u = np.zeros(12)
+        u[2] = 1.0
+        u[8] = 1.0
+        mass = u.T.dot(M).dot(u)
+        assert_allclose(mass, mass_theoretic)
+
+
 class Tri3Test(ElementTest):
     def setUp(self):
         self.initialize_element(Tri3, X_tri3)
@@ -93,12 +133,14 @@ class Tri3Test(ElementTest):
         M = self.my_element.m_int(X, u)
         np.testing.assert_almost_equal(np.sum(M), 4)
 
+
 class Tri6Test(ElementTest):
     def setUp(self):
         self.initialize_element(Tri6, X_tri6)
 
     def test_jacobi(self):
         self.jacobi_test_element(rtol=1E-3)
+
 
 class Quad4Test(ElementTest):
     def setUp(self):
