@@ -951,15 +951,15 @@ class Mesh:
         """
         return self.add_node(self.nodes_df.loc[node_id])
     
-    def add_node(self, node_coordinates, node_id=None):
+    def add_node(self, node_coordinates, index=None, overwrite=False):
         """
         Add new node to mesh with given coordinates. In case of 2D-mesh the z-coordinate is not needed.
         It is optional to give a node-id as well. If the given node-id is reserved already or no node-id is given, the next larger one is set.
         
         Parameters
         ----------
-        node_coordinates: ndarray, pandas.Series
-            x, y, z coordinates of new node. In case of a pandas.Series, it has to consist of columns 'x', 'y' and maybe 'z'
+        node_coordinates: tuple, List, dict or ndarray
+            x, y, z coordinates of new node. In case of a dict, it has to consist of columns 'x', 'y' and maybe 'z'
 
         node_id: int
             id of that node, which is to be copied
@@ -969,31 +969,46 @@ class Mesh:
         new_node_id: int
             id of the new, added node
         """
-        if self.no_of_nodes > 0:
-            if node_id is None or node_id in self.nodes_df.index.tolist():
-                node_id = self.nodes_df.last_valid_index() + 1
-        else:
-            node_id = 1
-            
-        if isinstance(node_coordinates, pd.Series):
-            if 'z' in node_coordinates:
-                print('WARNING: To many coordinates were given. Dropping the z-coordinate.')
-                node_coordinates.drop('z', axis=1)
-                
-            new_node = node_coordinates.rename(node_id)
-        else:
-            if self.dimension == 2:
-                if len(node_coordinates) > self.dimension:
-                    print('WARNING: To many coordinates were given. Dropping the last ', node_coordinates.shape[0]-self.dimension, ' entries.')
-
-                new_node = pd.Series({'x': node_coordinates[0], 'y': node_coordinates[1]}, name=node_id)
-            elif self.dimension == 3:
-                new_node = pd.Series({'x': node_coordinates[0], 'y': node_coordinates[1], 'z': node_coordinates[2]}, name=node_id)
+        if index is None:
+            if self.no_of_nodes > 0:
+                index = self.nodes_df.last_valid_index() + 1
             else:
-                raise ValueError('Node can only be added for mesh dimension equals 2 or 3')
+                index = 0
 
-        self.nodes_df = self.nodes_df.append(new_node, ignore_index=False)
-        return node_id
+        else:
+            if index in self.nodes_df.index.values and not overwrite:
+                    self.logger.error('Element can not be added because elementid already exists.'
+                                      'Pass overwrite=True to overwrite the index or choose another one')
+                    raise ValueError('Index in mesh already used. Try overwrite=True flag or choose another index')
+
+        try:
+            dtype = node_coordinates.dtype
+            if dtype != np.float:
+                node_coordinates = node_coordinates.astype(float)
+        except AttributeError:
+            if isinstance(node_coordinates, dict):
+                if self.dimension == 2:
+                    if 'z' in node_coordinates:
+                        self.logger.warning('Too many coordinates were given. Dropping the last')
+                        node_coordinates = np.array([node_coordinates['x'], node_coordinates['y']], dtype=float)
+                elif self.dimension == 3:
+                    node_coordinates = np.array([node_coordinates['x'], node_coordinates['y'], node_coordinates['z']],
+                                                dtype=float)
+                else:
+                    raise NotImplementedError('The mesh is only implemented for 2 or 3 dimensional topologies')
+
+        if self.dimension == 2:
+            coordnames = ('x', 'y')
+            if len(node_coordinates) > 2:
+                self.logger.warning('Too many coordinates were given. Dropping the last')
+                node_coordinates = node_coordinates[0:2]
+        elif self.dimension == 3:
+            coordnames = ('x', 'y', 'z')
+        else:
+            raise NotImplementedError('The mesh is only implemented for 2 or 3 dimensional topologies')
+
+        self.nodes_df.at[index, coordnames] = node_coordinates
+        return index
 
     def add_element(self, shape, connectivity, index=None, overwrite=False):
         """

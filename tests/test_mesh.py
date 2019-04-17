@@ -378,22 +378,73 @@ class TestMesh(TestCase):
         self.assertEqual(len(self.testmesh.groups), len(groups_desired))
             
     def test_add_node(self):
-        nodes_df_old = deepcopy(self.testmesh.nodes_df)
-        nodes_df_desired = deepcopy(nodes_df_old)
-        nodes_df_desired.loc[7] = {'x': 1.0, 'y': 0.5}
-        
-        self.testmesh.add_node(pd.Series({'x': 1.0, 'y': 0.5}))
-        
-        assert_frame_equal(self.testmesh.nodes_df, nodes_df_desired)
-        assert_equal(self.testmesh.no_of_nodes, 7)
-        
-        self.testmesh.nodes_df = nodes_df_old
-        nodes_df_desired = pd.DataFrame({'x': [0.0, 1.0, 1.0, 0.0, 2.0, 2.0, 1.0], 'y': [0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.5]}, index=[1, 2, 3, 4, 5, 6, 7])
-        
-        self.testmesh.add_node(np.array([1.0, 0.5, 4.0]), 3)
-        
-        assert_frame_equal(self.testmesh.nodes_df, nodes_df_desired)
-        assert_equal(self.testmesh.no_of_nodes, 7)
+        # Test 3D mesh
+        mesh = Mesh(3)
+
+        # test with tuple
+        coords = (0.0, 1.0, 2.0)
+        new_id = mesh.add_node(coords)
+        coords_actual = mesh.nodes_df.loc[new_id, ['x', 'y', 'z']]
+        assert_array_equal(coords_actual, np.array(coords, dtype=float))
+
+        # test with array
+        coords = np.array([5, 6, 3], dtype=float)
+        new_id = mesh.add_node(coords)
+        coords_actual = mesh.nodes_df.loc[new_id, ['x', 'y', 'z']]
+        assert_array_equal(coords_actual, np.array(coords, dtype=float))
+
+        # test with dict and id
+        coords = {'x': 5.0, 'y': 6.0, 'z': 3}
+        new_id = mesh.add_node(coords, 8)
+        coords_actual = mesh.nodes_df.loc[new_id, ['x', 'y', 'z']]
+        assert_array_equal(coords_actual, np.array([5, 6, 3], dtype=float))
+        self.assertEqual(new_id, 8)
+
+        # test raise error no overwrite
+        coords = np.array([10, 4, 2], dtype=float)
+        with self.assertRaises(ValueError):
+            new_id = mesh.add_node(coords, 8)
+
+        # test overwrite and with int array
+        coords = np.array([10, 4, 2], dtype=int)
+        new_id = mesh.add_node(coords, 8, overwrite=True)
+        coords_actual = mesh.nodes_df.loc[new_id, ['x', 'y', 'z']]
+        assert_array_equal(coords_actual, np.array(coords, dtype=float))
+        self.assertEqual(new_id, 8)
+
+        # Test 2D mesh
+        mesh = Mesh(2)
+
+        # test with tuple
+        coords = (0.0, 1.0, 2.0)
+        new_id = mesh.add_node(coords)
+        coords_actual = mesh.nodes_df.loc[new_id, ['x', 'y']]
+        assert_array_equal(coords_actual, np.array(coords[0:2], dtype=float))
+
+        # test with array
+        coords = np.array([5, 6, 3], dtype=float)
+        new_id = mesh.add_node(coords)
+        coords_actual = mesh.nodes_df.loc[new_id, ['x', 'y']]
+        assert_array_equal(coords_actual, np.array(coords[0:2], dtype=float))
+
+        # test with dict and id
+        coords = {'x': 5.0, 'y': 6.0, 'z': 3}
+        new_id = mesh.add_node(coords, 8)
+        coords_actual = mesh.nodes_df.loc[new_id, ['x', 'y']]
+        assert_array_equal(coords_actual, np.array([5, 6], dtype=float))
+        self.assertEqual(new_id, 8)
+
+        # test raise error no overwrite
+        coords = np.array([10, 4, 2], dtype=float)
+        with self.assertRaises(ValueError):
+            new_id = mesh.add_node(coords, 8)
+
+        # test overwrite and with int array
+        coords = np.array([10, 4, 2], dtype=int)
+        new_id = mesh.add_node(coords, 8, overwrite=True)
+        coords_actual = mesh.nodes_df.loc[new_id, ['x', 'y']]
+        assert_array_equal(coords_actual, np.array(coords[0:2], dtype=float))
+        self.assertEqual(new_id, 8)
 
     def test_add_element(self):
         mesh = Mesh(2)
