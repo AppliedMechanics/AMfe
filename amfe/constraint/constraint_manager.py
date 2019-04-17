@@ -284,7 +284,7 @@ class ConstraintManager:
             generator object that yields the B function with correct signature for the assembler
         """
         for i, const in self._constraints_df.iterrows():
-            X_local = self._get_local_X(X, const['Xidxs'])
+            X_local = X[const['Xidxs']]
 
             def B(u):
                 return const['constraint_obj'].B(X_local, u, t)
@@ -308,7 +308,7 @@ class ConstraintManager:
             generator object that yields the g functions with correct signature for the assembler
         """
         for i, const in self._constraints_df.iterrows():
-            X_local = self._get_local_X(X, const['Xidxs'])
+            X_local = X[const['Xidxs']]
 
             def g(u):
                 return const['constraint_obj'].g(X_local, u, t)
@@ -333,7 +333,7 @@ class ConstraintManager:
             generator object that yields the g functions with correct signature for the assembler
         """
         for i, const in self._constraints_df.iterrows():
-            X_local = self._get_local_X(X, const['Xidxs'])
+            X_local = X[const['Xidxs']]
 
             def a(u, du):
                 return const['constraint_obj'].a(X_local, u, du, t)
@@ -358,7 +358,7 @@ class ConstraintManager:
             generator object that yields the g functions with correct signature for the assembler
         """
         for i, const in self._constraints_df.iterrows():
-            X_local = self._get_local_X(X, const['Xidxs'])
+            X_local = X[const['Xidxs']]
 
             def b(u):
                 return const['constraint_obj'].b(X_local, u, t)
@@ -481,11 +481,3 @@ class ConstraintManager:
         b *= 0.0
         b = self._constraint_assembler.assemble_g(self._bs(X, t), self._dofidxs(), (u, ), b)
         return b
-
-    def _get_local_X(self, X, Xidxs):
-        if Xidxs.size == 0:
-            X_local = X
-        else:
-            X_local = X[Xidxs]
-        return X_local
-
