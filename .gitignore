@@ -26,9 +26,8 @@ results/
 build/
 dist/
 private/
-amfe.egg-info/
 experiments/
-meshes/gid/
+amfe.egg-info/
 experiments/paper_icoev
 .idea/
 .spyproject/

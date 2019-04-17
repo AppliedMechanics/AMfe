@@ -7,6 +7,7 @@
 
 from collections.abc import Iterable
 from .component_base import *
+from .component_connector import *
 
 
 class ComponentComposite(ComponentBase):
@@ -29,6 +30,8 @@ class ComponentComposite(ComponentBase):
                 arg_components = [arg_components]
             for component in arg_components:
                 self.add_component(component)
+                
+        self.component_connector = ComponentConnector()
 
     @property
     def no_of_components(self):
@@ -53,7 +56,7 @@ class ComponentComposite(ComponentBase):
         
     def delete_component(self, target_component_id):
         """
-        Deletes a local child component by indexlocation
+        Deletes a local child component by indexlocation. Take care of connections to this component and update connections after deletions!
 
         Parameters
         ----------
@@ -63,8 +66,6 @@ class ComponentComposite(ComponentBase):
         Returns
         -------
         None
-
-        TODO: Check connections (e.g. constraints to other components and delete them first
         """
         del(self.components[target_component_id])
         
@@ -89,38 +90,21 @@ class ComponentComposite(ComponentBase):
             if isinstance(component, ComponentComposite):
                 component.update_tree(leaf_paths)
 
-    def get_mat(self, matrix_type="K", u=None, t=0):
+    def update_component_connections(self):
         """
-        Returns a requested matrix
+        Updates all connection-matrices in the composite's ComponentConnector-module.
         
         Parameters
         ----------
-        matrix_type : str
-            Matrix type that is returned (e.g. M, K, ...)
-        u : ndarray
-            primal variable (e.g. displacements)
-        t : float
-            time
-
+        None
+        
         Returns
         -------
-        matrix : ndarray or csc_matrix
-            the requested matrix
+        None
         """
-        pass
-        #for comp in self.components:
-            #################################
-            ## ASSEMBLE LOCAL MATRICES!!!
-            #################################
-            #mat = comp.get_mat(matrix_type, u, t)
+        for slave_id, slave_comp in enumerate(self.components):
+            for master_id, master_comp in enumerate(self.components): 
+                if master_id is not slave_id:
+                    self.component_connector.apply_compatibility_constraint(master_id, master_comp, slave_id, slave_comp)
 
-        
-    #PRIVATE METHODS
-    
-    def _test_input(self, input_to_test, valid_input):
-        try:
-            return valid_input.index(input_to_test)
-        except AttributeError as error:
-            print('{} not a valid input. Please try one of the following instead: '.format(input_to_test))
-            print(valid_input)
 
