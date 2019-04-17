@@ -63,7 +63,7 @@ class PendulumConstraintTest(TestCase):
         self.dh_ddq = jac_du
 
         # X coordinates in reference configuration
-        self.X = np.array([[0.0, 0.0], [0.0, -self.L]], dtype=float)
+        self.X = np.array([0.0, 0.0, 0.0, -self.L], dtype=float)
         # initial condition u_0: 90deg to the right
         self.u_0 = np.array([0.0, 0.0, self.L, self.L])
         # other initial conditions:
@@ -80,7 +80,7 @@ class PendulumConstraintTest(TestCase):
         self.cm.add_constraint('Fixation', self.constraint_fixation, np.array([0], dtype=int), ())
         self.cm.add_constraint('Fixation', self.constraint_fixation, np.array([1], dtype=int), ())
         self.cm.add_constraint('Pendulum', self.constraint_fixed_distance, np.array([0, 1, 2, 3], dtype=int),
-                               np.array([0, 1], dtype=int))
+                               np.array([0, 1, 2, 3], dtype=int))
 
         def g_func(u, t):
             return self.cm.g(self.X, u, t)

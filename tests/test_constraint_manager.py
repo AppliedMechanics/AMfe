@@ -56,13 +56,13 @@ class ConstraintManagerTest(TestCase):
         self.cm.add_constraint('Dirich0', self.diric_constraint, [2], [2])
         constraint_df_desired = pd.DataFrame({'name': 'Dirich0', 'constraint_obj': self.diric_constraint,
                                               'dofidxs': [np.array([2], dtype=int)],
-                                              'nodeidxs': [np.array([2], dtype=int)]})
+                                              'Xidxs': [np.array([2], dtype=int)]})
         assert_frame_equal(self.cm._constraints_df, constraint_df_desired, check_like=True)
         self.cm.add_constraint('Dirich1', self.diric_constraint, [1], [1])
         constraint_df_desired = constraint_df_desired.append(pd.DataFrame({'name': 'Dirich1',
                                                                            'constraint_obj': self.diric_constraint,
                                                                            'dofidxs': [np.array([1], dtype=int)],
-                                                                           'nodeidxs': [np.array([1], dtype=int)]}),
+                                                                           'Xidxs': [np.array([1], dtype=int)]}),
                                                              ignore_index=True)
         print(self.cm._constraints_df)
         print(constraint_df_desired)
@@ -74,7 +74,7 @@ class ConstraintManagerTest(TestCase):
         self.cm.remove_constraint_by_name('Dirich0')
         constraint_df_desired = pd.DataFrame({'name': [], 'constraint_obj': [],
                                               'dofidxs': [],
-                                              'nodeidxs': []}, dtype=object)
+                                              'Xidxs': []}, dtype=object)
         assert_frame_equal(self.cm._constraints_df, constraint_df_desired, check_like=True)
 
         self.cm.add_constraint('Dirich0', self.diric_constraint, [2], [2])
@@ -82,7 +82,7 @@ class ConstraintManagerTest(TestCase):
         self.cm.remove_constraint_by_name('Dirich0')
         constraint_df_desired = pd.DataFrame({'name': 'Dirich1', 'constraint_obj': self.diric_constraint,
                                               'dofidxs': [np.array([1], dtype=int)],
-                                              'nodeidxs': [np.array([1], dtype=int)]})
+                                              'Xidxs': [np.array([1], dtype=int)]})
         assert_frame_equal(self.cm._constraints_df, constraint_df_desired, check_like=True)
 
     def test_remove_constraint_by_dofidxs(self):
@@ -91,7 +91,7 @@ class ConstraintManagerTest(TestCase):
         self.cm.remove_constraint_by_dofidxs([2])
         constraint_df_desired = pd.DataFrame({'name': 'Dirich1', 'constraint_obj': self.diric_constraint,
                                               'dofidxs': [np.array([1], dtype=int)],
-                                              'nodeidxs': [np.array([1], dtype=int)]})
+                                              'Xidxs': [np.array([1], dtype=int)]})
         assert_frame_equal(self.cm._constraints_df, constraint_df_desired, check_like=True)
 
     def _initalization_for_g_b_test(self):
@@ -157,7 +157,7 @@ class PendulumConstraintManagerTest(TestCase):
             # Mass of the pendulum
             self.m = 1.0
             # X coordinates in reference configuration
-            self.X = np.array([0.0, 0.0, 0.0, -self.L], dtype=float).reshape(-1, 2)
+            self.X = np.array([0.0, 0.0, 0.0, -self.L], dtype=float)
             # initial condition u_0: 90deg to the right
             self.u_0 = np.array([0.0, 0.0, self.L, self.L])
             # other initial conditions:
@@ -198,7 +198,7 @@ class PendulumConstraintManagerTest(TestCase):
                                    np.array([], dtype=int))
             self.cm.add_constraint('Pendulum', self.constraint_pendulum,
                                    np.array([0, 1, 2, 3], dtype=int),
-                                   np.array([0, 1], dtype=int))
+                                   np.array([0, 1, 2, 3], dtype=int))
             # set time to zero
             t = 0.0
 
