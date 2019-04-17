@@ -11,6 +11,7 @@
 *~
 
 # ignore mesh files because they can be large
+*.msh
 
 # saved numpy-arrays
 *.npy
@@ -19,7 +20,7 @@
 
 # Folders to ignore
 docs/_build
-/meshes/
+meshes/
 notebooks/
 results/
 build/
