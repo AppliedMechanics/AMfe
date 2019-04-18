@@ -3,11 +3,9 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
 
-import numpy as np
 from scipy.sparse import csc_matrix
 
 from .mesh_component import MeshComponent
-from amfe.constraint.constraint_manager import ConstraintManager
 from amfe.assembly.structural_assembly import StructuralAssembly
 from amfe.component.constants import ELEPROTOTYPEHELPERLIST
 from amfe.mesh import Mesh
@@ -24,10 +22,6 @@ class StructuralComponent(MeshComponent):
     def __init__(self, mesh=Mesh()):
         super().__init__(mesh)
         self.rayleigh_damping = None
-        if mesh.dimension == 3:
-            self._fields = ('ux', 'uy', 'uz')
-        elif mesh.dimension == 2:
-            self._fields = ('ux', 'uy')
         self._assembly = StructuralAssembly()
         self._M_constr = None
         self._D_constr = None

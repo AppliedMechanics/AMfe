@@ -25,7 +25,7 @@ except Exception:
 
 
 class Element:
-    '''
+    """
     Anonymous baseclass for all elements. It contains the methods needed
     for the computation of the element stuff.
 
@@ -36,22 +36,33 @@ class Element:
     name : str
         Name for the postprocessing tool to identify the characteristics of the
         element
-
-    '''
+    """
     name = None
 
     def __init__(self, material=None):
-        '''
+        """
         Parameters
         ----------
         material : amfe.HyperelasticMaterial - object
             Object handling the material
-        '''
+        """
         self.material = material
         self.K = None
         self.f = None
         self.S = None
         self.E = None
+
+    @staticmethod
+    def fields():
+        """
+        Returns unique physical fields for elements
+
+        Returns
+        -------
+        fields: tuple[str]
+            unique physical fields in element
+        """
+        return ()
 
     def dofs(self):
         """

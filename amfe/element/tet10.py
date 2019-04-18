@@ -91,6 +91,10 @@ class Tet10(Element):
              [c2, c2, c1, c2, m2, m1, m1, m2, m2, m1],
              [c2, c2, c2, c1, m2, m2, m2, m1, m1, m1]]).T
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy', 'uz')
+
     def dofs(self):
         return (('N', 0, 'ux'), ('N', 0, 'uy'), ('N', 0, 'uz'),
                 ('N', 1, 'ux'), ('N', 1, 'uy'), ('N', 1, 'uz'),

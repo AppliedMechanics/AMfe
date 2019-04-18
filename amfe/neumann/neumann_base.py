@@ -74,3 +74,6 @@ class NeumannBase:
 
     def dofs(self):
         return self._boundary_element.dofs()
+
+    def fields(self):
+        return self._boundary_element.fields()

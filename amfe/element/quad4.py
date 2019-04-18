@@ -74,6 +74,10 @@ class Quad4(Element):
             [1-np.sqrt(3)/2, -1/2, 1+np.sqrt(3)/2, -1/2],
             [-1/2, 1-np.sqrt(3)/2, -1/2, 1+np.sqrt(3)/2]]).T
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy')
+
     def dofs(self):
         return (('N', 0, 'ux'),
                 ('N', 0, 'uy'),

@@ -30,6 +30,7 @@ class Quad8Boundary(BoundaryElement):
     """
     Quad8 boundary element for 3D-Problems.
     """
+
     g = np.sqrt(3/5)
     w = 5/9
     w0 = 8/9
@@ -40,6 +41,10 @@ class Quad8Boundary(BoundaryElement):
     def __init__(self):
         super().__init__()
         return
+
+    @staticmethod
+    def fields():
+        return ('ux', 'uy', 'uz')
 
     def f_mat(self, X, u):
         """

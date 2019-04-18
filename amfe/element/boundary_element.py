@@ -29,6 +29,19 @@ class BoundaryElement:
         -------
         None
         """
+
+    @staticmethod
+    def fields():
+        """
+        Returns the unique physical fields that are local dofs of the element
+
+        Returns
+        -------
+        fields: tuple[str]
+            unique fields
+        """
+        return ()
+
     def f_mat(self, X, u):
         raise NotImplementedError('The f_mat is not implemented')
 

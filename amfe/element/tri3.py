@@ -61,6 +61,10 @@ class Tri3(Element):
         self.S = np.zeros((3,6))
         self.E = np.zeros((3,6))
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy')
+
     def dofs(self):
         return (('N', 0, 'ux'), ('N', 0, 'uy'),
                 ('N', 1, 'ux'), ('N', 1, 'uy'),

@@ -27,7 +27,14 @@ class NeumannManager:
         self._neumann_obj_df['fk_neumann_df'] = self._neumann_obj_df['fk_neumann_df'].astype(int)
         self._neumann_obj_df['fk_mesh'] = self._neumann_obj_df['fk_mesh'].astype(int)
         self._neumann_obj_df['fk_mapping'] = self._neumann_obj_df['fk_mapping'].astype(int)
-        
+
+    @property
+    def fields(self):
+        fields_list = list(set([field for ele_obj in self._neumann_obj_df['neumann_obj'].unique()
+                                for field in ele_obj.fields()]))
+        fields_list.sort()
+        return fields_list
+
     def assign_neumann_by_eleids(self, neumannobj, eleidxes, ele_shapes, property_names, tag, name):
         dfindex = self._neumann_df.index.max() + 1
         if pd.isnull(dfindex):

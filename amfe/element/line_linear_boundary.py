@@ -30,6 +30,7 @@ class LineLinearBoundary(BoundaryElement):
     """
     Line Boundary element for 2D-Problems.
     """
+
     # Johannes Rutzmoser: rot_mat is a rotationmatrix, that turns +90deg
     # rot_mat = np.array([[0,-1], [1, 0]])
     # Christian Meyer: more intuitive: boundary in math. positive direction equals outer vector => rotate -90deg:
@@ -39,6 +40,10 @@ class LineLinearBoundary(BoundaryElement):
 
     def __init__(self):
         super().__init__()
+
+    @staticmethod
+    def fields():
+        return ('ux', 'uy')
 
     def f_mat(self, X, u):
         x_vec = (X+u).reshape((-1, 2)).T

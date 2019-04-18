@@ -44,6 +44,10 @@ class Tri6Boundary(BoundaryElement):
     def __init__(self):
         super().__init__()
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy', 'uz')
+
     def f_mat(self, X, u):
         """
         Compute the full pressure contribution by performing gauss integration.

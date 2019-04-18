@@ -41,6 +41,10 @@ class Prism6(Element):
         self.E = np.zeros((6,6))
         return
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy', 'uz')
+
     def dofs(self):
         return ()
 
