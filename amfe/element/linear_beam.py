@@ -36,6 +36,9 @@ class LinearBeam3D(Element):
         self.M = np.zeros((12, 12))
         self.f = np.zeros(12)
 
+    def fields(self):
+        return ('ux', 'uy', 'uz', 'rotx', 'roty', 'rotz')
+
     def dofs(self):
         return (('N', 0, 'ux'),
                 ('N', 0, 'uy'),
