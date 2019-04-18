@@ -13,10 +13,11 @@ from amfe.mesh import Mesh
 from amfe.mapping import StandardMapping
 from .component_base import ComponentBase
 from amfe.assembly.assembly import Assembly
-from amfe.component.constants import ELEPROTOTYPEHELPERLIST
+from amfe.component.constants import ELEPROTOTYPEHELPERLIST, SHELLELEPROTOTYPEHELPERLIST
 from amfe.neumann.neumann_manager import *
 from amfe.constraint.constraint_manager import *
 from amfe.tools import make_input_iterable
+from amfe.material import ShellMaterial
 
 __all__ = ['MeshComponent']
 
@@ -24,6 +25,7 @@ __all__ = ['MeshComponent']
 class MeshComponent(ComponentBase):
     # The following class attributes must be overwritten by subclasses
     ELEMENTPROTOTYPES = dict(((element[0], None) for element in ELEPROTOTYPEHELPERLIST))
+    SHELLELEMENTPROTOTYPES = dict(((element[0], None) for element in SHELLELEPROTOTYPEHELPERLIST))
 
     def __init__(self, mesh=Mesh()):
         super().__init__()
@@ -87,7 +89,10 @@ class MeshComponent(ComponentBase):
         self._assign_material_by_eleids(materialobj, eleids, physics)
 
     def _assign_material_by_eleids(self, materialobj, eleids, physics):
-        prototypes = deepcopy(self.ELEMENTPROTOTYPES)
+        if isinstance(materialobj, ShellMaterial):
+            prototypes = deepcopy(self.SHELLELEMENTPROTOTYPES)
+        else:
+            prototypes = deepcopy(self.ELEMENTPROTOTYPES)
         for prototype in prototypes.values():
             prototype.material = materialobj
         ele_shapes = self._mesh.get_ele_shapes_by_ids(eleids)

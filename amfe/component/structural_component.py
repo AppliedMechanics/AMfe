@@ -7,13 +7,15 @@ from scipy.sparse import csc_matrix
 
 from .mesh_component import MeshComponent
 from amfe.assembly.structural_assembly import StructuralAssembly
-from amfe.component.constants import ELEPROTOTYPEHELPERLIST
+from amfe.component.constants import ELEPROTOTYPEHELPERLIST, SHELLELEPROTOTYPEHELPERLIST
 from amfe.mesh import Mesh
 
 
 class StructuralComponent(MeshComponent):
     TYPE = 'StructuralComponent'
     ELEMENTPROTOTYPES = dict(((element[0], element[1]()) for element in ELEPROTOTYPEHELPERLIST
+                              if element[1] is not None))
+    SHELLELEMENTPROTOTYPES = dict(((element[0], element[1]()) for element in SHELLELEPROTOTYPEHELPERLIST
                               if element[1] is not None))
     BOUNDARYELEMENTFACTORY = dict(((element[0], element[2]) for element in ELEPROTOTYPEHELPERLIST
                                    if element[2] is not None))
