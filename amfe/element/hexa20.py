@@ -130,6 +130,10 @@ class Hexa20(Element):
             [-p,p,n,p,f,-l,n,-l,l,q,p,-n,p,f,-l,-n,-l,m,-p,p,n,p,f,-l,n,-l,l],
             [n,p,-p,-l,f,p,l,-l,n,-n,p,q,-l,f,p,m,-l,-n,n,p,-p,-l,f,p,l,-l,n]])
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy', 'uz')
+
     def dofs(self):
         return (('N', 0, 'ux'), ('N', 0, 'uy'), ('N', 0, 'uz'),
                 ('N', 1, 'ux'), ('N', 1, 'uy'), ('N', 1, 'uz'),

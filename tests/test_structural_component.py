@@ -12,6 +12,7 @@ from amfe.io.mesh.reader import GidJsonMeshReader
 from amfe.io.mesh.writer import AmfeMeshConverter
 from amfe.material import KirchhoffMaterial
 from amfe.component.structural_component import StructuralComponent
+from amfe.mesh import Mesh
 
 
 class StructuralComponentTest(TestCase):
@@ -49,3 +50,8 @@ class StructuralComponentTest(TestCase):
         f_ext_2 = self.my_comp.f_ext(q, dq, t=2.0)
 
         assert_allclose(2*f_ext, f_ext_2)
+
+    def test_fields(self):
+        fields_actual = self.my_comp.fields
+        fields_desired = ['ux', 'uy']
+        self.assertListEqual(fields_actual, fields_desired)

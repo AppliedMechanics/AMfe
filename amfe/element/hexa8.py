@@ -84,6 +84,10 @@ class Hexa8(Element):
                                               [e, d, b, e, b, e, c, b],
                                               [d, e, e, b, e, b, b, c]])
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy', 'uz')
+
     def dofs(self):
         return (('N', 0, 'ux'),
                 ('N', 0, 'uy'),

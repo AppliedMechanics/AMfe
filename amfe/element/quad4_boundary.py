@@ -30,6 +30,7 @@ class Quad4Boundary(BoundaryElement):
     """
     Quad4 boundary element for 3D-Problems.
     """
+
     g1 = 1/np.sqrt(3)
 
     gauss_points = ((-g1, -g1, 1.),
@@ -40,6 +41,10 @@ class Quad4Boundary(BoundaryElement):
     def __init__(self):
         super().__init__()
         return
+
+    @staticmethod
+    def fields():
+        return ('ux', 'uy', 'uz')
 
     def f_mat(self, X, u):
         """

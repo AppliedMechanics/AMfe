@@ -78,6 +78,10 @@ class Tri6(Element):
 
         self.gauss_points = self.gauss_points2
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy')
+
     def dofs(self):
         return (('N', 0, 'ux'), ('N', 0, 'uy'),
                 ('N', 1, 'ux'), ('N', 1, 'uy'),

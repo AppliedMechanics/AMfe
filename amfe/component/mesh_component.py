@@ -29,7 +29,6 @@ class MeshComponent(ComponentBase):
         super().__init__()
         self._mesh = mesh
         self._mapping = StandardMapping()
-        self._fields = None
         self._ele_obj_df = pd.DataFrame([], columns=['physics', 'fk_mesh', 'ele_obj', 'fk_mapping'])
         self._ele_obj_df['fk_mapping'] = self._ele_obj_df['fk_mapping'].astype(int)
         self._ele_obj_df['fk_mesh'] = self._ele_obj_df['fk_mesh'].astype(int)
@@ -69,6 +68,13 @@ class MeshComponent(ComponentBase):
     @property
     def constraints(self):
         return self._constraints
+
+    @property
+    def fields(self):
+        fields_volume = set([field for ele_obj in self._ele_obj_df['ele_obj'].unique() for field in ele_obj.fields()])
+        fields_list = list(fields_volume.union(set(self._neumann.fields)))
+        fields_list.sort()
+        return fields_list
 
     # -- ASSIGN MATERIAL METHODS -------------------------------------------------------------------------
     def assign_material(self, materialobj, propertynames, physics, tag='_groups'):
@@ -121,7 +127,7 @@ class MeshComponent(ComponentBase):
     def _update_mapping(self):
         # collect parameters for call of update_mapping
         print('Updating Mapping')
-        fields = self._fields
+        fields = self.fields
         nodeids = self._mesh.nodes_df.index.values
 
         volume_connectivites = self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values

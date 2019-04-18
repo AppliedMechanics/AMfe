@@ -34,6 +34,10 @@ class Tri3Boundary(BoundaryElement):
     def __init__(self):
         super().__init__()
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy', 'uz')
+
     def f_mat(self, X, u):
         x_vec = (X+u).reshape((-1, 3)).T
         v1 = x_vec[:,2] - x_vec[:,0]

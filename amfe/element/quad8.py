@@ -74,6 +74,10 @@ class Quad8(Element):
          [ 0, 0, 0, 0, -sqrt(15)/6 + 5/6, 0, sqrt(15)/6 + 5/6, 0, -2/3],
          [ 0, 0, 0, 0, 0, -sqrt(15)/6 + 5/6, 0, sqrt(15)/6 + 5/6, -2/3]])
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy')
+
     def dofs(self):
         return (('N', 0, 'ux'), ('N', 0, 'uy'),
                 ('N', 1, 'ux'), ('N', 1, 'uy'),

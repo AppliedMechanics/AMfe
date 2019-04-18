@@ -36,6 +36,10 @@ class Bar2Dlumped(Element):
         self.M = np.zeros((4,4))
         self.f = np.zeros(4)
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy')
+
     def dofs(self):
         return (('N', 0, 'ux'),
                 ('N', 0, 'uy'),

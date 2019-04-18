@@ -30,7 +30,6 @@ class LineQuadraticBoundary(BoundaryElement):
     """
     Quadratic line boundary element for 2D problems.
     """
-
     # rot_mat = np.array([[ 0, -1],
     #                    [ 1,  0]])
     # same as above:
@@ -46,6 +45,10 @@ class LineQuadraticBoundary(BoundaryElement):
         n = self.rot_mat @ v
         f_mat = np.outer(self.N, n)
         return f_mat
+
+    @staticmethod
+    def fields():
+        return ('ux', 'uy')
 
     def dofs(self):
         return (('N', 0, 'ux'),

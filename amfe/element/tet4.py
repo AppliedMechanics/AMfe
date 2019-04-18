@@ -41,6 +41,10 @@ class Tet4(Element):
         self.S = np.zeros((4,6))
         self.E = np.zeros((4,6))
 
+    @staticmethod
+    def fields():
+        return ('ux', 'uy', 'uz')
+
     def dofs(self):
         return (('N', 0, 'ux'), ('N', 0, 'uy'), ('N', 0, 'uz'),
                 ('N', 1, 'ux'), ('N', 1, 'uy'), ('N', 1, 'uz'),
