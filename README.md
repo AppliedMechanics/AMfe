@@ -12,6 +12,11 @@ Coverage Report for Refactoring 2018:
 Pipeline Status:
 [![pipeline status](https://gitlab.lrz.de/AMCode/AMfe/badges/refactoring-2018/pipeline.svg)](https://gitlab.lrz.de/AMCode/AMfe/commits/refactoring-2018)
 
+**Important Info:** The project has been moved recently. So please update your remote via:
+
+    git remote set-url origin https://gitlab.lrz.de/AM/AMfe.git
+
+
 Overview:
 ---------
 
