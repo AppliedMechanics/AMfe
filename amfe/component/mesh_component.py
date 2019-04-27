@@ -5,10 +5,6 @@
 # Distributed under 3-Clause BSD license. See LICENSE file for more information.
 #
 
-from copy import deepcopy
-import numpy as np
-import pandas as pd
-
 from amfe.mesh import Mesh
 from amfe.mapping import StandardMapping
 from .component_base import ComponentBase
@@ -68,8 +64,20 @@ class MeshComponent(ComponentBase):
         self._assembly = assembly
 
     @property
+    def mesh(self):
+        return self._mesh
+
+    @property
     def constraints(self):
         return self._constraints
+
+    @property
+    def mapping(self):
+        return self._mapping
+
+    @property
+    def neumann(self):
+        return self._neumann
 
     @property
     def fields(self):

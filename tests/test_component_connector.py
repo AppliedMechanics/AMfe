@@ -155,13 +155,17 @@ class DummyMesh5(DummyMesh):
 
 class DummyMeshComponent:
     def __init__(self, mesh):
-        self._mesh = mesh
+        self.mesh = mesh
         self._mapping = None
+
+    @property
+    def mapping(self):
+        return self._mapping
 
     @property
     def X(self):
         pos = np.array([])
-        for node in self._mesh.nodes_df.itertuples():
+        for node in self.mesh.nodes_df.itertuples():
             pos = np.append(pos, np.array([node.x, node.y]))
         return pos
 

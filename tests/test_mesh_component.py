@@ -87,8 +87,8 @@ class TestMeshComponent(TestCase):
         nodal2global_desired = pd.DataFrame({'ux': {1: -1, 2: 6, 3: 4, 4: -1, 5: 0, 6: 2},
                                              'uy': {1: -1, 2: 7, 3: 5, 4: -1, 5: 1, 6: 3}})
         elements2global_desired = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([4, 5, 6, 7, 0, 1], dtype=int)]
-        assert_frame_equal(component._mapping.nodal2global, nodal2global_desired)
-        for actual, desired in zip(component._mapping.elements2global, elements2global_desired):
+        assert_frame_equal(component.mapping.nodal2global, nodal2global_desired)
+        for actual, desired in zip(component.mapping.elements2global, elements2global_desired):
             assert_array_equal(actual, desired)
 
         # assign second material
@@ -110,8 +110,8 @@ class TestMeshComponent(TestCase):
         elements2global_desired = [np.array([0, 1, 2, 3, 4, 5], dtype=int),
                                    np.array([4, 5, 6, 7, 0, 1], dtype=int),
                                    np.array([8,  9,  6,  7,  4,  5, 10, 11], dtype=int)]
-        assert_frame_equal(component._mapping.nodal2global, nodal2global_desired)
-        for actual, desired in zip(component._mapping.elements2global, elements2global_desired):
+        assert_frame_equal(component.mapping.nodal2global, nodal2global_desired)
+        for actual, desired in zip(component.mapping.elements2global, elements2global_desired):
             assert_array_equal(actual, desired)
 
         component = StructuralComponent(self.testmesh)
@@ -137,8 +137,8 @@ class TestMeshComponent(TestCase):
                                              'uy': {1: 1, 2: 3, 3: 5, 4: 7, 5: 9, 6: 11}})
         elements2global_desired = [np.array([0,  1,  2,  3,  4,  5, 6, 7], dtype=int),
                                    np.array([8, 9, 10, 11, 4, 5], dtype=int)]
-        assert_frame_equal(component._mapping.nodal2global, nodal2global_desired)
-        for actual, desired in zip(component._mapping.elements2global, elements2global_desired):
+        assert_frame_equal(component.mapping.nodal2global, nodal2global_desired)
+        for actual, desired in zip(component.mapping.elements2global, elements2global_desired):
             assert_array_equal(actual, desired)
 
     def test_assign_material_by_groups(self):

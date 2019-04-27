@@ -43,16 +43,16 @@ class ComponentConnector:
         -------
         None
         """
-        slave_nodeids, master_nodeids = self.mesh_tying.check_node_compatibility(slave_component._mesh,
-                                                                                 master_component._mesh)
+        slave_nodeids, master_nodeids = self.mesh_tying.check_node_compatibility(slave_component.mesh,
+                                                                                 master_component.mesh)
         
         master_key = str(loc_slave_id) + 'to' + str(loc_master_id)
         slave_key = str(loc_master_id) + 'to' + str(loc_slave_id)
         if slave_nodeids.size != 0 and master_nodeids.size != 0:
-            slave_dofids = np.reshape(slave_component._mapping.get_dofs_by_nodeids(slave_nodeids), -1)
-            master_dofids = np.reshape(master_component._mapping.get_dofs_by_nodeids(master_nodeids), -1)
+            slave_dofids = np.reshape(slave_component.mapping.get_dofs_by_nodeids(slave_nodeids), -1)
+            master_dofids = np.reshape(master_component.mapping.get_dofs_by_nodeids(master_nodeids), -1)
             
-            slave_constraints = ConstraintManager(slave_component._mapping.no_of_dofs)
+            slave_constraints = ConstraintManager(slave_component.mapping.no_of_dofs)
             constraint = slave_constraints.create_dirichlet_constraint()
             name = 'Compatibility' + str(loc_master_id) + str(loc_slave_id)
             for dof in slave_dofids:
@@ -62,7 +62,7 @@ class ComponentConnector:
 
             self.constraints[slave_key] = -slave_constraints.B(X, u , 0)
             
-            master_constraints = ConstraintManager(master_component._mapping.no_of_dofs)
+            master_constraints = ConstraintManager(master_component.mapping.no_of_dofs)
             constraint = master_constraints.create_dirichlet_constraint()
             name = 'Compatibility' + str(loc_slave_id) + str(loc_master_id)
             for dof in master_dofids:

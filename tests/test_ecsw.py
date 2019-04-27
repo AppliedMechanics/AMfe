@@ -91,7 +91,7 @@ class TestEcsw(TestCase):
         self.my_component.assign_material(my_material, ['left', 'right'], 'S')
 
         # Get number of dofs for snapshot generation
-        self.no_of_dofs = self.my_component._mapping.no_of_dofs
+        self.no_of_dofs = self.my_component.mapping.no_of_dofs
         # create 2 random snapshots
         self.no_of_snapshots = 2
         self.S = np.random.rand(self.no_of_dofs, self.no_of_snapshots) * 0.05
@@ -122,10 +122,10 @@ class TestEcsw(TestCase):
         g11_actual = G[0:self.no_of_dofs, 0]
         connectivity = self.my_mesh.get_connectivity_by_elementids([1])[0]
         X_local = self.my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
-        u_local_indices = self.my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
+        u_local_indices = self.my_component.mapping.nodal2global.loc[connectivity].values.reshape(-1)
         u_local = self.S[u_local_indices, 0]
         fe_local = self.my_component.ele_obj[0].f_int(X_local, u_local)
-        global_dofs = self.my_component._mapping.elements2global[0]
+        global_dofs = self.my_component.mapping.elements2global[0]
         g11_desired = np.zeros(self.no_of_dofs)
         g11_desired[global_dofs] = fe_local
         assert_allclose(g11_actual, g11_desired)
@@ -133,10 +133,10 @@ class TestEcsw(TestCase):
         g21_actual = G[self.no_of_dofs:, 0]
         connectivity = self.my_mesh.get_connectivity_by_elementids([1])[0]
         X_local = self.my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
-        u_local_indices = self.my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
+        u_local_indices = self.my_component.mapping.nodal2global.loc[connectivity].values.reshape(-1)
         u_local = self.S[u_local_indices, 1]
         fe_local = self.my_component.ele_obj[0].f_int(X_local, u_local)
-        global_dofs = self.my_component._mapping.elements2global[0]
+        global_dofs = self.my_component.mapping.elements2global[0]
         g21_desired = np.zeros(self.no_of_dofs)
         g21_desired[global_dofs] = fe_local
         assert_allclose(g21_actual, g21_desired)
@@ -144,10 +144,10 @@ class TestEcsw(TestCase):
         g12_actual = G[0:self.no_of_dofs, 1]
         connectivity = self.my_mesh.get_connectivity_by_elementids([2])[0]
         X_local = self.my_mesh.nodes_df.loc[connectivity].values.reshape(-1)
-        u_local_indices = self.my_component._mapping.nodal2global.loc[connectivity].values.reshape(-1)
+        u_local_indices = self.my_component.mapping.nodal2global.loc[connectivity].values.reshape(-1)
         u_local = self.S[u_local_indices, 0]
         fe_local = self.my_component.ele_obj[1].f_int(X_local, u_local)
-        global_dofs = self.my_component._mapping.elements2global[1]
+        global_dofs = self.my_component.mapping.elements2global[1]
         g12_desired = np.zeros(self.no_of_dofs)
         g12_desired[global_dofs] = fe_local
         assert_allclose(g12_actual, g12_desired)
@@ -168,27 +168,27 @@ class TestEcsw(TestCase):
     def test_reduce_with_ecsw(self):
         # store old ids:
         comp_id_old = id(self.my_component)
-        mesh_id_old = id(self.my_component._mesh)
+        mesh_id_old = id(self.my_component.mesh)
 
         # first mode: deepcopy
         ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01, copymode='deep',
                                                  conv_stats=True)
         self.assertNotEqual(id(ecsw_component), comp_id_old)
-        self.assertNotEqual(id(ecsw_component._mesh), mesh_id_old)
+        self.assertNotEqual(id(ecsw_component.mesh), mesh_id_old)
         self.assertIsInstance(ecsw_component.assembly, EcswAssembly)
 
         # second mode: shallow
         ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01, copymode='shallow',
                                                  conv_stats=True)
         self.assertNotEqual(id(ecsw_component), comp_id_old)
-        self.assertEqual(id(ecsw_component._mesh), mesh_id_old)
+        self.assertEqual(id(ecsw_component.mesh), mesh_id_old)
         self.assertIsInstance(ecsw_component.assembly, EcswAssembly)
 
         # third mode: overwrite
         ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01, copymode='overwrite',
                                                  conv_stats=True)
         self.assertEqual(id(ecsw_component), comp_id_old)
-        self.assertEqual(id(ecsw_component._mesh), mesh_id_old)
+        self.assertEqual(id(ecsw_component.mesh), mesh_id_old)
         self.assertIsInstance(ecsw_component.assembly, EcswAssembly)
 
         # test wrong mode

@@ -150,15 +150,15 @@ class TestPartitioner(TestCase):
         assert_series_equal(submesh._el_df['connectivity'], el_df_desired['connectivity'])
         assert_equal(submesh.groups, groups_desired)
 
-
     def test_separate_partitioned_component(self):
         new_components = self.partitioner.separate_partitioned_component(self.testcomponent)
         
         for icomp in new_components:
             self.assertTrue(isinstance(icomp, MeshComponent))
-            assert_equal(len(icomp._mesh.get_uniques_by_tag('partition_id')), 1)
+            assert_equal(len(icomp.mesh.get_uniques_by_tag('partition_id')), 1)
             
         assert_equal(len(new_components), self.no_of_partitions)
+
 
 if __name__ == '__main__':
     main()

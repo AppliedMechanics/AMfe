@@ -53,15 +53,15 @@ class AmfeSolutionReader(PostProcessorReader):
             u_unconstrained = np.array(self._amfesolution.q).T
             if self._amfesolution.dq[0] is not None or self._amfesolution.ddq[0] is not None:
                 self.logger.warning('Velocities and Accelerations cannot be written by AmfeSolutionReader')
-            mapping = self._meshcomponent._mapping
-            no_of_nodes = self._meshcomponent._mesh.no_of_nodes
+            mapping = self._meshcomponent.mapping
+            no_of_nodes = self._meshcomponent.mesh.no_of_nodes
             # Allocate empty array:
             data = np.empty((no_of_nodes, 3, no_of_timesteps))
             data[:, :, :] = np.nan
             nodal2global = mapping.nodal2global.values
             # Write ux
             nodeids = mapping._nodal2global.index.values
-            nodeidxs = self._meshcomponent._mesh.get_nodeidxs_by_nodeids(nodeids)
+            nodeidxs = self._meshcomponent.mesh.get_nodeidxs_by_nodeids(nodeids)
             data[nodeidxs, 0, :] = u_unconstrained[nodal2global[:, 0], :]
             data[nodeidxs, 1, :] = u_unconstrained[nodal2global[:, 1], :]
             if nodal2global.shape[1] > 2:
@@ -69,5 +69,5 @@ class AmfeSolutionReader(PostProcessorReader):
             else:
                 data[nodeidxs, 2, :] = np.zeros((len(nodeidxs), no_of_timesteps))
 
-            index = self._meshcomponent._mesh.nodes_df.index.values
+            index = self._meshcomponent.mesh.nodes_df.index.values
             builder.write_field('displacement', PostProcessDataType.VECTOR, t, data, index, MeshEntityType.NODE)

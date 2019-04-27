@@ -60,9 +60,9 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
         new_components_list : list of MeshComponent, StructuralComponent
         """
         if opt_keep_node_ids:
-            mesh = component._mesh
+            mesh = component.mesh
         else:
-            mesh = self._separate_common_nodes_of_partitions(component._mesh)
+            mesh = self._separate_common_nodes_of_partitions(component.mesh)
         
         new_components_list = []
         materials = component.get_materials()

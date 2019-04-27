@@ -14,7 +14,7 @@ from amfe.io.postprocessing import *
 from amfe.io.postprocessing.tools import write_xdmf_from_hdf5
 from amfe.io.postprocessing.reader import AmfeSolutionReader
 from amfe.io.postprocessing.writer import Hdf5PostProcessorWriter
-from amfe.solver.translators import ConstrainedMechanicalSystem
+from amfe.solver.translators import MechanicalSystem
 
 
 times = dict([])
@@ -32,39 +32,39 @@ my_component.assign_material(my_material, [7], 'S', '_groups')
 
 
 
-dirichlet = my_component._constraints.create_dirichlet_constraint()
+dirichlet = my_component.constraints.create_dirichlet_constraint()
 
 # Variant A
 # (xy, direction)
 #nodeids = mesh.get_nodeids_by_groups([8])
-#dofs = my_component._mapping.get_dofs_by_nodeids(nodeids, ('ux', 'uy'))
+#dofs = my_component.mapping.get_dofs_by_nodeids(nodeids, ('ux', 'uy'))
 #for dof in dofs.reshape(-1):
     #my_component.assign_constraint('Leftfixation', dirichlet, np.array([dof], dtype=int), np.array([], dtype=int))
 
-#neumann = my_component._neumann.create_fixed_direction_neumann((0, -1),
+#neumann = my_component.neumann.create_fixed_direction_neumann((0, -1),
                                                                #lambda t: 1E8*np.sin(31*t))
 
 #my_component.assign_neumann('Rightneumann', neumann, [9], '_groups')
 
-#q0_raw = np.zeros(my_component._mapping.no_of_dofs)
+#q0_raw = np.zeros(my_component.mapping.no_of_dofs)
 #dq0_raw = q0_raw.copy()
 
 # Variant B
 
-dirichlet2 = my_component._constraints.create_dirichlet_constraint(lambda t: 3.0*np.sin(31.0*t),
+dirichlet2 = my_component.constraints.create_dirichlet_constraint(lambda t: 3.0*np.sin(31.0*t),
                                                                   lambda t: 3.0*31.0*np.cos(31.0*t),
                                                                   lambda t: -3.0*31.0*31.0*np.sin(31.0*t))
 
 nodeids = mesh.nodes_df.index.values
-ydofs = my_component._mapping.get_dofs_by_nodeids(nodeids, ('uy'))
-q0_raw = np.zeros(my_component._mapping.no_of_dofs)
+ydofs = my_component.mapping.get_dofs_by_nodeids(nodeids, ('uy'))
+q0_raw = np.zeros(my_component.mapping.no_of_dofs)
 dq0_raw = q0_raw.copy()
 dq0_raw[ydofs] = 3.0*31.0
 
 # (xy, direction)
 nodeids = mesh.get_nodeids_by_groups([8])
-supportdofs_x = my_component._mapping.get_dofs_by_nodeids(nodeids, ('ux'))
-supportdofs_y = my_component._mapping.get_dofs_by_nodeids(nodeids, ('uy'))
+supportdofs_x = my_component.mapping.get_dofs_by_nodeids(nodeids, ('ux'))
+supportdofs_y = my_component.mapping.get_dofs_by_nodeids(nodeids, ('uy'))
 for dof in supportdofs_x.reshape(-1):
     my_component.assign_constraint('Leftfixation', dirichlet, np.array([dof], dtype=int), np.array([], dtype=int))
 
@@ -75,7 +75,7 @@ for dof in supportdofs_y.reshape(-1):
 
 
 # ----------------------------------------- NONLINEAR DYNAMIC ANALYSIS ------------------------------------------------
-system = ConstrainedMechanicalSystem(my_component, formulation='lagrange', scaling=10.0, penalty=3.0)
+system = MechanicalSystem(my_component, formulation='lagrange', scaling=10.0, penalty=3.0)
 
 solfac = SolverFactory()
 solfac.set_system(system)
