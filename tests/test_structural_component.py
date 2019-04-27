@@ -31,7 +31,7 @@ class StructuralComponentTest(TestCase):
         self.my_comp = my_comp
 
     def test_f_ext(self):
-        q = dq = ddq = np.zeros(self.my_comp._constraints.no_of_dofs_unconstrained)
+        q = dq = ddq = np.zeros(self.my_comp.constraints.no_of_dofs_unconstrained)
         f_ext = self.my_comp.f_ext(q, dq, 1.0)
 
         summed_force_actual = np.sum(f_ext)
@@ -39,7 +39,7 @@ class StructuralComponentTest(TestCase):
         summed_force_desired = self.amp * length_right
         assert_allclose(summed_force_actual, summed_force_desired)
         # test global locations of f_ext
-        locations_not_zero_desired = self.my_comp._mapping.nodal2global.loc[[13, 14, 15], 'ux']
+        locations_not_zero_desired = self.my_comp.mapping.nodal2global.loc[[13, 14, 15], 'ux']
         locations_not_zero_actual = np.nonzero(f_ext)[0]
         self.assertTrue(np.all(np.isin(locations_not_zero_desired, locations_not_zero_actual)))
         self.assertTrue(np.all(np.isin(locations_not_zero_actual, locations_not_zero_desired)))

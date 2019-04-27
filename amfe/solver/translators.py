@@ -53,7 +53,7 @@ class MechanicalSystemBase:
 
     @property
     def dimension(self):
-        return self.structural_component._constraints.no_of_dofs_unconstrained
+        return self.structural_component.constraints.no_of_dofs_unconstrained
 
 
 class MechanicalSystem(MechanicalSystemBase):
@@ -99,7 +99,7 @@ class MechanicalSystem(MechanicalSystemBase):
 
     def _create_constraint_formulation(self, formulation, formulation_options):
         if formulation == 'boolean':
-            no_of_dofs_unconstrained = self.structural_component._constraints.no_of_dofs_unconstrained
+            no_of_dofs_unconstrained = self.structural_component.constraints.no_of_dofs_unconstrained
             self._constraint_formulation = BooleanEliminationConstraintFormulation(no_of_dofs_unconstrained,
                                                                                    self.structural_component.M,
                                                                                    self._h_func,
@@ -109,7 +109,7 @@ class MechanicalSystem(MechanicalSystemBase):
                                                                                    self.structural_component.g_holo)
 
         elif formulation == 'lagrange':
-            no_of_dofs_unconstrained = self.structural_component._constraints.no_of_dofs_unconstrained
+            no_of_dofs_unconstrained = self.structural_component.constraints.no_of_dofs_unconstrained
             self._constraint_formulation = SparseLagrangeMultiplierConstraintFormulation(no_of_dofs_unconstrained,
                                                                                          self.structural_component.M,
                                                                                          self._h_func,
