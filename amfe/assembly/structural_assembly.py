@@ -15,10 +15,8 @@ routines, as they allow for a huge speedup.
 """
 
 import numpy as np
-import logging
 import time
 from scipy.sparse import csr_matrix
-import pandas as pd
 
 from .assembly import Assembly
 from .tools import fill_csr_matrix
@@ -40,7 +38,6 @@ class StructuralAssembly(Assembly):
         """
 
         super().__init__()
-        self.logger = logging.getLogger('amfe.assembly.StructuralAssembly')
         # compute nodes_frequency for stress recovery
         # TODO: move this to another class
         # if connectivity is not None:
@@ -74,7 +71,6 @@ class StructuralAssembly(Assembly):
         memory-efficient, so for large systems and low RAM this might become an issue...
         """
 
-        self.logger.info('Pre-allocating the stiffness matrix')
         t1 = time.clock()
 
         # NOTE
@@ -110,9 +106,6 @@ class StructuralAssembly(Assembly):
         C_csr = csr_matrix((vals_global, (row_global, col_global)), shape=(no_of_dofs, no_of_dofs), dtype=float)
 
         t2 = time.clock()
-        self.logger.info('Done pre-allocating stiffness matrix with {0:d} elements and {1:d} dofs.'
-                         .format(len(elements2global), no_of_dofs))
-        self.logger.info('Time taken for pre-allocation: {0:2.2f} seconds.'.format(t2 - t1))
         return C_csr
 
     def assemble_k_and_f(self, nodes, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0., K_csr=None,

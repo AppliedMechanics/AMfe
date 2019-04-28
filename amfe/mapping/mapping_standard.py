@@ -5,7 +5,6 @@
 
 import numpy as np
 import pandas as pd
-import logging
 
 from .mapping_base import MappingBase
 
@@ -31,7 +30,6 @@ class StandardMapping(MappingBase):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.logger = logging.getLogger('amfe.mapping.StandardMapping')
 
     def _set_standard_mapping(self, fields, nodeids, connectivity, dofs_by_element, callbacks, callbackargs, **kwargs):
         """
