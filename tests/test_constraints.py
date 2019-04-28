@@ -7,8 +7,45 @@ from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_array_equal, assert_allclose
 
+from amfe.constraint.tools import *
 from amfe.constraint.constraint import DirichletConstraint, FixedDistanceConstraint,\
     NonholonomicConstraintBase, HolonomicConstraintBase
+
+
+class TestConstraintTools(TestCase):
+    def setUp(self):
+        return
+
+    def test_constraints_scaling_factor(self):
+        K = np.diag([1, 2, 3])
+        M = 2.0*K
+        D = 3.0*K
+        dt = 0.1
+
+        actual_1 = constraints_scaling_factor(dt, K, M)
+        actual_2 = constraints_scaling_factor(dt, K, M, D)
+        mean_k = (1.0 + 2.0 + 3.0)/3
+        mean_m = 2.0 * mean_k
+        mean_d = 3.0 * mean_k
+        desired_1 = mean_k + mean_m/(0.1*0.1)
+        desired_2 = mean_k + mean_m/(0.1*0.1) + mean_d/0.1
+        self.assertAlmostEqual(actual_1, desired_1)
+        self.assertAlmostEqual(actual_2, desired_2)
+
+    def test_validate_constraints_independent(self):
+        B_independent = np.array([[1, 0, 0], [1, 1, 0]], dtype=float)
+        B_dependent = np.array([[0, 1, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=float)
+        B_dependent_tol = np.array([[0, 1, 0, 0], [1, 0, 0, 0], [0, 1, 1e-5, 0]], dtype=float)
+
+        actual_independent = validate_constraints_independent(B_independent)
+        actual_dependent = validate_constraints_independent(B_dependent)
+        actual_tol1 = validate_constraints_independent(B_dependent_tol, 1e-6)
+        actual_tol2 = validate_constraints_independent(B_dependent_tol, 1e-12)
+
+        self.assertTrue(actual_independent)
+        self.assertFalse(actual_dependent)
+        self.assertFalse(actual_tol1)
+        self.assertTrue(actual_tol2)
 
 
 class TestNonholonomicBase(TestCase):
