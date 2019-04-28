@@ -11,8 +11,6 @@ ECSW assembly.
 Provides Assembly routines for the ECSW Assembly
 """
 
-import logging
-
 import numpy as np
 import pandas as pd
 
@@ -52,7 +50,6 @@ class EcswAssembly(StructuralAssembly):
             Then the indices array is np.array([0, 3, 4], dtype=int)
         """
         super().__init__()
-        self.logger = logging.getLogger('amfe.assembly.EcswAssembly')
         self.weights = np.array(weights)
         self.indices = np.array(indices, dtype=int)
 

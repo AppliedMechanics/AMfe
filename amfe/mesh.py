@@ -12,7 +12,6 @@ This module provides a mesh class that handles the mesh information: nodes, mesh
 
 import numpy as np
 import pandas as pd
-import logging
 from collections.abc import Iterable
 
 __all__ = [
@@ -47,8 +46,6 @@ class Mesh:
         DataFrame with element information
     groups : list
         List of groups containing ids (not row indices!)
-    logger: Logger
-        Python logger instance to log events from the mesh
 
     Notes
     -----
@@ -74,8 +71,6 @@ class Mesh:
         mesh : Mesh
             a new mesh object
         """
-        # -- INSTANTIATE A LOGGER --
-        self.logger = logging.getLogger('amfe.mesh.Mesh')
 
         # -- GENERAL INFORMATION --
         self._dimension = dimension
@@ -977,8 +972,6 @@ class Mesh:
 
         else:
             if node_id in self.nodes_df.index.values and not overwrite:
-                    self.logger.error('Element can not be added because elementid already exists.'
-                                      'Pass overwrite=True to overwrite the node_id or choose another one')
                     raise ValueError('Index in mesh already used. Try overwrite=True flag or choose another node_id')
 
         try:
@@ -989,7 +982,6 @@ class Mesh:
             if isinstance(node_coordinates, dict):
                 if self.dimension == 2:
                     if 'z' in node_coordinates:
-                        self.logger.warning('Too many coordinates were given. Dropping the last')
                         node_coordinates = np.array([node_coordinates['x'], node_coordinates['y']], dtype=float)
                 elif self.dimension == 3:
                     node_coordinates = np.array([node_coordinates['x'], node_coordinates['y'], node_coordinates['z']],
@@ -1000,7 +992,6 @@ class Mesh:
         if self.dimension == 2:
             coordnames = ('x', 'y')
             if len(node_coordinates) > 2:
-                self.logger.warning('Too many coordinates were given. Dropping the last')
                 node_coordinates = node_coordinates[0:2]
         elif self.dimension == 3:
             coordnames = ('x', 'y', 'z')
@@ -1053,8 +1044,6 @@ class Mesh:
 
         else:
             if element_id in self._el_df.index.values and not overwrite:
-                    self.logger.error('Element can not be added because elementid already exists.'
-                                      'Pass overwrite=True to overwrite the element_id or choose another one')
                     raise ValueError('Index in mesh already used. Try overwrite=True flag or choose another element_id')
 
         self._el_df.at[element_id, 'connectivity'] = connectivity

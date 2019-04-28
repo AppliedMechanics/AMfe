@@ -13,7 +13,6 @@ __all__ = [
     'Assembly'
 ]
 
-import logging
 import time
 import abc
 
@@ -28,7 +27,6 @@ class Assembly:
 
     def __init__(self):
         self._observers = list()
-        self.logger = logging.getLogger('amfe.assembly.Assembly')
         return
 
     def add_observer(self, observer):

@@ -12,7 +12,6 @@ Gould, N.I.M. e.a. (1998) - On the Solution of Equality Constrained Quadratic Pr
 Optimization
 """
 
-import logging
 import numpy as np
 import pandas as pd
 
@@ -32,8 +31,6 @@ class ConstraintManager:
 
     Attributes
     ----------
-    logger: logging.Logger
-        logging class to log events coming from constraint manager
     _no_of_dofs_unconstrained: int
         number of dofs of the unconstrained system (length of global vectors that are provided when an entity is asked
         for
@@ -58,7 +55,6 @@ class ConstraintManager:
             number of dofs of the unconstrained system.
         """
         super().__init__()
-        self.logger = logging.getLogger('amfe.constraint.constraint_manager.ConstraintManager')
         self._no_of_dofs_unconstrained = ndof_unconstrained_system
         self._update_flag = True
         self._constraints_df = pd.DataFrame(columns=['name', 'constraint_obj', 'Xidxs', 'dofidxs'])
@@ -176,7 +172,7 @@ class ConstraintManager:
             ATTENTION: Whether this is needed or not depends on the constraint's type. Take a look at the constraint-
             classes' documentation!
         """
-        self.logger.info('Adding constraint {} to dofs {} and nodes {}'.format(name, dofidxs, Xidxs))
+        print('Adding constraint {} to dofs {} and nodes {}'.format(name, dofidxs, Xidxs))
 
         # Create new rows for constraints_df
         df = pd.DataFrame(
@@ -189,6 +185,7 @@ class ConstraintManager:
         constraint_obj.after_assignment(dofidxs)
 
         self._update_flag = True
+        
         return
     
     def remove_constraint_by_name(self, name):
