@@ -1,28 +1,35 @@
-'''
+#
+# Copyright (c) 2018 TECHNICAL UNIVERSITY OF MUNICH, DEPARTMENT OF MECHANICAL ENGINEERING, CHAIR OF APPLIED MECHANICS,
+# BOLTZMANNSTRASSE 15, 85748 GARCHING/MUNICH, GERMANY, RIXEN@TUM.DE.
+#
+# Distributed under 3-Clause BSD license. See LICENSE file for more information.
+#
+"""
 Structural Dynamics tools
-'''
+"""
 
 import numpy as np
 from .reduced_basis import vibration_modes
 from .linalg.linearsolvers import solve_sparse
-
-modal_analysis = vibration_modes
+from .linalg.orth import m_orthogonalize
 
 __all__ = ['modal_assurance',
+           'mac_criterion',
+           'modal_analysis',
            'mass_orth',
            'force_norm',
            'rayleigh_coefficients',
-           'give_mass_and_stiffness',
            ]
 
+
 def modal_assurance(U, V):
-    r'''
+    r"""
     Compute the Modal Assurance Criterion (MAC) of the vectors stacked
     in U and V:
 
     .. math::
         U = [u_1, \dots, u_n], V = [v_1, \dots, v_n] \\
-        MAC_{i,j} = \frac{(u_i^Tv_j)^2}{u_i^T u_i \cdot v_j^T v_j}
+        MAC_{i,j} = \frac{(u_i^Hv_j)^2}{u_i^T u_i \cdot v_j^H v_j}
 
 
     Parameters
@@ -45,58 +52,16 @@ def modal_assurance(U, V):
     .. [1]  Géradin, Michel and Rixen, Daniel: Mechanical Vibrations.
             John Wiley & Sons, 2014. p.499.
 
-    '''
-    nominator =  (U.T @ V)**2
+    """
+    nominator = (U.conj().T @ V)**2
     diag_u_squared = np.einsum('ij, ij -> j', U, U)
     diag_v_squared = np.einsum('ij, ij -> j', V, V)
     denominator = np.outer(diag_u_squared, diag_v_squared)
     return nominator / denominator
 
 
-
-def mass_orth(V, M, overwrite=False, niter=2):
-    '''
-    Mass-orthogonalize the matrix V with respect to the mass matrix M with a
-    Gram-Schmid-procedure.
-
-    Parameters
-    ----------
-    V : ndarray
-        Matrix (e.g. projection basis) containing displacement vectors in the
-        column. Shape is (ndim, no_of_basis_vectors)
-    M : ndarray / sparse matrix.
-        Mass matrix. Shape is (ndim, ndim).
-    overwrite : bool
-        Flag setting, if matrix V should be overwritten.
-    niter : int
-        Number of Gram-Schmid runs for the orthogonalization. As the
-        Gram-Schmid-procedure is not stable, more then one iteration are
-        recommended.
-
-    Returns
-    -------
-    V_orth : ndarray
-        Mass-orthogonalized basis V
-
-    '''
-    if overwrite:
-        V_orth = V
-    else:
-        V_orth = V.copy()
-
-    __, no_of_basis_vecs = V.shape
-    for run_no in range(niter):
-        for i in range(no_of_basis_vecs):
-            v = V_orth[:,i]
-            v /= np.sqrt(v @ M @ v)
-            V_orth[:,i] = v
-            weights = v @ M @ V_orth[:,i+1:]
-            V_orth[:,i+1:] -= v.reshape((-1,1)) * weights
-    return V_orth
-
-
 def force_norm(F, K, M, norm='euclidean'):
-    '''
+    """
     Compute the norm of the given force vector or array
 
     Parameters
@@ -119,7 +84,7 @@ def force_norm(F, K, M, norm='euclidean'):
     norm : float or array of shape(m)
         norm of the given force vector or array. When F is an array with m
         columns, norm is a vector with the norm given for every column
-    '''
+    """
     # define diag operator which also works for floats
     if len(F.shape) == 1:
         diag = lambda x : x
@@ -140,31 +105,8 @@ def force_norm(F, K, M, norm='euclidean'):
     return output
 
 
-def give_mass_and_stiffness(mechanical_system):
-    '''
-    Determine mass and stiffness matrix of a mechanical system.
-
-    Parameters
-    ----------
-    mechanical_system : MechanicalSystem
-        Instance of the class MechanicalSystem
-
-    Returns
-    -------
-    M : ndarray
-        Mass matrix of the mechanical system
-    K : ndarray
-        Stiffness matrix of the mechanical system
-
-    '''
-
-    K = mechanical_system.K()
-    M = mechanical_system.M()
-    return M, K
-
-
 def rayleigh_coefficients(zeta, omega_1, omega_2):
-    '''
+    """
     Compute the coefficients for rayleigh damping such, that the modal damping
     for the given two eigenfrequencies is zeta.
 
@@ -184,7 +126,44 @@ def rayleigh_coefficients(zeta, omega_1, omega_2):
     beta : float
         rayleigh damping for the stiffness matrix
 
-    '''
+    """
     beta = 2*zeta/(omega_1 + omega_2)
     alpha = omega_1*omega_2*beta
     return alpha, beta
+
+
+def modal_analysis(K, M, n=10, shift=0.0, mass_norm=False):
+    """
+    modal analysis with stiffness matrix K and mass matrix M
+
+    Parameters
+    ----------
+    K: array_like
+        stiffness matrix
+    M: array_like
+        mass matris M
+    n: int, optional
+        number of modes desired
+    shift: float, optional
+        shift for the eigensolver to find frequencies near the shift
+    mass_norm: bool
+        Flag if eigenmodes shall be mass normalized
+
+    Returns
+    -------
+    omega: numpy.array
+        eigenfrequencies in rad/s
+    V: numpy.array
+        eigenshapes
+    """
+    omega, V = vibration_modes(K, M, n, shift)
+    if mass_norm:
+        V = m_orthogonalize(V, M)
+    else:
+        for i in range(V.shape[1]):
+            V[:, i] = V[:, i]/np.linalg.norm(V[:, i])
+    return omega, V
+
+
+mass_orth = m_orthogonalize
+mac_criterion = modal_assurance
