@@ -7,7 +7,7 @@
 
 import numpy as np
 from scipy.linalg import null_space
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, identity
 from scipy.sparse import vstack as spvstack
 
 from .constraint_formulation import ConstraintFormulationBase
@@ -98,7 +98,11 @@ class NullspaceConstraintFormulation(ConstraintFormulationBase):
             nullspace of B(x, t)
         """
         u = self.u(x, t)
-        self._L = csr_matrix(null_space(self._B_func(u, t).todense()))
+        B = self._B_func(u, t)
+        if B.shape[0] > 0:
+            self._L = csr_matrix(null_space(B.todense()))
+        else:
+            self._L = identity(self._no_of_dofs_unconstrained, format='csr')
         return self._L
 
     @property

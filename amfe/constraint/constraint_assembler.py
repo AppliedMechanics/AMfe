@@ -158,9 +158,10 @@ class ConstraintAssembler:
         B : csr_matrix
             assembled B
         """
-        B.data *= 0
-        B.data = np.concatenate([jac(*(arg[dofs_i] for arg in args)).reshape(-1) for jac, dofs_i in zip(jacobians,
-                                                                                                        dofs)])
+        B.data *= 0.0
+        data = [jac(*(arg[dofs_i] for arg in args)).reshape(-1) for jac, dofs_i in zip(jacobians, dofs)]
+        if len(data) != 0:
+            B.data = np.concatenate(data)
         return B
 
     @staticmethod
@@ -185,5 +186,7 @@ class ConstraintAssembler:
             assembled holonomic constraint function
 
         """
-        g[:] = np.concatenate([res(*(arg[dofs_i] for arg in args)) for res, dofs_i in zip(residuals, dofs)])
+        values = [res(*(arg[dofs_i] for arg in args)) for res, dofs_i in zip(residuals, dofs)]
+        if len(values) != 0:
+            g[:] = np.concatenate(values)
         return g

@@ -405,8 +405,7 @@ class ConstraintManager:
         """
         if self._update_flag:
             self.update()
-        return self._constraint_assembler.assemble_B(self._Bs(X, t, ), self._dofidxs(), (u,),
-                                                     self._B)
+        return self._constraint_assembler.assemble_B(self._Bs(X, t, ), self._dofidxs(), (u,), self._B)
 
     def g(self, X, u, t):
         """
