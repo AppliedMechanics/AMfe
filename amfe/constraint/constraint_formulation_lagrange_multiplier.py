@@ -394,6 +394,7 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
         if self._penalty is not None:
             self._F_full[:self.no_of_dofs_unconstrained] -= self._penalty*self._scaling*B.T.dot(g)
         self._F_full[self._no_of_dofs_unconstrained:] = -self._scaling*g
+
         return self._F_full
 
     def K(self, x, dx, t):
@@ -433,4 +434,5 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
 
         return spvstack((sphstack((K, self._scaling*B.T), format='csr'),
                         sphstack((self._scaling*B, csr_matrix((self._no_of_constraints,
-                                                               self._no_of_constraints))), format='csr')), format='csr')
+                                                               self._no_of_constraints))), format='csr')),
+                        format='csr')

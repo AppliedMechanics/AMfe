@@ -169,3 +169,18 @@ class BooleanEliminationFormulationTest(TestCase):
 
         L_actual_dense = self.formulation_dense.L
         assert_array_equal(L_actual_dense, L_desired)
+
+    def test_L_without_constraints(self):
+        def B(u, t):
+            return csr_matrix((0, 3))
+
+        def g(u, t):
+            return np.array([], dtype=float, ndmin=1)
+
+        formulation = BooleanEliminationConstraintFormulation(self.no_of_dofs_unconstrained, self.M_func,
+                                                              self.h_func, B, self.h_q_func,
+                                                              self.h_dq_func, g)
+
+        L_desired = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
+        L_actual = formulation.L
+        assert_array_equal(L_actual.todense(), L_desired)

@@ -144,7 +144,7 @@ class BooleanEliminationConstraintFormulation(ConstraintFormulationBase):
         constrained_dofs: list or ndarray
             list containing the indices of the constrained dofs
         ndof_unconstrained: int
-            number of dofs of the unconstraiend system
+            number of dofs of the unconstrained system
         format: str
             format = 'csr' or 'dense' describes the format of L
 
@@ -153,8 +153,7 @@ class BooleanEliminationConstraintFormulation(ConstraintFormulationBase):
         L: csr_matrix
             computed L matrix
         """
-        L = identity(ndof_unconstrained)
-        L = L.tocsr()
+        L = identity(ndof_unconstrained, format='csr')
         col_idxs_not_to_remove = np.arange(0, ndof_unconstrained)
         col_idxs_not_to_remove = np.delete(col_idxs_not_to_remove, constrained_dofs)
         if format == 'csr':

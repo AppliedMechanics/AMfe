@@ -127,3 +127,19 @@ class TestNullspaceConstraintFormulation(TestCase):
 
         K_actual = self.formulation.K(x, dx, 0.0)
         # TODO: This is no real test it tests the function call
+
+    def test_L_without_constraints(self):
+        def B(u, t):
+            return csr_matrix((0, 3))
+
+        def g(u, t):
+            return np.array([], dtype=float, ndmin=1)
+
+        formulation = NullspaceConstraintFormulation(self.no_of_dofs_unconstrained, self.M_func,
+                                                     self.h_func, B, self.h_q_func,
+                                                     self.h_dq_func, g)
+
+        x = np.arange(formulation.dimension, dtype=float)
+        L_desired = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
+        L_actual = formulation.L(x, 0.0)
+        assert_array_equal(L_actual.todense(), L_desired)

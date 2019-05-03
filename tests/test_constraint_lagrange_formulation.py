@@ -147,6 +147,35 @@ class SparseLagrangeFormulationTest(TestCase):
         K_actual = self.formulation.K(x, dx, 0.0)
         assert_array_equal(K_actual.todense(), K_desired.todense())
 
+    def test_formulation_without_constraints(self):
+        def B(u, t):
+            return csr_matrix((0, 3))
+
+        def g_holo(u, t):
+            return np.array([], ndmin=1)
+
+        formulation = SparseLagrangeMultiplierConstraintFormulation(self.no_of_dofs_unconstrained, self.M_func,
+                                                                    self.h_func, B, self.h_q_func,
+                                                                    self.h_dq_func, g_holo)
+        x = np.arange(formulation.dimension, dtype=float)
+        dx = x.copy()
+        self.assertEqual(formulation._no_of_constraints, 0.0)
+
+        K_actual = formulation.K(x, dx, 0.0)
+        assert_array_equal(K_actual.todense(), self.K_unconstr.todense())
+
+        D_actual = formulation.D(x, dx, 0.0)
+        assert_array_equal(D_actual.todense(), self.D_unconstr.todense())
+
+        M_actual = formulation.M(x, dx, 0.0)
+        assert_array_equal(M_actual.todense(), self.M_unconstr.todense())
+
+        F_actual = formulation.F(x, dx, 0.0)
+        u = x[:self.no_of_dofs_unconstrained]
+        du = dx[:self.no_of_dofs_unconstrained]
+        F_desired = self.h_func(u, du, 0.0)
+        assert_array_equal(F_actual, F_desired)
+
     def test_scaling(self):
         x0 = np.zeros(self.formulation.dimension)
         x0[0] = 3.141

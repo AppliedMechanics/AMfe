@@ -96,3 +96,27 @@ class ConstraintAssemblyTest(TestCase):
         self.assertEqual(B_actual.shape, self.B_desired.shape)
         self.assertEqual(id(B), id(B_actual))
         return
+
+    def test_with_no_constraints(self):
+        residuals = []
+        jacobians = []
+        dofs = []
+        no_of_constraints_by_object = ()
+        args = []
+
+        # Test preallocation
+        g, B = self.casm.preallocate_g_and_B(self.no_of_dofs_unconstrained,
+                                             dofs, no_of_constraints_by_object)
+        g_desired = np.array([], dtype=float)
+        B_desired = csr_matrix((0, self.no_of_dofs))
+        assert_array_equal(g, g_desired)
+        assert_array_equal(B.data, B_desired.data)
+        assert_array_equal(B.indptr, B_desired.indptr)
+        assert_array_equal(B.indices, B_desired.indices)
+
+        # Test assembly
+        g, B = self.casm.assemble_g_and_B(residuals, jacobians, dofs, args, g, B)
+        assert_array_equal(g, g_desired)
+        assert_array_equal(B.data, B_desired.data)
+        assert_array_equal(B.indptr, B_desired.indptr)
+        assert_array_equal(B.indices, B_desired.indices)
