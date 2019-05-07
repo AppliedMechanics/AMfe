@@ -8,8 +8,7 @@ import numpy as np
 from numpy.testing import assert_array_equal, assert_allclose
 
 from amfe.constraint.tools import *
-from amfe.constraint.constraint import DirichletConstraint, FixedDistanceConstraint,\
-    NonholonomicConstraintBase, HolonomicConstraintBase
+from amfe.constraint.constraint import *
 
 
 class TestConstraintTools(TestCase):
@@ -246,3 +245,480 @@ class TestFixedDistanceConstraint(TestCase):
         radius = np.linalg.norm(self.X_local[2:]-self.X_local[:2])
         absolute_acceleration = absolute_velocity**2/radius
         assert_allclose(B_1.dot(absolute_acceleration*direction) + a_1, a_desired, atol=1e-6)
+
+
+class TestFixedDistanceToLineConstraint(TestCase):
+    def setUp(self):
+        """
+                     o  -
+                        ^
+                        | fixed distance
+                        v
+        o------------o  -
+
+
+        Returns
+        -------
+
+        """
+        self.dofs = 9
+        # set parameters:
+        self.X_local = np.array([0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 1.0, 0.0], dtype=float)
+        # shift line to right
+        self.u_local_1 = np.array([1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        # zero
+        self.u_local_2 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
+        # turn point around line:
+        self.u_local_3 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 1.0])
+        # Turn line and point
+        self.u_local_4 = np.array([0.0, 0.0, 0.0, -2.0, -2.0, 0.0, -1.0, 0.0, 0.0])
+        # violated constraint
+        self.u_local_5 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.1, 0.0])
+
+        self.du_local = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
+        self.t = 2
+
+        self.constraint_1 = FixedDistanceToLineConstraint()
+
+    def tearDown(self):
+        pass
+
+    def test_constraint_func_zero(self):
+        # test constraint-functions
+        constraint_desired = np.array(0.0, dtype=float)
+
+        constraint_1 = self.constraint_1.g(self.X_local, self.u_local_1,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_1)
+
+        constraint_2 = self.constraint_1.g(self.X_local, self.u_local_2,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_2)
+
+        constraint_3 = self.constraint_1.g(self.X_local, self.u_local_3,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_3)
+
+        constraint_4 = self.constraint_1.g(self.X_local, self.u_local_4,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_4)
+
+        # violated constraint
+        constraint_5 = self.constraint_1.g(self.X_local, self.u_local_5,
+                                           self.t)
+        self.assertLess(constraint_5[0], 0.0)
+
+    def test_jacobian(self):
+        # test jacobians with finite differences:
+        J_u_1 = self.constraint_1.B(self.X_local, self.u_local_1, self.t)
+        J_u_2 = self.constraint_1.B(self.X_local, self.u_local_2, self.t)
+        delta = 0.00001
+        J_u_desired_1 = np.zeros((len(self.u_local_1)))
+        J_u_desired_2 = np.zeros((len(self.u_local_2)))
+        for i, _ in enumerate(J_u_desired_1):
+            u_local_delta = np.zeros(len(self.u_local_1))
+            u_local_delta[i] = 1
+            J_u_desired_1[i] = (self.constraint_1.g(self.X_local, self.u_local_1 + delta * u_local_delta,
+                                                    self.t)
+                                - self.constraint_1.g(self.X_local, self.u_local_1 - delta * u_local_delta,
+                                                      self.t)) / (2*delta)
+            J_u_desired_2[i] = (self.constraint_1.g(self.X_local, self.u_local_2 + delta * u_local_delta,
+                                                    self.t)
+                                - self.constraint_1.g(self.X_local, self.u_local_2 - delta * u_local_delta,
+                                                      self.t)) / (2*delta)
+
+        assert_allclose(J_u_1, J_u_desired_1.T, atol=1e-9)
+        assert_allclose(J_u_2, J_u_desired_2.T, atol=1e-9)
+
+    def test_b(self):
+        b_desired = np.array([0], dtype=float)
+        B_1 = self.constraint_1.B(self.X_local, self.u_local_1, self.t)
+        b_1 = self.constraint_1.b(self.X_local, self.u_local_1, self.t)
+        # Check if a rotation of the node around the line returns zero
+        du_local = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+        assert_allclose(B_1.dot(du_local) + b_1, b_desired)
+        # Check if a same velocity of line and point returns zero
+        du_local = np.array([0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0])
+        assert_allclose(B_1.dot(du_local) + b_1, b_desired)
+
+    def test_a(self):
+        with self.assertRaises(NotImplementedError):
+            a_1 = self.constraint_1.a(self.X_local, self.u_local_1, self.u_local_1, self.t)
+
+
+class TestNodesCollinear2DConstraint(TestCase):
+    def setUp(self):
+        """
+
+        o--------o----o
+
+
+        Returns
+        -------
+
+        """
+        self.dofs = 6
+        # set parameters:
+        self.X_local = np.array([0.0, 0.0, 2.0, 0.0, 1.0, 0.0], dtype=float)
+        # shift line to right
+        self.u_local_1 = np.array([1.0, 0.0, 1.0, 0.0, 0.0, 0.0])
+        # zero
+        self.u_local_2 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
+        # move point along line
+        self.u_local_3 = np.array([0.0, 0.0, 0.0, 0.0, 100.0, 0.0])
+        # Turn line and point
+        self.u_local_4 = np.array([0.0, 0.0, -2.0, -2.0, -1.0, -1.0])
+        # violated constraint
+        self.u_local_5 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, -0.1])
+
+        self.du_local = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
+        self.t = 2
+
+        self.constraint_1 = NodesCollinear2DConstraint()
+
+    def tearDown(self):
+        pass
+
+    def test_constraint_func_zero(self):
+        # test constraint-functions
+        constraint_desired = np.array(0.0, dtype=float)
+
+        constraint_1 = self.constraint_1.g(self.X_local, self.u_local_1,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_1)
+
+        constraint_2 = self.constraint_1.g(self.X_local, self.u_local_2,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_2)
+
+        constraint_3 = self.constraint_1.g(self.X_local, self.u_local_3,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_3)
+
+        constraint_4 = self.constraint_1.g(self.X_local, self.u_local_4,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_4)
+
+        # violated constraint
+        constraint_5 = self.constraint_1.g(self.X_local, self.u_local_5,
+                                           self.t)
+        self.assertLess(constraint_5[0], 0.0)
+
+    def test_jacobian(self):
+        # test jacobians with finite differences:
+        J_u_1 = self.constraint_1.B(self.X_local, self.u_local_1, self.t)
+        J_u_2 = self.constraint_1.B(self.X_local, self.u_local_2, self.t)
+        delta = 0.00001
+        J_u_desired_1 = np.zeros((len(self.u_local_1)))
+        J_u_desired_2 = np.zeros((len(self.u_local_2)))
+        for i, _ in enumerate(J_u_desired_1):
+            u_local_delta = np.zeros(len(self.u_local_1))
+            u_local_delta[i] = 1
+            J_u_desired_1[i] = (self.constraint_1.g(self.X_local, self.u_local_1 + delta * u_local_delta,
+                                                    self.t)
+                                - self.constraint_1.g(self.X_local, self.u_local_1 - delta * u_local_delta,
+                                                      self.t)) / (2*delta)
+            J_u_desired_2[i] = (self.constraint_1.g(self.X_local, self.u_local_2 + delta * u_local_delta,
+                                                    self.t)
+                                - self.constraint_1.g(self.X_local, self.u_local_2 - delta * u_local_delta,
+                                                      self.t)) / (2*delta)
+
+        assert_allclose(J_u_1, J_u_desired_1.T, atol=1e-9)
+        assert_allclose(J_u_2, J_u_desired_2.T, atol=1e-9)
+
+    def test_b(self):
+        b_desired = np.array([0], dtype=float)
+        B_1 = self.constraint_1.B(self.X_local, self.u_local_1, self.t)
+        b_1 = self.constraint_1.b(self.X_local, self.u_local_1, self.t)
+        # Check if constraint returns zero if node moves along line
+        du_local = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.0])
+        assert_allclose(B_1.dot(du_local) + b_1, b_desired)
+        # Check if a same velocity of line and point returns zero
+        du_local = np.array([0.0, 1.0, 0.0, 1.0, 0.0, 1.0])
+        assert_allclose(B_1.dot(du_local) + b_1, b_desired)
+
+    def test_a(self):
+        with self.assertRaises(NotImplementedError):
+            a_1 = self.constraint_1.a(self.X_local, self.u_local_1, self.u_local_1, self.t)
+
+
+class TestEqualDisplacementConstraint(TestCase):
+    def setUp(self):
+        """
+                    o -->
+
+        o -->
+
+
+        Returns
+        -------
+
+        """
+        self.dofs = 2
+        # set parameters:
+        self.X_local = np.array([], dtype=float)
+        # shift to right
+        self.u_local_1 = np.array([1.0, 1.0])
+        # zero
+        self.u_local_2 = np.array([0.0, 0.0], dtype=float)
+        # violated constraint
+        self.u_local_3 = np.array([1.0, 3.0])
+
+        self.du_local = np.array([0.0, 0.0], dtype=float)
+        self.t = 2
+
+        self.constraint_1 = EqualDisplacementConstraint()
+
+    def tearDown(self):
+        pass
+
+    def test_constraint_func_zero(self):
+        # test constraint-functions
+        constraint_desired = np.array(0.0, dtype=float)
+
+        constraint_1 = self.constraint_1.g(self.X_local, self.u_local_1,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_1)
+
+        constraint_2 = self.constraint_1.g(self.X_local, self.u_local_2,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_2)
+
+        constraint_3 = self.constraint_1.g(self.X_local, self.u_local_3,
+                                           self.t)
+        self.assertGreater(constraint_3[0], 0.0)
+
+    def test_jacobian(self):
+        # test jacobians with finite differences:
+        J_u_1 = self.constraint_1.B(self.X_local, self.u_local_1, self.t)
+        J_u_2 = self.constraint_1.B(self.X_local, self.u_local_2, self.t)
+        delta = 0.00001
+        J_u_desired_1 = np.zeros((len(self.u_local_1)))
+        J_u_desired_2 = np.zeros((len(self.u_local_2)))
+        for i, _ in enumerate(J_u_desired_1):
+            u_local_delta = np.zeros(len(self.u_local_1))
+            u_local_delta[i] = 1
+            J_u_desired_1[i] = (self.constraint_1.g(self.X_local, self.u_local_1 + delta * u_local_delta,
+                                                    self.t)
+                                - self.constraint_1.g(self.X_local, self.u_local_1 - delta * u_local_delta,
+                                                      self.t)) / (2*delta)
+            J_u_desired_2[i] = (self.constraint_1.g(self.X_local, self.u_local_2 + delta * u_local_delta,
+                                                    self.t)
+                                - self.constraint_1.g(self.X_local, self.u_local_2 - delta * u_local_delta,
+                                                      self.t)) / (2*delta)
+
+        assert_allclose(J_u_1, J_u_desired_1.T, atol=1e-9)
+        assert_allclose(J_u_2, J_u_desired_2.T, atol=1e-9)
+
+    def test_b(self):
+        b_desired = np.array([0], dtype=float)
+        B_1 = self.constraint_1.B(self.X_local, self.u_local_1, self.t)
+        b_1 = self.constraint_1.b(self.X_local, self.u_local_1, self.t)
+        # Check if constraint returns zero if node moves along line
+        du_local = np.array([0.0, 0.0])
+        assert_allclose(B_1.dot(du_local) + b_1, b_desired)
+        # Check if a same velocity of line and point returns zero
+        du_local = np.array([3.0, 3.0])
+        assert_allclose(B_1.dot(du_local) + b_1, b_desired)
+
+    def test_a(self):
+        a_1 = self.constraint_1.a(self.X_local, self.u_local_1, self.u_local_1, self.t)
+        assert_array_equal(a_1, np.array([0.0], ndmin=1))
+
+
+class TestFixedDistanceToPlaneConstraint(TestCase):
+    def setUp(self):
+        """
+                     o
+                     |
+                     |
+                     |    plane    point in z direction
+        o------------o
+
+
+        Returns
+        -------
+
+        """
+        self.dofs = 12
+        # set parameters:
+        self.X_local = np.array([0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 1.0, 0.0, 0.0, 0.0, 5.0], dtype=float)
+        # shift bottom line to right
+        self.u_local_1 = np.array([1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        # zero
+        self.u_local_2 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
+        # turn plane such that it is a yz-plane
+        self.u_local_3 = np.array([0.0, 0.0, 0.0, -2.0, -2.0, 0.0, -2.0, -1.0, 1.0, -5.0, 0.0, -5.0])
+        # Move point parallel to plane
+        self.u_local_4 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -20.0, 40.0, 0.0])
+        # violated constraint
+        self.u_local_5 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.1])
+
+        self.du_local = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
+        self.t = 2
+
+        self.constraint_1 = FixedDistanceToPlaneConstraint()
+
+    def tearDown(self):
+        pass
+
+    def test_constraint_func_zero(self):
+        # test constraint-functions
+        constraint_desired = np.array(0.0, dtype=float)
+
+        constraint_1 = self.constraint_1.g(self.X_local, self.u_local_1,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_1)
+
+        constraint_2 = self.constraint_1.g(self.X_local, self.u_local_2,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_2)
+
+        constraint_3 = self.constraint_1.g(self.X_local, self.u_local_3,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_3)
+
+        constraint_4 = self.constraint_1.g(self.X_local, self.u_local_4,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_4)
+
+        # violated constraint
+        constraint_5 = self.constraint_1.g(self.X_local, self.u_local_5,
+                                           self.t)
+        self.assertLess(constraint_5[0], 0.0)
+
+    def test_jacobian(self):
+        # test jacobians with finite differences:
+        J_u_1 = self.constraint_1.B(self.X_local, self.u_local_1, self.t)
+        J_u_2 = self.constraint_1.B(self.X_local, self.u_local_2, self.t)
+        delta = 0.000001
+        J_u_desired_1 = np.zeros((len(self.u_local_1)))
+        J_u_desired_2 = np.zeros((len(self.u_local_2)))
+        for i, _ in enumerate(J_u_desired_1):
+            u_local_delta = np.zeros(len(self.u_local_1))
+            u_local_delta[i] = 1
+            J_u_desired_1[i] = (self.constraint_1.g(self.X_local, self.u_local_1 + delta * u_local_delta,
+                                                    self.t)
+                                - self.constraint_1.g(self.X_local, self.u_local_1 - delta * u_local_delta,
+                                                      self.t)) / (2*delta)
+            J_u_desired_2[i] = (self.constraint_1.g(self.X_local, self.u_local_2 + delta * u_local_delta,
+                                                    self.t)
+                                - self.constraint_1.g(self.X_local, self.u_local_2 - delta * u_local_delta,
+                                                      self.t)) / (2*delta)
+
+        assert_allclose(J_u_1, J_u_desired_1.T, atol=1e-9)
+        assert_allclose(J_u_2, J_u_desired_2.T, atol=1e-9)
+
+    def test_b(self):
+        b_desired = np.array([0], dtype=float)
+        B_1 = self.constraint_1.B(self.X_local, self.u_local_1, self.t)
+        b_1 = self.constraint_1.b(self.X_local, self.u_local_1, self.t)
+        # Check if a move with same distance leads to zero
+        du_local = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 2.0, 0.0])
+        assert_allclose(B_1.dot(du_local) + b_1, b_desired)
+        # Check if a same velocity of line and point returns zero
+        du_local = np.array([0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0])
+        assert_allclose(B_1.dot(du_local) + b_1, b_desired)
+
+    def test_a(self):
+        with self.assertRaises(NotImplementedError):
+            a_1 = self.constraint_1.a(self.X_local, self.u_local_1, self.u_local_1, self.t)
+
+
+class TestNodesCoplanarConstraint(TestCase):
+    def setUp(self):
+        """
+                     o
+                     |
+               o     |
+                     |    plane    point in z direction
+        o------------o
+
+
+        Returns
+        -------
+
+        """
+        self.dofs = 12
+        # set parameters:
+        self.X_local = np.array([0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 2.0, 1.0, 0.0, 1.0, 0.5, 0.0], dtype=float)
+        # shift bottom line to right
+        self.u_local_1 = np.array([1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        # zero
+        self.u_local_2 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
+        # turn plane such that it is a yz-plane
+        self.u_local_3 = np.array([0.0, 0.0, 0.0, -2.0, -2.0, 0.0, -2.0, -1.0, 1.0, -1.0, -0.5, 0.5])
+        # Move point parallel to plane
+        self.u_local_4 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -20.0, 40.0, 0.0])
+        # violated constraint
+        self.u_local_5 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.1])
+
+        self.du_local = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=float)
+        self.t = 2
+
+        self.constraint_1 = NodesCoplanarConstraint()
+
+    def tearDown(self):
+        pass
+
+    def test_constraint_func_zero(self):
+        # test constraint-functions
+        constraint_desired = np.array(0.0, dtype=float)
+
+        constraint_1 = self.constraint_1.g(self.X_local, self.u_local_1,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_1)
+
+        constraint_2 = self.constraint_1.g(self.X_local, self.u_local_2,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_2)
+
+        constraint_3 = self.constraint_1.g(self.X_local, self.u_local_3,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_3)
+
+        constraint_4 = self.constraint_1.g(self.X_local, self.u_local_4,
+                                           self.t)
+        assert_array_equal(constraint_desired, constraint_4)
+
+        # violated constraint
+        constraint_5 = self.constraint_1.g(self.X_local, self.u_local_5,
+                                           self.t)
+        self.assertGreater(constraint_5[0], 0.0)
+
+    def test_jacobian(self):
+        # test jacobians with finite differences:
+        J_u_1 = self.constraint_1.B(self.X_local, self.u_local_1, self.t)
+        J_u_2 = self.constraint_1.B(self.X_local, self.u_local_2, self.t)
+        delta = 0.000001
+        J_u_desired_1 = np.zeros((len(self.u_local_1)))
+        J_u_desired_2 = np.zeros((len(self.u_local_2)))
+        for i, _ in enumerate(J_u_desired_1):
+            u_local_delta = np.zeros(len(self.u_local_1))
+            u_local_delta[i] = 1
+            J_u_desired_1[i] = (self.constraint_1.g(self.X_local, self.u_local_1 + delta * u_local_delta,
+                                                    self.t)
+                                - self.constraint_1.g(self.X_local, self.u_local_1 - delta * u_local_delta,
+                                                      self.t)) / (2*delta)
+            J_u_desired_2[i] = (self.constraint_1.g(self.X_local, self.u_local_2 + delta * u_local_delta,
+                                                    self.t)
+                                - self.constraint_1.g(self.X_local, self.u_local_2 - delta * u_local_delta,
+                                                      self.t)) / (2*delta)
+
+        assert_allclose(J_u_1, J_u_desired_1.T, atol=1e-9)
+        assert_allclose(J_u_2, J_u_desired_2.T, atol=1e-9)
+
+    def test_b(self):
+        b_desired = np.array([0], dtype=float)
+        B_1 = self.constraint_1.B(self.X_local, self.u_local_1, self.t)
+        b_1 = self.constraint_1.b(self.X_local, self.u_local_1, self.t)
+        # Check if a the move of all points inside plane returns zero
+        du_local = np.array([1.0, 1.0, 0.0, 0.5, 0.5, 0.0, 0.6, 0.7, 0.0, 0.1, 0.2, 0.0])
+        assert_allclose(B_1.dot(du_local) + b_1, b_desired)
+        # Check if same velocity returns zero
+        du_local = np.array([0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0])
+        assert_allclose(B_1.dot(du_local) + b_1, b_desired)
+
+    def test_a(self):
+        with self.assertRaises(NotImplementedError):
+            a_1 = self.constraint_1.a(self.X_local, self.u_local_1, self.u_local_1, self.t)
