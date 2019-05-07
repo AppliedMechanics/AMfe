@@ -1,0 +1,14 @@
+AMfe is an open source project maintained by the Chair of Applied Mechanics at Technical University Munich
+Many people (researchers and students) have contributed to this project.
+They are listed below. If your are missing, please mail the maintainer christian.meyer@tum.de
+
+Main Developers:
+Johannes B. Rutzmoser
+Christian H. Meyer
+Christopher Lerch
+Andreas Seibold
+
+We thank the following contributors:
+
+Guilherme Jenovecio for many discussions and ideas about code structure and implementation of Partitioning I/O Functions
+Gabriel Erwin Gruber for implementation of many of the g and B functions of the constraints module
