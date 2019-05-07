@@ -15,6 +15,8 @@ class ComponentConnector:
     """
     def __init__(self):
         self.constraints = dict()
+        self._L = np.array([])
+        self.dofs_mapping_local2global = dict()
         self.mesh_tying = MeshTying()
     
     def apply_compatibility_constraint(self, loc_master_id, master_component, loc_slave_id, slave_component):
@@ -60,7 +62,7 @@ class ComponentConnector:
             X = slave_component.X
             u = np.zeros(X.shape)
 
-            self.constraints[slave_key] = -slave_constraints.B(X, u , 0)
+            self.constraints[slave_key] = -slave_constraints.B(X, u, 0)
             
             master_constraints = ConstraintManager(master_component.mapping.no_of_dofs)
             constraint = master_constraints.create_dirichlet_constraint()
@@ -69,13 +71,13 @@ class ComponentConnector:
                 master_constraints.add_constraint(name, constraint, np.array([dof], dtype=int))
             X = master_component.X
             u = np.zeros(X.shape)
-            
-            self.constraints[master_key] = master_constraints.B(X, u , 0)
+
+            self.constraints[master_key] = master_constraints.B(X, u, 0)
             
         elif master_key in self.constraints or slave_key in self.constraints:
             self.delete_connection(master_key)
             self.delete_connection(slave_key)
-            
+
     def delete_connection(self, key):
         """
         Method to delete a connection by a given key. Returns an error if the key is not available in the constraints.
@@ -93,7 +95,54 @@ class ComponentConnector:
             del self.constraints[key]
         except KeyError:
             pass
-    
+
+    def _assemble_constraint_matrices(self, component_ids, component_n_dofs):
+        constraints_assembled = np.array([]).reshape(0, np.sum(component_n_dofs))
+        used_keys = []
+
+        def _assemble_matrices_rowwise_and_fill_with_zeros(left_idx, left_key, right_idx, right_key):
+            start_zeros = np.array([]).reshape(n_rows, 0)
+            middle_zeros = np.array([]).reshape(n_rows, 0)
+            end_zeros = np.array([]).reshape(n_rows, 0)
+
+            if int(left_key[0]) != component_ids[0]:
+                n_fill_dofs = np.sum(component_n_dofs[0: left_idx])
+                start_zeros = np.zeros((n_rows, n_fill_dofs))
+            if int(right_key[0]) != component_ids[left_idx + 1]:
+                n_fill_dofs = np.sum(component_n_dofs[left_idx + 1: right_idx])
+                middle_zeros = np.zeros((n_rows, n_fill_dofs))
+            if int(right_key[0]) != component_ids[-1]:
+                n_fill_dofs = np.sum(component_n_dofs[right_idx + 1: len(component_n_dofs)])
+                end_zeros = np.zeros((n_rows, n_fill_dofs))
+
+            return np.hstack((start_zeros, self.constraints[left_key].todense(),
+                              middle_zeros, self.constraints[right_key].todense(), end_zeros))
+
+        for idx, compid in enumerate(component_ids):
+            for key in self.constraints:
+                if int(key[-1]) == compid and key not in used_keys:
+                    key_neighbor = key[-1] + key[1:-1] + key[0]
+
+                    neighbor_idx = int(np.where(component_ids == int(key_neighbor[-1]))[0])
+
+                    n_rows = int(self.constraints[key].shape[0])
+
+                    if neighbor_idx > idx:
+                        constraint_row_assembled = _assemble_matrices_rowwise_and_fill_with_zeros(idx, key,
+                                                                                                  neighbor_idx,
+                                                                                                  key_neighbor)
+                    else:
+                        constraint_row_assembled = _assemble_matrices_rowwise_and_fill_with_zeros(neighbor_idx,
+                                                                                                  key_neighbor, idx,
+                                                                                                  key)
+
+                    constraints_assembled = np.vstack((constraints_assembled, constraint_row_assembled))
+
+                    used_keys.append(key)
+                    used_keys.append(key_neighbor)
+
+        return constraints_assembled
+
 
 class MeshTying:
     """
