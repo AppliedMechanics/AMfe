@@ -26,19 +26,22 @@ class BooleanEliminationFormulationTest(TestCase):
             return M(u, du, t).toarray()
 
         def h(u, du, t):
-            return self.f_ext_unconstr - self.f_int_unconstr
+             return self.f_int_unconstr
+
+        def p(u, du, t):
+            return self.f_ext_unconstr
 
         def h_q(u, du, t):
-            return -self.K_unconstr
+            return self.K_unconstr
 
         def h_q_dense(u, du, t):
-            return -self.K_unconstr.toarray()
+            return self.K_unconstr.toarray()
 
         def h_dq(u, du, t):
-            return -self.D_unconstr
+            return self.D_unconstr
 
         def h_dq_dense(u, du, t):
-            return -self.D_unconstr.toarray()
+            return self.D_unconstr.toarray()
 
         # Assumption: Fixed Dirichlet Condition on first dof
         def g_holo(u, t):
@@ -55,6 +58,7 @@ class BooleanEliminationFormulationTest(TestCase):
         self.M_func = M
         self.M_func_dense = M_dense
         self.h_func = h
+        self.p_func = p
         self.h_q_func = h_q
         self.h_dq_func = h_dq
         self.h_q_func_dense = h_q_dense
@@ -64,14 +68,17 @@ class BooleanEliminationFormulationTest(TestCase):
         self.B_holo_func_dense = B_holo_dense
 
         self.formulation = BooleanEliminationConstraintFormulation(self.no_of_dofs_unconstrained, self.M_func,
-                                                                   self.h_func, self.B_holo_func, self.h_q_func,
-                                                                   self.h_dq_func, self.g_holo_func)
+                                                                   self.h_func, self.B_holo_func, self.p_func,
+                                                                   self.h_q_func, self.h_dq_func,
+                                                                   g_func=self.g_holo_func)
 
         self.formulation_dense = BooleanEliminationConstraintFormulation(self.no_of_dofs_unconstrained,
                                                                          self.M_func_dense,
                                                                          self.h_func, self.B_holo_func_dense,
+                                                                         self.p_func,
                                                                          self.h_q_func_dense,
-                                                                         self.h_dq_func_dense, self.g_holo_func)
+                                                                         self.h_dq_func_dense,
+                                                                         g_func=self.g_holo_func)
 
     def tearDown(self):
         self.formulation = None
@@ -124,7 +131,7 @@ class BooleanEliminationFormulationTest(TestCase):
         assert_array_equal(M_actual.todense(), M_desired.todense())
         assert_array_equal(M_actual_dense, M_desired.todense())
 
-    def test_F(self):
+    def test_f_int(self):
         x = np.arange(self.no_of_dofs_unconstrained - self.no_of_constraints,
                       dtype=float) + 1.0
         dx = x.copy() + 1.0
@@ -133,11 +140,26 @@ class BooleanEliminationFormulationTest(TestCase):
         u = np.concatenate((zero_array, x), axis=0)
         du = np.concatenate((zero_array, dx), axis=0)
         t = 0.0
-        F_desired = self.h_func(u, du, t)[1:]
-        F_actual = self.formulation.F(x, dx, t)
-        F_actual_dense = self.formulation_dense.F(x, dx, t)
-        assert_array_equal(F_actual, F_desired)
-        assert_array_equal(F_actual_dense, F_desired)
+        f_int_desired = self.h_func(u, du, t)[1:]
+        f_int_actual = self.formulation.f_int(x, dx, t)
+        f_int_actual_dense = self.formulation_dense.f_int(x, dx, t)
+        assert_array_equal(f_int_actual, f_int_desired)
+        assert_array_equal(f_int_actual_dense, f_int_desired)
+
+    def test_f_ext(self):
+        x = np.arange(self.no_of_dofs_unconstrained - self.no_of_constraints,
+                      dtype=float) + 1.0
+        dx = x.copy() + 1.0
+
+        zero_array = np.array([0.0], ndmin=1)
+        u = np.concatenate((zero_array, x), axis=0)
+        du = np.concatenate((zero_array, dx), axis=0)
+        t = 0.0
+        f_ext_desired = self.p_func(u, du, t)[1:]
+        f_ext_actual = self.formulation.f_ext(x, dx, t)
+        f_ext_actual_dense = self.formulation_dense.f_ext(x, dx, t)
+        assert_array_equal(f_ext_actual, f_ext_desired)
+        assert_array_equal(f_ext_actual_dense, f_ext_desired)
 
     def test_D(self):
         x = np.arange(self.formulation.dimension, dtype=float)
@@ -178,8 +200,9 @@ class BooleanEliminationFormulationTest(TestCase):
             return np.array([], dtype=float, ndmin=1)
 
         formulation = BooleanEliminationConstraintFormulation(self.no_of_dofs_unconstrained, self.M_func,
-                                                              self.h_func, B, self.h_q_func,
-                                                              self.h_dq_func, g)
+                                                              self.h_func, B, self.p_func,
+                                                              self.h_q_func, self.h_dq_func,
+                                                              g_func=g)
 
         L_desired = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
         L_actual = formulation.L

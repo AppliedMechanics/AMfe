@@ -29,9 +29,12 @@ class BooleanEliminationConstraintFormulation(ConstraintFormulationBase):
     Currently there is no check if this formulation is allowed to use!
     It may only be used for constraints defined by Bu = 0 with boolean matrix B
     """
-    def __init__(self, no_of_dofs_unconstrained, M_func, h_func, B_func, jac_h_u=None, jac_h_du=None, g_func=None,
-                 b_func=None, a_func=None):
-        super().__init__(no_of_dofs_unconstrained, M_func, h_func, B_func, jac_h_u, jac_h_du, g_func, b_func, a_func)
+    def __init__(self, no_of_dofs_unconstrained, M_func, h_func, B_func, p_func=None,
+                 jac_h_u=None, jac_h_du=None, jac_p_u=None, jac_p_du=None,
+                 g_func=None, b_func=None, a_func=None):
+        super().__init__(no_of_dofs_unconstrained, M_func, h_func, B_func, p_func,
+                         jac_h_u, jac_h_du, jac_p_u, jac_p_du,
+                         g_func, b_func, a_func)
         self._L = None
         self._L_changed = True  # Setting flag for lazy evaluation
 
@@ -272,9 +275,9 @@ class BooleanEliminationConstraintFormulation(ConstraintFormulationBase):
         du = self.du(x, dx, t)
         return self.L.T.dot(self._M_func(u, du, t)).dot(self.L)
 
-    def F(self, x, dx, t):
+    def f_int(self, x, dx, t):
         r"""
-        Returns the constrained F vector
+        Returns the constrained f_int vector
 
         Parameters
         ----------
@@ -303,6 +306,37 @@ class BooleanEliminationConstraintFormulation(ConstraintFormulationBase):
         du = self.du(x, dx, t)
         return self.L.T.dot(self._h_func(u, du, t))
 
+    def f_ext(self, x, dx, t):
+        r"""
+        Returns the constrained f_ext vector
+
+        Parameters
+        ----------
+        x: numpy.array
+            Global state vector of the system
+        dx: numpy.array
+            First time derivative of global state vector of the constrained system
+        t: float
+            time
+
+        Returns
+        -------
+        F: numpy.array
+            Constrained F vector
+
+        Notes
+        -----
+        In this formulation this returns
+
+        .. math::
+            L^T p(u, du, t)
+
+        """
+
+        u = self.u(x, t)
+        du = self.du(x, dx, t)
+        return self.L.T.dot(self._p_func(u, du, t))
+
     def K(self, x, dx, t):
         r"""
         Returns the constrained stiffness matrix
@@ -326,13 +360,16 @@ class BooleanEliminationConstraintFormulation(ConstraintFormulationBase):
         In this formulation this returns
 
         .. math::
-            - L^T \frac{\mathrm{d}h}{\mathrm{d} u} L
+            L^T \frac{\mathrm{d}(h-p)}{\mathrm{d} u} L
 
         """
         u = self.u(x, t)
         du = self.du(x, dx, t)
         if self._jac_h_u is not None:
-            return -self.L.T.dot(self._jac_h_u(u, du, t)).dot(self.L)
+            if self._jac_p_u is not None:
+                return self.L.T.dot(self._jac_h_u(u, du, t) - self._jac_p_u(u, du, t)).dot(self.L)
+            else:
+                return self.L.T.dot(self._jac_h_u(u, du, t)).dot(self.L)
         else:
             raise NotImplementedError('Numerical differentiation of h is not implemented yet')
 
@@ -359,12 +396,15 @@ class BooleanEliminationConstraintFormulation(ConstraintFormulationBase):
         In this formulation this returns
 
         .. math::
-            - L^T \frac{\mathrm{d}h}{\mathrm{d} \dot{u}} L
+            L^T \frac{\mathrm{d}(h-p)}{\mathrm{d} \dot{u}} L
 
         """
         u = self.u(x, t)
         du = self.du(x, dx, t)
-        if self._jac_h_u is not None:
-            return -self.L.T.dot(self._jac_h_du(u, du, t)).dot(self.L)
+        if self._jac_h_du is not None:
+            if self._jac_p_du is not None:
+                return self.L.T.dot(self._jac_h_du(u, du, t) - self._jac_p_du(u, du, t)).dot(self.L)
+            else:
+                return self.L.T.dot(self._jac_h_du(u, du, t)).dot(self.L)
         else:
             raise NotImplementedError('Numerical differentiation of h is not implemented yet')

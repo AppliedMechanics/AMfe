@@ -24,13 +24,16 @@ class TestNullspaceConstraintFormulation(TestCase):
             return self.M_unconstr
 
         def h(u, du, t):
-            return self.f_ext_unconstr - self.f_int_unconstr
+            return self.f_int_unconstr
+
+        def p(u, du, t):
+            return self.f_ext_unconstr
 
         def h_q(u, du, t):
-            return -self.K_unconstr
+            return self.K_unconstr
 
         def h_dq(u, du, t):
-            return -self.D_unconstr
+            return self.D_unconstr
 
         def g_holo(u, t):
             return np.array(u[0], dtype=float, ndmin=1)
@@ -45,6 +48,7 @@ class TestNullspaceConstraintFormulation(TestCase):
         self.no_of_dofs_unconstrained = 3
         self.M_func = M
         self.h_func = h
+        self.p_func = p
         self.h_q_func = h_q
         self.h_dq_func = h_dq
         self.g_holo_func = g_holo
@@ -52,8 +56,9 @@ class TestNullspaceConstraintFormulation(TestCase):
         self.c_holo_func = c_holo
 
         self.formulation = NullspaceConstraintFormulation(self.no_of_dofs_unconstrained, self.M_func, self.h_func,
-                                                          self.B_holo_func, self.h_q_func, self.h_dq_func,
-                                                          self.g_holo_func, a_func=self.c_holo_func)
+                                                          self.B_holo_func, self.p_func,
+                                                          self.h_q_func, self.h_dq_func,
+                                                          g_func=self.g_holo_func, a_func=self.c_holo_func)
 
     def tearDown(self):
         self.formulation = None
@@ -107,7 +112,7 @@ class TestNullspaceConstraintFormulation(TestCase):
                       dtype=float) + 1.0
         dx = x.copy() + 1.0
         t = 0.0
-        F_actual = self.formulation.F(x, dx, t)
+        F_actual = self.formulation.f_int(x, dx, t) - self.formulation.f_ext(x, dx, t)
 
         assert_array_equal(F_actual[-1], np.array([0], ndmin=1, dtype=float))
 
@@ -136,8 +141,8 @@ class TestNullspaceConstraintFormulation(TestCase):
             return np.array([], dtype=float, ndmin=1)
 
         formulation = NullspaceConstraintFormulation(self.no_of_dofs_unconstrained, self.M_func,
-                                                     self.h_func, B, self.h_q_func,
-                                                     self.h_dq_func, g)
+                                                     self.h_func, B, self.p_func, self.h_q_func,
+                                                     self.h_dq_func, g_func=g)
 
         x = np.arange(formulation.dimension, dtype=float)
         L_desired = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)
