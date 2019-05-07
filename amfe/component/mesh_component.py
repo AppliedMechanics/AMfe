@@ -177,18 +177,21 @@ class MeshComponent(ComponentBase):
     
     @make_input_iterable
     def get_elementids_by_physics(self, physics):
-        elements = np.array([])
+        elements = np.array([], dtype=int)
         for phys in physics: 
             elements = np.append(elements, self._ele_obj_df['fk_mesh'][self._ele_obj_df['physics'] == phys])
+        elements = elements.astype(int)
         return elements
     
     @make_input_iterable
     def get_elementids_by_materials(self, material_obj):
-        ele_ids = np.array([])
+        ele_ids = np.array([], dtype=int)
         for mat in material_obj:
             for eleid, element in self._ele_obj_df.iterrows():
                 if element['ele_obj'].material is mat:
                     ele_ids = np.append(ele_ids, element['fk_mesh'])
+
+        ele_ids = ele_ids.astype(int)
         return ele_ids
 
     # -- GETTER FOR SYSTEM MATRICES ------------------------------------------------------------------------

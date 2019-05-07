@@ -117,6 +117,39 @@ class DummyMesh2(DummyMesh):
         self._el_df = pd.DataFrame(data, index=indices)
 
 
+class DummyMesh3(DummyMesh):
+    def __init__(self, dimension):
+        super().__init__(dimension)
+        """
+        Testmesh:                Partition:
+
+                                    9---10--11   11--12
+        9---10--11--12              |  *3*  |    |*4*|
+        |   |   |   |               |       |    |   |
+        |   |   |   |               4---3---6    6---7
+        4---3---6---7            
+        |   |\  |  /|               4---3---6    6---7
+        |   |  \| / |               |  *1*  |    |*2*|
+        1---2---5---8               |       |    |   |
+                                    1---2---5    5---8
+        """
+        nodes_desired = np.array(
+            [[0.0, 2.0], [1.0, 2.0], [2.0, 2.0],
+             [1.0, 1.0], [2.0, 1.0], [0.0, 1.0]], dtype=np.float)
+        x = nodes_desired[:, 0]
+        y = nodes_desired[:, 1]
+        nodeids = [9, 10, 11, 13, 16, 18]
+        self.nodes_df = pd.DataFrame({'x': x, 'y': y}, index=nodeids)
+
+        connectivity_desired = [np.array([13, 18, 9, 10], dtype=np.int), np.array([13, 16, 10, 11], dtype=np.int),
+                                # boundary elements
+                                np.array([18, 9], dtype=np.int)]
+
+        data = {'connectivity': connectivity_desired}
+        indices = [1, 2, 3]
+        self._el_df = pd.DataFrame(data, index=indices)
+
+
 class DummyMesh5(DummyMesh):
     def __init__(self, dimension):
         super().__init__(dimension)
@@ -192,18 +225,22 @@ class ComponentConnectorTest(TestCase):
         mesh_master = DummyMesh(2)
         mesh_slave = DummyMesh2(2)
         mesh_nointerf = DummyMesh5(2)
+        mesh3 = DummyMesh3(2)
 
         mapping_master = DummyMapping(mesh_master.nodes_df.index)
         mapping_slave = DummyMapping(mesh_slave.nodes_df.index)
         mapping_nointerf = DummyMapping(mesh_nointerf.nodes_df.index)
+        mapping_3 = DummyMapping(mesh3.nodes_df.index)
 
         self.TestComponent_Master = DummyMeshComponent(mesh_master)
         self.TestComponent_Slave = DummyMeshComponent(mesh_slave)
         self.TestComponent_nointerf = DummyMeshComponent(mesh_nointerf)
+        self.TestComponent_3 = DummyMeshComponent(mesh3)
 
         self.TestComponent_Master._mapping = mapping_master
         self.TestComponent_Slave._mapping = mapping_slave
         self.TestComponent_nointerf._mapping = mapping_nointerf
+        self.TestComponent_3._mapping = mapping_3
 
         self.TestConnector = ComponentConnector()
 
@@ -215,7 +252,7 @@ class ComponentConnectorTest(TestCase):
                                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]],
                                     dtype=int)
         C_slave_desired = np.array([[0, 0, 0, 0, -1, 0, 0, 0], [0, 0, 0, 0, 0, -1, 0, 0],
-                                    [0, 0, 0, 0, 0, 0, -1, 0],[0, 0, 0, 0, 0, 0, 0, -1]],
+                                    [0, 0, 0, 0, 0, 0, -1, 0], [0, 0, 0, 0, 0, 0, 0, -1]],
                                    dtype=int)
 
         self.TestConnector.apply_compatibility_constraint(1, self.TestComponent_Master, 2, self.TestComponent_Slave)
@@ -245,6 +282,41 @@ class ComponentConnectorTest(TestCase):
         self.assertTrue('testkey' not in self.TestConnector.constraints)
 
         self.assertRaises(KeyError, self.TestConnector.delete_connection('wrong_key'))
+
+    def test__assemble_constraint_matrices(self):
+        self.TestConnector.apply_compatibility_constraint(1, self.TestComponent_Master, 2, self.TestComponent_Slave)
+        self.TestConnector.apply_compatibility_constraint(1, self.TestComponent_Master, 3, self.TestComponent_3)
+        self.TestConnector.apply_compatibility_constraint(2, self.TestComponent_Slave, 3, self.TestComponent_3)
+
+        B_actual = self.TestConnector._assemble_constraint_matrices(np.array([1, 2, 3, 4], dtype=int),
+                                                                    np.array([12, 8, 12, 8], dtype=int))
+
+        def _set_constraint(B, lm_node, nodeidx, value):
+            for idx, dofid in enumerate([2 * nodeidx, 2 * nodeidx + 1]):
+                B[lm_node * 2 + idx, dofid] = value
+            return B
+
+        B_desired_1 = np.zeros((12, 12))
+        B_desired_1 = _set_constraint(B_desired_1, 0, 4, 1)
+        B_desired_1 = _set_constraint(B_desired_1, 1, 5, 1)
+        B_desired_1 = _set_constraint(B_desired_1, 2, 2, 1)
+        B_desired_1 = _set_constraint(B_desired_1, 3, 5, 1)
+        B_desired_1 = _set_constraint(B_desired_1, 4, 3, 1)
+
+        B_desired_2 = np.zeros((12, 8))
+        B_desired_2 = _set_constraint(B_desired_2, 0, 2, -1)
+        B_desired_2 = _set_constraint(B_desired_2, 1, 3, -1)
+        B_desired_2 = _set_constraint(B_desired_2, 5, 3, 1)
+
+        B_desired_3 = np.zeros((12, 12))
+        B_desired_3 = _set_constraint(B_desired_3, 2, 3, -1)
+        B_desired_3 = _set_constraint(B_desired_3, 3, 4, -1)
+        B_desired_3 = _set_constraint(B_desired_3, 4, 5, -1)
+        B_desired_3 = _set_constraint(B_desired_3, 5, 4, -1)
+
+        B_desired = np.hstack((B_desired_1, B_desired_2, B_desired_3, np.zeros((12, 8))))
+
+        assert_array_equal(B_actual, B_desired)
 
 
 class MeshTyingTest(TestCase):
