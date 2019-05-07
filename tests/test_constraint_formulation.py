@@ -51,6 +51,10 @@ class PendulumConstraintTest(TestCase):
         def F_ext(u, du, t):
             return np.array([0.0, 0.0, 0.0, -self.m * self.g])
 
+        # Internal force
+        def h(u, du, t):
+            return np.zeros(4, dtype=float)
+
         def jac_u(u, du, t):
             return csr_matrix((4, 4), dtype=float)
 
@@ -58,7 +62,8 @@ class PendulumConstraintTest(TestCase):
             return csr_matrix((4, 4), dtype=float)
 
         self.M_raw_func = M_raw
-        self.h_func = F_ext
+        self.h_func = h
+        self.p_func = F_ext
         self.dh_dq = jac_u
         self.dh_ddq = jac_du
 
@@ -102,8 +107,8 @@ class PendulumConstraintTest(TestCase):
 
     def test_base_formulation(self):
         formulation = ConstraintFormulationBase(self.cm.no_of_dofs_unconstrained, self.M_raw_func,
-                                                self.h_func, self.B_func, self.dh_dq, self.dh_ddq,
-                                                self.g_func)
+                                                self.h_func, self.B_func, self.p_func, self.dh_dq, self.dh_ddq,
+                                                g_func=self.g_func)
         x = np.array([0.0, 0.0, self.L, self.L, 0.0, 0.0, 0.0])
         dx = np.zeros_like(x)
         t = 0.0
@@ -118,7 +123,10 @@ class PendulumConstraintTest(TestCase):
             formulation.K(x, dx, t)
 
         with self.assertRaises(NotImplementedError):
-            formulation.F(x, dx, t)
+            formulation.f_ext(x, dx, t)
+
+        with self.assertRaises(NotImplementedError):
+            formulation.f_int(x, dx, t)
 
         with self.assertRaises(NotImplementedError):
             formulation.u(x, t)
@@ -140,8 +148,8 @@ class PendulumConstraintTest(TestCase):
         Test that tests a pure lagrange formulation.
         """
         formulation = SparseLagrangeMultiplierConstraintFormulation(self.cm.no_of_dofs_unconstrained, self.M_raw_func,
-                                                                    self.h_func, self.B_func, self.dh_dq, self.dh_ddq,
-                                                                    self.g_func)
+                                                                    self.h_func, self.B_func, self.p_func,
+                                                                    self.dh_dq, self.dh_ddq, g_func=self.g_func)
         # Define state: 90deg to the right
         x = np.array([0.0, 0.0, self.L, self.L, 0.0, 0.0, 0.0])
         unconstrained_u_desired = np.array([0.0, 0.0, self.L, self.L])
@@ -153,9 +161,9 @@ class PendulumConstraintTest(TestCase):
         # Check if g function is zero for different positions
         # -90 deg
         x = np.array([0.0, 0.0, -self.L, self.L, 0.0, 0.0, 0.0])
-        F1 = formulation.F(x, np.zeros_like(x), 0.0)
-        F2 = formulation.F(x, np.zeros_like(x), 2.0)
-        F3 = formulation.F(x, x, 2.0)
+        F1 = formulation.f_int(x, np.zeros_like(x), 0.0)
+        F2 = formulation.f_int(x, np.zeros_like(x), 2.0)
+        F3 = formulation.f_int(x, x, 2.0)
 
         assert_array_equal(F1[-3:], np.array([0.0, 0.0, 0.0]))
         assert_array_equal(F2[-3:], np.array([0.0, 0.0, 0.0]))
@@ -163,7 +171,7 @@ class PendulumConstraintTest(TestCase):
 
         x = np.array([0.0, 0.0, 0.0, -0.1 * self.L, 0.0, 0.0, 0.0])
 
-        F1 = formulation.F(x, np.zeros_like(x), 0.0)
+        F1 = formulation.f_int(x, np.zeros_like(x), 0.0)
         # Violated constraint, thus g > 0.0
         self.assertGreater(np.linalg.norm(F1[-3:]), 0.0)
 
@@ -180,9 +188,9 @@ class PendulumConstraintTest(TestCase):
             x_minus = x.copy()
             x_minus[i] = x_minus[i] - delta
 
-            F_plus = formulation.F(x_plus, x, 0.0).copy()
-            F_minus = formulation.F(x_minus, x, 0.0)
-            K_finite_difference[:, i] = -(F_plus - F_minus).reshape(-1, 1) / (2 * delta)
+            F_plus = formulation.f_int(x_plus, x, 0.0).copy() - formulation.f_ext(x_plus, x, 0.0).copy()
+            F_minus = formulation.f_int(x_minus, x, 0.0) - formulation.f_ext(x_minus, x, 0.0)
+            K_finite_difference[:, i] = (F_plus - F_minus).reshape(-1, 1) / (2 * delta)
 
         assert_allclose(K_actual, K_finite_difference, rtol=1e-7)
 
@@ -191,8 +199,8 @@ class PendulumConstraintTest(TestCase):
         Test the nullspace elimination for the pendulum.
         """
         formulation = NullspaceConstraintFormulation(self.cm.no_of_dofs_unconstrained, self.M_raw_func, self.h_func,
-                                                     self.B_func, self.dh_dq, self.dh_ddq, self.g_func,
-                                                     a_func=self.a_func)
+                                                     self.B_func, self.p_func, self.dh_dq, self.dh_ddq,
+                                                     g_func=self.g_func, a_func=self.a_func)
 
         # Define state: 90deg to the right
         x = np.array([0.0, 0.0, self.L, self.L])
@@ -205,8 +213,8 @@ class PendulumConstraintTest(TestCase):
         # Check if g function is zero for different positions
         # -90 deg
         x = np.array([0.0, 0.0, -self.L, self.L])
-        F1 = formulation.F(x, np.zeros_like(x), 0.0)
-        F2 = formulation.F(x, np.zeros_like(x), 2.0)
+        F1 = formulation.f_int(x, np.zeros_like(x), 0.0)
+        F2 = formulation.f_int(x, np.zeros_like(x), 2.0)
 
         assert_array_equal(F1[-3:], np.array([0.0, 0.0, 0.0]))
         assert_array_equal(F2[-3:], np.array([0.0, 0.0, 0.0]))
@@ -224,9 +232,9 @@ class PendulumConstraintTest(TestCase):
             x_minus = x.copy()
             x_minus[i] = x_minus[i] - delta
 
-            F_plus = formulation.F(x_plus, x, 0.0).copy()
-            F_minus = formulation.F(x_minus, x, 0.0)
-            K_finite_difference[:, i] = -(F_plus - F_minus).reshape(-1, 1) / (2 * delta)
+            F_plus = formulation.f_int(x_plus, x, 0.0).copy() - formulation.f_ext(x_plus, x, 0.0).copy()
+            F_minus = formulation.f_int(x_minus, x, 0.0) - formulation.f_ext(x_minus, x, 0.0)
+            K_finite_difference[:, i] = (F_plus - F_minus).reshape(-1, 1) / (2 * delta)
 
         assert_allclose(K_actual, K_finite_difference, rtol=1e-7)
 
@@ -236,11 +244,13 @@ class PendulumConstraintTest(TestCase):
         """
         formulation_lagrange = SparseLagrangeMultiplierConstraintFormulation(self.cm.no_of_dofs_unconstrained,
                                                                              self.M_raw_func, self.h_func, self.B_func,
-                                                                             self.dh_dq, self.dh_ddq, self.g_func)
+                                                                             self.p_func, self.dh_dq, self.dh_ddq,
+                                                                             g_func=self.g_func)
 
         formulation_nullspace = NullspaceConstraintFormulation(self.cm.no_of_dofs_unconstrained, self.M_raw_func,
-                                                               self.h_func, self.B_func, self.dh_dq, self.dh_ddq,
-                                                               self.g_func, a_func=self.a_func)
+                                                               self.h_func, self.B_func, self.p_func,
+                                                               self.dh_dq, self.dh_ddq,
+                                                               g_func=self.g_func, a_func=self.a_func)
 
         sol_lagrange = AmfeSolution()
         sol_nullspace = AmfeSolution()
@@ -253,8 +263,6 @@ class PendulumConstraintTest(TestCase):
         nonlinear_solver = NewtonRaphson()
 
         for (formulation, sol) in formulations:
-            def f_int(u, du, t):
-                return np.zeros(formulation.dimension)
 
             def write_callback(t, x, dx, ddx):
                 u = formulation.u(x, t)
@@ -262,7 +270,8 @@ class PendulumConstraintTest(TestCase):
                 ddu = formulation.ddu(x, dx, ddx, t)
                 sol.write_timestep(t, u, du, ddu)
 
-            integrator = GeneralizedAlpha(formulation.M, f_int, formulation.F, formulation.K, formulation.D,
+            integrator = GeneralizedAlpha(formulation.M, formulation.f_int, formulation.f_ext, formulation.K,
+                                          formulation.D,
                                           alpha_m=0.0)
             integrator.dt = 0.025
             integrator.nonlinear_solver_func = nonlinear_solver.solve
@@ -286,7 +295,7 @@ class PendulumConstraintTest(TestCase):
                 write_callback(t, x, dx, ddx)
 
         def plot_pendulum_path(u_plot):
-            plt.scatter(self.X[1, 0]+[u[2] for u in u_plot], self.X[1, 1]+[u[3] for u in u_plot])
+            plt.scatter(self.X[2]+[u[2] for u in u_plot], self.X[3]+[u[3] for u in u_plot])
             plt.title('Pendulum-test: Positional curve of rigid pendulum under gravitation')
             return
 

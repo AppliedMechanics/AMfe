@@ -10,14 +10,15 @@ Constraint Formulations
 It expects a system of this type:
 
 .. math::
-    M(u, \dot{u}, t) \ddot{u} + B^T \lambda &= h(u, \dot{u}, t) \\
+    M(u, \dot{u}, t) \ddot{u} + h(u, \dot{u}, t) + B^T \lambda = p(u, \dot{u}, t) \\
     g_{holo}(u, t) &= 0 \\
-    g_{nonholo}(u, \dot{u}, t) &= B_{nonholo}(u, t) * \dot{u} + b(u, t) = 0
+    g_{nonholo}(u, \dot{u}, t) &= B_{nonholo}(u, t) \cdot \dot{u} + b(u, t) = 0
 
+where :math:`h` are internal forces and :math:`p` are external forces
 And returns this type of system:
 
 .. math::
-    M(x, dx, t) \ddot{x} = F(x, \dot{x}, t)
+    M(x, dx, t) \ddot{x} + f_{int}(x, \dot{x}, t) = f_{ext}(x, \dot{x}, t)
 
 Here x is the full state vector of the system. Depending on the constraint formulation this can e.g. be a mixture of
 displacements :math:`u` and Lagrange Multipliers :math:`\lambda`
@@ -26,11 +27,11 @@ Furthermore, it provides the following entities:
 
 - Linear Damping matrix
 .. math::
-    D = -\frac{\mathrm{d}F}{\mathrm{d} \dot{x}}
+    D = \frac{\mathrm{d}(f_{int} - f_{ext})}{\mathrm{d} \dot{x}}
 
 - Linear Stiffness matrix
 .. math::
-    K = -\frac{\mathrm{d}F}{\mathrm{d} x}
+    K = \frac{\mathrm{d}(f_{int} - f_{ext})}{\mathrm{d} x}
 
 It also can recover the u, du, ddu of the unconstrained system from the system states x of the constrained system
 """
@@ -41,7 +42,10 @@ class ConstraintFormulationBase:
     Applies constraints to general system
 
     .. math::
-        M(u, \dot{u}, t) \ddot{u} + B^T \lambda = h(u, \dot{u}, t)
+        M(u, \dot{u}, t) \ddot{u} + h(u, \dot{u}, t) + B^T \lambda = p(u, \dot{u}, t)
+
+    where :math:`h` are internal forces, :math:`p` are external forces and :math:`\lambda` Lagrange
+    Multipliers
 
     Attributes
     ----------
@@ -50,7 +54,9 @@ class ConstraintFormulationBase:
     _M_func: function
         function with signature M(u, du, t) returning the mass matrix
     _h_func: function
-        function with signature h(u, du, t) returning the nonlinear forces
+        function with signature h(u, du, t) returning the nonlinear internal forces
+    _p_func: function
+        function with signature p(u, du, t) returning the nonlinear external forces
     _B_func: function
         function with signature B(u, t) returning the linear map of the constraint function on velocity level
         mapping the velocities to the residual of the constraint equation (B*dq + b) = 0
@@ -58,6 +64,10 @@ class ConstraintFormulationBase:
         Jacobian of the _h_func w.r.t. displacements u
     _jac_h_du: function
         Jacobian of the _h_func w.r.t. velocities du
+    _jac_p_u: function
+        Jacobian of the _p_func w.r.t. displacements u
+    _jac_p_du: function
+        Jacobian of the _p_func w.r.t. velocities du
     _g_func: function
         Function with signature g(u, t) returning the residual of the holonomic constraints on displacement level
     _b_func: function
@@ -68,14 +78,18 @@ class ConstraintFormulationBase:
         :math:`B(u, t) \ddot{u} + a(u, t) = 0` (last term a)
 
     """
-    def __init__(self, no_of_dofs_unconstrained, M_func, h_func, B_func, jac_h_u=None, jac_h_du=None, g_func=None,
-                 b_func=None, a_func=None):
+    def __init__(self, no_of_dofs_unconstrained, M_func, h_func, B_func, p_func=None,
+                 jac_h_u=None, jac_h_du=None, jac_p_u=None, jac_p_du=None,
+                 g_func=None, b_func=None, a_func=None):
         self._no_of_dofs_unconstrained = no_of_dofs_unconstrained
         self._M_func = M_func
         self._h_func = h_func
         self._B_func = B_func
+        self._p_func = p_func
         self._jac_h_u = jac_h_u
         self._jac_h_du = jac_h_du
+        self._jac_p_u = jac_p_u
+        self._jac_p_du = jac_p_du
         self._g_func = g_func
         self._b_func = b_func
         self._a_func = a_func
@@ -148,6 +162,8 @@ class ConstraintFormulationBase:
             1st time derivative of final ode variables
         ddx : ndarray
             2nd time derivative of final ode variables
+        t : float
+            time
 
         Returns
         -------
@@ -264,9 +280,9 @@ class ConstraintFormulationBase:
         """
         raise NotImplementedError('M is not implemented')
 
-    def F(self, x, dx, t):
+    def f_int(self, x, dx, t):
         r"""
-        Returns the constrained F vector
+        Returns the constrained f_int vector
 
         Parameters
         ----------
@@ -279,11 +295,32 @@ class ConstraintFormulationBase:
 
         Returns
         -------
-        F: numpy.array
-            Constrained F vector
+        f_int: numpy.array
+            Constrained f_int vector
 
         """
-        raise NotImplementedError('F is not implemented')
+        raise NotImplementedError('f_int is not implemented')
+
+    def f_ext(self, x, dx, t):
+        r"""
+        Returns the constrained f_ext vector
+
+        Parameters
+        ----------
+        x: numpy.array
+            Global state vector of the system
+        dx: numpy.array
+            First time derivative of global state vector of the constrained system
+        t: float
+            time
+
+        Returns
+        -------
+        f_ext: numpy.array
+            Constrained f_ext vector
+
+        """
+        raise NotImplementedError('f_ext is not implemented')
 
     def K(self, x, dx, t):
         r"""
@@ -324,4 +361,3 @@ class ConstraintFormulationBase:
             Constrained damping matrix
         """
         raise NotImplementedError('D is not implemented')
-

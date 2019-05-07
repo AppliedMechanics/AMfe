@@ -26,13 +26,16 @@ class SparseLagrangeFormulationTest(TestCase):
             return self.M_unconstr
 
         def h(u, du, t):
-            return self.f_ext_unconstr - self.f_int_unconstr
+            return self.f_int_unconstr
+
+        def p(u, du, t):
+            return self.f_ext_unconstr
 
         def h_q(u, du, t):
-            return -self.K_unconstr
+            return self.K_unconstr
 
         def h_dq(u, du, t):
-            return -self.D_unconstr
+            return self.D_unconstr
 
         def g_holo(u, t):
             return np.array(u[0], dtype=float, ndmin=1)
@@ -44,14 +47,16 @@ class SparseLagrangeFormulationTest(TestCase):
         self.no_of_dofs_unconstrained = 3
         self.M_func = M
         self.h_func = h
+        self.p_func = p
         self.h_q_func = h_q
         self.h_dq_func = h_dq
         self.g_holo_func = g_holo
         self.B_holo_func = B_holo
 
         self.formulation = SparseLagrangeMultiplierConstraintFormulation(self.no_of_dofs_unconstrained, self.M_func,
-                                                                         self.h_func, self.B_holo_func, self.h_q_func,
-                                                                         self.h_dq_func, self.g_holo_func)
+                                                                         self.h_func, self.B_holo_func, self.p_func,
+                                                                         self.h_q_func, self.h_dq_func,
+                                                                         g_func=self.g_holo_func)
 
     def tearDown(self):
         self.formulation = None
@@ -106,16 +111,29 @@ class SparseLagrangeFormulationTest(TestCase):
         M_actual = self.formulation.M(x, dx, 0.0)
         assert_array_equal(M_actual.todense(), M_desired.todense())
 
-    def test_F(self):
+    def test_f_int(self):
         x = np.arange(self.no_of_dofs_unconstrained + self.no_of_constraints,
                       dtype=float) + 1.0
         dx = x.copy() + 1.0
         u = x[:self.no_of_dofs_unconstrained]
         du = dx[:self.no_of_dofs_unconstrained]
         t = 0.0
-        F_desired = np.concatenate((self.h_func(u, du, t)-self.B_holo_func(u, t).T.dot(x[self.no_of_dofs_unconstrained:]),
-                                   -self.g_holo_func(u, t)))
-        F_actual = self.formulation.F(x, dx, t)
+        F_desired = np.concatenate((self.h_func(u, du, t)+self.B_holo_func(u, t).T.dot(x[self.no_of_dofs_unconstrained:]),
+                                   +self.g_holo_func(u, t)))
+        F_actual = self.formulation.f_int(x, dx, t)
+        assert_array_equal(F_actual, F_desired)
+
+    def test_f_ext(self):
+        x = np.arange(self.no_of_dofs_unconstrained + self.no_of_constraints,
+                      dtype=float) + 1.0
+        dx = x.copy() + 1.0
+        u = x[:self.no_of_dofs_unconstrained]
+        du = dx[:self.no_of_dofs_unconstrained]
+        t = 0.0
+        F_desired = np.concatenate(
+            (self.p_func(u, du, t),
+             np.zeros(self.no_of_constraints)))
+        F_actual = self.formulation.f_ext(x, dx, t)
         assert_array_equal(F_actual, F_desired)
 
     def test_D(self):
@@ -155,8 +173,9 @@ class SparseLagrangeFormulationTest(TestCase):
             return np.array([], ndmin=1)
 
         formulation = SparseLagrangeMultiplierConstraintFormulation(self.no_of_dofs_unconstrained, self.M_func,
-                                                                    self.h_func, B, self.h_q_func,
-                                                                    self.h_dq_func, g_holo)
+                                                                    self.h_func, B, self.p_func,
+                                                                    self.h_q_func, self.h_dq_func,
+                                                                    g_func=g_holo)
         x = np.arange(formulation.dimension, dtype=float)
         dx = x.copy()
         self.assertEqual(formulation._no_of_constraints, 0.0)
@@ -170,11 +189,15 @@ class SparseLagrangeFormulationTest(TestCase):
         M_actual = formulation.M(x, dx, 0.0)
         assert_array_equal(M_actual.todense(), self.M_unconstr.todense())
 
-        F_actual = formulation.F(x, dx, 0.0)
+        F_int_actual = formulation.f_int(x, dx, 0.0)
         u = x[:self.no_of_dofs_unconstrained]
         du = dx[:self.no_of_dofs_unconstrained]
-        F_desired = self.h_func(u, du, 0.0)
-        assert_array_equal(F_actual, F_desired)
+        F_int_desired = self.h_func(u, du, 0.0)
+        assert_array_equal(F_int_actual, F_int_desired)
+
+        F_ext_actual = formulation.f_ext(x, dx, 0.0)
+        F_ext_desired = self.p_func(u, du, 0.0)
+        assert_array_equal(F_ext_actual, F_ext_desired)
 
     def test_scaling(self):
         x0 = np.zeros(self.formulation.dimension)
@@ -186,10 +209,10 @@ class SparseLagrangeFormulationTest(TestCase):
 
         # Test only constraint equation scaling
         self.formulation.set_options(scaling=2.0)
-        F_scale_2 = self.formulation.F(x0, dx0, 0.0).copy()
+        F_scale_2 = self.formulation.f_int(x0, dx0, 0.0).copy()
 
         self.formulation.set_options(scaling=4.0)
-        F_scale_4 = self.formulation.F(x0, dx0, 0.0).copy()
+        F_scale_4 = self.formulation.f_int(x0, dx0, 0.0).copy()
 
         assert_array_equal((F_scale_2-F0)/2.0, (F_scale_4-F0)/4.0)
 
@@ -198,10 +221,10 @@ class SparseLagrangeFormulationTest(TestCase):
         x0[-1] = 2.7
 
         self.formulation.set_options(scaling=2.0)
-        F_scale_2 = self.formulation.F(x0, dx0, 0.0).copy()
+        F_scale_2 = self.formulation.f_int(x0, dx0, 0.0).copy()
 
         self.formulation.set_options(scaling=4.0)
-        F_scale_4 = self.formulation.F(x0, dx0, 0.0).copy()
+        F_scale_4 = self.formulation.f_int(x0, dx0, 0.0).copy()
 
         assert_array_equal((F_scale_2-F0)/2.0, (F_scale_4-F0)/4.0)
 
@@ -243,13 +266,11 @@ class SparseLagrangeFormulationTest(TestCase):
 
         self.formulation.set_options(penalty=scale1)
         K_pen_2 = self.formulation.K(x0, dx0, 0.0).copy()
-        F_pen_2 = self.formulation.F(x0, dx0, 0.0).copy()
+        F_pen_2 = self.formulation.f_int(x0, dx0, 0.0).copy()
 
         self.formulation.set_options(penalty=scale2)
         K_pen_4 = self.formulation.K(x0, dx0, 0.0).copy()
-        F_pen_4 = self.formulation.F(x0, dx0, 0.0).copy()
+        F_pen_4 = self.formulation.f_int(x0, dx0, 0.0).copy()
 
         assert_allclose(K_pen_2 - scale1 * KBTB, K_pen_4 - scale2 * KBTB)
-        assert_allclose(F_pen_2 + scale1 * FBTg, F_pen_4 + scale2 * FBTg)
-
-
+        assert_allclose(F_pen_2 - scale1 * FBTg, F_pen_4 - scale2 * FBTg)

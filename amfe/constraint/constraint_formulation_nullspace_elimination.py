@@ -20,21 +20,24 @@ class NullspaceConstraintFormulation(ConstraintFormulationBase):
     This formulation transforms the system
 
     .. math::
-        M_{\mathrm{raw}}(u, \dot{u}, t) \ddot{u} + B^T \lambda &= h(u, \dot{u}, t) \\
+        M_{\mathrm{raw}}(u, \dot{u}, t) \ddot{u} + h(u, \dot{u}, t) + B^T \lambda &= p(u, \dot{u}, t) \\
         B(u, t) \ddot{u} + a(u, \dot{u}, t) &= 0
 
     to
 
     .. math::
-        M(x, dx, t) \ddot{x} = F(x, \dot{x}, t)
+        M(x, dx, t) \ddot{x} + f_{int}(x, \dot{x}, t) = f_{ext}(x, \dot{x}, t)
 
     In detail:
 
     .. math::
         \begin{bmatrix} L^T M_{raw} \\
         s B(u, t) \end{bmatrix} \ddot{u}
-        = \begin{bmatrix} L^T h(u, \dot{u}, t)\\
-            - s a(u, \dot{u}, t) \end{bmatrix}
+        + \begin{bmatrix} L^T h(u, \dot{u}, t)\\
+            s a(u, \dot{u}, t) \end{bmatrix}
+        = \begin{bmatrix} L^T p(u, \dot{u}, t)\\
+            0
+        \end{bmatrix}
 
     where L is the nullspace of B in the acceleration level constraint equation
     :math:`B(u, t) \ddot{u} + a(u, \dot{u}, t) = 0`.
@@ -48,9 +51,11 @@ class NullspaceConstraintFormulation(ConstraintFormulationBase):
     _scaling: float
         scaling factor that scales the constraint equation in the formulation (default 1.0)
     """
-    def __init__(self, no_of_dofs_unconstrained, M_func, h_func, B_func, jac_h_u=None, jac_h_du=None, g_func=None,
-                 b_func=None, a_func=None):
-        super().__init__(no_of_dofs_unconstrained, M_func, h_func, B_func, jac_h_u, jac_h_du, g_func, b_func, a_func)
+    def __init__(self, no_of_dofs_unconstrained, M_func, h_func, B_func, p_func=None,
+                 jac_h_u=None, jac_h_du=None, jac_p_u=None, jac_p_du=None,
+                 g_func=None, b_func=None, a_func=None):
+        super().__init__(no_of_dofs_unconstrained, M_func, h_func, B_func, p_func,
+                         jac_h_u, jac_h_du, jac_p_u, jac_p_du, g_func, b_func, a_func)
         self._no_of_constraints = len(self._g_func(np.zeros(self._no_of_dofs_unconstrained), 0.0))
         if self._a_func is None:
             z = np.zeros(self._no_of_constraints)
@@ -250,9 +255,9 @@ class NullspaceConstraintFormulation(ConstraintFormulationBase):
         return spvstack((csr_matrix(self.L(x, t).T.dot(M)),
                          self._scaling*self._B_func(u, t)), format='csr')
 
-    def F(self, x, dx, t):
+    def f_int(self, x, dx, t):
         r"""
-        Returns the constrained F vector
+        Returns the constrained f_int vector
 
         Parameters
         ----------
@@ -265,8 +270,8 @@ class NullspaceConstraintFormulation(ConstraintFormulationBase):
 
         Returns
         -------
-        F: numpy.array
-            Constrained F vector
+        f_int: numpy.array
+            Constrained f_int vector
 
         Notes
         -----
@@ -274,20 +279,53 @@ class NullspaceConstraintFormulation(ConstraintFormulationBase):
 
         .. math::
             \begin{bmatrix} L^T h(u, \dot{u}, t)   \\
-            - s a(u, \dot{u}, t)
+            s a(u, \dot{u}, t)
             \end{bmatrix}
 
         """
         u = self.u(x, t)
         du = self.du(x, dx, t)
         return np.concatenate((self.L(x, t).T.dot(self._h_func(u, du, t)),
-                               -self._scaling*self._a_func(u, du, t)), axis=0)
+                               self._scaling*self._a_func(u, du, t)), axis=0)
+
+    def f_ext(self, x, dx, t):
+        r"""
+        Returns the constrained f_ext vector
+
+        Parameters
+        ----------
+        x: numpy.array
+            Global state vector of the system
+        dx: numpy.array
+            First time derivative of global state vector of the constrained system
+        t: float
+            time
+
+        Returns
+        -------
+        f_ext: numpy.array
+            Constrained f_ext vector
+
+        Notes
+        -----
+        In this formulation this returns
+
+        .. math::
+            \begin{bmatrix} L^T p(u, \dot{u}, t)   \\
+            0
+            \end{bmatrix}
+
+        """
+        u = self.u(x, t)
+        du = self.du(x, dx, t)
+        return np.concatenate((self.L(x, t).T.dot(self._p_func(u, du, t)),
+                               np.zeros(self._no_of_constraints)), axis=0)
 
     def K(self, x, dx, t):
         r"""
         Returns the constrained stiffness matrix
 
-        This is an approximation! The upperpart, nameley the B of the internal and external forces
+        This is an approximation! The upper part, namely the B of the internal and external forces
         is exactly evaluated. But the B of the a_function is not available and set to zero!
 
         Parameters
@@ -314,14 +352,18 @@ class NullspaceConstraintFormulation(ConstraintFormulationBase):
             \end{bmatrix}
 
         """
-        K = -self._jac_h_u(self.u(x, t), self.du(x, dx, t), t)
+        u = self.u(x, t)
+        du = self.du(x, dx, t)
+        K = self._jac_h_u(u, du, t)
+        if self._jac_p_u is not None:
+            K -= self._jac_p_u(u, du, t)
 
         return spvstack((self.L(x, t).T.dot(K), csr_matrix((self._no_of_constraints, self._no_of_dofs_unconstrained))),
                         format='csr')
 
     def D(self, x, dx, t):
         r"""
-        This is an approximation of D. The upperpart, namely the B of the internal and external forces is exactly
+        This is an approximation of D. The upper part, namely the B of the internal and external forces is exactly
         evaluated. But the B of the c_function w.r.t. the velocities is not available and set to zero!
 
         Returns the constrained damping matrix
@@ -350,8 +392,13 @@ class NullspaceConstraintFormulation(ConstraintFormulationBase):
             \end{bmatrix}
 
         """
+        u = self.u(x, t)
+        du = self.du(x, dx, t)
         if self._jac_h_u is not None:
-            D = -self._jac_h_du(self.u(x, t), self.du(x, dx, t), t)
+            if self._jac_p_du is not None:
+                D = self._jac_h_du(u, du, t) - self._jac_p_du(u, du, t)
+            else:
+                D = self._jac_h_du(u, du, t)
         else:
             raise NotImplementedError('Numerical differentiation of h is not implemented yet')
         D = self.L(x, t).T.dot(D)
@@ -359,7 +406,8 @@ class NullspaceConstraintFormulation(ConstraintFormulationBase):
             self._D_full = self._preallocate_D(D)
         if not isinstance(D, csr_matrix):
             D = D.tocsr()
-        self._D_full.indptr = np.concatenate((D.indptr, np.ones(self._no_of_constraints, dtype=D.indptr.dtype)*D.indptr[-1]))
+        self._D_full.indptr = np.concatenate((D.indptr, np.ones(self._no_of_constraints,
+                                                                dtype=D.indptr.dtype)*D.indptr[-1]))
         self._D_full.indices = D.indices
         self._D_full.data = D.data
         return self._D_full

@@ -24,13 +24,13 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
     This formulation transforms the system
 
     .. math::
-        M_{\mathrm{raw}}(u, \dot{u}, t) \ddot{u} + B^T \lambda &= h(u, \dot{u}, t) \\
+        M_{\mathrm{raw}}(u, \dot{u}, t) \ddot{u} + h(u, \dot{u}, t) + B^T \lambda &= p(u, \dot{u}, t) \\
         g_{holo}(u, t) &= 0
 
     to
 
     .. math::
-        M(x, dx, t) \ddot{x} = F(x, \dot{x}, t)
+        M(x, dx, t) \ddot{x} + f_{int}(x, \dot{x}, t) = f_{ext}(x, \dot{x}, t)
 
     In detail:
 
@@ -38,8 +38,12 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
         \begin{bmatrix} M_{raw} & 0 \\
         0 & 0
         \end{bmatrix} \begin{bmatrix} \ddot{u} \\
-        \ddot{\lambda} \end{bmatrix} = \begin{bmatrix} h(u, \dot{u}, t) - s \cdot B^T \lambda - ps B^T g(u, t)  \\
-            - s g(u, t)
+        \ddot{\lambda} \end{bmatrix} + \begin{bmatrix} h(u, \dot{u}, t) + s \cdot B^T \lambda + ps B^T g(u, t)  \\
+            s g(u, t)
+            \end{bmatrix} =
+            \begin{bmatrix}
+            p(u, \dot{u}, t) \\
+            0
             \end{bmatrix}
 
     and the linearization
@@ -60,15 +64,17 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
         \end{bmatrix} \
         \begin{bmatrix} \Delta u \\
         \Delta \lambda \end{bmatrix} = \
-        \begin{bmatrix} h(\bar{u}, \dot{\bar{u}}, t) - s \cdot B^T \bar{\lambda} - ps B^T g(\bar{u}, t) \\
+        \begin{bmatrix} p(\bar{u}, \dot{\bar{u}}, t) - h(\bar{u}, \dot{\bar{u}}, t) - s \cdot B^T \bar{\lambda}
+        - ps B^T g(\bar{u}, t) \\
             - s g(\bar{u}, t)
             \end{bmatrix}
+        = f_{ext}(\bar{u}, \dot{\bar{u}}, t) - f_{int}(\bar{u}, \dot{\bar{u}}, t)
 
     with
 
     .. math::
-        K_{\mathrm{raw}} &= - \frac{\partial h}{\partial u} \\
-        D_{\mathrm{raw}} &= - \frac{\partial h}{\partial {\dot u}}
+        K_{\mathrm{raw}} &= \frac{\partial (h-p)}{\partial u} \\
+        D_{\mathrm{raw}} &= \frac{\partial (h-p)}{\partial {\dot u}}
 
     It includes a scaling factor s that scales the constraint equations and a penalization term in the tangential
     stiffness matrix (Augmentation or Penalization) that is scaled by a penalty factor p.
@@ -81,21 +87,28 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
         Preallocated csr_matrix for D
     _K_full: csr_matrix
         Preallocated csr_matrix for K
-    _F_full: csr_matrix
-        Preallocated csr_matrix for F
+    _f_int_full: csr_matrix
+        Preallocated ndarray for f_int
+    _f_ext_full: csr_matrix
+        Preallocated ndarray for f_ext
     _scaling: float
         Scaling factor for scaling the constraint equation
     _penalty: float or None
         Penalty factor for Penalization of stiffness matrix K to achieve better conditioning
     """
-    def __init__(self, no_of_dofs_unconstrained, M_func, h_func, B_func, jac_h_u=None, jac_h_du=None, g_func=None,
-                 b_func=None, a_func=None):
-        super().__init__(no_of_dofs_unconstrained, M_func, h_func, B_func, jac_h_u, jac_h_du, g_func, b_func, a_func)
+
+    def __init__(self, no_of_dofs_unconstrained, M_func, h_func, B_func, p_func=None,
+                 jac_h_u=None, jac_h_du=None, jac_p_u=None, jac_p_du=None,
+                 g_func=None, b_func=None, a_func=None):
+        super().__init__(no_of_dofs_unconstrained, M_func, h_func, B_func, p_func,
+                         jac_h_u, jac_h_du, jac_p_u, jac_p_du,
+                         g_func, b_func, a_func)
         self._no_of_constraints = len(self._g_func(np.zeros(self._no_of_dofs_unconstrained), 0.0))
         self._M_full = None
         self._D_full = None
         self._K_full = None
-        self._F_full = None
+        self._f_int_full = None
+        self._f_ext_full = None
         self._scaling = 1.0
         self._penalty = None
 
@@ -118,9 +131,9 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
                 M = M.tocsr()
             else:
                 M = csr_matrix(M)
-        indptr = np.concatenate((M.indptr, np.ones(self._no_of_constraints, dtype=M.indptr.dtype)*M.indptr[-1]))
-        return csr_matrix((M.data*0.0, M.indices, indptr), shape=(M.shape[0] + self._no_of_constraints,
-                           M.shape[1] + self._no_of_constraints))
+        indptr = np.concatenate((M.indptr, np.ones(self._no_of_constraints, dtype=M.indptr.dtype) * M.indptr[-1]))
+        return csr_matrix((M.data * 0.0, M.indices, indptr), shape=(M.shape[0] + self._no_of_constraints,
+                                                                    M.shape[1] + self._no_of_constraints))
 
     def _preallocate_D(self, D):
         """
@@ -138,9 +151,9 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
         """
         return self._preallocate_M(D)
 
-    def _preallocate_F(self):
+    def _preallocate_f(self):
         """
-        internal function for preallocation of F vector
+        internal function for preallocation of f_int and f_ext vector
 
         Returns
         -------
@@ -308,7 +321,8 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
                 M = M.tocsr()
             else:
                 M = csr_matrix(M)
-        self._M_full.indptr = np.concatenate((M.indptr, np.ones(self._no_of_constraints, dtype=M.indptr.dtype)*M.indptr[-1]))
+        self._M_full.indptr = np.concatenate((M.indptr, np.ones(self._no_of_constraints,
+                                                                dtype=M.indptr.dtype) * M.indptr[-1]))
         self._M_full.indices = M.indices
         self._M_full.data = M.data
         return self._M_full
@@ -341,22 +355,28 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
             \end{bmatrix}
 
         """
-        if self._jac_h_u is not None:
-            D = -self._jac_h_du(self.u(x, t), self.du(x, dx, t), t)
+        u = self.u(x, t)
+        du = self.du(x, dx, t)
+        if self._jac_h_du is not None:
+            if self._jac_p_du is not None:
+                D = self._jac_h_du(u, du, t) - self._jac_p_du(u, du, t)
+            else:
+                D = self._jac_h_du(u, du, t)
         else:
             raise NotImplementedError('Numerical differentiation of h is not implemented yet')
         if self._D_full is None:
             self._D_full = self._preallocate_D(D)
         if not isinstance(D, csr_matrix):
             D = D.tocsr()
-        self._D_full.indptr = np.concatenate((D.indptr, np.ones(self._no_of_constraints, dtype=D.indptr.dtype)*D.indptr[-1]))
+        self._D_full.indptr = np.concatenate((D.indptr, np.ones(self._no_of_constraints,
+                                                                dtype=D.indptr.dtype) * D.indptr[-1]))
         self._D_full.indices = D.indices
         self._D_full.data = D.data
         return self._D_full
 
-    def F(self, x, dx, t):
+    def f_int(self, x, dx, t):
         r"""
-        Returns the constrained F vector
+        Returns the constrained f_int vector
 
         Parameters
         ----------
@@ -369,33 +389,70 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
 
         Returns
         -------
-        F: numpy.array
-            Constrained F vector
+        f_int: numpy.array
+            Constrained f_int vector
 
         Notes
         -----
         In this formulation this returns
 
         .. math::
-            \begin{bmatrix} h(u, \dot{u}, t) - s \cdot B^T \lambda   \\
-            - s g(u, t)
+            \begin{bmatrix} h(u, \dot{u}, t) + s \cdot B^T \lambda   \\
+            s g(u, t)
             \end{bmatrix}
 
         """
-        if self._F_full is None:
-            self._F_full = self._preallocate_F()
+        if self._f_int_full is None:
+            self._f_int_full = self._preallocate_f()
         u = self.u(x, t)
         du = self.du(x, dx, t)
         B = self._B_func(u, t)
         g = self._g_func(u, t)
-        self._F_full *= 0.0
-        self._F_full[:self._no_of_dofs_unconstrained] = self._h_func(u, du, t) - \
-                                                        self._scaling*B.T.dot(x[self._no_of_dofs_unconstrained:])
+        self._f_int_full *= 0.0
+        self._f_int_full[:self._no_of_dofs_unconstrained] = self._h_func(u, du, t) + \
+                                                            self._scaling * B.T.dot(x[self._no_of_dofs_unconstrained:])
         if self._penalty is not None:
-            self._F_full[:self.no_of_dofs_unconstrained] -= self._penalty*self._scaling*B.T.dot(g)
-        self._F_full[self._no_of_dofs_unconstrained:] = -self._scaling*g
+            self._f_int_full[:self.no_of_dofs_unconstrained] += self._penalty * self._scaling * B.T.dot(g)
+        self._f_int_full[self._no_of_dofs_unconstrained:] = self._scaling * g
 
-        return self._F_full
+        return self._f_int_full
+
+    def f_ext(self, x, dx, t):
+        r"""
+        Returns the constrained f_ext vector
+
+        Parameters
+        ----------
+        x: numpy.array
+            Global state vector of the system
+        dx: numpy.array
+            First time derivative of global state vector of the constrained system
+        t: float
+            time
+
+        Returns
+        -------
+        f_ext: numpy.array
+            Constrained f_ext vector
+
+        Notes
+        -----
+        In this formulation this returns
+
+        .. math::
+            \begin{bmatrix} p(u, \dot{u}, t)   \\
+            0
+            \end{bmatrix}
+
+        """
+        if self._f_ext_full is None:
+            self._f_ext_full = self._preallocate_f()
+        u = self.u(x, t)
+        du = self.du(x, dx, t)
+        self._f_ext_full *= 0.0
+        if self._p_func is not None:
+            self._f_ext_full[:self._no_of_dofs_unconstrained] = self._p_func(u, du, t)
+        return self._f_ext_full
 
     def K(self, x, dx, t):
         r"""
@@ -428,11 +485,11 @@ class SparseLagrangeMultiplierConstraintFormulation(ConstraintFormulationBase):
         This is done because dB/dq could be expensive to evaluate.
         """
         B = self._B_func(self.u(x, t), t)
-        K = -self._jac_h_u(self.u(x, t), self.du(x, dx, t), t)
+        K = self._jac_h_u(self.u(x, t), self.du(x, dx, t), t)
         if self._penalty is not None:
-            K += self._penalty*self._scaling*B.T.dot(B)
+            K += self._penalty * self._scaling * B.T.dot(B)
 
-        return spvstack((sphstack((K, self._scaling*B.T), format='csr'),
-                        sphstack((self._scaling*B, csr_matrix((self._no_of_constraints,
-                                                               self._no_of_constraints))), format='csr')),
+        return spvstack((sphstack((K, self._scaling * B.T), format='csr'),
+                         sphstack((self._scaling * B, csr_matrix((self._no_of_constraints,
+                                                                  self._no_of_constraints))), format='csr')),
                         format='csr')
