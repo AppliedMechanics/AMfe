@@ -9,7 +9,7 @@ Structural Dynamics tools
 """
 
 import numpy as np
-from .reduced_basis import vibration_modes
+from .mor.reduction_basis import vibration_modes
 from .linalg.linearsolvers import solve_sparse
 from .linalg.orth import m_orthogonalize
 
