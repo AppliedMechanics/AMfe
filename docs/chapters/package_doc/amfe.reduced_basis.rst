@@ -1,7 +1,7 @@
-amfe.reduced_basis module
-=========================
+amfe.mor.reduction_basis module
+===============================
 
-.. automodule:: amfe.reduced_basis
+.. automodule:: amfe.mor.reduction_basis
     :members:
     :undoc-members:
     :show-inheritance:
