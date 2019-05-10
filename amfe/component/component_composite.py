@@ -17,79 +17,110 @@ class ComponentComposite(ComponentBase):
     
     TYPE = 'ComponentComposite'
     
-    def __init__(self, leafpaths, arg_components=None):
+    def __init__(self, arg_components=None, componenet_ids=None):
         super().__init__()
         
-        self.components = []
-        
-        # Stores the addresses of leaves in the composite-tree-structure
-        self.leaf_paths = leafpaths
+        self.components = dict()
 
         if arg_components:
             if not isinstance(arg_components, Iterable):
                 arg_components = [arg_components]
-            for component in arg_components:
-                self.add_component(component)
-                
-        self.component_connector = ComponentConnector()
+            if componenet_ids is None:
+                for comp_idx, component in enumerate(arg_components):
+                    self.add_component(comp_idx, component)
+            else:
+                for comp_id, component in zip(componenet_ids, arg_components):
+                    self.add_component(comp_id, component)
+
+        self.connector = ComponentConnector()
 
     @property
     def no_of_components(self):
         return len(self.components)
 
-    def add_component(self, new_component):
+    def get_full_component_idpaths(self):
+        """
+        Searches the components-dictionary of this component and all lower composites for the components' keys.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        component_idpaths : list
+        """
+        component_idpaths = []
+        for comp_id, component in self.components.items():
+            if isinstance(component, ComponentComposite):
+                lower_component_idpaths = component.get_full_component_idpaths()
+                for lower_comp_idpath in lower_component_idpaths:
+                    component_idpaths.append([comp_id]+lower_comp_idpath)
+            else:
+                component_idpaths.append([comp_id])
+
+        return component_idpaths
+
+    def add_component(self, new_component_id, new_component):
         """
         Adds component to composite as child
 
         Parameters
         ----------
+        new_component_id : int
+            key of the new component in the components-dictionary
+
         new_component : ComponentBase
-            iterable containing component objects that shall be added as children to composite
+            component object that shall be added as child to composite
 
         Returns
         -------
-        iloc : int
-            local index where the component is added in components property
+        new_component_id : int
+            key of the new component in the components-dictionary.
         """
-        self.components.append(new_component)
-        return self.no_of_components-1
-        
+        if isinstance(new_component, ComponentBase):
+            if new_component_id in self.components:
+                raise ValueError('Component-ID is already in use. Choose another one.')
+            else:
+                self.components[new_component_id] = new_component
+        else:
+            raise TypeError('Wrong type of component. Only instanciated subclasses of ComponentBase are allowed.')
+
+    def replace_component(self, comp_id, new_component):
+        """
+        Replaces an existing component with a new component.
+
+        Parameters
+        ----------
+        comp_id : int
+            local id of the component, which shall be replaced. Id must be a key in the components-dictionary.
+
+        new_component : ComponentBase
+            component object that replaces the old component
+
+        Returns
+        -------
+        None
+        """
+        self.components[comp_id] = new_component
+
     def delete_component(self, target_component_id):
         """
-        Deletes a local child component by indexlocation. Take care of connections to this component and update connections after deletions!
+        Deletes a local child component by id. Take care of connections to this component and update
+        connections after deletions!
 
         Parameters
         ----------
         target_component_id : int
-            local index location of child component to delete
+            local index of child component to delete from property 'components'
 
         Returns
         -------
         None
         """
-        del(self.components[target_component_id])
-        
-    def update_tree(self, leaf_paths):
-        """
-        Updates leaf path reference in case of merging trees
+        del self.components[target_component_id]
 
-        (This step is necessary if child components contain composites that have an old leaf path reference)
-
-        Parameters
-        ----------
-        leaf_paths : LeafPaths
-            LeafPaths object the composite shall be updated with
-
-        Returns
-        -------
-        None
-        """
-        self.leaf_paths = leaf_paths
-
-        for component in self.components:
-            if isinstance(component, ComponentComposite):
-                component.update_tree(leaf_paths)
-
+    # To Test!
     def update_component_connections(self):
         """
         Updates all connection-matrices in the composite's ComponentConnector-module.
@@ -102,9 +133,7 @@ class ComponentComposite(ComponentBase):
         -------
         None
         """
-        for slave_id, slave_comp in enumerate(self.components):
-            for master_id, master_comp in enumerate(self.components): 
+        for slave_id, slave_comp in self.components.items():
+            for master_id, master_comp in self.components.items():
                 if master_id is not slave_id:
-                    self.component_connector.apply_compatibility_constraint(master_id, master_comp, slave_id, slave_comp)
-
-
+                    self.connector.apply_compatibility_constraint(master_id, master_comp, slave_id, slave_comp)
