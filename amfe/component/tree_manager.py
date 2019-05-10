@@ -6,27 +6,93 @@
 #
 from collections.abc import Iterable
 from amfe.component.component_composite import ComponentComposite
+from amfe.component.partitioner import PartitionedMeshComponentSeparator, PartitionerBase
 
 
 class TreeBuilder:
-    
-    def __init__(self):
+    """
+    Management-class for the tree structure, which results from the system's organisation in composites and their
+    components. The TreeBuilder provides methods for adding and removing components or entire composites and a
+    methodology to find certain components in the tree by the leaf-paths-tool.
+    """
+    def __init__(self, separator=PartitionedMeshComponentSeparator(), partitioner=PartitionerBase()):
         self.leaf_paths = LeafPaths()
         self.root_composite = ComponentComposite()
-        
-    def add(self, new_component_ids, new_components, target_path=None):
+        self.separator = separator
+        self.partitioner = partitioner
+
+    def separate_partitioned_component_by_leafid(self, leaf_id):
         """
+        This method separates a component, which has an already partitioned mesh, into new components with new submeshes.
+        The new components are added to the same composite-object as the partitioned component.
 
         Parameters
         ----------
-        new_components : Component or Iterable containing Component objects
+        leaf_id : int
+            global id of the component
+
+        Returns
+        -------
+        None
+        """
+        print(self.leaf_paths.leaves)
+        new_component_ids, new_components, dofs_map_loc2glo = self._separate_component(leaf_id)
+        composite_path = self.leaf_paths.get_composite_path(leaf_id)
+
+        self.delete_leafs(leaf_id)
+
+        self.add(new_component_ids, new_components, composite_path)
+
+        composite = self.get_component_by_path(composite_path)
+        composite.connector.dofs_mapping_local2global = dofs_map_loc2glo
+        composite.update_component_connections()
+
+    # FINNISH IMPLEMENTATION AND TEST!
+    def separate_partitioned_component_by_leafid_at_new_level(self, leaf_id):
+
+        """
+        This method separates a component, which has an already partitioned mesh, into new components with new submeshes.
+        A new composite-object is added at the same position as the partitioned component and the new components are added to that composite.
+
+        Parameters
+        ----------
+        leaf_id : int
+            global id of the component
+
+        Returns
+        -------
+        None
+        """
+        new_component_ids, new_components, dofs_map_loc2glo = self._separate_component(leaf_id)
+        composite_path = self.leaf_paths.get_composite_path(leaf_id)
+
+        self.delete_leafs(leaf_id)
+
+        self.add(new_component_ids, new_components, composite_path)
+
+        composite = self.get_component_by_path(composite_path)
+        composite.connector.dofs_mapping_local2global = dofs_map_loc2glo
+        composite.update_component_connections()
+
+    def add(self, new_component_ids, new_components, target_path=None):
+        """
+        Adds a list of new components or tree of composites with components at a certain position in the tree.
+        If no path for the positioning is given, it is just attached to the topmost composite.
+
+
+        Parameters
+        ----------
+        new_component_ids : list, ndarray of int
+            ids of the new components. Be careful with choosing unoccupied ids for the composite
+
+        new_components : list of ComponentBase
+            Component objects, that shall be added to the tree
 
         target_path : list describing the path from root
 
         Returns
         -------
         None
-
         """
         # if no target path is given, set placement next to root element
         if not target_path:
@@ -78,7 +144,7 @@ class TreeBuilder:
             target_component.delete_component(self.leaf_paths.get_local_component_id(leaf_id))
             # Delete reference in leaf_paths
             self.leaf_paths.delete_leaf_by_id(leaf_id)
-        
+
     def delete_component(self, target_path, component_id):
         """
         Delete a component by given composite path and local component id
@@ -101,7 +167,24 @@ class TreeBuilder:
         target_composite.delete_component(component_id)
         # Delete reference in leaf_paths
         self.leaf_paths.delete_leafs_by_path(target_path + [component_id])
-        
+
+    # TO TEST!
+    def get_component_by_leafid(self, leaf_id):
+        """
+        Get component defined by global leaf-id
+
+        Parameters
+        ----------
+        leaf_id : int
+            global id of the desired component
+
+        Returns
+        -------
+        target_component : ComponentBase
+            desired component-object
+        """
+        return self.get_component_by_path(self.leaf_paths.leaves[leaf_id])
+
     def get_component_by_path(self, path):
         """
         Get component defined by path
@@ -113,32 +196,42 @@ class TreeBuilder:
 
         Returns
         -------
-
+        target_component : ComponentBase
+            desired component-object
         """
-        target_composite = self.root_composite
+        target_component = self.root_composite
 
         if len(path) > 0:
             for comp_id in path:
-                target_composite = target_composite.components[comp_id]
-                
-        return target_composite
+                try:
+                    target_component = target_component.components[comp_id]
+                except ValueError:
+                    print('No component of local id ', comp_id, ' found! Check your path.')
+
+        return target_component
+
+    # TO TEST!
+    def _separate_component(self, leaf_id):
+        target_component = self.get_component_by_leafid(leaf_id)
+        return self.separator.separate_partitioned_component(target_component)
 
 
 class LeafPaths:
+
     def __init__(self):
         self.leaves = dict()
-        
+
     @property
-    def no_of_leaves(self):    
+    def no_of_leaves(self):
         return len(self.leaves)
-    
+
     @property
     def max_leaf_id(self):
         if self.no_of_leaves == 0:
             return self.no_of_leaves-1
         else:
             return max(self.leaves)
-    
+
     def add_leaf(self, target_path, component_id):
         """
         Adds a leaf and its path to LeafPaths
@@ -156,11 +249,11 @@ class LeafPaths:
         """
         path = target_path + component_id
         self.leaves[self.max_leaf_id+1] = path
-            
+
     def delete_leaf_by_id(self, leaf_id):
         del(self.leaves[leaf_id])
         print('Leaf ', leaf_id, ' deleted.')
-        
+
     def delete_leafs_by_path(self, path):
         for leaf_id in self.get_leafids_from_path(path):     
             self.delete_leaf_by_id(leaf_id)
@@ -174,18 +267,18 @@ class LeafPaths:
                 return path[:-1]
             else:
                 return path[:length]
-    
+
     def get_leafids_from_path(self, path):
         searched_leafs = []
         for leaf_id in self.leaves:
             if path == self.get_composite_path(leaf_id, len(path)):
                 searched_leafs.append(leaf_id)
-            
+
         if len(searched_leafs)==0:
             print('Warning: No matching leaf found for component!')
         else:
             return searched_leafs
-        
+
     def get_local_component_id(self, leaf_id, composite_layer = None):
         path = self.leaves[leaf_id]
         if composite_layer is None:

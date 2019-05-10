@@ -604,20 +604,20 @@ class TestPartitionedMesh(TestCase):
         
         assert_frame_equal(nodes, nodes_desired)
         assert_frame_equal(elements, elements_desired)
-  
+
     def test_update_connectivity_with_new_node(self):
         connectivity_desired = np.array([np.array([5, 6, 3], dtype=np.int), np.array([3, 2, 5], dtype=np.int),
                         np.array([1, 2, 3, 4], dtype=np.int), np.array([5, 13, 8], dtype=np.int), np.array([6, 7, 5], dtype=np.int),
                         np.array([3, 4, 9, 10], dtype=np.int), np.array([6, 13, 11, 12], dtype=np.int), np.array([3, 6, 10, 11], dtype=np.int),
                         # boundary elements
                         np.array([4, 1], dtype=np.int), np.array([4, 9], dtype=np.int), np.array([7, 8], dtype=np.int), np.array([7, 12], dtype=np.int)])
-        
+
         self.testmesh.update_connectivity_with_new_node(7, 13, [4, 7])
         connectivity_actual = self.testmesh.get_connectivity_by_elementids([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
 
         for i in range(connectivity_desired.shape[0]):
             assert_array_equal(connectivity_actual[i], connectivity_desired[i])
-            
+
     def test_get_elementids_by_tags(self):
         desired = np.array([1, 2, 4, 5, 7, 8], dtype=int)
         actual = self.testmesh.get_elementids_by_tags('no_of_mesh_partitions', 2, True)
@@ -629,7 +629,7 @@ class TestPartitionedMesh(TestCase):
         neighbors_actual = self.testmesh.get_value_by_elementid_and_tag(2, 'partitions_neighbors')
 
         assert_array_equal(neighbors_actual, neighbors_desired)
-        
+
 
 
 if __name__ == '__main__':

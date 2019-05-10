@@ -245,44 +245,44 @@ class TestMeshComponent(TestCase):
         eleids2 = np.array([3], dtype=int)
         component.assign_material(self.mat1, eleids1, 'S', '_eleids')
         component.assign_material(self.mat2, eleids2, 'S', '_eleids')
-        
+
         eleids_actual = component.get_elementids_by_physics('S')
         eleids_desired = np.array([1, 2, 3], dtype=int)
-        
+
         assert_array_equal(eleids_actual, eleids_desired)
-        
+
     def test_get_elementids_by_materials(self):
         component = StructuralComponent(self.testmesh)
         eleids1 = np.array([1, 2], dtype=int)
         eleids2 = np.array([3], dtype=int)
         component.assign_material(self.mat1, eleids1, 'S', '_eleids')
         component.assign_material(self.mat2, eleids2, 'S', '_eleids')
-        
+
         eleids_actual = component.get_elementids_by_materials(self.mat1)
         eleids_desired = np.array([1, 2], dtype=int)
-        
+
         assert_array_equal(eleids_actual, eleids_desired)
-        
+
     def test_get_physics(self):
         component = StructuralComponent(self.testmesh)
         eleids1 = np.array([1, 2], dtype=int)
         eleids2 = np.array([3], dtype=int)
         component.assign_material(self.mat1, eleids1, 'S', '_eleids')
         component.assign_material(self.mat2, eleids2, 'S', '_eleids')
-        
+
         physics_desired = 'S'
         physics_actual = component.get_physics()
-        
+
         assert_array_equal(physics_desired, physics_actual)
-        
+
     def test_get_materials(self):
         component = StructuralComponent(self.testmesh)
         eleids1 = np.array([1, 2], dtype=int)
         eleids2 = np.array([3], dtype=int)
         component.assign_material(self.mat1, eleids1, 'S', '_eleids')
         component.assign_material(self.mat2, eleids2, 'S', '_eleids')
-        
+
         materials_desired = [self.mat1, self.mat2]
         materials_actual = component.get_materials()
-        
+
         assert_array_equal(materials_desired, materials_actual)

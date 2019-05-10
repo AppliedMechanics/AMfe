@@ -9,13 +9,15 @@ from collections.abc import Iterable
 from .component_base import *
 from .component_connector import *
 
+__all__ = ['ComponentComposite',
+           'MeshComponentComposite'
+           ]
+
 
 class ComponentComposite(ComponentBase):
     """
     Class which handles child-components and child-ComponentComposites and acts as an interface to foreign clients
     """
-    
-    TYPE = 'ComponentComposite'
     
     def __init__(self, arg_components=None, componenet_ids=None):
         super().__init__()
@@ -86,6 +88,7 @@ class ComponentComposite(ComponentBase):
         else:
             raise TypeError('Wrong type of component. Only instanciated subclasses of ComponentBase are allowed.')
 
+
     def replace_component(self, comp_id, new_component):
         """
         Replaces an existing component with a new component.
@@ -123,12 +126,12 @@ class ComponentComposite(ComponentBase):
     # To Test!
     def update_component_connections(self):
         """
-        Updates all connection-matrices in the composite's ComponentConnector-module.
+        Updates all connections in the composite's ComponentConnector-module.
         
         Parameters
         ----------
         None
-        
+
         Returns
         -------
         None
@@ -137,3 +140,65 @@ class ComponentComposite(ComponentBase):
             for master_id, master_comp in self.components.items():
                 if master_id is not slave_id:
                     self.connector.apply_compatibility_constraint(master_id, master_comp, slave_id, slave_comp)
+
+
+class MeshComponentComposite(ComponentComposite):
+    """
+    Class which handles child-MeshComponents and child-MeshComponentComposites and acts as an interface to foreign
+    clients
+    """
+    def __init__(self, arg_components=None, componenet_ids=None):
+        super().__init__(arg_components, componenet_ids)
+
+    def assign_neumann(self, name, condition, tag_values, tag='_groups'):
+        """
+        Assignment-method for Neumann-boundary-conditions on the composite's child-components. It loops over all child-
+        components and tries to assign the condition-object to each component based on the given assignment-option.
+
+        Parameters
+        ----------
+        name : string
+            name of the condition, defined by user
+        condition : NeumannBase
+            neumann-condition object
+        tag_values : list of strings, list, ndarray
+            either group-tags or element-ids, the condition shall be assigned to
+        tag : string
+            defines the assignment-option. Use either '_groups' or '_eleids'. Default is '_groups'
+
+        Returns
+        -------
+        None
+        """
+        for comp_id, component in self.components.items():
+            component.assign_neumann(name, condition, tag_values, tag)
+
+    def assign_constraint(self, name, constraint, dofidxs, Xidxs=()):
+        """
+        Assignment-method for constraints on the composite's child-components. It loops over all child-components and
+        tries to assign the constraint-object to each component based on the given dof-indices and/or reference-
+        coordinates.
+
+        Parameters
+        ----------
+        name : string
+            name of the constraint, defined by user
+        constraint : ConstraintBase
+            constraint-object
+        dofidxs : ndarray, tuple, list
+            dofs, the constraint shall be applied to
+        Xidxs : ndarray, tuple, list
+            reference coordinates, the constraint shall use, if needed by a special constraint-type. Default is empty.
+
+        Returns
+        -------
+        None
+        """
+        for component_id, component in self.components.items():
+            loc_dofidxs = self.connector.map_global_dofs2local(component_id, dofidxs)
+            loc_Xidxs = self.connector.map_global_dofs2local(component_id, Xidxs)
+            component.assign_constraint(name, constraint, loc_dofidxs, loc_Xidxs)
+
+
+
+

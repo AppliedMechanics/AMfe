@@ -19,6 +19,9 @@ __all__ = ['MeshComponent']
 
 
 class MeshComponent(ComponentBase):
+    """
+    Base-class for components, which have a mesh.
+    """
     # The following class attributes must be overwritten by subclasses
     ELEMENTPROTOTYPES = dict(((element[0], None) for element in ELEPROTOTYPEHELPERLIST))
     SHELLELEMENTPROTOTYPES = dict(((element[0], None) for element in SHELLELEPROTOTYPEHELPERLIST))
@@ -118,6 +121,25 @@ class MeshComponent(ComponentBase):
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
     def assign_neumann(self, name, condition, tag_values, tag='_groups'):
+        """
+        Assignment-method for Neumann-boundary-conditions on the component. It tries to assign the condition-object
+        based on the given assignment-option.
+
+        Parameters
+        ----------
+        name : string
+            name of the condition, defined by user
+        condition : NeumannBase
+            neumann-condition object
+        tag_values : list of strings, list, ndarray
+            either group-tags or element-ids, the condition shall be assigned to
+        tag : string
+            defines the assignment-option. Use either '_groups' or '_eleids'. Default is '_groups'
+
+        Returns
+        -------
+        None
+        """
         print('Assigning Neumann Condition')
         if tag == '_groups':
             eleids = self._mesh.get_elementids_by_groups(tag_values)
@@ -125,17 +147,44 @@ class MeshComponent(ComponentBase):
             eleids = tag_values
         else:
             eleids = self._mesh.get_elementids_by_tags(tag, tag_values)
-            
-        # get ele_shapes of the elements belonging to the passed eleidxes
-        ele_shapes = self._mesh.get_ele_shapes_by_elementids(eleids)
-            
-        self._neumann.assign_neumann_by_eleids(condition, eleids, ele_shapes, tag_values, tag, name)
-        self._update_mapping()
+
+        n_eleids = len(eleids)
+
+        if n_eleids != 0:
+            # get ele_shapes of the elements belonging to the passed eleidxes
+            ele_shapes = self._mesh.get_ele_shapes_by_elementids(eleids)
+
+            self._neumann.assign_neumann_by_eleids(condition, eleids, ele_shapes, tag_values, tag, name)
+            self._update_mapping()
+        else:
+            print('No Neumann-condition applied!')
 
     # -- ASSIGN CONSTRAINTS METHODS ------------------------------------------------------------------------
-    def assign_constraint(self, name, constraint, dofidxs, nodeidxs):
-        self._constraints.add_constraint(name, constraint, dofidxs, nodeidxs)
-        
+    def assign_constraint(self, name, constraint, dofidxs, Xidxs=np.array([])):
+        """
+        Assignment-method for constraints on the composite's child-components. It tries to assign the constraint-object
+        based on the given dof-indices and/or reference-coordinates.
+
+        Parameters
+        ----------
+        name : string
+            name of the constraint, defined by user
+        constraint : ConstraintBase
+            constraint-object
+        dofidxs : ndarray
+            dofs, the constraint shall be applied to
+        Xidxs : ndarray
+            reference coordinates, the constraint shall use, if needed by a special constraint-type. Default is empty.
+
+        Returns
+        -------
+        None
+        """
+        if dofidxs.size == 0 and Xidxs.size == 0:
+            print('No constraint applied!')
+        else:
+            self._constraints.add_constraint(name, constraint, dofidxs, Xidxs)
+
     # -- MAPPING METHODS -----------------------------------------------------------------------------------
     def _update_mapping(self):
         # collect parameters for call of update_mapping
