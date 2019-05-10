@@ -13,7 +13,7 @@ from copy import deepcopy
 from time import time
 from amfe.linalg.linearsolvers import *
 from amfe.solver.nonlinear_solver import *
-from amfe.solver.translators import MechanicalSystemBase
+from amfe.solver.translators import MechanicalSystem
 from amfe.solver.initializer import *
 from amfe.component import StructuralComponent
 from amfe.solver.integrator import *
@@ -156,7 +156,7 @@ class SolverFactory:
 
     # --------------------------------------- SETTER METHODS ---------------------------------------------------------
     def set_system(self, translator):
-        if isinstance(translator, (StructuralComponent, MechanicalSystemBase)):
+        if isinstance(translator, (StructuralComponent, MechanicalSystem)):
             self._system = translator
         else:
             raise NotImplementedError('The Solver Factory currently cannot handle this type of component')

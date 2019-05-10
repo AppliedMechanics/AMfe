@@ -16,7 +16,7 @@ from amfe.component.structural_component import StructuralComponent
 from amfe.material import KirchhoffMaterial
 from amfe.forces import *
 from amfe.neumann.structural_neumann import FixedDirectionNeumann
-from amfe.solver.translators import MechanicalSystem
+from amfe.solver.translators import create_constrained_mechanical_system_from_component
 from amfe.solver import SolverFactory, AmfeSolution
 
 from amfe.io.mesh.reader import GidJsonMeshReader, AmfeMeshObjMeshReader, GmshAsciiMeshReader
@@ -78,6 +78,15 @@ def import_mesh_from_file(filename):
 
 def create_structural_component(mesh):
     return StructuralComponent(mesh)
+
+
+def create_mechanical_system(structural_component, constant_mass=False,
+                             constant_damping=False, constraint_formulation='boolean',
+                             **formulation_options):
+    system, formulation = create_constrained_mechanical_system_from_component(structural_component, constant_mass,
+                                                                              constant_damping, constraint_formulation,
+                                                                              **formulation_options)
+    return system, formulation
 
 
 def create_material(material_type='Kirchhoff', **kwargs):
@@ -144,9 +153,9 @@ def set_neumann_by_elementids(component, elementids, direction_vector=np.array([
     component.assign_neumann(neumann_name, neumann, elementids, '_eleids')
 
 
-def solve_linear_static(model):
-    constraint_enforcement_type = 'boolean'
-    system = MechanicalSystem(model, formulation=constraint_enforcement_type, scaling=10.0, penalty=3.0)
+def solve_linear_static(component):
+    system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
+                                                   constraint_formulation='boolean')
 
     solfac = SolverFactory()
     solfac.set_system(system)
@@ -160,7 +169,7 @@ def solve_linear_static(model):
     solution_writer = AmfeSolution()
 
     def write_callback(t, x, dx, ddx):
-        u, du, ddu = system.unconstrain(x, dx, ddx, t)
+        u, du, ddu = formulation.recover(x, dx, ddx, t)
         solution_writer.write_timestep(t, u, du, ddu)
 
     no_of_dofs = system.dimension
@@ -174,8 +183,9 @@ def solve_linear_static(model):
 
 
 def solve_linear_dynamic(component):
-    constraint_enforcement_type = 'lagrange'
-    system = MechanicalSystem(component, formulation=constraint_enforcement_type, scaling=10.0, penalty=3.0)
+    system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
+                                                   constraint_formulation='lagrange',
+                                                   scaling=10.0, penalty=3.0)
 
     solfac = SolverFactory()
     solfac.set_system(system)
@@ -192,7 +202,7 @@ def solve_linear_dynamic(component):
     solution_writer = AmfeSolution()
 
     def write_callback(t, x, dx, ddx):
-        u, du, ddu = system.unconstrain(x, dx, ddx, t)
+        u, du, ddu = formulation.recover(x, dx, ddx, t)
         solution_writer.write_timestep(t, u, du, ddu)
 
     no_of_dofs = system.dimension
@@ -206,8 +216,8 @@ def solve_linear_dynamic(component):
 
 
 def solve_nonlinear_static(component):
-    constraint_enforcement_type = 'boolean'
-    system = MechanicalSystem(component, formulation=constraint_enforcement_type, scaling=10.0, penalty=3.0)
+    system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
+                                                   constraint_formulation='boolean')
 
     solfac = SolverFactory()
     solfac.set_system(system)
@@ -224,7 +234,7 @@ def solve_nonlinear_static(component):
     solution_writer = AmfeSolution()
 
     def write_callback(t, x, dx, ddx):
-        u, du, ddu = system.unconstrain(x, dx, ddx, t)
+        u, du, ddu = formulation.recover(x, dx, ddx, t)
         solution_writer.write_timestep(t, u, du, ddu)
 
     no_of_dofs = system.dimension
@@ -237,9 +247,9 @@ def solve_nonlinear_static(component):
     return solution_writer
 
 
-def solve_nonlinear_dynamic(model):
-    constraint_enforcement_type = 'boolean'
-    system = MechanicalSystem(model, formulation=constraint_enforcement_type, scaling=10.0, penalty=3.0)
+def solve_nonlinear_dynamic(component):
+    system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
+                                                   constraint_formulation='boolean')
 
     solfac = SolverFactory()
     solfac.set_system(system)
@@ -259,7 +269,7 @@ def solve_nonlinear_dynamic(model):
     solution_writer = AmfeSolution()
 
     def write_callback(t, x, dx, ddx):
-        u, du, ddu = system.unconstrain(x, dx, ddx, t)
+        u, du, ddu = formulation.unconstrain(x, dx, ddx, t)
         solution_writer.write_timestep(t, u, du, ddu)
 
     no_of_dofs = system.dimension
@@ -288,7 +298,7 @@ def write_results_to_paraview(solution, component, paraviewfilename):
     paraviewfilename = splitext(paraviewfilename)[0]
 
     preader = AmfeSolutionReader(solution, component, is_constrained=False)
-    meshreaderobj = AmfeMeshObjMeshReader(component._mesh)
+    meshreaderobj = AmfeMeshObjMeshReader(component.mesh)
 
     hdf5resultsfilename = paraviewfilename + '.hdf5'
     xdmfresultsfilename = paraviewfilename + '.xdmf'

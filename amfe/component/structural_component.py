@@ -33,19 +33,94 @@ class StructuralComponent(MeshComponent):
         self._f_glob_ext = None
 
     def g_holo(self, q, t):
-        return self._constraints.g(self._mesh.nodes, q, t)
-
-    def B(self, q, t):
-        return self._constraints.B(self._mesh.nodes, q, t)
-
-    def M(self, q, dq, t):
         """
-        Compute and return the mass matrix of the mechanical system.
+        Return the residual of the holonomic constraint function on displacement level
 
         Parameters
         ----------
-        u : ndarray, optional
-            Array of the displacement.
+        q : ndarray
+            Displacement field in voigt notation.
+        t : float
+            time
+
+        Returns
+        -------
+        res : ndarray
+            Residual of the holonomic constraint function
+
+        """
+        return self._constraints.g(self._mesh.nodes, q, t)
+
+    def B(self, q, t):
+        r"""
+        Constraint matrix B such that :math:`B(q, t) \dot{q} + b(q, t) = 0`
+
+
+        Parameters
+        ----------
+        q : ndarray
+            Displacement field in voigt notation
+        t : float
+            time
+
+        Returns
+        -------
+        B : csr_matrix
+            Constraint matrix B
+        """
+        return self._constraints.B(self._mesh.nodes, q, t)
+
+    def b(self, q, t):
+        r"""
+        Rheonomic part of :math:`b` the constraint equation :math:`B(q, t) \dot{q} + b(q, t) = 0`
+
+
+        Parameters
+        ----------
+        q : ndarray
+            Displacement field in voigt notation
+        t : float
+            time
+
+        Returns
+        -------
+        b : ndarray
+            Rheonomic part b on velocity level
+        """
+        return self._constraints.b(self._mesh.nodes, q, t)
+
+    def a(self, q, dq, t):
+        r"""
+        Inhomogeneous part :math:`a` of the constraint equation on acceleration level
+        such that :math:`B(q, t) \ddot{q} + a(q, \dot{q}, t) = 0`
+
+
+        Parameters
+        ----------
+        q : ndarray
+            Displacement field in voigt notation.
+        dq : ndarray
+            Velocity field in voigt notation.
+        t : float
+            time
+
+        Returns
+        -------
+        a : ndarray
+            Part a of the constraint equation above
+        """
+        return self._constraints.a(self._mesh.nodes, q, dq, t)
+
+    def M(self, q, dq, t):
+        """
+        Compute and return the unconstrained mass matrix of the structural component.
+
+        Parameters
+        ----------
+        q : ndarray
+            Displacement field in voigt notation.
+        dq : ndarray
+            Velocity field in voigt notation.
         t : float
             Time.
 
@@ -67,16 +142,18 @@ class StructuralComponent(MeshComponent):
 
     def D(self, q, dq, t):
         """
-        Compute and return the damping matrix of the mechanical system. At the moment either no damping
+        Compute and return the unconstrained damping matrix of the mechanical system. At the moment either no damping
         (rayleigh_damping = False) or simple Rayleigh damping applied to the system linearized around zero
         displacement (rayleigh_damping = True) are possible. They are set via the functions apply_no_damping() and
         apply_rayleigh_damping(alpha, beta).
 
         Parameters
         ----------
-        u : ndarray, optional
+        q : ndarray
             Displacement field in voigt notation.
-        t : float, optional
+        dq : ndarray
+            Velocity field in voigt notation.
+        t : float
             Time.
 
         Returns
@@ -94,14 +171,15 @@ class StructuralComponent(MeshComponent):
 
     def f_int(self, q, dq, t):
         """
-        Compute and return the nonlinear internal force vector of the structural component.
+        Compute and return the nonlinear unconstrained internal force vector of the structural component.
 
         Parameters
         ----------
-        u : ndarray, optional
-            Displacement field in voigt notation. len(u) is equal to the number of dofs after constraints have been
-            applied
-        t : float, optional
+        q : ndarray
+            Displacement field in voigt notation.
+        dq : ndarray
+            Velocity field in voigt notation.
+        t : float
             Time.
 
         Returns
@@ -116,18 +194,19 @@ class StructuralComponent(MeshComponent):
                                                            self._ele_obj_df['fk_mapping'].values),
                                                            q, t,
                                                            self._C_csr, self._f_glob_int)[1]
-        return self._f_glob_int
+        return self._f_glob_int + self.D(q, dq, t).dot(dq)
 
     def K(self, q, dq, t):
         """
-        Compute and return the stiffness matrix of the structural component
+        Compute and return the unconstrained stiffness matrix of the structural component
 
         Parameters
         ----------
-        u : ndarray, optional
-            Displacement field in voigt notation. len(u) is equal to the number of dofs after constraints have been
-            applied
-        t : float, optional
+        q : ndarray
+            Displacement field in voigt notation.
+        dq : ndarray
+            Velocity field in voigt notation
+        t : float
             Time.
 
         Returns
@@ -145,13 +224,15 @@ class StructuralComponent(MeshComponent):
 
     def K_and_f_int(self, q, dq, t):
         """
-        Compute and return the tangential stiffness matrix and internal force vector of the structural component.
+        Compute and return the unconstrained tangential stiffness matrix and internal force vector of the structural
+        component.
 
         Parameters
         ----------
-        u : ndarray, optional
-            Displacement field in voigt notation. len(u) is equal to the number of dofs after constraints have been
-            applied
+        q : ndarray
+            Displacement field in voigt notation.
+        dq : ndarray
+            Velocity field in voigt notation.
         t : float, optional
             Time.
 
@@ -169,18 +250,19 @@ class StructuralComponent(MeshComponent):
                                                                         self._ele_obj_df['fk_mapping'].values),
                                                                         q, t,
                                                                         self._C_csr, self._f_glob_int)
-        return self._C_csr, self._f_glob_int
+        return self._C_csr, self._f_glob_int + self.D(q, dq, t).dot(dq)
 
     def f_ext(self, q, dq, t):
         """
-        Compute and return external force vector
+        Compute and return external unconstrained force vector
 
         Parameters
         ----------
         q : ndarray
-            displacement field in voigt noation. len(u)  is equal to the number of dofs after constraints have been
-            applied
-        t : float, optional
+            Displacement field in voigt notation.
+        dq : ndarray
+            Velocity field in voigt notation.
+        t : float
             time
 
         Returns

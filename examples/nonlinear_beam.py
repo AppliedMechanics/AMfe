@@ -14,12 +14,12 @@ from amfe.io.postprocessing import *
 from amfe.io.postprocessing.tools import write_xdmf_from_hdf5
 from amfe.io.postprocessing.reader import AmfeSolutionReader
 from amfe.io.postprocessing.writer import Hdf5PostProcessorWriter
-from amfe.solver.translators import MechanicalSystem
+from amfe.solver.translators import *
 
 
 times = dict([])
 input_file = amfe_dir('meshes/gmsh/bar.msh')
-output_file = amfe_dir('results/test_refactoring/nonlinear_beam_new_constraints')
+output_file = amfe_dir('results/test_refactoring/nonlinear_beam_new_translators')
 
 mesh_reader = GmshAsciiMeshReader(input_file)
 mesh_converter = AmfeMeshConverter()
@@ -73,9 +73,12 @@ for dof in supportdofs_y.reshape(-1):
 # END Variant B
 
 
-
 # ----------------------------------------- NONLINEAR DYNAMIC ANALYSIS ------------------------------------------------
-system = MechanicalSystem(my_component, formulation='lagrange', scaling=10.0, penalty=3.0)
+
+system, formulation = create_constrained_mechanical_system_from_component(my_component, constant_mass=True,
+                                                                          constant_damping=True,
+                                                                          constraint_formulation='lagrange',
+                                                                          scaling=10.0, penalty=3.0)
 
 solfac = SolverFactory()
 solfac.set_system(system)
@@ -97,7 +100,7 @@ writer = AmfeSolution()
 
 
 def write_callback(t, x, dx, ddx):
-    u, du, ddu = system.unconstrain(x, dx, ddx, t)
+    u, du, ddu = formulation.recover(x, dx, ddx, t)
     writer.write_timestep(t, u, du, ddu)
 
 

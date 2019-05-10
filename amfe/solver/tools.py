@@ -3,7 +3,8 @@
 import numpy as np
 
 __all__ = ['MemoizeJac',
-           'MemoizeStiffness'
+           'MemoizeStiffness',
+           'MemoizeConstant',
            ]
 
 
@@ -27,6 +28,17 @@ class MemoizeJac(object):
         else:
             self(x, *args)
         return self.jac
+
+
+class MemoizeConstant(object):
+    def __init__(self, fun):
+        self.fun = fun
+        self._cache = None
+
+    def __call__(self, *args, **kwargs):
+        if self._cache is None:
+            self._cache = self.fun(*args, **kwargs)
+        return self._cache
 
 
 class MemoizeStiffness(object):
