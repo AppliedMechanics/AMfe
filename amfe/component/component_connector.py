@@ -18,7 +18,18 @@ class ComponentConnector:
         self._L = np.array([])
         self.dofs_mapping_local2global = dict()
         self.mesh_tying = MeshTying()
-    
+
+    def map_global_dofs2local(self, component_id, glo_dofidx):
+        loc2glo_dofs_map = self.dofs_mapping_local2global[component_id]
+        glo2loc_dofs_map = {glodof: locdof for locdof, glodof in loc2glo_dofs_map.items()}
+        local_dofs = np.array([])
+
+        for glodof_input in glo_dofidx:
+            if glodof_input in glo2loc_dofs_map:
+                local_dofs = np.append(local_dofs, glo2loc_dofs_map[glodof_input])
+
+        return local_dofs
+
     def apply_compatibility_constraint(self, loc_master_id, master_component, loc_slave_id, slave_component):
         """
         Method to check compatibility of mesh-components and construct compatibility-constraints. It distinguishes

@@ -68,7 +68,7 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
         
         new_components_list = []
         new_ids_list = []
-        dof_mapping_loc2glo_list = []
+        dof_mapping_loc2glo_dict = dict()
         materials = component.get_materials()
         physics = component.get_physics()
         fields = component.fields
@@ -78,16 +78,36 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
             new_component = component.__class__(submesh)
             self._assign_materials_to_new_component(new_component, component, materials, physics)
             partitions_nodes = nodes_mapping[nodes_mapping['partition_id'] == partition_id]
-            dof_mapping_loc2glo = self._map_dofs_local2global(partitions_nodes, new_component._mapping,
-                                                              component._mapping, fields)
+            dof_mapping_loc2glo = self._map_dofs_local2global(partitions_nodes, new_component.mapping,
+                                                              component.mapping, fields)
 
             new_ids_list.append(partition_id)
             new_components_list.append(new_component)
-            dof_mapping_loc2glo_list.append(dof_mapping_loc2glo)
-        return new_ids_list, new_components_list, dof_mapping_loc2glo_list
+            dof_mapping_loc2glo_dict[partition_id] = dof_mapping_loc2glo
+        return new_ids_list, new_components_list, dof_mapping_loc2glo_dict
 
     @staticmethod
     def _map_dofs_local2global(nodes_mapping_df, local_component_mapping, global_component_mapping, fields):
+        """
+        Generates a mapping of the new local dofs to the old global dofs of the unseparated component from a nodes-
+        mapping and both nodes-to-dofs-mappings of the original component and the new local component.
+
+        Parameters
+        ----------
+        nodes_mapping_df : pandas.DataFrame
+            mapping of old global node-ids to the new local node-ids
+        local_component_mapping : MappingBase
+            nodes-to-dofs mapping of new local component
+        global_component_mapping : MappingBase
+            nodes-to-dofs mapping of old global component
+        fields : tuple of strings
+            all fields of the old global component
+
+        Returns
+        -------
+        dof_mapping_loc2glo : dict
+            mapping of local dofs to old global dofs
+        """
         dof_mapping_loc2glo = dict()
         for idx, node_map in nodes_mapping_df.iterrows():
             glo_nodeid = node_map.loc['global_nodeid']
@@ -155,7 +175,7 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
         nodes_mapping = nodes_mapping.astype(int)
 
         for partition_id in mesh.get_uniques_by_tag('partition_id'):
-            ele_ids = mesh.get_elementids_by_tags('partition_id', partition_id)
+            ele_ids = mesh.get_elementids_by_tags(['partition_id'], partition_id)
 
             nodeids_full = mesh.get_nodeids_by_elementids(ele_ids)
 

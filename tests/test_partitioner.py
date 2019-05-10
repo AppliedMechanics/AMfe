@@ -173,7 +173,7 @@ class TestPartitioner(TestCase):
         assert_allclose(submesh.nodes_df, nodes_df_desired)
         assert_series_equal(submesh._el_df['connectivity'], el_df_desired['connectivity'])
         assert_equal(submesh.groups, groups_desired)
-        
+
         submesh = self.partitioner._get_submesh_by_partition_id(4, separated_mesh)
         
         nodes_desired = np.array([[3.0, 2.0], [2.0, 1.0], [3.0, 1.0], [2.0, 2.0]], dtype=np.float)
@@ -233,7 +233,7 @@ class TestPartitioner(TestCase):
                     self.assertTrue(isinstance(element['ele_obj'].material, DummyMaterial2))
                 else:
                     self.assertTrue(isinstance(element['ele_obj'].material, DummyMaterial1))
-            
+
         assert_equal(len(new_components), self.no_of_partitions)
         assert_equal(len(dof_map_list), self.no_of_partitions)
 
