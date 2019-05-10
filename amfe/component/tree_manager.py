@@ -47,33 +47,6 @@ class TreeBuilder:
         composite.connector.dofs_mapping_local2global = dofs_map_loc2glo
         composite.update_component_connections()
 
-    # FINNISH IMPLEMENTATION AND TEST!
-    def separate_partitioned_component_by_leafid_at_new_level(self, leaf_id):
-
-        """
-        This method separates a component, which has an already partitioned mesh, into new components with new submeshes.
-        A new composite-object is added at the same position as the partitioned component and the new components are added to that composite.
-
-        Parameters
-        ----------
-        leaf_id : int
-            global id of the component
-
-        Returns
-        -------
-        None
-        """
-        new_component_ids, new_components, dofs_map_loc2glo = self._separate_component(leaf_id)
-        composite_path = self.leaf_paths.get_composite_path(leaf_id)
-
-        self.delete_leafs(leaf_id)
-
-        self.add(new_component_ids, new_components, composite_path)
-
-        composite = self.get_component_by_path(composite_path)
-        composite.connector.dofs_mapping_local2global = dofs_map_loc2glo
-        composite.update_component_connections()
-
     def add(self, new_component_ids, new_components, target_path=None):
         """
         Adds a list of new components or tree of composites with components at a certain position in the tree.
