@@ -688,7 +688,9 @@ class Mesh:
         
         if not isinstance(tag_names, Iterable) or isinstance(tag_names, str):
             tag_names = [tag_names]
+        if not isinstance(tag_values, Iterable) or isinstance(tag_values, str):
             tag_values = [tag_values]
+        if opt_larger is not None and (not isinstance(opt_larger, Iterable) or isinstance(opt_larger, str)):
             opt_larger = [opt_larger]
         
         selected_elements = self._el_df

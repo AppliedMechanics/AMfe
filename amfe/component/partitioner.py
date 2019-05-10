@@ -67,6 +67,7 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
         mesh, nodes_mapping = self._separate_common_nodes_of_partitions(component._mesh)
         
         new_components_list = []
+        new_ids_list = []
         dof_mapping_loc2glo_list = []
         materials = component.get_materials()
         physics = component.get_physics()
@@ -80,9 +81,10 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
             dof_mapping_loc2glo = self._map_dofs_local2global(partitions_nodes, new_component._mapping,
                                                               component._mapping, fields)
 
+            new_ids_list.append(partition_id)
             new_components_list.append(new_component)
             dof_mapping_loc2glo_list.append(dof_mapping_loc2glo)
-        return new_components_list, dof_mapping_loc2glo_list
+        return new_ids_list, new_components_list, dof_mapping_loc2glo_list
 
     @staticmethod
     def _map_dofs_local2global(nodes_mapping_df, local_component_mapping, global_component_mapping, fields):
@@ -115,7 +117,7 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
         """
         submesh = Mesh(mesh.dimension)
         
-        ele_ids = mesh.get_elementids_by_tags('partition_id', partition_id)
+        ele_ids = mesh.get_elementids_by_tags(['partition_id'], partition_id)
         nodes_df, el_df = mesh.get_submesh_by_elementids(ele_ids)
         ele_groups = mesh.get_groups_dict_by_elementids(el_df.index.tolist())
         node_groups = mesh.get_groups_dict_by_nodeids(nodes_df.index.tolist())
@@ -161,7 +163,8 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
                 if node in nodes_mapping['global_nodeid'].values:
                     new_node = mesh.copy_node_by_id(node)
                     nodes_mapping = nodes_mapping.append(
-                        {'partition_id': partition_id, 'global_nodeid': node, 'local_nodeid': new_node}, ignore_index=True)
+                        {'partition_id': partition_id, 'global_nodeid': node, 'local_nodeid': new_node},
+                        ignore_index=True)
                     groups_node = mesh.get_groups_by_nodeids(node)
                     mesh.add_node_to_groups(new_node, groups_node)
 
@@ -179,5 +182,5 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
             for phys in old_physics:
                 full_phys_ele = old_component.get_elementids_by_physics(phys)
                 common_full_ele = np.intersect1d(full_mat_ele, full_phys_ele)
-                assign_eleids = np.intersect1d(common_full_ele, new_component._mesh._el_df.index)
+                assign_eleids = np.intersect1d(common_full_ele, new_component.mesh.el_df.index)
                 new_component.assign_material(material, assign_eleids, phys, '_eleids')

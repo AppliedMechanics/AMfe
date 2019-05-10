@@ -8,6 +8,7 @@ from numpy.testing import assert_array_equal
 
 from amfe.component.tree_manager import *
 from amfe.component.structural_component import StructuralComponent
+from copy import deepcopy
 
 
 class StructuralComponentTest(TestCase):
@@ -162,7 +163,7 @@ class ComponentCompositeTest(TestCase):
         comp._assembly = self.assembly
 
         self.TestComponent.append(comp)
-        self.CompComposite = ComponentComposite(self.leaf_paths, self.TestComponent)
+        self.CompComposite = ComponentComposite(self.TestComponent)
 
     def tearDown(self):
         pass
@@ -172,35 +173,39 @@ class ComponentCompositeTest(TestCase):
         prev_N_components = self.CompComposite.no_of_components
 
         TestComponent2 = deepcopy(self.TestComponent)
-        self.CompComposite.add_component(TestComponent2[0])
+        self.CompComposite.add_component(1, TestComponent2[0])
 
         self.assertEqual(self.CompComposite.no_of_components, 2)
-        self.assertTrue(self.TestComponent[0] in self.CompComposite.components)
-        self.assertTrue(TestComponent2[0] in self.CompComposite.components)
+        self.assertTrue(self.TestComponent[0] in self.CompComposite.components.values())
+        self.assertTrue(TestComponent2[0] in self.CompComposite.components.values())
 
         #Test composite component
         prev_N_components = self.CompComposite.no_of_components
-        TestComposite = ComponentComposite(self.leaf_paths)
-        TestComposite.add_component(self.TestComponent + TestComponent2)
+        TestComposite = ComponentComposite()
+        TestComposite.add_component(0, self.TestComponent[0])
+        TestComposite.add_component(1, TestComponent2[0])
 
-        self.CompComposite.add_component(TestComposite)
+        self.CompComposite.add_component(2, TestComposite)
 
         self.assertEqual(self.CompComposite.no_of_components, prev_N_components+1)
-        self.assertTrue(TestComposite in self.CompComposite.components)
+        self.assertTrue(TestComposite in self.CompComposite.components.values())
+
+        self.assertRaises(TypeError, lambda : self.CompComposite.add_component(3, self.TestComponent))
+        self.assertRaises(ValueError, lambda : self.CompComposite.add_component(1, self.TestComponent[0]))
 
     def test_delete_component(self):
         TestComponent2 = deepcopy(self.TestComponent)
-        self.CompComposite.add_component(TestComponent2)
-        TestComposite = ComponentComposite(self.leaf_paths, self.TestComponent)
-        TestComposite.add_component(TestComponent2)
-        self.CompComposite.add_component(TestComposite)
+        self.CompComposite.add_component(1, TestComponent2[0])
+        TestComposite = ComponentComposite(self.TestComponent)
+        TestComposite.add_component(3, TestComponent2[0])
+        self.CompComposite.add_component(2, TestComposite)
 
         prev_N_components = self.CompComposite.no_of_components
 
         self.CompComposite.delete_component(1)
 
         self.assertEqual(self.CompComposite.no_of_components, prev_N_components-1)
-        self.assertTrue(TestComponent2 not in self.CompComposite.components)
+        self.assertTrue(TestComponent2 not in self.CompComposite.components.values())
 
 
 class TreeBuilderTest(TestCase):
@@ -257,19 +262,19 @@ class TreeBuilderTest(TestCase):
                           1: [1]}
 
         TestComponent2 = deepcopy(self.TestComponent)
-        self.tree.add(self.TestComponent + TestComponent2)
+        self.tree.add([0, 1], self.TestComponent + TestComponent2)
 
         self.assertEqual(self.tree.root_composite.no_of_components, 2)
         self.assertTrue(self.tree.root_composite.components[0] == self.TestComponent[0])
-        self.assertTrue(TestComponent2[0] in self.tree.root_composite.components)
+        self.assertTrue(TestComponent2[0] in self.tree.root_composite.components.values())
         self.assertEqual(desiredLeafPaths, self.tree.leaf_paths.leaves)
 
         #Test composite component
         TestTree = TreeBuilder()
 
-        TestTree.add(self.TestComponent + TestComponent2)
+        TestTree.add([0, 1], self.TestComponent + TestComponent2)
         TestTree2 = deepcopy(TestTree)
-        TestTree.add(TestTree2.root_composite)
+        TestTree.add([2], TestTree2.root_composite)
 
         desiredLeafPaths = {0: [0],
                             1: [1],
@@ -278,7 +283,7 @@ class TreeBuilderTest(TestCase):
 
         self.assertEqual(desiredLeafPaths, TestTree.leaf_paths.leaves)
 
-        self.tree.add(TestTree.root_composite)
+        self.tree.add([2], TestTree.root_composite)
 
         desiredLeafPaths = {0: [0],
                            1: [1],
@@ -288,65 +293,64 @@ class TreeBuilderTest(TestCase):
                            5: [2, 2, 1]}
 
         self.assertEqual(self.tree.root_composite.no_of_components, 3)
-        self.assertTrue(TestTree.root_composite in self.tree.root_composite.components)
+        self.assertTrue(TestTree.root_composite in self.tree.root_composite.components.values())
         self.assertEqual(desiredLeafPaths, self.tree.leaf_paths.leaves)
 
     def test_delete(self):
         TestComponent2 = deepcopy(self.TestComponent)
-        self.tree.add(self.TestComponent + TestComponent2)
+        self.tree.add([0, 1], self.TestComponent + TestComponent2)
         TestTree = TreeBuilder()
-        TestTree.add(self.TestComponent + TestComponent2)
+        TestTree.add([0, 1], self.TestComponent + TestComponent2)
         TestTree2 = deepcopy(TestTree)
-        TestTree.add(TestTree2.root_composite)
-        self.tree.add(TestTree.root_composite)
-        self.tree.add(self.TestComponent)
+        TestTree.add([2], TestTree2.root_composite)
+        self.tree.add([2], TestTree.root_composite)
+        self.tree.add([3], self.TestComponent)
 
         self.tree.delete_leafs(1)
 
         desiredLeafPaths = {0: [0],
-                           2: [1, 0],
-                           3: [1, 1],
-                           4: [1, 2, 0],
-                           5: [1, 2, 1],
-                           6: [2]}
+                           2: [2, 0],
+                           3: [2, 1],
+                           4: [2, 2, 0],
+                           5: [2, 2, 1],
+                           6: [3]}
 
         self.assertEqual(self.tree.root_composite.no_of_components, 3)
-        self.assertTrue(TestComponent2 not in self.tree.root_composite.components)
-        self.assertEqual(desiredLeafPaths, self.tree.leaf_paths.leaves)
-        self.assertEqual(desiredLeafPaths, self.tree.root_composite.components[1].leaf_paths.leaves)
-
-        self.tree.delete_component([1, 2],0)
-
-        desiredLeafPaths = {0: [0],
-                           2: [1, 0],
-                           3: [1, 1],
-                           5: [1, 2, 0],
-                           6: [2]}
-
-        self.assertTrue(TestComponent2 not in self.tree.root_composite.components[1].components)
+        self.assertTrue(TestComponent2 not in self.tree.root_composite.components.values())
         self.assertEqual(desiredLeafPaths, self.tree.leaf_paths.leaves)
 
-        self.tree.delete_component([1],0)
+        self.tree.delete_component([2, 2], 0)
 
         desiredLeafPaths = {0: [0],
-                           3: [1, 0],
-                           5: [1, 1, 0],
-                           6: [2]}
+                           2: [2, 0],
+                           3: [2, 1],
+                           5: [2, 2, 1],
+                           6: [3]}
 
+        self.assertTrue(TestComponent2 not in self.tree.root_composite.components[2].components.values())
         self.assertEqual(desiredLeafPaths, self.tree.leaf_paths.leaves)
 
-        self.tree.delete_component([1],0)
+        self.tree.delete_component([2], 0)
 
         desiredLeafPaths = {0: [0],
-                           5: [1, 0, 0],
-                           6: [2]}
+                           3: [2, 1],
+                           5: [2, 2, 1],
+                           6: [3]}
 
         self.assertEqual(desiredLeafPaths, self.tree.leaf_paths.leaves)
 
-        self.tree.delete_component([],1)
+        self.tree.delete_component([2], 1)
 
         desiredLeafPaths = {0: [0],
-                            6: [1]}
+                           5: [2, 2, 1],
+                           6: [3]}
+
+        self.assertEqual(desiredLeafPaths, self.tree.leaf_paths.leaves)
+
+        self.tree.delete_component([], 2)
+
+        desiredLeafPaths = {0: [0],
+                            6: [3]}
 
         self.assertEqual(desiredLeafPaths, self.tree.leaf_paths.leaves)
 

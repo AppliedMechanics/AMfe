@@ -4,7 +4,7 @@
 #
 
 from unittest import TestCase, main
-from numpy.testing import assert_equal, assert_array_equal, assert_allclose
+from numpy.testing import assert_equal, assert_allclose
 from pandas.testing import assert_frame_equal, assert_series_equal
 from amfe.component.partitioner import *
 from amfe.component.structural_component import StructuralComponent
@@ -60,10 +60,12 @@ class TestPartitioner(TestCase):
         nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0], [3.0, 1.0],
                           [3.0, 0.0], [0.0, 2.0], [1.0, 2.0], [2.0, 2.0], [3.0, 2.0]], dtype=np.float)
         connectivity = [np.array([5, 6, 3], dtype=np.int), np.array([3, 2, 5], dtype=np.int),
-                        np.array([1, 2, 3, 4], dtype=np.int), np.array([5, 7, 8], dtype=np.int), np.array([6, 7, 5], dtype=np.int),
-                        np.array([3, 4, 9, 10], dtype=np.int), np.array([6, 7, 11, 12], dtype=np.int), np.array([3, 6, 10, 11], dtype=np.int),
+                        np.array([1, 2, 3, 4], dtype=np.int), np.array([5, 7, 8], dtype=np.int),
+                        np.array([6, 7, 5], dtype=np.int), np.array([3, 4, 9, 10], dtype=np.int),
+                        np.array([6, 7, 11, 12], dtype=np.int), np.array([3, 6, 10, 11], dtype=np.int),
                         # boundary elements
-                        np.array([4, 1], dtype=np.int), np.array([4, 9], dtype=np.int), np.array([7, 8], dtype=np.int), np.array([7, 12], dtype=np.int)]
+                        np.array([4, 1], dtype=np.int), np.array([4, 9], dtype=np.int), np.array([7, 8], dtype=np.int),
+                        np.array([7, 12], dtype=np.int)]
 
         self._connectivity = connectivity
 
@@ -103,8 +105,10 @@ class TestPartitioner(TestCase):
         pass
 
     def test_separate_common_nodes_of_partitions(self):
-        nodes_desired = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0], [3.0, 1.0], [3.0, 0.0], [0.0, 2.0], [1.0, 2.0], [2.0, 2.0], [3.0, 2.0],
-                                  [2.0, 0.0], [2.0, 1.0], [1.0, 1.0], [0.0, 1.0], [2.0, 1.0], [2.0, 1.0], [3.0, 1.0], [2.0, 2.0]
+        nodes_desired = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0], [3.0, 1.0],
+                                  [3.0, 0.0], [0.0, 2.0], [1.0, 2.0], [2.0, 2.0], [3.0, 2.0],
+                                  [2.0, 0.0], [2.0, 1.0], [1.0, 1.0], [0.0, 1.0], [2.0, 1.0], [2.0, 1.0], [3.0, 1.0],
+                                  [2.0, 2.0]
                                   ], dtype=np.float)
         x = nodes_desired[:, 0]
         y = nodes_desired[:, 1]
@@ -117,7 +121,8 @@ class TestPartitioner(TestCase):
                                 np.array([15, 16, 9, 10], dtype=np.int), np.array([18, 19, 20, 12], dtype=np.int),
                                 np.array([15, 17, 10, 11], dtype=np.int),
                                 # boundary elements
-                                np.array([4, 1], dtype=np.int), np.array([16, 9], dtype=np.int), np.array([7, 8], dtype=np.int), np.array([19, 12], dtype=np.int)]
+                                np.array([4, 1], dtype=np.int), np.array([16, 9], dtype=np.int),
+                                np.array([7, 8], dtype=np.int), np.array([19, 12], dtype=np.int)]
 
         data = {'connectivity': connectivity_desired}
         indices = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -146,13 +151,15 @@ class TestPartitioner(TestCase):
         separated_mesh, copied_nodes = self.partitioner._separate_common_nodes_of_partitions(self.testmesh)
         submesh = self.partitioner._get_submesh_by_partition_id(1, separated_mesh)
         
-        nodes_desired = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0]], dtype=np.float)
+        nodes_desired = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0]],
+                                 dtype=np.float)
         x = nodes_desired[:, 0]
         y = nodes_desired[:, 1]
         nodeids = [1, 2, 3, 4, 5, 6]
         nodes_df_desired = pd.DataFrame({'x': x, 'y': y}, index=nodeids)
         
-        connectivity_desired = [np.array([5, 6, 3], dtype=np.int), np.array([3, 2, 5], dtype=np.int), np.array([1, 2, 3, 4], dtype=np.int), np.array([4, 1], dtype=np.int)]
+        connectivity_desired = [np.array([5, 6, 3], dtype=np.int), np.array([3, 2, 5], dtype=np.int),
+                                np.array([1, 2, 3, 4], dtype=np.int), np.array([4, 1], dtype=np.int)]
         data = {'connectivity': connectivity_desired}
         indices = [1, 2, 3, 9]
         el_df_desired = pd.DataFrame(data, index=indices)
@@ -209,10 +216,13 @@ class TestPartitioner(TestCase):
         assert_equal(dofs_map_desired, dofs_map_actual)
 
     def test_separate_partitioned_component(self):
-        new_components, dof_map_list = self.partitioner.separate_partitioned_component(self.testcomponent)
+        new_component_ids, new_components, dof_map_list = self.partitioner.separate_partitioned_component(
+                                                                                                    self.testcomponent)
+        component_ids_desired = [1, 2, 3, 4]
         
-        for comp_id, icomp in enumerate(new_components):
+        for comp_id, icomp in zip(new_component_ids, new_components):
             self.assertTrue(isinstance(icomp, StructuralComponent))
+            self.assertTrue(comp_id in component_ids_desired)
             assert_equal(len(icomp.mesh.get_uniques_by_tag('partition_id')), 1)
             for idx, element in icomp._ele_obj_df.iterrows():
                 if not isinstance(element['fk_mesh'], Iterable):
