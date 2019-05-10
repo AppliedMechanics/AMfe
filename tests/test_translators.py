@@ -1,6 +1,6 @@
-'''
+"""
 Test for testing the translator-module
-'''
+"""
 
 from unittest import TestCase
 import numpy as np
@@ -10,9 +10,20 @@ from numpy.testing import assert_array_equal
 
 class TranslatorsTest(TestCase):
     def setUp(self):
+        class DummyMapping:
+            def __init__(self):
+                return
+
+            @property
+            def no_of_dofs(self):
+                return 3
+
+        dummy_mapping = DummyMapping()
+
         class DummyStructuralComponent:
             def __init__(self):
                 pass
+
             @property
             def X(self):
                 return np.array([0.1, 0.2, 0.3])
@@ -34,14 +45,18 @@ class TranslatorsTest(TestCase):
 
             def f_ext(self, q, dq, t):
                 return np.array([0., 0., 1])
+
+            @property
+            def mapping(self):
+                return dummy_mapping
     
         self.structural_component = DummyStructuralComponent()
         
     def tearDown(self):
         pass
     
-    def testMechanicalTranslatorBase(self):
-        translator = MechanicalSystemBase(self.structural_component)
+    def test_mechanical_translator_base(self):
+        translator = create_mechanical_system_from_structural_component(self.structural_component)
         
         u = np.array([0.05, 0.1, 0.15])
         du = np.zeros_like(u)
@@ -56,8 +71,6 @@ class TranslatorsTest(TestCase):
         assert_array_equal(K_desired, translator.K(u, du, t))
         assert_array_equal(D_desired, translator.D(u, du, t))
         assert_array_equal(M_desired, translator.M(u, du, t))
-        assert_array_equal(f_ext_desired - f_int_desired, translator.F(u, du, t))
+        assert_array_equal(f_ext_desired, translator.f_ext(u, du, t))
+        assert_array_equal(f_int_desired, translator.f_int(u, du, t))
 
-        u_actual, du_actual, ddu_actual = translator.unconstrain(u, du, du, t)
-        for actual, desired in zip((u_actual, du_actual, ddu_actual), (u, du, du)):
-            assert_array_equal(actual, desired)

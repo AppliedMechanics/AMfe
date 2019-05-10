@@ -13,120 +13,210 @@ The translator has to provide the following methods:
 M()
 D()
 K()
-F()
+f_ext()
+f_int()
+dimension
 """
 
 
-from amfe.solver.tools import MemoizeStiffness, MemoizeJac
+from amfe.solver.tools import MemoizeStiffness, MemoizeConstant
 from amfe.constraint.constraint_formulation_boolean_elimination import BooleanEliminationConstraintFormulation
 from amfe.constraint.constraint_formulation_lagrange_multiplier import SparseLagrangeMultiplierConstraintFormulation
 
 __all__ = [
-    'MechanicalSystemBase',
     'MechanicalSystem',
+    'create_constrained_mechanical_system_from_component',
+    '_create_constraint_formulation',
+    'create_mechanical_system_from_structural_component',
 ]
 
 
-class MechanicalSystemBase:
+class MechanicalSystem:
     """
-    Most basic translator, that just hands over the structural-component methods to the solver.
-    The default case is a mechanical system here due to tradition, but might be something else as long as API and
-    implementation are similar.
+    Describes a second order system of this type:
+
+    .. math::
+        M \ddot{x} + f_{int}(x, \dot x, t) = f_{ext}
+
+    Linearized entities:
+
+    .. math::
+        K = \frac{\partial (f_{int} - f_{ext}}{\partial x}
+        D = \frac{\partial (f_{int} - f_{ext}}{\partial \dot x}
     """
-    def __init__(self, structural_component):
-        self.structural_component = structural_component
+    def __init__(self, dimension, M_func, D_func, K_func, f_ext_func, f_int_func):
+
+        self._dimension = dimension
+        self._M_func = M_func
+        self._K_func = K_func
+        self._f_ext_func = f_ext_func
+        self._f_int_func = f_int_func
+        self._D_func = D_func
 
     def M(self, q, dq, t):
-        return self.structural_component.M(q, dq, t)
+        return self._M_func(q, dq, t)
 
     def D(self, q, dq, t):
-        return self.structural_component.D(q, dq, t)
+        return self._D_func(q, dq, t)
 
-    def F(self, q, dq, t):
-        return self.structural_component.f_ext(q, dq, t) - self.structural_component.f_int(q, dq, t)
+    def f_ext(self, q, dq, t):
+        return self._f_ext_func(q, dq, t)
+
+    def f_int(self, q, dq, t):
+        return self._f_int_func(q, dq, t)
 
     def K(self, q, dq, t):
-        return self.structural_component.K(q, dq, t)
-
-    def unconstrain(self, x, dx, ddx, t):
-        return x, dx, ddx
+        return self._K_func(q, dq, t)
 
     @property
     def dimension(self):
-        return self.structural_component.constraints.no_of_dofs_unconstrained
+        return self._dimension
 
 
-class MechanicalSystem(MechanicalSystemBase):
-    # constant m
-    def __init__(self, structural_component, formulation='boolean', constant_mass=True, **formulation_options):
-        super().__init__(structural_component)
-        self._constraint_formulation = None
-        self._memoize_m = constant_mass
-        self._M = None
-        self._f_int = MemoizeStiffness(self.structural_component.K_and_f_int)
-        self._K = self._f_int.derivative
+def create_mechanical_system_from_structural_component(structural_component, constant_mass=False,
+                                                       constant_damping=False):
+    """
+    Create a MechanicalSystem Object from a structural component
 
-        def dh_ddq(q, dq, t):
-            return -self.structural_component.D(q, dq, t)
+    Parameters
+    ----------
+    structural_component : amfe.component.StructuralComponent
+        Structural component that will describe the mechanical system
+    constant_mass : bool
+        flag if the mass is constant
+    constant_damping : bool
+        flag indicating if damping matrix is constant
 
-        def h_and_jac_q(q, dq, t):
-            h = self.structural_component.f_ext(q, dq, t) - self._f_int(q, dq, t)
-            jac_q = -self._K(q, dq, t)
-            return h, jac_q
+    Returns
+    -------
+    system : MechanicalSystem
+        Created MechanicalSystem object describing the Structural Component
+    """
+    if constant_mass:
+        M = MemoizeConstant(structural_component.M)
+    else:
+        M = structural_component.M
 
-        self._dh_ddq_func = dh_ddq
-        self._h_func = MemoizeJac(h_and_jac_q)
-        self._dh_dq_func = self._h_func.derivative
-        self._create_constraint_formulation(formulation, formulation_options)
-        self._f_ext = None
+    if constant_damping:
+        D = MemoizeConstant(structural_component.D)
+    else:
+        D = structural_component.D
 
-    def M(self, x, dx, t):
-        if self._memoize_m:
-            if self._M is None:
-                self._M = self._constraint_formulation.M(x, dx, t)
-            return self._M
-        else:
-            return self.structural_component.M(x, dx, t)
+    f_int = MemoizeStiffness(structural_component.K_and_f_int)
+    K = f_int.derivative
+    f_ext = structural_component.f_ext
 
-    def F(self, x, dx, t):
-        return self._constraint_formulation.F(x, dx, t)
+    dimension = structural_component.mapping.no_of_dofs
 
-    def K(self, x, dx, t):
-        return self._constraint_formulation.K(x, dx, t)
-
-    def D(self, x, dx, t):
-        return self._constraint_formulation.D(x, dx, t)
-
-    def _create_constraint_formulation(self, formulation, formulation_options):
-        if formulation == 'boolean':
-            no_of_dofs_unconstrained = self.structural_component.constraints.no_of_dofs_unconstrained
-            self._constraint_formulation = BooleanEliminationConstraintFormulation(no_of_dofs_unconstrained,
-                                                                                   self.structural_component.M,
-                                                                                   self._h_func,
-                                                                                   self.structural_component.B,
-                                                                                   self._dh_dq_func,
-                                                                                   self._dh_ddq_func,
-                                                                                   self.structural_component.g_holo)
-
-        elif formulation == 'lagrange':
-            no_of_dofs_unconstrained = self.structural_component.constraints.no_of_dofs_unconstrained
-            self._constraint_formulation = SparseLagrangeMultiplierConstraintFormulation(no_of_dofs_unconstrained,
-                                                                                         self.structural_component.M,
-                                                                                         self._h_func,
-                                                                                         self.structural_component.B,
-                                                                                         self._dh_dq_func,
-                                                                                         self._dh_ddq_func,
-                                                                                         self.structural_component.g_holo)
-        else:
-            raise ValueError('formulation not valid')
-
-        if formulation_options is not None:
-            self._constraint_formulation.set_options(**formulation_options)
+    system = MechanicalSystem(dimension, M, D, K, f_ext, f_int)
+    return system
 
 
-    @property
-    def dimension(self):
-        return self._constraint_formulation.dimension
+def create_constrained_mechanical_system_from_component(structural_component, constant_mass=False,
+                                                        constant_damping=False, constraint_formulation='boolean',
+                                                        **formulation_options):
+    """
+    Create a mechanical system from a component where the constraints are applied by a constraint formulation
 
-    def unconstrain(self, x, dx, ddx, t):
-        return self._constraint_formulation.recover(x, dx, ddx, t)
+    Parameters
+    ----------
+    structural_component : amfe.component.StructuralComponent
+        Structural component describing the mechanical system
+    constant_mass : bool
+        Flag indicating if mass matrix is constant
+    constant_damping : bool
+        Flag indicating if damping matrix is constant
+    constraint_formulation : str {'boolean', 'lagrange', 'nullspace_elimination'}
+        String describing the constraint formulation that shall be used
+    formulation_options : dict
+        options passed to the set_options method of the constraint formulation
+
+    Returns
+    -------
+        system : MechanicalSystem
+    """
+    system_unconstrained = create_mechanical_system_from_structural_component(structural_component)
+    constraint_formulation = _create_constraint_formulation(system_unconstrained, structural_component,
+                                                            constraint_formulation, **formulation_options)
+
+    if constant_mass:
+        M = MemoizeConstant(constraint_formulation.M)
+    else:
+        M = constraint_formulation.M
+
+    if constant_damping:
+        D = MemoizeConstant(constraint_formulation.D)
+    else:
+        D = constraint_formulation.D
+
+    f_int = constraint_formulation.f_int
+    K = constraint_formulation.K
+    f_ext = constraint_formulation.f_ext
+
+    dimension = constraint_formulation.dimension
+
+    system = MechanicalSystem(dimension, M, D, K, f_ext, f_int)
+
+    return system, constraint_formulation
+
+
+def _create_constraint_formulation(mechanical_system, component, formulation, **formulation_options):
+    """
+    Internal method that creates a constraint formulation for a mechanical system combined with the constraints
+    from a component
+
+    Parameters
+    ----------
+    mechanical_system : MechanicalSystem
+        Mechanical system whose matrices M, K, D, f_int, f_ext will be used in the constraint formulation
+    component : amfe.component.StructuralComponent
+        Structural Component having constraint functions, such as g_holo, B, b, a.
+    formulation : str {'boolean', 'lagrange', 'nullspace_elimination'}
+        String describing the constraint formulation that shall be used
+    formulation_options : dict
+        options passed to the set_options method of the constraint formulation
+
+    Returns
+    -------
+    constraint_formulation : amfe.constraint.ConstraintFormulation
+        A ConstraintFormulation object that applies the constraints on the mechanical system.
+    """
+    no_of_dofs_unconstrained = mechanical_system.dimension
+    if formulation == 'boolean':
+
+        constraint_formulation = BooleanEliminationConstraintFormulation(no_of_dofs_unconstrained,
+                                                                         mechanical_system.M,
+                                                                         mechanical_system.f_int,
+                                                                         component.B,
+                                                                         mechanical_system.f_ext,
+                                                                         mechanical_system.K,
+                                                                         mechanical_system.D,
+                                                                         g_func=
+                                                                         component.g_holo)
+    elif formulation == 'lagrange':
+        constraint_formulation = SparseLagrangeMultiplierConstraintFormulation(no_of_dofs_unconstrained,
+                                                                               mechanical_system.M,
+                                                                               mechanical_system.f_int,
+                                                                               component.B,
+                                                                               mechanical_system.f_ext,
+                                                                               mechanical_system.K,
+                                                                               mechanical_system.D,
+                                                                               g_func=
+                                                                               component.g_holo)
+    elif formulation == 'nullspace_elimination':
+        constraint_formulation = BooleanEliminationConstraintFormulation(no_of_dofs_unconstrained,
+                                                                         mechanical_system.M,
+                                                                         mechanical_system.f_int,
+                                                                         component.B,
+                                                                         mechanical_system.f_ext,
+                                                                         mechanical_system.K,
+                                                                         mechanical_system.D,
+                                                                         g_func=component.g_holo,
+                                                                         b_func=component.b,
+                                                                         a_func=component.a)
+    else:
+        raise ValueError('formulation not valid')
+
+    if formulation_options is not None:
+        constraint_formulation.set_options(**formulation_options)
+    return constraint_formulation
