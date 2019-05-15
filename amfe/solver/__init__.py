@@ -25,3 +25,6 @@ from .translators import *
 
 # --- SOLUTION CLASSES ---
 from .solution import *
+
+# --- DOMAIN DECOMPOSITION SOLVERS ---
+from .domain_decomposition_solver import *
