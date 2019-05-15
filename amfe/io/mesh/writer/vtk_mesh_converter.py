@@ -11,6 +11,7 @@ Super class of all mesh converter for I/O module.
 
 from enum import Enum
 import numpy as np
+import pandas as pd
 import vtk
 from os.path import splitext
 import logging
@@ -58,6 +59,10 @@ class VtkMeshConverter(MeshConverter):
         self._tags = dict()
         self._groups = dict()
         self.logger = logging.getLogger('amfe.io.VtkMeshConverter')
+        self._nodes_df = pd.DataFrame(columns=['row', 'x', 'y', 'z'])
+        self._el_df = pd.DataFrame(columns=['id', 'type', 'connectivity'])
+        self._index = 0
+        self._el_idx = 0
 
     def build_no_of_nodes(self, no):
         """
@@ -78,6 +83,7 @@ class VtkMeshConverter(MeshConverter):
         """
         if self._nodespreallocation is VtkPreallocation.UNKNOWN:
             self._vtknodes.SetNumberOfPoints(no)
+            self._nodes = np.zeros((no, 4))
             self._nodespreallocation = VtkPreallocation.PREALLOCATED
 
     def build_no_of_elements(self, no):
@@ -99,15 +105,16 @@ class VtkMeshConverter(MeshConverter):
         """
         if self._elementspreallocation is VtkPreallocation.UNKNOWN:
             self._vtkelements.Allocate(no, 1)
+            self._el_df = pd.DataFrame(columns=['id', 'type', 'connectivity'], index=np.arange(no))
             self._elementspreallocation = VtkPreallocation.PREALLOCATED
 
-    def build_node(self, idx, x, y, z):
+    def build_node(self, node_id, x, y, z):
         """
-        Builds a node
+        Builds a node.
 
         Parameters
         ----------
-        idx : int
+        node_id : int
             ID of the node
         x : float
             X coordinate of the node
@@ -121,18 +128,24 @@ class VtkMeshConverter(MeshConverter):
         None
         """
         if self._nodespreallocation is VtkPreallocation.PREALLOCATED:
-            self._vtknodes.InsertPoint(idx, (x, y, z))
+            self._nodes[self._index, 0] = node_id
+            self._nodes[self._index, 1] = x
+            self._nodes[self._index, 2] = y
+            self._nodes[self._index, 3] = z
+            self._index += 1
         else:
-            self._nodes = np.concatenate((self._nodes, np.array([idx, x, y, z], ndmin=2, dtype=float)), axis=0)
+            new_node = pd.Series({'row': self._nodes_df['row'].count(), 'x': x, 'y': y, 'z': z}, name=int(node_id))
+            self._nodes_df = self._nodes_df.append(new_node)
+            self._nodes_df = self._nodes_df.astype(dtype={'row': 'int', 'x': 'float', 'y': 'float', 'z': 'float'})
             self._nodespreallocation = VtkPreallocation.NOTPREALLOCATED
 
-    def build_element(self, idx, etype, nodes):
+    def build_element(self, ele_id, etype, nodes):
         """
         Builds an  element
 
         Parameters
         ----------
-        idx : int
+        ele_id : int
             ID of an element
         etype : str
             valid amfe elementtype (shape) string
@@ -143,18 +156,8 @@ class VtkMeshConverter(MeshConverter):
         -------
         None
         """
-        cell = self.amfe2vtk[etype]()
-        for i, node in enumerate(nodes):
-            cell.GetPointIds().SetId(i, node)
-            self._eleid2cell.update({idx: cell})
-        if self._elementspreallocation is VtkPreallocation.PREALLOCATED:
-            cellid = self._vtkelements.InsertNextCell(cell.GetCellType(), cell.GetPointIds())
-        else:
-            if self._elementspreallocation is VtkPreallocation.UNKNOWN:
-                self._vtkelements.Allocate(1, 1)
-                self._elementspreallocation = VtkPreallocation.NOTPREALLOCATED
-            cellid = self._vtkelements.InsertNextCell(cell.GetCellType(), cell.GetPointIds())
-        self._eleid2cell.update({idx: cellid})
+        self._el_df.loc[self._el_idx] = pd.Series({'id': ele_id, 'type': etype, 'connectivity': nodes})
+        self._el_idx += 1
 
     def build_group(self, name, nodeids, elementids):
         """
@@ -231,50 +234,87 @@ class VtkMeshConverter(MeshConverter):
         -------
         Object
         """
-        if self._nodespreallocation is not VtkPreallocation.PREALLOCATED:
-            self._vtknodes.SetNumberOfPoints(self._nodes.shape[0])
-            for node in self._nodes:
-                self._vtknodes.InsertPoint(int(node[0]), node[1:])
+        if self._nodespreallocation is VtkPreallocation.PREALLOCATED:
+            x = self._nodes[:, 1]
+            y = self._nodes[:, 2]
+            z = self._nodes[:, 3]
+            no_of_nodes = self._nodes.shape[0]
+            self._nodes_df = pd.DataFrame({'row': np.arange(no_of_nodes, dtype=int), 'x': x, 'y': y, 'z': z},
+                                          index=np.array(self._nodes[:, 0], dtype=int))
 
-        self._vtkelements.SetPoints(self._vtknodes)
+            self._vtknodes.SetNumberOfPoints(no_of_nodes)
 
-        for tagname, tag_dict in self._tags.items():
-            vtkarray = vtk.vtkIntArray()
-            vtkarray.SetNumberOfComponents(1)
-            vtkarray.SetNumberOfTuples(self._vtkelements.GetNumberOfCells())
-            vtkarray.FillComponent(0, 0)
-            vtkarray.SetName(tagname)
-            for tagvalue, eleids in tag_dict.items():
-                vtkids = [self._eleid2cell[eleid] for eleid in eleids]
-                for vtkid in vtkids:
-                    vtkarray.SetTuple1(vtkid, int(tagvalue))
-            self._vtkelements.GetCellData().AddArray(vtkarray)
+        if not self._el_df.isnull().values.any():
+            # Function change connectivity ids to row ids in nodes array:
+            def change_connectivity(arr):
+                return np.array([self._nodes_df.loc[node, 'row'] for node in arr], ndmin=2, dtype=int)
 
-        for groupname, groupdict in self._groups.items():
-            nodeids = groupdict['nodes']
-            elementids = groupdict['elements']
-            elementids = [self._eleid2cell[eleid] for eleid in elementids]
+            def write_vtk_element(idx, etype, nodes):
+                cell = self.amfe2vtk[etype]()
+                for i, node in enumerate(nodes):
+                    cell.GetPointIds().SetId(i, node)
+                    self._eleid2cell.update({idx: cell})
 
-            if len(elementids) > 0:
-                # Allocate vtk elements array
-                vtkelements = vtk.vtkIntArray()
-                vtkelements.SetNumberOfComponents(1)
-                vtkelements.SetNumberOfTuples(self._vtkelements.GetNumberOfCells())
-                vtkelements.SetName(groupname + '_elements')
-                vtkelements.FillComponent(0, 0)
-                for elementid in elementids:
-                    vtkelements.SetTuple1(elementid, 1)
-                self._vtkelements.GetCellData().AddArray(vtkelements)
+                if self._elementspreallocation is VtkPreallocation.UNKNOWN:
+                    self._vtkelements.Allocate(1, 1)
+                    self._elementspreallocation = VtkPreallocation.NOTPREALLOCATED
 
-            if len(nodeids) > 0:
-                vtknodes = vtk.vtkIntArray()
-                vtknodes.SetNumberOfComponents(1)
-                vtknodes.SetNumberOfTuples(self._vtknodes.GetNumberOfPoints())
-                vtknodes.SetName(groupname + '_nodes')
-                vtknodes.FillComponent(0, 0)
-                for nodeid in nodeids:
-                    vtknodes.SetTuple1(nodeid, 1)
-                self._vtkelements.GetPointData().AddArray(vtknodes)
+                cellid = self._vtkelements.InsertNextCell(cell.GetCellType(), cell.GetPointIds())
+                self._eleid2cell.update({idx: cellid})
+
+            self._el_df = self._el_df.astype(dtype={'id': 'int', 'type': 'object', 'connectivity': 'object'})
+            self._el_df['connectivity'] = self._el_df['connectivity'].apply(change_connectivity)
+
+            for element in self._el_df.itertuples():
+                write_vtk_element(element.Index, element.type, element.connectivity[0])
+
+            for node in self._nodes_df.itertuples():
+                self._vtknodes.InsertPoint(node.row, node.x, node.y, node.z)
+
+            self._vtkelements.SetPoints(self._vtknodes)
+
+            for tagname, tag_dict in self._tags.items():
+                vtkarray = vtk.vtkIntArray()
+                vtkarray.SetNumberOfComponents(1)
+                vtkarray.SetNumberOfTuples(self._vtkelements.GetNumberOfCells())
+                vtkarray.FillComponent(0, 0)
+                vtkarray.SetName(tagname)
+                for tagvalue, eleids in tag_dict.items():
+                    vtkids = [self._eleid2cell[eleid] for eleid in eleids]
+                    for vtkid in vtkids:
+                        vtkarray.SetTuple1(vtkid, int(tagvalue))
+                self._vtkelements.GetCellData().AddArray(vtkarray)
+
+            for groupname, groupdict in self._groups.items():
+                nodeids = groupdict['nodes']
+                elementids = groupdict['elements']
+                elementidxs = []
+                for eleid in elementids:
+                    elementidxs += self._el_df.index[self._el_df['id'] == eleid].tolist()
+                elementids = [self._eleid2cell[eleidx] for eleidx in elementidxs]
+
+                if len(elementids) > 0:
+                    # Allocate vtk elements array
+                    vtkelements = vtk.vtkIntArray()
+                    vtkelements.SetNumberOfComponents(1)
+                    vtkelements.SetNumberOfTuples(self._vtkelements.GetNumberOfCells())
+                    vtkelements.SetName(groupname + '_elements')
+                    vtkelements.FillComponent(0, 0)
+                    for elementid in elementids:
+                        vtkelements.SetTuple1(elementid, 1)
+                    self._vtkelements.GetCellData().AddArray(vtkelements)
+
+                if len(nodeids) > 0:
+                    vtknodes = vtk.vtkIntArray()
+                    vtknodes.SetNumberOfComponents(1)
+                    vtknodes.SetNumberOfTuples(self._vtknodes.GetNumberOfPoints())
+                    vtknodes.SetName(groupname + '_nodes')
+                    vtknodes.FillComponent(0, 0)
+
+                    for nodeid in nodeids:
+                        nodeidx = int(self._nodes_df.loc[nodeid, 'row'])
+                        vtknodes.SetTuple1(nodeidx, 1)
+                    self._vtkelements.GetPointData().AddArray(vtknodes)
 
         filename, file_extension = splitext(self._filename)
         if file_extension == '.vtu':
