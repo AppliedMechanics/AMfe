@@ -131,7 +131,7 @@ class Hdf5PostProcessorWriter(PostProcessorWriter):
             for etype in etypes:
                 # For each etype write an ascending enumeration into 'igoal' column.
                 # This enumeration is seperate for each etype
-                el_df_current_etype = el_df[el_df['shape'] == etype]
+                el_df_current_etype = el_df[el_df['shape'] == etype].copy()
                 no_of_elements_of_current_etype = len(el_df_current_etype.index)
                 el_df_current_etype.loc[el_df_current_etype.index, 'igoal'] = np.arange(no_of_elements_of_current_etype)
 
@@ -147,6 +147,8 @@ class Hdf5PostProcessorWriter(PostProcessorWriter):
                 igoal = el_df_current_etype_not_nan['igoal'].values.astype(int)
 
                 # Write the data of data array at the right places
+                if field_type == PostProcessDataType.SCALAR and data.ndim == 1:
+                    data = data.reshape(-1, 1)
                 arr_to_write[igoal, :] = data[isource, :]
 
                 # write the array for current etype into the hdf5 and its attribute information

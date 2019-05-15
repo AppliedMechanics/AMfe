@@ -842,8 +842,7 @@ class PostProcessorTest(TestCase):
         material = KirchhoffMaterial()
         meshcomponent.assign_material(material, 'Tri6', 'S', 'shape')
 
-
-        postprocessorreader = AmfeSolutionReader(amfesolution, meshcomponent, False)
+        postprocessorreader = AmfeSolutionReader(amfesolution, meshcomponent)
 
         #meshreader = AmfeMeshObjMeshReader(mesh)
         #postprocessorwriter = DummyPostProcessorWriter(meshreader)

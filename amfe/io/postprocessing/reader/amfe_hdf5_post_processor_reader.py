@@ -8,11 +8,11 @@
 import numpy as np
 from tables import File as PytablesFile, open_file, Group, Array
 
-from amfe.io.tools import check_filename_or_filepointer
-from amfe.io.mesh.reader import Hdf5MeshReader
+from amfe.io import check_filename_or_filepointer, MeshEntityType, PostProcessDataType
+from amfe.io.mesh import Hdf5MeshReader
+from amfe.io.postprocessing import AmfePostprocessMeshConverter
 
 from ..base import PostProcessorReader
-from .. import AmfePostprocessMeshConverter, MeshEntityType, PostProcessDataType
 
 
 __all__ = ['AmfeHdf5PostProcessorReader']

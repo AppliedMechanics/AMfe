@@ -8,14 +8,16 @@
 from unittest import TestCase
 
 import numpy as np
-from numpy.testing import assert_, assert_allclose
+from numpy.testing import assert_, assert_allclose, assert_array_equal
 from numpy.linalg import norm
 
-from amfe.hyper_red.ecsw import sparse_nnls, assemble_g_and_b, reduce_with_ecsw
+from amfe.mor.hyper_red.ecsw import sparse_nnls, ecsw_assemble_G_and_b, ecsw_get_weights_by_component
+from amfe.mor.ui import create_ecsw_hyperreduced_component_from_weights
 from amfe.io.tools import amfe_dir
 from amfe.io.mesh.reader import GidJsonMeshReader
 from amfe.io.mesh.writer import AmfeMeshConverter
-from amfe.assembly import EcswAssembly
+from amfe.mor.hyper_red.ecsw_assembly import EcswAssembly
+from amfe.assembly import StructuralAssembly
 from amfe.component import StructuralComponent
 from amfe.material import KirchhoffMaterial
 
@@ -95,6 +97,7 @@ class TestEcsw(TestCase):
         # create 2 random snapshots
         self.no_of_snapshots = 2
         self.S = np.random.rand(self.no_of_dofs, self.no_of_snapshots) * 0.05
+        self.W = np.eye(self.no_of_dofs)
         self.timesteps = np.zeros(self.no_of_snapshots)
 
     def tearDown(self):
@@ -102,14 +105,14 @@ class TestEcsw(TestCase):
 
     def test_assemble_g_b(self):
         # store an example for f_int for later comparison to check if the old assembly is recovered
-        # after assemble_g_and_b has finished
+        # after ecsw_assemble_G_and_b has finished
         no_of_dofs = self.S.shape[0]
         dq = ddq = np.zeros(no_of_dofs)
         t = 0.0
         f_old = self.my_component.f_int(self.S[:, 0], dq, t)
 
-        # run assemble_g_and_b
-        G, b = assemble_g_and_b(self.my_component, self.S, self.timesteps)
+        # run ecsw_assemble_G_and_b
+        G, b = ecsw_assemble_G_and_b(self.my_component, self.S, self.W, self.timesteps)
 
         # test shape of G and b
         no_of_elements = self.my_component.no_of_elements
@@ -171,32 +174,228 @@ class TestEcsw(TestCase):
         mesh_id_old = id(self.my_component.mesh)
 
         # first mode: deepcopy
-        ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01, copymode='deep',
-                                                 conv_stats=True)
+        weights, indices, stats = ecsw_get_weights_by_component(self.my_component, self.S, self.W,
+                                                                self.timesteps, tau=0.01)
+        ecsw_component = create_ecsw_hyperreduced_component_from_weights(self.my_component, weights, indices,
+                                                                         copymode='deep')
         self.assertNotEqual(id(ecsw_component), comp_id_old)
         self.assertNotEqual(id(ecsw_component.mesh), mesh_id_old)
         self.assertIsInstance(ecsw_component.assembly, EcswAssembly)
 
         # second mode: shallow
-        ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01, copymode='shallow',
-                                                 conv_stats=True)
+        weights, indices, stats = ecsw_get_weights_by_component(self.my_component, self.S, self.W,
+                                                                self.timesteps, tau=0.01)
+        ecsw_component = create_ecsw_hyperreduced_component_from_weights(self.my_component, weights, indices,
+                                                                         copymode='shallow')
         self.assertNotEqual(id(ecsw_component), comp_id_old)
         self.assertEqual(id(ecsw_component.mesh), mesh_id_old)
         self.assertIsInstance(ecsw_component.assembly, EcswAssembly)
 
         # third mode: overwrite
-        ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01, copymode='overwrite',
-                                                 conv_stats=True)
+        weights, indices, stats = ecsw_get_weights_by_component(self.my_component, self.S, self.W,
+                                                                self.timesteps, tau=0.01)
+        ecsw_component = create_ecsw_hyperreduced_component_from_weights(self.my_component, weights, indices,
+                                                                         copymode='overwrite')
         self.assertEqual(id(ecsw_component), comp_id_old)
         self.assertEqual(id(ecsw_component.mesh), mesh_id_old)
         self.assertIsInstance(ecsw_component.assembly, EcswAssembly)
 
-        # test wrong mode
+        # test wrong copymode
         with self.assertRaises(ValueError):
-            ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01, copymode='foo',
-                                                     conv_stats=True)
-
+            weights, indices, stats = ecsw_get_weights_by_component(self.my_component, self.S, self.W,
+                                                                    self.timesteps, tau=0.01, conv_stats=False)
+            ecsw_component = create_ecsw_hyperreduced_component_from_weights(self.my_component, weights, indices,
+                                                                             copymode='foo')
         # test if function with option stats = false is executable
-        ecsw_component, stats = reduce_with_ecsw(self.my_component, self.S, self.timesteps, 0.01,
-                                                 conv_stats=False)
+        weights, indices, stats = ecsw_get_weights_by_component(self.my_component, self.S, self.W,
+                                                                self.timesteps, tau=0.01, conv_stats=False)
+        ecsw_component = create_ecsw_hyperreduced_component_from_weights(self.my_component, weights, indices)
         self.assertIsInstance(ecsw_component.assembly, EcswAssembly)
+
+
+class EcswTest(TestCase):
+    def setUp(self):
+        self.nodes = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], dtype=np.float)
+        self.iconnectivity = [np.array([0, 1, 2], dtype=np.int), np.array([0, 2, 3], dtype=np.int),
+                              np.array([1, 2], dtype=np.int), np.array([2, 3], dtype=np.int)]
+
+        self.asm = StructuralAssembly()
+
+        class DummyTri3Element:
+            def __init__(self):
+                pass
+
+            def m_int(self, X, u, t=0.):
+                M = np.array([[2, 0, -0.5, 0, -0.5, 0],
+                              [0, 2, 0, -0.5, 0, -0.5],
+                              [-0.5, 0, 2, 0, -0.5, 0],
+                              [0, -0.5, 0, 2, 0, -0.5],
+                              [-0.5, 0, -0.5, 0, 2, 0],
+                              [0, -0.5, 0, -0.5, 0, 2]], dtype=float)
+                return M
+
+            def k_and_f_int(self, X, u, t=0.):
+                K = np.array([[4, -0.5, -0.5, -0.2, -0.5, -0.2],
+                              [-0.2, 4, -0.2, -0.5, -0.2, -0.5],
+                              [-0.5, -0.2, 4, -0.2, -0.5, -0.2],
+                              [-0.2, -0.5, -0.2, 4, -0.2, -0.5],
+                              [-0.5, -0.2, -0.5, -0.2, 4, -0.2],
+                              [-0.2, -0.5, -0.2, -0.5, -0.2, 4]], dtype=float)
+                f = np.array([3, 1, 3, 1, 3, 1], dtype=float)
+                return K, f
+
+            def k_f_S_E_int(self, X, u, t=0):
+                K, f = self.k_and_f_int(X, u, t)
+                S = np.ones((3, 6), dtype=float)
+                E = 2*np.ones((3, 6), dtype=float)
+                return K, f, S, E
+
+        self.ele = DummyTri3Element()
+
+    def tearDown(self):
+        self.asm = None
+
+    def test_assemble_k_and_f_ecsw_test1(self):
+
+        weights = [5]
+        indices = np.array([1], dtype=int)
+        asm = EcswAssembly(weights, indices)
+        ele_obj = np.array([self.ele, self.ele], dtype=object)
+        element2dofs = np.array([np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)])
+
+        K_global = asm.preallocate(8, element2dofs[indices])
+        f_global = np.zeros(K_global.shape[0])
+
+        memory_K_global_before = id(K_global)
+        memory_K_global_data_before = id(K_global.data)
+        memory_f_global_before = id(f_global)
+
+        dofvalues = np.array([0.0, 0.1, 0.2, 0.05, 0.0, 0.05, 0.02, 0.04])
+        asm.assemble_k_and_f(self.nodes, ele_obj, self.iconnectivity[0:2], element2dofs, dofvalues, K_csr=K_global, f_glob=f_global)
+        K_global_desired = np.zeros((8, 8), dtype=float)
+        f_global_desired = np.zeros(8, dtype=float)
+        # element 1
+        # Not assembled:
+        # K_global_desired[0:6, 0:6], f_global_desired[0:6] = self.ele.k_and_f_int(None, None)
+
+        # element 2
+        K_local, f_local = self.ele.k_and_f_int(None, None)
+        # diagonals
+        K_global_desired[0:2, 0:2] += weights[0]*K_local[0:2, 0:2]
+        K_global_desired[4:, 4:] += weights[0]*K_local[2:, 2:]
+        # off-diagonals
+        K_global_desired[0:2, 4:] += weights[0]*K_local[0:2, 2:]
+        K_global_desired[4:, 0:2] += weights[0]*K_local[2:, 0:2]
+        # f_int:
+        f_global_desired[0:2] += weights[0]*f_local[0:2]
+        f_global_desired[4:] += weights[0]*f_local[2:]
+
+        assert_array_equal(K_global.todense(), K_global_desired)
+        assert_array_equal(f_global, f_global_desired)
+
+
+        # Test if preallocation is working
+        memory_K_global_after = id(K_global)
+        memory_K_global_data_after = id(K_global.data)
+        memory_f_global_after = id(f_global)
+
+        self.assertTrue(memory_K_global_after == memory_K_global_before)
+        self.assertTrue(memory_K_global_data_after == memory_K_global_data_before)
+        self.assertTrue(memory_f_global_after == memory_f_global_before)
+
+    def test_assemble_k_and_f_ecsw_test2(self):
+
+        weights = np.array([5.0, 4.0])
+        indices = np.array([1, 0], dtype=int)
+        asm = EcswAssembly(weights, indices)
+        ele_obj = np.array([self.ele, self.ele], dtype=object)
+        element2dofs = np.array([np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)])
+
+        K_global, f_global = asm.assemble_k_and_f(self.nodes, ele_obj, self.iconnectivity[0:2], element2dofs, K_csr=None,
+                                                 f_glob=None)
+        K_global_desired = np.zeros((8, 8), dtype=float)
+        f_global_desired = np.zeros(8, dtype=float)
+        # element 0
+        K_global_desired[0:6, 0:6], f_global_desired[0:6] = self.ele.k_and_f_int(None, None)
+        K_global_desired[0:6, 0:6] = weights[1]*K_global_desired[0:6, 0:6]
+        f_global_desired[0:6] = weights[1]*f_global_desired[0:6]
+
+        # element 1
+        K_local, f_local = self.ele.k_and_f_int(None, None)
+        # diagonals
+        K_global_desired[0:2, 0:2] += weights[0]*K_local[0:2, 0:2]
+        K_global_desired[4:, 4:] += weights[0]*K_local[2:, 2:]
+        # off-diagonals
+        K_global_desired[0:2, 4:] += weights[0]*K_local[0:2, 2:]
+        K_global_desired[4:, 0:2] += weights[0]*K_local[2:, 0:2]
+        # f_int:
+        f_global_desired[0:2] += weights[0]*f_local[0:2]
+        f_global_desired[4:] += weights[0]*f_local[2:]
+
+        assert_array_equal(K_global.todense(), K_global_desired)
+        assert_array_equal(f_global, f_global_desired)
+
+    def test_assemble_k_f_S_E_ecsw(self):
+
+        weights = [5]
+        indices = np.array([1], dtype=int)
+        asm = EcswAssembly(weights, indices)
+
+        ele_obj = np.array([self.ele, self.ele], dtype=object)
+        element2dofs = [np.array([0, 1, 2, 3, 4, 5], dtype=int), np.array([0, 1, 4, 5, 6, 7], dtype=int)]
+        elements_on_node = np.array([weights[0], np.Inf, weights[0], weights[0]])
+
+        K_global = asm.preallocate(8, element2dofs)
+        f_global = np.zeros(K_global.shape[0])
+
+        memory_K_global_before = id(K_global)
+        memory_K_global_data_before = id(K_global.data)
+        memory_f_global_before = id(f_global)
+
+        K_global, f_global, S_global, E_global= asm.assemble_k_f_S_E(self.nodes, ele_obj, self.iconnectivity[0:2],
+                                                                     element2dofs, elements_on_node, K_csr=K_global, f_glob=f_global)
+
+        memory_K_global_after = id(K_global)
+        memory_K_global_data_after = id(K_global.data)
+        memory_f_global_after = id(f_global)
+
+        # test fully preallocated version
+        self.assertTrue(memory_K_global_after == memory_K_global_before)
+        self.assertTrue(memory_K_global_data_after == memory_K_global_data_before)
+        self.assertTrue(memory_f_global_after == memory_f_global_before)
+
+        K_global_desired = np.zeros((8, 8), dtype=float)
+        f_global_desired = np.zeros(8, dtype=float)
+        # element 1
+        # Not assembled:
+        # K_global_desired[0:6, 0:6], f_global_desired[0:6] = self.ele.k_and_f_int(None, None)
+
+        # element 2
+        K_local, f_local = self.ele.k_and_f_int(None, None)
+        # diagonals
+        K_global_desired[0:2, 0:2] += weights[0] * K_local[0:2, 0:2]
+        K_global_desired[4:, 4:] += weights[0] * K_local[2:, 2:]
+        # off-diagonals
+        K_global_desired[0:2, 4:] += weights[0] * K_local[0:2, 2:]
+        K_global_desired[4:, 0:2] += weights[0] * K_local[2:, 0:2]
+        # f_int:
+        f_global_desired[0:2] += weights[0] * f_local[0:2]
+        f_global_desired[4:] += weights[0] * f_local[2:]
+
+        assert_array_equal(K_global.todense(), K_global_desired)
+        assert_array_equal(f_global, f_global_desired)
+
+
+        S_global_desired = np.ones((4, 6))
+
+        E_global_desired = np.ones((4, 6))*2
+
+
+        # Set 2nd rows to zero as this node has no element in ecsw assembly:
+        S_global_desired[1, :] = 0.0
+        E_global_desired[1, :] = 0.0
+
+        assert_array_equal(K_global.todense(), K_global_desired)
+        assert_array_equal(f_global, f_global_desired)
+        assert_array_equal(S_global, S_global_desired)
+        assert_array_equal(E_global, E_global_desired)
