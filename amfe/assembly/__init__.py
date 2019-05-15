@@ -17,6 +17,3 @@ Module for assembly algorithms.
 
 # --- STRUCTURAL ASSEMBLY ---
 from .structural_assembly import *
-
-# --- Hyperreduction ---
-from .ecsw_assembly import *

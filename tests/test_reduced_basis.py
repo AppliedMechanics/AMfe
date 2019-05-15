@@ -8,13 +8,11 @@
 from unittest import TestCase
 
 import numpy as np
-from scipy.linalg import subspace_angles, solve, toeplitz, lu_factor, lu_solve, eigh
-from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import LinearOperator
+from scipy.linalg import subspace_angles, solve, toeplitz, eigh
 from numpy.testing import assert_allclose
 
 from amfe.linalg.tools import arnoldi
-from amfe.mor.reduction_basis import vibration_modes, krylov_basis, vibration_modes_lanczos, pod, modal_derivatives,\
+from amfe.mor.reduction_basis import krylov_basis, pod, modal_derivatives,\
     static_derivatives, shifted_static_derivatives, modal_derivatives_cruz
 
 
@@ -129,69 +127,6 @@ class TestKrylovBasis(TestCase):
         rows, cols = V.shape
         self.assertEqual(rows, dim)
         self.assertEqual(cols, n * no_of_inputs)
-
-
-class TestVibrationModes(TestCase):
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def test_vibration_modes(self):
-        K = np.array([[5.0, -2.0, 0.0], [-2.0, 4.0, -2.0], [0.0, -2.0, 3.0]], dtype=float)
-        M = np.diag([2.0, 2.0, 2.0])
-
-        omega, Phi = vibration_modes(K, M, 2)
-        for i, om in enumerate(omega):
-            res = (K - om**2*M).dot(Phi[:, i])
-            assert_allclose(res, np.zeros(3, dtype=float), atol=1e-12)
-
-        # Test shift
-        om2 = omega[1]
-        omega, Phi = vibration_modes(K, M, 1, shift=om2)
-        assert_allclose(omega[0], om2)
-
-        # Test with csr_matrices instead of numpy arrays
-        K = csr_matrix(K)
-        M = csr_matrix(M)
-
-        omega, Phi = vibration_modes(K, M, 2)
-        for i, om in enumerate(omega):
-            res = (K - om**2*M).dot(Phi[:, i])
-            assert_allclose(res, np.zeros(3, dtype=float), atol=1e-12)
-
-    def test_vibration_modes_lanczos(self):
-        K = np.array([[5.0, -2.0, 0.0], [-2.0, 4.0, -2.0], [0.0, -2.0, 3.0]], dtype=float)
-        M = np.diag([2.0, 2.0, 2.0])
-
-        # factorize K:
-        lu, piv = lu_factor(K)
-
-        # Define linear operator that solves Kx = b
-        def operator(b):
-            return lu_solve((lu, piv), b)
-
-        Kinv_operator = LinearOperator(shape=K.shape, matvec=operator)
-
-        omega, Phi = vibration_modes_lanczos(K, M, 2, Kinv_operator=Kinv_operator)
-        for i, om in enumerate(omega):
-            res = (K - om**2*M).dot(Phi[:, i])
-            assert_allclose(res, np.zeros(3, dtype=float), atol=1e-12)
-
-        # Test with csr_matrices instead of numpy arrays
-        K = csr_matrix(K)
-        M = csr_matrix(M)
-
-        omega, Phi = vibration_modes_lanczos(K, M, 2, Kinv_operator=Kinv_operator)
-        for i, om in enumerate(omega):
-            res = (K - om**2*M).dot(Phi[:, i])
-            assert_allclose(res, np.zeros(3, dtype=float), atol=1e-12)
-
-        # Test shift
-        om2 = omega[1]
-        with self.assertRaises(NotImplementedError):
-            omega, Phi = vibration_modes_lanczos(K, M, 1, shift=om2, Kinv_operator=Kinv_operator)
 
 
 class TestPOD(TestCase):

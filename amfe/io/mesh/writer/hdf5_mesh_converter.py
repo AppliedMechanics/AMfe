@@ -11,7 +11,7 @@ from os.path import basename, splitext
 
 from amfe.io.mesh.base import MeshConverter
 from amfe.io.tools import insert_line_breaks_in_xml, check_filename_or_filepointer
-from amfe.io.postprocessing.constants import XDMFDICT
+from amfe.io.constants import XDMFDICT
 
 __all__ = [
     'Hdf5MeshConverter',

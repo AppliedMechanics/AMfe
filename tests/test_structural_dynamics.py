@@ -8,7 +8,9 @@
 from unittest import TestCase
 
 import numpy as np
-from scipy.linalg import qr
+from scipy.linalg import qr, lu_factor, lu_solve
+from scipy.sparse import csr_matrix
+from scipy.sparse.linalg import LinearOperator
 from numpy.testing import assert_allclose, assert_array_almost_equal
 
 from amfe.structural_dynamics import *
@@ -98,7 +100,7 @@ class TestStructuralDynamicsToolsRayleigh(TestCase):
     def test_rayleigh_coefficients(self):
         K = np.array([[4.0, -1.0, 0.0], [-1.0, 3.0, -1.5], [0.0, -1.5, 2.5]])
         M = np.diag([2.0, 6.0, 5.0])
-        omegas, V = modal_analysis(K, M, 3, mass_norm=True)
+        omegas, V = modal_analysis(K, M, 3, mass_orth=True)
         omega1 = omegas[0]
         omega2 = omegas[1]
         zeta = 0.01
@@ -110,6 +112,69 @@ class TestStructuralDynamicsToolsRayleigh(TestCase):
         Ddiag = V.T.dot(D).dot(V)
         self.assertAlmostEqual(Ddiag[0, 0]/2/omega1, zeta)
         self.assertAlmostEqual(Ddiag[1, 1]/2/omega2, zeta)
+
+
+class TestVibrationModes(TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_vibration_modes(self):
+        K = np.array([[5.0, -2.0, 0.0], [-2.0, 4.0, -2.0], [0.0, -2.0, 3.0]], dtype=float)
+        M = np.diag([2.0, 2.0, 2.0])
+
+        omega, Phi = vibration_modes(K, M, 2)
+        for i, om in enumerate(omega):
+            res = (K - om**2*M).dot(Phi[:, i])
+            assert_allclose(res, np.zeros(3, dtype=float), atol=1e-12)
+
+        # Test shift
+        om2 = omega[1]
+        omega, Phi = vibration_modes(K, M, 1, shift=om2)
+        assert_allclose(omega[0], om2)
+
+        # Test with csr_matrices instead of numpy arrays
+        K = csr_matrix(K)
+        M = csr_matrix(M)
+
+        omega, Phi = vibration_modes(K, M, 2)
+        for i, om in enumerate(omega):
+            res = (K - om**2*M).dot(Phi[:, i])
+            assert_allclose(res, np.zeros(3, dtype=float), atol=1e-12)
+
+    def test_vibration_modes_lanczos(self):
+        K = np.array([[5.0, -2.0, 0.0], [-2.0, 4.0, -2.0], [0.0, -2.0, 3.0]], dtype=float)
+        M = np.diag([2.0, 2.0, 2.0])
+
+        # factorize K:
+        lu, piv = lu_factor(K)
+
+        # Define linear operator that solves Kx = b
+        def operator(b):
+            return lu_solve((lu, piv), b)
+
+        Kinv_operator = LinearOperator(shape=K.shape, matvec=operator)
+
+        omega, Phi = vibration_modes_lanczos(K, M, 2, Kinv_operator=Kinv_operator)
+        for i, om in enumerate(omega):
+            res = (K - om**2*M).dot(Phi[:, i])
+            assert_allclose(res, np.zeros(3, dtype=float), atol=1e-12)
+
+        # Test with csr_matrices instead of numpy arrays
+        K = csr_matrix(K)
+        M = csr_matrix(M)
+
+        omega, Phi = vibration_modes_lanczos(K, M, 2, Kinv_operator=Kinv_operator)
+        for i, om in enumerate(omega):
+            res = (K - om**2*M).dot(Phi[:, i])
+            assert_allclose(res, np.zeros(3, dtype=float), atol=1e-12)
+
+        # Test shift
+        om2 = omega[1]
+        with self.assertRaises(NotImplementedError):
+            omega, Phi = vibration_modes_lanczos(K, M, 1, shift=om2, Kinv_operator=Kinv_operator)
 
 
 class TestStructuralDynamicsToolsModalAnalysis(TestCase):
@@ -124,7 +189,7 @@ class TestStructuralDynamicsToolsModalAnalysis(TestCase):
         M = np.diag([2.0, 6.0, 5.0])
 
         # Test mass norm true
-        omegas, V = modal_analysis(K, M, 3, mass_norm=True)
+        omegas, V = modal_analysis(K, M, 3, mass_orth=True)
         vmv_desired = np.diag([1.0, 1.0, 1.0])
         assert_array_almost_equal(vmv_desired, V.T.dot(M).dot(V))
 
@@ -134,7 +199,7 @@ class TestStructuralDynamicsToolsModalAnalysis(TestCase):
             assert_array_almost_equal(residual, desired)
 
         # Test mass norm false
-        omegas, V = modal_analysis(K, M, 3, mass_norm=False)
+        omegas, V = modal_analysis(K, M, 3, normalized=True)
 
         for i, omega in enumerate(omegas):
             residual = (K - omega ** 2 * M).dot(V[:, i])

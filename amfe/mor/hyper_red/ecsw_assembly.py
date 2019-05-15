@@ -12,10 +12,9 @@ Provides Assembly routines for the ECSW Assembly
 """
 
 import numpy as np
-import pandas as pd
 
-from .structural_assembly import StructuralAssembly
-from .tools import fill_csr_matrix
+from amfe.assembly.structural_assembly import StructuralAssembly
+from amfe.assembly.tools import fill_csr_matrix
 
 __all__ = [
     'EcswAssembly'
@@ -28,8 +27,6 @@ class EcswAssembly(StructuralAssembly):
 
     Attributes
     ----------
-    logger : logging.Logger
-        Logger object for pushing logging messages
     indices : numpy.array
         dtype = int, array containing the row indices of the arrays that are passed for assembly, that have nonzero
         weights.
@@ -133,8 +130,8 @@ class EcswAssembly(StructuralAssembly):
             Connectivity of the elements mapping to the indices of nodes ndarray
         elements2dofs : list of ndarrays
             Mapping the elements to their global dofs
-        elements_on_node : pandas.DataFrame
-            DataFrame containing number of elements that are assembled belonging to a node
+        elements_on_node : ndarray
+            ndarray containing number of elements that are assembled belonging to a node
         dofvalues : ndarray
             current values of all dofs (at time t) ordered by the dofnumbers given by elements2dof list
         t : float

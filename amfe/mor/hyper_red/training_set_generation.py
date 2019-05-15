@@ -1,27 +1,26 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Training set generation
-'''
+"""
 
 import numpy as np
 import time
 import scipy as sp
+from scipy.sparse.linalg import LinearOperator, splu
 import multiprocessing as mp
-import copy
 
-from ..linalg.linearsolvers import PardisoSolver
-from ..solver import NonlinearStaticsSolver
-from ..structural_dynamics import force_norm
-from ..num_exp_toolbox import apply_async
-
+from amfe.linalg.tools import arnoldi
+from amfe.structural_dynamics import force_norm
+from amfe.num_exp_toolbox import apply_async
+from amfe.solver.nonlinear_solver import NewtonRaphson
 
 __all__ = ['compute_nskts',
            'krylov_force_subspace',
            'modal_force_subspace',
-          ]
+           ]
 
-def compute_nskts(mechanical_system,
-                  F_ext_max=None,
+
+def compute_nskts(K, M, F_ext_max, f_int_func, K_func,
                   no_of_moments=4,
                   no_of_static_cases=8,
                   load_factor=2,
@@ -30,7 +29,7 @@ def compute_nskts(mechanical_system,
                   norm='impedance',
                   verbose=True,
                   force_basis='krylov'):
-    '''
+    """
     Compute the Nonlinear Stochastic Krylov Training Sets (NSKTS).
 
     NSKTS can be used as training sets for Hyper Reduction of nonlinear systems.
@@ -38,14 +37,18 @@ def compute_nskts(mechanical_system,
 
     Parameters
     ----------
-    mechanical_system : instance of amfe.MechanicalSystem
-        Mechanical System to which the NSKTS should be computed
-    F_ext_max : ndarray, optional
-        Maximum external force. If None is given, 10 random samples of the
-        external force in the time range t = [0,1] are computed and the maximum
-        value is taken. Default value is None.
+    K : csr_matrix
+        linearized stiffness matrix for which the Krylov subspace shall be computed
+    M : csr_matrix
+        linearized mass matrix for which the Krylov subspace shall be compute
+    F_ext_max : ndarray
+        External force appearing in simulation with maximum norm
+    f_int_func : callable
+        f_int function with signature res = f_int(x)
+    K_func : callable
+        K_func is the Jacobian of the f_int_func
     no_of_moments : int, optional
-        Number of moments consiedered in the Krylov force subspace. Default
+        Number of moments considered in the Krylov force subspace. Default
         value is 4.
     no_of_static_cases : int, optional
         Number of stochastic static cases which are solved. Default value is 8.
@@ -68,7 +71,7 @@ def compute_nskts(mechanical_system,
 
     Returns
     -------
-    nskts_arr : ndarray
+    nskts_arr : numpy.array
         Nonlinear Stochastic Krylov Training Sets. Every column in nskts_arr
         represents one NSKTS displacement field.
 
@@ -76,46 +79,52 @@ def compute_nskts(mechanical_system,
     ---------
     Todo
 
-    '''
-    def compute_stochastic_displacements(mechanical_system, F_rand):
-        '''
+    """
+    def compute_stochastic_displacements(f_int_func, jac_f_int, F_rand, x0, u_out):
+        """
         Solve a static problem for the given Force F_rand
 
-        '''
-        def f_ext_monkeypatched(u, du, t):
+        Parameters
+        ----------
+        f_int_func : callable
+            f_int_function of system with signature f_int(x)
+        jac_f_int : callable
+            Jacobian of f_int_func with signature K(x)
+        F_rand : array_like
+        x0 : ndarray
+            start for first search direction for newton solver
+        u_out : ndarray
+            preallocated array to write results into
+        """
+
+        def f_ext(t):
             return F_rand * t
 
-        nlsolver = NonlinearStaticsSolver(mechanical_system,
-                                          number_of_load_steps=no_of_force_increments,
-                                          max_number_of_iterations=no_of_force_increments,
-                                          verbose=verbose,
-                                          convergence_abort=True,
-                                          save_solution=False,
-                                          f_ext=f_ext_monkeypatched)
-        u_arr = nlsolver.solve()
+        for i, t in enumerate(np.arange(1/no_of_force_increments,
+                                        1+1/no_of_force_increments,
+                                        1/no_of_force_increments)):
+
+            def residual(x):
+                return f_int_func(x) - f_ext(t)
+
+            nlsolver = NewtonRaphson()
+
+            u_out[:, i], _ = nlsolver.solve(residual, x0, jac=jac_f_int, tol=1e-8*np.linalg.norm(f_ext(t)),
+                                            options={'verbose': verbose})
+            x0 = u_out[:, i]
         
-        return u_arr
+        return u_out
 
     print('*'*80)
     print('Start computing nonlinear stochastic ' +
           '{} training sets.'.format(force_basis))
     print('*'*80)
     time_1 = time.time()
-    K = mechanical_system.K()
-    M = mechanical_system.M()
+
     ndim = K.shape[0]
-    u = du = np.zeros(ndim)
-    if F_ext_max is None:
-        F_ext_max = 0
-        # compute the maximum external force
-        for i in range(10):
-            F_tmp = mechanical_system.f_ext(u, du, np.random.rand())
-            if np.linalg.norm(F_tmp) > np.linalg.norm(F_ext_max):
-                F_ext_max = F_tmp
 
     if force_basis == 'krylov':
-        F_basis = krylov_force_subspace(M, K, F_ext_max,
-                                        no_of_moments=no_of_moments,
+        F_basis = krylov_force_subspace(M, K, F_ext_max, n=no_of_moments,
                                         orth=norm)
     elif force_basis == 'modal':
         F_basis = modal_force_subspace(M, K, no_of_modes=no_of_moments,
@@ -143,10 +152,12 @@ def compute_nskts(mechanical_system,
 #            u_list.append(u)
 # NON PARALLEL IMPLEMENTATION
     u_list = []
+    u_out = np.zeros((ndim, no_of_force_increments), dtype=float)
     for i in range(no_of_static_cases):
         F_rand = F_basis @ np.random.normal(0, standard_deviation)
-        res = compute_stochastic_displacements(mechanical_system, F_rand)
-        u_list.append(res)
+        u_out[:, :] = 0.0
+        u_out = compute_stochastic_displacements(f_int_func, K_func, F_rand, np.zeros(ndim), u_out)
+        u_list.append(u_out.copy())
 
     if len(u_list) > 1:
         for number, u in enumerate(u_list):
@@ -162,9 +173,9 @@ def compute_nskts(mechanical_system,
     return snapshot_arr
 
 
-def krylov_force_subspace(M, K, b, omega=0, no_of_moments=3,
+def krylov_force_subspace(M, K, b, omega=0, n=3,
                           orth='euclidean'):
-    '''
+    """
     Compute a krylov force subspace for the computation of snapshots needed in
     hyper reduction.
 
@@ -172,8 +183,8 @@ def krylov_force_subspace(M, K, b, omega=0, no_of_moments=3,
 
     ..code::
 
-        [b, M @ inv(K - omega**2) @ b, ...,
-         (M @ inv(K - omega**2))**(no_of_moments-1) @ b]
+        [b, M @ inv(K - omega**2 M) @ b, ...,
+         (M @ inv(K - omega**2 M))**(no_of_moments-1) @ b]
 
     Parameters
     ----------
@@ -185,10 +196,10 @@ def krylov_force_subspace(M, K, b, omega=0, no_of_moments=3,
         input vector of external forcing.
     omega : float, optional
         frequency for the frequency shift of the stiffness. Default value 0.
-    no_of_moments : int, optional
+    n : int, optional
         number of moments matched. Default value 3.
     orth : str, {'euclidean', 'impedance', 'kinetic'} optional
-        flag for setting orthogonality of returnd Krylov basis vectors.
+        flag for setting orthogonality of returned Krylov basis vectors.
 
         * 'euclidean' : ``V.T @ V = eye``
         * 'impedance' : ``V.T @ inv(K) @ V = eye``
@@ -199,60 +210,60 @@ def krylov_force_subspace(M, K, b, omega=0, no_of_moments=3,
     V : ndarray
         Krylov force basis where vectors V[:,i] give the basis vectors.
 
-    '''
+    """
     ndim = M.shape[0]
-    no_of_inputs = b.size//ndim
-    f = b.copy()
-    V = np.zeros((ndim, no_of_moments*no_of_inputs))
-    LU_object = PardisoSolver(K - omega**2 * M)
-    b_new = f
-    for i in np.arange(no_of_moments):
-        V[:,i*no_of_inputs:(i+1)*no_of_inputs] = b_new.reshape((-1, no_of_inputs))
-        V[:,:(i+1)*no_of_inputs], R = sp.linalg.qr(V[:,:(i+1)*no_of_inputs],
-                                                   mode='economic')
-        f = V[:,i*no_of_inputs:(i+1)*no_of_inputs]
-        u = LU_object.solve(f)
-        b_new = M.dot(u)
+    no_of_inputs = b.size // ndim
+    r = b.reshape(-1, no_of_inputs).copy()
+    V = np.zeros((ndim, n * no_of_inputs))
+    A = K - omega ** 2 * M
+
+    solver = splu(A)
+
+    def matvec(v):
+        result = M @ solver.solve(v)
+        return result
+
+    linear_operator = LinearOperator(shape=A.shape, matvec=matvec)
+
+    V = arnoldi(linear_operator, r, n, Vout=V)
 
     sigmas = sp.linalg.svdvals(V)
 
     # mass-orthogonalization of V:
     if orth == 'impedance':
         # Gram-Schmid-process
-        for i in range(no_of_moments*no_of_inputs):
-            v = V[:,i]
-            u = LU_object.solve(v)
+        for i in range(n*no_of_inputs):
+            v = V[:, i]
+            u = solver.solve(v)
             v /= np.sqrt(u @ v)
-            V[:,i] = v
-            weights = u.T @ V[:,i+1:]
-            V[:,i+1:] -= v.reshape((-1,1)) * weights
+            V[:, i] = v
+            weights = u.T @ V[:, i+1:]
+            V[:, i+1:] -= v.reshape((-1, 1)) * weights
     if orth == 'kinetic':
-        for i in range(no_of_moments*no_of_inputs):
-            v = V[:,i]
-            u = LU_object.solve(v)
+        for i in range(n*no_of_inputs):
+            v = V[:, i]
+            u = solver.solve(v)
             v /= np.sqrt(u.T @ M @ u)
-            V[:,i] = v
-            if i+1 < no_of_moments*no_of_inputs:
-                weights = u.T @ M @ LU_object.solve(V[:,i+1:])
-                V[:,i+1:] -= v.reshape((-1,1)) * weights
+            V[:, i] = v
+            if i+1 < n*no_of_inputs:
+                weights = u.T @ M @ solver.solve(V[:, i+1:])
+                V[:, i+1:] -= v.reshape((-1, 1)) * weights
 
-
-    LU_object.clear()
     print('Krylov force basis constructed.',
           'The singular values of the basis are', sigmas)
     return V
 
 
 def modal_force_subspace(M, K, no_of_modes=3, orth='euclidean'):
-    '''
+    """
     Force subspace spanned by the forces producing the vibration modes.
-    '''
+    """
     lambda_, Phi = sp.sparse.linalg.eigsh(K, M=M, k=no_of_modes, sigma=0,
                                           which='LM',
                                           maxiter=100)
     V = K @ Phi
 
-    LU_object = PardisoSolver(K)
+    solver = splu(K)
 
     if orth == 'euclidean':
         V, _ = sp.linalg.qr(V, mode='economic')
@@ -271,15 +282,14 @@ def modal_force_subspace(M, K, no_of_modes=3, orth='euclidean'):
 
     elif orth == 'kinetic':
         for i in range(no_of_modes):
-            v = V[:,i]
-            u = LU_object.solve(v)
+            v = V[:, i]
+            u = solver.solve(v)
             v /= np.sqrt(u.T @ M @ u)
-            V[:,i] = v
+            V[:, i] = v
             if i+1 < no_of_modes:
-                weights = u.T @ M @ LU_object.solve(V[:,i+1:])
-                V[:,i+1:] -= v.reshape((-1,1)) * weights
+                weights = u.T @ M @ solver.solve(V[:, i+1:])
+                V[:, i+1:] -= v.reshape((-1, 1)) * weights
 
-    LU_object.clear()
     print('Modal force basis constructed with orth type {}.'.format(orth))
     return V
 

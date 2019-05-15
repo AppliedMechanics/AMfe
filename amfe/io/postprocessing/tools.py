@@ -9,7 +9,7 @@
 from os.path import splitext, basename
 from xml.etree import ElementTree as ET
 
-from amfe.io.postprocessing import XDMFDICT, MESHENTITYTYPE2XDMF, POSTPROCESSDATATYPE2XDMF,\
+from amfe.io import XDMFDICT, MESHENTITYTYPE2XDMF, POSTPROCESSDATATYPE2XDMF,\
     POSTPROCESSDATATYPE2XDMFDIMENSION, MeshEntityType
 from amfe.io.tools import insert_line_breaks_in_xml
 

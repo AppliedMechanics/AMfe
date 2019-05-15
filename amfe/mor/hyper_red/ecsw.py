@@ -3,18 +3,18 @@ TODO: Write introduction to ECSW
 """
 
 import logging
-from copy import deepcopy, copy
 
 import numpy as np
 from scipy.linalg import solve as linsolve
 from scipy.sparse import csc_matrix
 
-from amfe.assembly import EcswAssembly
+from .ecsw_assembly import EcswAssembly
 
 
 __all__ = ['sparse_nnls',
-           'assemble_g_and_b',
-           'reduce_with_ecsw']
+           'ecsw_assemble_G_and_b',
+           'ecsw_get_weights_by_component',
+           'EcswAssembly']
 
 
 def sparse_nnls(G, b, tau, conv_stats=True):
@@ -119,7 +119,7 @@ def sparse_nnls(G, b, tau, conv_stats=True):
     return x, stats
 
 
-def assemble_g_and_b(component, S, timesteps=None):
+def ecsw_assemble_G_and_b(component, S, W, timesteps=None):
     """
     Assembles the element contribution matrix G for the given snapshots S.
 
@@ -133,6 +133,8 @@ def assemble_g_and_b(component, S, timesteps=None):
         be the component that is reduced by this reduction basis
     S : ndarray, shape (no_of_dofs, no_of_snapshots)
         Snapshots gathered as column vectors.
+    W : ndarray
+        projection matrix
     timesteps : ndarray, shape(no_of_snapshots)
         the timesteps of where the snapshots have been generated can be passed,
         this is important for systems with certain constraints
@@ -154,15 +156,19 @@ def assemble_g_and_b(component, S, timesteps=None):
     # Currently not applicable
     # assert(component.no_of_dofs == S.shape[0])
 
-    logger = logging.getLogger('amfe.hyper_red.ecsw.assemble_g_and_b')
+    logger = logging.getLogger('amfe.hyper_red.ecsw.ecsw_assemble_G_and_b')
+
+    if timesteps is None:
+        timesteps = np.zeros(S.shape[1], dtype=float)
 
     no_of_dofs, no_of_snapshots = S.shape
+    no_of_reduced_dofs = W.shape[1]
 
     no_of_elements = component.no_of_elements
     logger.info('Start building large selection matrix G. In total {0:d} elements are treated:'.format(
                   no_of_elements))
 
-    G = np.zeros((no_of_dofs*no_of_snapshots, no_of_elements))
+    G = np.zeros((no_of_reduced_dofs*no_of_snapshots, no_of_elements))
 
     # Temporarily replace Assembly of component:
     old_assembly = component.assembly
@@ -184,7 +190,7 @@ def assemble_g_and_b(component, S, timesteps=None):
         # loop over all snapshots
 
         for snapshot_number, (snapshot_vector, t) in enumerate(zip(S.T, timesteps)):
-            G[snapshot_number*no_of_dofs:(snapshot_number+1)*no_of_dofs, element_no] = component.f_int(snapshot_vector,
+            G[snapshot_number*no_of_reduced_dofs:(snapshot_number+1)*no_of_reduced_dofs, element_no] = W.T @ component.f_int(snapshot_vector,
                                                                                                        dq, t)
 
     b = np.sum(G, axis=1)
@@ -194,8 +200,7 @@ def assemble_g_and_b(component, S, timesteps=None):
     return G, b
 
 
-def reduce_with_ecsw(component, S, timesteps, tau=0.001, copymode='overwrite',
-                                   conv_stats=True, tagname=None):
+def ecsw_get_weights_by_component(component, S, W, timesteps=None, tau=0.001, conv_stats=True):
     """
     Reduce the given MeshComponent
 
@@ -205,49 +210,41 @@ def reduce_with_ecsw(component, S, timesteps, tau=0.001, copymode='overwrite',
         MeshComponent
     S : ndarray, shape (no_of_dofs, no_of_snapshots)
         Snapshots
-    copymode : str {'overwrite', 'shallow', 'deep'}
-        Select if the component shall be verwritten, shallow copied or deepcopied
+    W : ndarray
+        projection basis
+    timesteps : ndarray, optional
+        timesteps of the training snapshots
+        if None, all timesteps will be set to zero
+    tau : float
+        tolerance of the ECSW reduction
     conv_stats : bool
         Flag if conv_stats shall be collected
-    tagname : str
-        optional, if a string is given the weights are written into the mesh as tag values
-        the tagname is the given string
 
     Returns
     -------
-    reduced_system : instance of MeshComponent
-        Reduced system with same properties of the passed Mesh Component
-        but with ECSW reduced mesh
-    stats : list
-        Information about hyperreduction convergence
+    weights : ndarray
+        ecsw weights
+    indices : ndarray
+        row based indices of elements that have non-zero weights
+    stats : ndarray
+        convergence stats of the snnls solver
     """
 
-    # If overwrite use existent component, else create new one by copying
-    if copymode == 'overwrite':
-        hyperreduced_component = component
-    elif copymode == 'shallow':
-        hyperreduced_component = copy(component)
-    elif copymode == 'deep':
-        hyperreduced_component = deepcopy(component)
-    else:
-        raise ValueError("copymode must be 'overwrite', 'shallow' or 'deep', got {}".format(copymode))
+    if timesteps is None:
+        timesteps = np.zeros(S.shape[1], dtype=float)
 
     # Create G and b from snapshots:
-    G, b = assemble_g_and_b(hyperreduced_component, S, timesteps)
+    G, b = ecsw_assemble_G_and_b(component, S, W, timesteps)
 
+    weights, indices, stats = ecsw_get_weights_by_G_and_b(G, b, tau, conv_stats)
+
+    return weights, indices, stats
+
+
+def ecsw_get_weights_by_G_and_b(G, b, tau, conv_stats):
     # Calculate indices and weights
     x, stats = sparse_nnls(G, b, tau, conv_stats)
     indices = x.indices
     weights = x.data
 
-    # Create new assembly
-    ecswassembly = EcswAssembly(weights, indices)
-
-    # Assign new assembly got reduced_component
-    hyperreduced_component.assembly = ecswassembly
-
-    # create a new tag for ecsw weights
-    if tagname is not None:
-        # FIXME: This cannot be done so far because indexing of elements on component level is hard accessible
-        pass
-    return hyperreduced_component, stats
+    return weights, indices, stats

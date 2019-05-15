@@ -17,8 +17,6 @@ from amfe.linalg.orth import m_orthogonalize
 from amfe.linalg.tools import arnoldi
 
 __all__ = ['krylov_basis',
-           'vibration_modes_lanczos',
-           'vibration_modes',
            'craig_bampton',
            'pod',
            'modal_derivatives',
@@ -33,9 +31,17 @@ __all__ = ['krylov_basis',
 
 def krylov_basis(M, K, b, n=3, omega=0.0, mass_orth=True,
                  n_iter_orth=1):
-    """
+    r"""
     Computes the Krylov Subspace associated with the input matrix b at the
     frequency omega.
+
+    .. math::
+        \mathcal{K}(K^{-1} M, K^{-1} b)
+
+    or with omega shift
+
+    .. math::
+        \mathcal{K}( (K - \omega^2 M)^{-1} M, (K - \omega^2 M)^{-1} b)
 
     Parameters
     ----------
@@ -80,7 +86,7 @@ def krylov_basis(M, K, b, n=3, omega=0.0, mass_orth=True,
         first_krylov_vectors[:, i] = solver.solve(A, rhs)
 
     def matvec(v):
-        result = solver.solve(A, v)
+        result = M @ solver.solve(A, v)
         return result
 
     linear_operator = LinearOperator(shape=A.shape, matvec=matvec)
@@ -91,158 +97,6 @@ def krylov_basis(M, K, b, n=3, omega=0.0, mass_orth=True,
     if mass_orth:
         m_orthogonalize(V, M, niter=n_iter_orth)
     return V
-
-
-def vibration_modes_lanczos(K, M, n=10, shift=0.0, Kinv_operator=None, niter_max=40, rtol=1E-14):
-    r"""
-    Make a modal analysis using a naive Lanczos iteration.
-
-    Parameters
-    ----------
-    K : array_like
-        stiffness matrix
-    M : array_like
-        mass matrix
-    n : int
-        number of modes to be computed
-    shift : float
-        shift the eigenvalue problem such that the eigenfrequencies around the shift (omega) are found
-    Kinv_operator : LinearOperator
-        LinearOperator solving Kx=b (i.e. multiplication :math:`K^{-1} b`)
-        if None, the scipy eigsh solver will be used instead
-
-    niter_max : int, optional
-        Maximum number of Lanzcos iterations
-    rtol : float, optional
-        relative tolerance
-
-    Returns
-    -------
-    om : ndarray, shape(n)
-        eigenfrequencies of the system
-    Phi : ndarray, shape(ndim, n)
-        Vibration modes of the system
-
-    Note
-    ----
-    In comparison to the vibration_modes method, this method can use different linear solvers
-    available via the Kinv_operator method and a naive Lanczos iteration. The modal_analysis method
-    uses the Arpack solver which is more accurate but takes also much longer for
-    large systems, since the factorization is very inefficient by using superLU.
-    """
-    if Kinv_operator is None:
-        return vibration_modes(K, M, n, shift)
-
-    if shift != 0.0:
-        raise NotImplementedError('The shift has not been implemented yet in the Lanczos solver')
-
-    k_diag = K.diagonal().sum()
-
-    # build up Krylov sequence
-    n_rand = n
-    n_dim = M.shape[0]
-
-    residual = np.zeros(n)
-    b = np.random.rand(n_dim, n_rand)
-    b, _ = sp.linalg.qr(b, mode='economic')
-    krylov_subspace = b
-
-    def matvec(v):
-        return Kinv_operator.dot(M.dot(v))
-
-    A = LinearOperator(shape=(n_dim, n_dim), matvec=matvec)
-
-    n_iter = niter_max + 1
-
-    for n_iter in range(niter_max):
-        print('Lanczos iteration # {}. '.format(n_iter), end='')
-        new_directions = A.dot(b)
-        krylov_subspace = np.concatenate((krylov_subspace, new_directions), axis=1)
-        krylov_subspace, _ = sp.linalg.qr(krylov_subspace, mode='economic')
-        b = krylov_subspace[:, -n_rand:]
-
-        # solve interaction problem
-        K_red = krylov_subspace.T @ K @ krylov_subspace
-        M_red = krylov_subspace.T @ M @ krylov_subspace
-        lambda_r, Phi_r = sp.linalg.eigh(K_red, M_red, overwrite_a=True, overwrite_b=True)
-        Phi = krylov_subspace @ Phi_r[:, :n]
-
-        # check the tolerance to be below machine epsilon with some buffer...
-        for i in range(n):
-            residual[i] = np.sum(abs((-lambda_r[i] * M + K) @ Phi[:, i])) / k_diag
-
-        print('Res max: {:.2e}'.format(np.max(residual)))
-        if np.max(residual) < rtol:
-            break
-
-    if n_iter - 1 == niter_max:
-        print('No convergence gained in the given iteration steps.')
-
-    print('The Lanczos solver took ' +
-          '{} iterations to solve for {} eigenvectors.'.format(n_iter+1, n))
-    omega = np.sqrt(abs(lambda_r[:n]))
-    V = Phi[:,:n]
-    # Little bit of sick hack: The negative sign is transferred to the
-    # eigenfrequencies
-    omega[lambda_r[:n] < 0] *= -1
-
-    return omega, V
-
-
-def vibration_modes(K, M, n=10, shift=0.0, mass_orth=False):
-    """
-    Compute the n first vibration modes of the given stiffness and mass matrix using the ARPACK Lanczos solver
-
-    Parameters
-    ----------
-    K: ndarray or csr_matrix
-        Stiffness Matrix
-    M: ndarray or csr_matrix
-        Mass Matrix
-    n: int
-        number of modes to be computed.
-    shift: float
-        shift the eigenvalue problem such that the eigenfrequencies around the shift (omega) are found
-    mass_orth: bool
-        Flag if modes shall be mass orthogonalized
-
-    Returns
-    -------
-    omega : ndarray
-        vector containing the eigenfrequencies of the mechanical system in
-        rad / s.
-    Phi : ndarray
-        Array containing the vibration modes. Phi[:,0] is the first vibration
-        mode corresponding to eigenfrequency omega[0]
-
-    Examples
-    --------
-    omega, Phi = vibration_modes(K, M, 10)
-
-    Notes
-    -----
-    The core command using the ARPACK library is a little bit tricky. One has
-    to use the shift inverted mode for the solution of the mechanical
-    eigenvalue problem with the largest eigenvalues. Generally no convergence
-    is gained when the smallest eigenvalue is to be found.
-
-    If the squared eigenvalue omega**2 is negative, as it might happen due to
-    round-off errors with rigid body modes, the negative sign is traveled to
-    the eigenfrequency omega, though this makes physically no sense...
-    """
-    sigma = shift**2
-
-    lambda_, V = sp.sparse.linalg.eigsh(K, M=M, k=n, sigma=sigma, which='LM',
-                                        maxiter=100)
-    omega = np.sqrt(abs(lambda_))
-    # Little bit of sick hack: The negative sign is transferred to the
-    # eigenfrequencies
-    omega[lambda_ < 0] *= -1
-
-    if mass_orth:
-        for i, v in enumerate(V.T):
-            V[:, i] = v/np.sqrt(v.dot(M).dot(v))
-    return omega, V
 
 
 def craig_bampton(K, M, interface_dofs, no_of_modes=5,

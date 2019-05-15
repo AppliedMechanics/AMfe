@@ -136,6 +136,8 @@ class NewtonRaphson:
             options.setdefault('atol', tol)
 
         # Parse options
+        if options is None:
+            options = dict()
         self.set_options(options)
 
         # Set callback function

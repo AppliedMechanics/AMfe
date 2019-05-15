@@ -19,8 +19,8 @@ from amfe.neumann.structural_neumann import FixedDirectionNeumann
 from amfe.solver.translators import create_constrained_mechanical_system_from_component
 from amfe.solver import SolverFactory, AmfeSolution
 
-from amfe.io.mesh.reader import GidJsonMeshReader, AmfeMeshObjMeshReader, GmshAsciiMeshReader
-from amfe.io.mesh.writer import AmfeMeshConverter
+from amfe.io.mesh import GidJsonMeshReader, AmfeMeshObjMeshReader, GmshAsciiMeshReader
+from amfe.io.mesh import AmfeMeshConverter
 from amfe.io.postprocessing.reader import AmfeSolutionReader
 from amfe.io.postprocessing.writer import Hdf5PostProcessorWriter
 from amfe.io.postprocessing.tools import write_xdmf_from_hdf5
@@ -297,7 +297,7 @@ def write_results_to_paraview(solution, component, paraviewfilename):
     """
     paraviewfilename = splitext(paraviewfilename)[0]
 
-    preader = AmfeSolutionReader(solution, component, is_constrained=False)
+    preader = AmfeSolutionReader(solution, component)
     meshreaderobj = AmfeMeshObjMeshReader(component.mesh)
 
     hdf5resultsfilename = paraviewfilename + '.hdf5'

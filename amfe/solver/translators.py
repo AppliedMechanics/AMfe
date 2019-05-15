@@ -133,7 +133,8 @@ def create_constrained_mechanical_system_from_component(structural_component, co
 
     Returns
     -------
-        system : MechanicalSystem
+    system : amfe.solver.translators.MechanicalSystem
+    formulation : amfe.constraint.ConstraintFormulation
     """
     system_unconstrained = create_mechanical_system_from_structural_component(structural_component)
     constraint_formulation = _create_constraint_formulation(system_unconstrained, structural_component,
