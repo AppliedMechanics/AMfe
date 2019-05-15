@@ -35,12 +35,10 @@ class TreeBuilder:
         -------
         None
         """
-        print(self.leaf_paths.leaves)
         new_component_ids, new_components, dofs_map_loc2glo = self._separate_component(leaf_id)
         composite_path = self.leaf_paths.get_composite_path(leaf_id)
 
         self.delete_leafs(leaf_id)
-
         self.add(new_component_ids, new_components, composite_path)
 
         composite = self.get_component_by_path(composite_path)

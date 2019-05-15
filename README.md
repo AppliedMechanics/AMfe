@@ -63,6 +63,15 @@ If you do not want to install the FORTRAN-routines, you can add the flag `no_for
 
 If no FORTRAN-compile is found, the installation will work only with the `no_fortran`-flag.
 
+There is also the option to use the domain decomposition solver library PYFETI. As this is very experimental, one can 
+switch it off by adding the `no_feti`-flag:
+
+    python setup.py develop no_feti
+    
+Of course this can be combined with the `no_fortran`-flag:
+
+    python setup.py develop no_fortran no_feti
+
 Documentation
 -------------
 Further documentation to this code is in the folder `docs/`. For building the documentation, go to the `docs/` folder

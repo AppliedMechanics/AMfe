@@ -10,7 +10,7 @@ Module for advanced nonlinear finite element analysis. This software is develope
 Applied Mechanics, Technical University of Munich.
 
 Authors:
-Christian Meyer, Christopher Lerch, Johannes Rutzmoser, Fabian Gruber
+Christian Meyer, Christopher Lerch, Johannes Rutzmoser, Fabian Gruber, Andreas Seibold
 """
 # from __future__ import absolute_import
 #
@@ -40,4 +40,4 @@ Christian Meyer, Christopher Lerch, Johannes Rutzmoser, Fabian Gruber
 # # Commented out as a dill dependency is required only here
 # from .num_exp_toolbox import *
 
-__author__ = 'Christian Meyer, Christopher Lerch, Johannes Rutzmoser, Fabian Gruber'
+__author__ = 'Christian Meyer, Christopher Lerch, Johannes Rutzmoser, Fabian Gruber, Andreas Seibold'

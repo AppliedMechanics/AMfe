@@ -102,7 +102,30 @@ no_extension_str = '''
 ###############################################################################
 '''
 
+no_feti_str = '''
+
+###############################################################################
+###############    Import of PYFETI-library is disabled!     ##################
+###############################################################################
+'''
+
 if __name__ == '__main__':
+    if 'no_feti' in sys.argv:
+        sys.argv.remove('no_feti')
+        print(no_feti_str)
+    else:
+        pyfeti_ver = 'pyfeti>=0.12'
+        pyfeti_repo = 'git+ssh://git@gitlab.lrz.de/AM/pyfeti.git#egg=pyfeti'
+
+        if 'install_requires' in config:
+            config['install_requires'] = config['install_requires'] + [pyfeti_ver]
+        else:
+            config['install_requires'] = [pyfeti_ver]
+        if 'dependency_links' in config:
+            config['dependency_links'] = config['dependency_links'] + [pyfeti_repo]
+        else:
+            config['dependency_links'] = [pyfeti_repo]
+
     if 'no_fortran' in sys.argv:
         sys.argv.remove('no_fortran')
         print(no_fortran_str)

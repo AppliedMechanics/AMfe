@@ -280,7 +280,8 @@ class Mesh:
         """
         elementids = list()
         for group in groups:
-            elementids.extend(self.groups[group]['elements'])
+            if group in self.groups:
+                elementids.extend(self.groups[group]['elements'])
         elementids = np.array(elementids)
         elementids = np.unique(elementids)
         return elementids
