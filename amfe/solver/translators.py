@@ -22,6 +22,7 @@ import numpy as np
 from amfe.solver.tools import MemoizeStiffness, MemoizeConstant
 from amfe.constraint.constraint_formulation_boolean_elimination import BooleanEliminationConstraintFormulation
 from amfe.constraint.constraint_formulation_lagrange_multiplier import SparseLagrangeMultiplierConstraintFormulation
+from amfe.constraint.constraint_formulation_nullspace_elimination import NullspaceConstraintFormulation
 
 __all__ = [
     'MechanicalSystem',
@@ -299,16 +300,16 @@ def _create_constraint_formulation(mechanical_system, component, formulation, **
                                                                                g_func=
                                                                                component.g_holo)
     elif formulation == 'nullspace_elimination':
-        constraint_formulation = BooleanEliminationConstraintFormulation(no_of_dofs_unconstrained,
-                                                                         mechanical_system.M,
-                                                                         mechanical_system.f_int,
-                                                                         component.B,
-                                                                         mechanical_system.f_ext,
-                                                                         mechanical_system.K,
-                                                                         mechanical_system.D,
-                                                                         g_func=component.g_holo,
-                                                                         b_func=component.b,
-                                                                         a_func=component.a)
+        constraint_formulation = NullspaceConstraintFormulation(no_of_dofs_unconstrained,
+                                                                mechanical_system.M,
+                                                                mechanical_system.f_int,
+                                                                component.B,
+                                                                mechanical_system.f_ext,
+                                                                mechanical_system.K,
+                                                                mechanical_system.D,
+                                                                g_func=component.g_holo,
+                                                                b_func=component.b,
+                                                                a_func=component.a)
     else:
         raise ValueError('formulation not valid')
 
