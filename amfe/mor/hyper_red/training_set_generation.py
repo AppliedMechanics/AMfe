@@ -7,11 +7,10 @@ import numpy as np
 import time
 import scipy as sp
 from scipy.sparse.linalg import LinearOperator, splu
-import multiprocessing as mp
 
 from amfe.linalg.tools import arnoldi
 from amfe.structural_dynamics import force_norm
-from amfe.num_exp_toolbox import apply_async
+
 from amfe.solver.nonlinear_solver import NewtonRaphson
 
 __all__ = ['compute_nskts',
