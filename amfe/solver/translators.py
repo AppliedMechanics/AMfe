@@ -17,7 +17,7 @@ f_ext()
 f_int()
 dimension
 """
-
+import numpy as np
 
 from amfe.solver.tools import MemoizeStiffness, MemoizeConstant
 from amfe.constraint.constraint_formulation_boolean_elimination import BooleanEliminationConstraintFormulation
@@ -25,6 +25,7 @@ from amfe.constraint.constraint_formulation_lagrange_multiplier import SparseLag
 
 __all__ = [
     'MechanicalSystem',
+    'MulticomponentMechanicalSystem',
     'create_constrained_mechanical_system_from_component',
     '_create_constraint_formulation',
     'create_mechanical_system_from_structural_component',
@@ -71,6 +72,99 @@ class MechanicalSystem:
     @property
     def dimension(self):
         return self._dimension
+
+
+class MulticomponentMechanicalSystem:
+    """
+    Translator for a system, that consists of several components.
+    """
+    def __init__(self, composite, constant_mass=False, constant_damping=False, constraint_formulation='boolean',
+                                                                                            ** formulation_options):
+        self.mechanical_systems = dict()
+        self.constraint_formulations = dict()
+        for comp_id, component in composite.components.items():
+            if component._constraints.no_of_constraints == 0:
+                new_mechanical_system = create_mechanical_system_from_structural_component(component, constant_mass,
+                                                                                           constant_damping)
+            else:
+                new_mechanical_system, formulation = create_constrained_mechanical_system_from_component(component,
+                                                                constant_mass, constant_damping, constraint_formulation,
+                                                                                                **formulation_options)
+                self.constraint_formulations[comp_id] = formulation
+
+            self.mechanical_systems[comp_id] = new_mechanical_system
+
+        self.connector = composite.connector
+
+        self.connections = dict()
+        for key in self.connector.constraints:
+            self.connections[key] = self.B(key)
+
+    def B(self, key):
+        """
+        Returns the constraint-matrix connecting two components at an interface. The key describes, which components are
+        connected.
+
+        Parameters
+        ----------
+        key : tuple
+            interface-key, that consists of both connected components
+
+        Returns
+        -------
+        B : ndarray
+            connection-matrix with dof-dimension of the constrained system
+        """
+        if key[-1] in self.constraint_formulations:
+            B_constrained = self.constraint_formulations[key[-1]].L.T @ self.connector.constraints[key].T
+        else:
+            B_constrained = self.connector.constraints[key].T
+        return B_constrained.T
+
+    def recover(self, x_dict, dx_dict=None, ddx_dict=None, t=0):
+        """
+        Method to recover the full solutions of the components
+
+        Parameters
+        ----------
+        x_dict : dict
+            dictionary of the components' final ode variables in the constrained space
+        dx_dict : dict
+            dictionary of the components' 1st time derivative of the final ode variables in the constrained space
+        ddx_dict : dict
+            dictionary of the components' 2nd time derivative of the final ode variables in the constrained space
+        t : float
+            time
+
+        Returns
+        -------
+        u : dict
+            dictionary of the components' full displacements
+        du : dict
+            dictionary of the components' full velocities
+        ddu : dict
+            dictionary of the components' full accelerations
+        """
+        u = dict()
+        du = dict()
+        ddu = dict()
+        for comp_id in self.mechanical_systems.keys():
+
+            x = x_dict[comp_id]
+
+            if dx_dict is None and ddx_dict is None:
+                dx = np.zeros_like(x)
+                ddx = np.zeros_like(x)
+            else:
+                dx = dx_dict[comp_id]
+                ddx = ddx_dict[comp_id]
+
+            if comp_id in self.constraint_formulations:
+                u[comp_id], du[comp_id], ddu[comp_id] = self.constraint_formulations[comp_id].recover(x, dx, ddx, t)
+            else:
+                u[comp_id], du[comp_id], ddu[comp_id] = x, dx, ddx
+
+        return u, du, ddu
 
 
 def create_mechanical_system_from_structural_component(structural_component, constant_mass=False,

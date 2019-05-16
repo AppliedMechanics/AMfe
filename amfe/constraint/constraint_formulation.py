@@ -173,8 +173,6 @@ class ConstraintFormulationBase:
             velocities
         ddu : ndarray
             accelerations
-        t : float
-            time
         """
         return self.u(x, t), self.du(x, dx, t), self.ddu(x, dx, ddx, t)
 
