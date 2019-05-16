@@ -75,9 +75,10 @@ config = {
     'author_email': 'johannes.rutzmoser@tum.de',
     'maintainer': 'Christian Meyer',
     'maintainer_email': 'christian.meyer@tum.de',
-    'install_requires': ['numpy>=1.10', 'scipy>=0.17', 'pandas',
-                         'h5py', 'matplotlib'],
-    'tests_require': ['nose', 'sphinx==1.3.1', 'sphinx_rtd_theme'],
+    'python_requires': '>=3.7',
+    'install_requires': ['numpy>=1.10', 'scipy>=0.17', 'pandas>=0.23', 'theano',
+                         'h5py', 'matplotlib', 'vtk==8.1.2', 'tables'],  # carefull: condapackage is pytables not tables
+    'tests_require': ['nose', 'sphinx==1.3.1', 'sphinx_rtd_theme', 'numpydoc'],
     'packages': ['amfe'],
     'scripts': [],
     'entry_points': {},
@@ -101,7 +102,30 @@ no_extension_str = '''
 ###############################################################################
 '''
 
+no_feti_str = '''
+
+###############################################################################
+###############    Import of PYFETI-library is disabled!     ##################
+###############################################################################
+'''
+
 if __name__ == '__main__':
+    if 'no_feti' in sys.argv:
+        sys.argv.remove('no_feti')
+        print(no_feti_str)
+    else:
+        pyfeti_ver = 'pyfeti>=0.12'
+        pyfeti_repo = 'git+ssh://git@gitlab.lrz.de/AM/pyfeti.git#egg=pyfeti'
+
+        if 'install_requires' in config:
+            config['install_requires'] = config['install_requires'] + [pyfeti_ver]
+        else:
+            config['install_requires'] = [pyfeti_ver]
+        if 'dependency_links' in config:
+            config['dependency_links'] = config['dependency_links'] + [pyfeti_repo]
+        else:
+            config['dependency_links'] = [pyfeti_repo]
+
     if 'no_fortran' in sys.argv:
         sys.argv.remove('no_fortran')
         print(no_fortran_str)

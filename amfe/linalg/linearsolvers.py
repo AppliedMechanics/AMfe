@@ -7,283 +7,275 @@
 Module contains linear equation solvers
 """
 
-
-from scipy.sparse import issparse
-import scipy as sp
-import scipy.sparse.linalg
+from scipy.linalg import solve as scipysolve
+from scipy.sparse import csr_matrix, issparse
+from scipy.sparse.linalg import spsolve, cg
 from .lib import PardisoWrapper
+from copy import deepcopy
+import numpy as np
+import logging
 
 
 __all__ = [
-    'ScipySparseSolver',
-    'PardisoSolver',
+    'ScipySparseLinearSolver',
+    'ScipyConjugateGradientLinearSolver',
+    'PardisoLinearSolver',
+    'ResidualbasedConjugateGradient',
     'solve_sparse'
 ]
 
 
-class LinearSolver:
-
-    def __init__(self, A=None, options=None):
+class LinearSolverBase:
+    """
+    Base Class for all linear solvers
+    """
+    def __init__(self):
         pass
 
-    def set_A(self, A):
-        pass
+    def solve(self, A, b):
+        """
+        Solve a linear system A x = b
+        Parameters
+        ----------
+        A : ndarray
+            ndarray desribing the matrix A
+        b : ndarray
+            right hand side
 
-    def clear(self):
-        '''
-        Method for clearing memory space
-        '''
-        pass
-
-    def solve(self, b):
-        '''
-        Method for solving for a rhs b
-        
-        Paramters
-        ---------
-        b : numpy.array
-            Right hand side to solve A*x = b
         Returns
         -------
-        x : numpy.array
+        x : ndarray
             Solution vector
-        '''
+        """
         pass
 
-    def get_options(self):
-        '''
-        Return a string that shows current options that have been set
-        
-        '''
-        pass
+# Wrappers for third-party linear solvers
+class ScipySparseLinearSolver(LinearSolverBase):
+    """
+    Scipy Sparse Solver
 
-    def __str__(self):
-        '''
-        Return a string that gives information about the solver state
+    Notes
+    -----
+    This tool uses the Intel MKL library provided by Anaconda. If the Intel MKL
+    is not installed, especially for large systems the computation time can go
+    crazy. To adjust the number of threads used for the computation, it is
+    recommended to use the mkl-service module provided by Anaconda:
 
-        '''
-        pass
+    >>> import mkl
+    >>> mkl.get_max_threads()
+    2
+    >>> mkl.set_num_threads(1)
+    >>> mkl.get_max_threads()
+    1
 
-
-class ScipySparseSolver(LinearSolver):
-
-    available_status = {0 : 'Unknown/Nothing',
-                        1 : 'A has been set'
-                        }
-    status = 0
-    available_options = {'permc_spec': 'How to permute the columns of the matrix for sparsity preservation'
+    """
+    AVAILABLE_OPTIONS = {'permc_spec': 'How to permute the columns of the matrix for sparsity preservation'
                                        'Allowed Values: NATURAL, MMD_ATA, MMD_AT_PLUS_A, COLAMD',
                          'use_umfpack': 'True or False for using umfpack. This can only be done if scikit-umfpack'
-                                        'is installed',
-                         'verbose': 'Verbose version'
-                        }
+                                        'is installed'
+                         }
 
-    def __init__(self, A=None, options=None):
-        super().__init__(A, options)
-        # Set some default Values
-        self.verbose = False
-        self.permc_spec = 'COLAMD'
-        self.use_umfpack = False
-        self.shape = A.shape
+    def __init__(self):
+        super().__init__()
 
-        if issparse(A):
-            self.A = A
-            self.status = 1
-        elif A is not None:
-            raise ValueError('A must be a sparse matrix for this solver')
-        else:
-            self.A = None
-        if options is not None:
-            for key in options:
-                if key not in self.available_options:
-                    raise ValueError('Error in ScipySparseSolver: Options Value {} not valid'.format(key))
-                else:
-                    # Check if verbose option is activated
-                    if key == 'verbose':
-                        self.verbose = options['verbose']
-                    # Check if mtype is in options
-                    if key == 'permc_spec':
-                        self.permc_spec = options['permc_spec']
-                    if key == 'use_umfpack':
-                        self.use_umfpack = options['use_umfpack']
+    def solve(self, A, b, **kwargs):
+        """
+        Solve a linear system A x = b
+        Parameters
+        ----------
+        A : {ndarray, matrix, LinearOperator}
+            ndarray desribing the matrix A
+        b : ndarray
+            right hand side
 
-    def set_A(self, A):
-        if issparse(A):
-            self.A = A
-            self.status = 1
-        else:
-            raise ValueError('A must be a sparse matrix for this solver')
-
-    def clear(self):
-        self.A = None
-
-    def solve(self, b):
-        return scipy.sparse.linalg.spsolve(self.A, b, permc_spec=self.permc_spec, use_umfpack=self.use_umfpack)
-
-    def __str__(self):
-        n = 0
-        if issparse(self.A):
-            n = self.A.shape[0]
-        info = 'This is a ScipySparseSolver object.\n  Dimension of A: {}\n' \
-               '  status: {} ({})\n  permc_spec option: {}, use_umfpack ' \
-               'option: {}'.format(n, str(self.status),
-                                   self.available_status[self.status], self.permc_spec, self.use_umfpack)
-        return info
+        Returns
+        -------
+        x : ndarray
+            Solution vector
+        """
+        x = spsolve(A, b, **kwargs)
+        return x
 
 
-class PardisoSolver(LinearSolver):
+class ScipyConjugateGradientLinearSolver(LinearSolverBase):
+    def __init__(self):
+        super().__init__()
 
-    available_status = {0: 'Unknown/Nothing',
-                        1: 'A has been set',
-                        2: 'A has been factorized'
-                        }
-    status = 0
-    mtypes = {'sym': 1,
+    def solve(self, A, b, x0=None, tol=1e-05, maxiter=None, P=None, callback=None, atol=None):
+        """
+
+        Parameters
+        ----------
+        A : {sparse_matrix, dense_matrix, LinearOperator}
+            Matrix A
+        b : {array, matrix}
+            Right hand side
+        x0 : {array, matrix}
+            starting guess for the solution
+        tol, atol : float, optional
+            Tolerances for convergence norm(residual) <= max(tol*norm(b), atol)
+        maxiter : int
+            maximum number of iterations
+        P : {sparse_matrix, dense_matrix, LinearOperator}
+            Preconditioner for A. The preconditioner should approximate the inverse of A
+        callback : function
+            User-supplied function to call after each iteration.
+            Signature callback(xk), where xk is the current solution vector
+
+        Returns
+        -------
+        x : {array, matrix}
+            solution vector
+        """
+        x, _ = cg(A, b, x0, tol, maxiter, P, callback, atol)
+        return x
+
+
+class PardisoLinearSolver(LinearSolverBase):
+
+    MTYPES = {'sym': 1,
               'spd': 2,
               'sid': -2,
               'nonsym': 11,
               }
-    available_options = {'mtype': 'Matrix Type, can be sym, spd, sid or nonsym',
-                         'verbose': 'Verbose',
-                         'saddle_point': 'Set options for saddlepoint problem',
-                         'refinement_steps': 'Number of Refinement steps',
-                         'pivoting_perturbation': 'Small Pivots are perturbed with eps=10^-(this_value)',
-                         'scaling': 'Use maximum weight matching algorithm to permute large elements to diagonal and'
-                                    'scale them to one',
-                         'transposed': 'use transposed matrix A instead',
-                         'maximum_weighted_matching': 'Use maximum weighted matching to permute large elements close'
-                                                      'diagonal',
-                         'indefinite_pivoting': 'Pivoting for indefinite matrices',
-                         'partial_solve': '',
-                         'storage_mode': '',
-    }
+
     # info:
     # For changing iparms that are not listed here, just add a name for the iparm parameter
     # Then you can pass an options dictionary to change the iparms
-    iparm_dict = {'refinement_steps': 7,
-               'pivoting_perturbation': 9,
-               'scaling': 10,
-               'transposed': 11,
-               'maximum_weighted_matching': 12,
-               'indefinite_pivoting': 20,
-               'partial_solve': 30,
-               'storage_mode': 59,
+    IPARM_DICT = {'refinement_steps': 7,
+                  'pivoting_perturbation': 9,
+                  'scaling': 10,
+                  'transposed': 11,
+                  'maximum_weighted_matching': 12,
+                  'indefinite_pivoting': 20,
+                  'partial_solve': 30,
+                  'storage_mode': 59,
                   }
 
-    def __init__(self, A=None, **options):
-        # call options initialization from superclass
-        super().__init__(A, options)
-        # Set some default values
-        self.shape = None
-        self.iparm = {}
-        self.verbose = False
-        self.mtype = 'nonsym'
+    def __init__(self):
+        super().__init__()
         self.wrapper_class = None
-        # Overwrite default values with options
-        self.set_options(**options)
-        if A is not None:
-            if not isinstance(A, sp.sparse.csr_matrix):
-                try:
-                    A = sp.sparse.csr_matrix(A)
-                except:
-                    self.status = 0
-                    raise ValueError('A must be A csr_matrix or at least a csr convertible matrix')
-                # First check if saddle_point problem option is set (this can be overwritten by other options)
 
+    def solve(self, A, b, mtype='nonsym', **iparms):
+        """
 
-            # instantiate PardisoWrapper object
-            # This does not! make a factorization
-            self.shape = A.shape
-            self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.__parse_iparms(), verbose=self.verbose)
-            self.status = 1
+        Parameters
+        ----------
+        A : csr_matrix or ndarray
+            Matrix A
+        b : ndarray
+            Right hand side
+        mtype : {'sid', 'sym', 'spd', 'nonsym'}
+            Matrix type (symmetric indefinite, symmetric, symmetric positive definite, nonsymmetric)
+        iparms : dict
+            e.g. {'transposed': 1, 'scaling': 1}
 
-    def set_A(self, A):
-        if isinstance(A, sp.sparse.csr_matrix):
-            if self.wrapper_class is not None:
-                if len(A.data) == len(self.wrapper_class.a) & len(A.indptr) == len(self.wrapper_class.ia) & \
-                        len(A.indices) == len(self.wrapper_class.ja):
-                    self.wrapper_class.a = A.data
-                    self.wrapper_class.ia = A.indptr
-                    self.wrapper_class.ja = A.indices
-                    self.status = 1
-                else:
-                    self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.__parse_iparms(), verbose=self.verbose)
-                    self.status = 1
-            else:
-                self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.__parse_iparms(), verbose=self.verbose)
-                self.status = 1
-        else:
-            try:
-                A = sp.sparse.csr_matrix(A)
-            except:
-                raise ValueError('A must be A csr_matrix or at least a csr convertible matrix')
-            self.shape = A.shape
-            self.wrapper_class = PardisoWrapper(A, mtype=self.mtypes[self.mtype], iparm=self.__parse_iparms(), verbose=self.verbose)
-            self.status = 1
+        Returns
+        -------
+        x : ndarray
+            solution
+        """
+        A = csr_matrix(A)
+        # Notes:
+        # saddle point problem: use iparms: scaling and maximum_weighted_matching
+        self.wrapper_class = PardisoWrapper(A, mtype=self.MTYPES[mtype], iparm=self._parse_iparms(iparms))
 
-    def clear(self):
-        self.wrapper_class.clear()
-
-    def factorize(self):
-        self.wrapper_class.factor()
-        self.status = 2
-
-    def solve(self, b):
+        # Notes:
         # Check if wrapper_class object is already factorized
-        if self.status == 2:
-            return self.wrapper_class.solve(b)
-        # Else solve in one step
-        elif self.status == 1:
-            return self.wrapper_class.run_pardiso(13, b)
+        # return self.wrapper_class.solve(b)
+        # Solve in one step
+        return self.wrapper_class.run_pardiso(13, b)
 
-    def set_options(self, **options):
-        if options is not None:
-            if 'saddle_point' in options:
-                # Check if saddle_point option is None or False
-                if options['saddle_point']:
-                    # Update two important parameters for saddle_point Problems
-                    self.iparm.update({'scaling': 1, 'maximum_weighted_matching': 1})
-            # Write other option parameters
-            for key in options:
-                if key not in self.available_options:
-                    out = 'Error in PardisoSolver: Options Value {} not valid\nAvailable options are:\n{}'.format(key, ''.join(['\t' + key + ': ' + self.available_options[key] + '\n' for key in self.available_options]))
-                    raise ValueError(out)
-                else:
-                    # Check if verbose option is activated
-                    if key == 'verbose':
-                        self.verbose = options['verbose']
-                    # Check if mtype is in options
-                    if key == 'mtype':
-                        # Check if mtype is valid
-                        if options[key] in self.mtypes:
-                            self.mtype = options[key]
-                        # Otherwise raise value error
-                        else:
-                            raise ValueError('Error in PardisoSolver mtype {} not available'.format(options[key]))
-                    # Check if key belongs to iparm parmeters
-                    if key in self.iparm_dict:
-                        self.iparm.update({key: options[key]})
-            # update wrapper_class
-            if self.wrapper_class is not None:
-                self.wrapper_class.set_iparms(self.__parse_iparms())
-                self.wrapper_class.set_mtype(self.mtypes[self.mtype])
-
-    def get_options(self, prefix=''):
-        print('Verbose: {}, Matrix-Type (mtype): {}, iparms: {}'.format(self.verbose, self.mtype, self.iparm))
-
-    def __parse_iparms(self):
-        return dict([(self.iparm_dict[key], self.iparm[key]) for key in self.iparm])
-
-    def __str__(self):
-        info = 'This is a PardisoSolver object. Dimension of A: {},' \
-               ' status={} ({})'.format(self.shape, str(self.status), self.available_status[self.status])
-        return info
-
-# Shortcut for compatibility
-
-
-def solve_sparse(A, b, matrix_type='sid', verbose=False):
+    def _parse_iparms(self, iparms):
+        return dict([(self.IPARM_DICT[key], iparms[key]) for key in iparms])
+    
+# Own solvers
+class ResidualbasedConjugateGradient:
     '''
+    Conjugate Gradient-solver, which solves a linear system of equations
+    
+    A*x = b
+    
+    for x. Instead of handing over A and b, a callback of the linear problem's current residual is required, i.e. res = A*x-b.
+    This might be more convenient in certain cases, where it's more implementation-friendly to evaluate the residual instead of 
+    building A and b explicitly.
+    '''
+    
+    def __init__(self):
+        super().__init__()
+        self.logger = logging.getLogger('amfe.linalg.linearsolvers.ResidualbasedConjugateGradient')
+        
+    def solve(self, residual_callback, x0, tol=1e-05, maxiter=None):
+        """
+        Solver-method of the residual-based Conjugate-Gradient iterative solver. 
+        
+        Parameters
+        ----------
+        residual_callback : method
+            callback-method of the linear system's residual, which is updated by the solution 'x'. Hence the method has to be of the form 'residual(x)'.
+        x0 : ndarray
+            starting guess for the solution
+        tol: float, optional
+            Tolerance for convergence norm(residual) <= max(tol*norm(b), atol)
+        maxiter : int
+            maximum number of iterations
+
+        Returns
+        -------
+        x : {array, matrix}
+            solution vector
+        """
+        
+        sol = x0
+        d = residual_callback(np.zeros(sol.shape))
+        res = residual_callback(sol)
+        
+        precon = np.identity(res.shape[0])
+        
+        w = deepcopy(res)
+
+        #Standard Conjugate Gradient
+        conv_crit = np.linalg.norm(res)
+
+        cg_iter = 1
+        converged = False
+        if conv_crit <= tol:
+            converged = True
+            self.logger.debug("CG converged due to initial residual=0")
+        while not converged:
+            q = -residual_callback(w) + d
+                            
+            alpha = np.dot(res.T, res) / np.dot(w.T, q)
+            
+            sol += alpha * w
+            
+            res_old = deepcopy(res)
+            res -= alpha * q
+            
+            conv_crit = np.linalg.norm(res)
+            if conv_crit <= tol:
+                converged = True
+                self.logger.debug(["CG converged at iteration ", cg_iter, ";  Residual: ", conv_crit])
+                break
+            
+            if cg_iter >= maxiter or conv_crit > 1e6:
+                self.logger.debug(["WARNING: CG not converged at iteration ", cg_iter, ";  Residual: ", conv_crit])
+                break
+            
+            beta = np.dot(res.T, res) / np.dot(res_old.T, res_old)
+            
+            w = res + beta * w
+
+            cg_iter += 1
+            self.logger.debug(["CG iteration ", cg_iter, ";  Residual: ", conv_crit])
+            
+        residual_callback(sol)
+            
+        return sol, converged, cg_iter
+
+
+def solve_sparse(A, b, matrix_type='sid'):
+    """
     Abstraction of the solution of the sparse system Ax=b using the fastest
     solver available for sparse and non-sparse matrices.
 
@@ -293,7 +285,7 @@ def solve_sparse(A, b, matrix_type='sid', verbose=False):
         sparse matrix in CSR-format
     b : ndarray
         right hand side of equation
-    matrix_type : {'spd', 'symm', 'unsymm'}, optional
+    matrix_type : {'spd', 'sym', 'nonsym', 'sid'}, optional
         Specifier for the matrix type:
 
         - 'spd' : symmetric positive definite
@@ -319,17 +311,14 @@ def solve_sparse(A, b, matrix_type='sid', verbose=False):
     >>> mkl.get_max_threads()
     1
 
-    '''
-    print('The function solve_sparse is deprecated and will be removed in next release!')
-    if sp.sparse.issparse(A):
+    """
+    if issparse(A):
         # if use_pardiso:
-        mtype = PardisoSolver.mtypes[matrix_type]
-        pSolve = PardisoWrapper(A, mtype=mtype, verbose=verbose)
-        x = pSolve.run_pardiso(13, b)
-        pSolve.clear()
+        solver = PardisoLinearSolver()
+        x = solver.solve(A, b, matrix_type)
         # else:
         # use scipy solver instead
         # x = spsolve(A, b)
     else:
-        x = sp.linalg.solve(A, b)
+        x = scipysolve(A, b)
     return x

@@ -11,25 +11,20 @@ Some tools here might be experimental.
 
 
 __all__ = [
-    'node2total',
-    'total2node',
     'read_hbmat',
     'append_interactively',
     'matshow_3d',
-    'amfe_dir',
-    'h5_read_u',
     'test',
     'reorder_sparse_matrix',
     'eggtimer',
     'compute_relative_error',
     'principal_angles',
     'query_yes_no',
-    'resulting_force',
-    'compare_signals'
+    'compare_signals',
+    'time_measured',
+    'make_input_iterable'
 ]
 
-
-import os
 import numpy as np
 import scipy as sp
 from scipy import linalg
@@ -37,59 +32,13 @@ from scipy import interpolate
 import time
 import subprocess
 import sys
-import h5py
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from .structural_dynamics import *
-from .linalg import *
-
-
-def node2total(node_index, coordinate_index, ndof_node=2):
-    '''
-    Converts the node index and the corresponding coordinate index to the index of the total dof.
-
-    Parameters
-    ----------
-    node_index : int
-        Index of the node as shown in tools like paraview
-    coordinate_index: int
-        Index of the coordinate; 0 if it's x, 1 if it's y etc.
-    ndof_node: int, optional
-        Number of degrees of freedom per node
-
-    Returns
-    -------
-    total_index : int
-        Index of the total dof
-    '''
-
-    if coordinate_index >= ndof_node:
-        raise ValueError('coordinate index is greater than dof per node.')
-    return node_index*ndof_node + coordinate_index
-
-
-def total2node(total_index, ndof_node=2):
-    '''
-    Converts the total index in the global dofs to the coordinate index and the index fo the coordinate.
-
-    Parameters
-    ----------
-    total_index : int
-        Index of the total dof
-    ndof_node: int, optional
-        Number of degrees of freedom per node
-
-    Returns
-    -------
-    node_index : int
-        Index of the node as shown in tools like paraview
-    coordinate_index : int
-        Index of the coordinate; 0 if it's x, 1 if it's y etc.
-    '''
-
-    return total_index // ndof_node, total_index % ndof_node
+from amfe.linalg import signal_norm, vector_norm
+from amfe.structural_dynamics import modal_assurance
+from collections.abc import Iterable
 
 
 def read_hbmat(filename):
@@ -259,70 +208,9 @@ def reorder_sparse_matrix(A):
     return A[perm,:][:,perm], perm
 
 
-def amfe_dir(filename=''):
-    '''
-    Return the absolute path of the filename given relative to the amfe directory.
-
-    Parameters
-    ----------
-    filename : string, optional
-        relative path to something inside the amfe directory.
-
-    Returns
-    -------
-    dir : string
-        string of the filename inside the AMFE-directory. Default value is '', so the AMFE-directory is returned.
-    '''
-
-    amfe_abs_path = os.path.dirname(os.path.dirname(__file__))
-    return os.path.join(amfe_abs_path, filename.lstrip('/'))
-
-
-def h5_read_u(h5filename):
-    '''
-    Extract the displacement field of a given hdf5-file.
-
-    Parameters
-    ---------
-    h5filename : str
-        Full filename (with e.g. .hdf5 ending) of the hdf5 file.
-
-    Returns
-    -------
-    u_constr : ndarray
-        Displacement time series of the dofs with constraints implied. Shape is (ndof_constr, no_of_timesteps), i.e.
-        u_constr[:,0] is the first timestep.
-    u_unconstr : ndarray
-        Displacement time series of the dofs without constraints. I.e. the dofs are as in the mesh file. Shape is
-        (ndof_unconstr, no_of_timesteps).
-    T : ndarray
-        Time. Shape is (no_of_timesteps,).
-    '''
-
-    with h5py.File(h5filename, 'r') as f:
-        u_full = f['time_vals/Displacement'][:]
-        T = f['time'][:]
-        h5_mat = f['mesh/bmat']
-        csr_list = []
-        for par in ('data', 'indices', 'indptr', 'shape'):
-            csr_list.append(h5_mat[par][:])
-
-    bmat = sp.sparse.csr_matrix(tuple(csr_list[:3]), shape=tuple(csr_list[3]))
-
-    # If the problem is 2D but exported to 3D, u_full has to be reduced.
-    ndof_unconstr, ndof_constr = bmat.shape
-    if ndof_unconstr == u_full.shape[0]: # this is the 3D-case
-        pass
-    elif ndof_unconstr*3//2 == u_full.shape[0]: # problem is 2D but u_full is 3D
-        mask = np.ones_like(u_full[:,0], dtype=bool)
-        mask[2::3] = False
-        u_full = u_full[mask, :]
-    return bmat.T @ u_full, u_full, T
-
-
-def compute_relative_error(red_file, ref_file, M=None):
-    r'''
-    Compute the farhat error of two given hdf5 files displacement sets.
+def compute_relative_error(u_ref, u_red, T_ref, T_red, M=None):
+    """
+    Compute the farhat error of two given displacement sets.
 
     Parameters
     ----------
@@ -345,10 +233,8 @@ def compute_relative_error(red_file, ref_file, M=None):
     .. math::
         ER = \frac{\sqrt{\sum\limits_{t\in T} \Delta u(t)^T M \Delta u(t)}}{
                    \sqrt{\sum\limits_{t\in T} u_{ref}(t)^T M u_{ref}(t)}}
-    '''
+    """
 
-    u_red, _, T_red = h5_read_u(red_file)
-    u_ref, _, T_ref = h5_read_u(ref_file)
     if len(T_red) < len(T_ref): # The time integration has aborted
         return np.nan
     delta_u = u_red - u_ref
@@ -365,7 +251,7 @@ def compute_relative_error(red_file, ref_file, M=None):
 
 
 def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
-    '''
+    """
     Return the principal/subspace angles of span(V1) and span(V2) subspaces of R^n.
 
     Parameters
@@ -408,7 +294,7 @@ def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
        [5]  J.B. Rutzmoser, F.M. Gruber and D.J. Rixen (2015): A comparison on model order reduction techniques for
             geometrically nonlinear systems based on a modal derivative approach using subspace angles. 11th
             International Conference on Engineering Vibration, Ljubljana, Slovenia.
-    '''
+    """
 
     Q1, __ = linalg.qr(a=V1, mode='economic')
     Q2, __ = linalg.qr(a=V2, mode='economic')
@@ -496,8 +382,33 @@ def principal_angles(V1, V2, unit='deg', method=None, principal_vectors=False):
         return theta
 
 
+def time_measured(fkt):
+    """
+    Decorator to measure execution time of a function
+
+    It prints out the measured time
+
+    Parameters
+    ----------
+    fkt : function
+        function that shall be measured
+
+    Returns
+    -------
+    None
+
+    """
+    def fkt_wrapper(*args, **kwargs):
+        t1 = time.time()
+        return_vals = fkt(*args, **kwargs)
+        t2 = time.time()
+        print("Job needed: {} seconds".format(t2-t1))
+        return return_vals
+    return fkt_wrapper
+
+
 def eggtimer(fkt):
-    '''
+    """
     Egg timer for functions which reminds via speech, when the function has terminated.
 
     The intention of this function is, that the user gets reminded, when longer simulations are over.
@@ -516,7 +427,7 @@ def eggtimer(fkt):
     --------
     Import eggtimer function:
 
-    >>> from amfe import eggtimer
+    >>> from amfe.tools import eggtimer
 
     working directly on function:
 
@@ -535,7 +446,7 @@ def eggtimer(fkt):
     ...
     >>> square(6)
     36
-    '''
+    """
 
     def fkt_wrapper(*args, **kwargs):
         t1 = time.time()
@@ -560,9 +471,9 @@ def eggtimer(fkt):
 
 
 def test(*args, **kwargs):
-    '''
+    """
     Run all tests for AMfe.
-    '''
+    """
 
     import nose
     nose.main(*args, **kwargs)
@@ -607,59 +518,8 @@ def query_yes_no(question, default="yes"):
             sys.stdout.write("Please respond with 'yes' or 'no'.\n")
 
 
-def resulting_force(mechanical_system, force_vec, ref_point=None):
-    '''
-    Compute the resulting force and moment of a given force vector.
-
-    Parameters
-    ----------
-    mechanical_system
-        mechanical system ẃith FE mesh
-    force_vec : array
-        constrained force vector
-    ref_point : array-like, shape: (ndim), optional
-        reference point to which the resulting moment is computed. Default value is None, meaning that the reference
-        point is at the origin
-
-    Returns
-    -------
-    resulting_force_and_moment : array, shape(6)
-        resulting force and moment vector with (F_x, F_y, F_z, M_x, M_y, M_z)
-    '''
-
-    nodes = mechanical_system.mesh_class.nodes
-    no_of_nodes, ndim = nodes.shape
-    f_ext = mechanical_system.unconstrain_vec(force_vec)
-
-    # convert everything to 3D for making cross product easier available
-    f_ext_mat = np.zeros((no_of_nodes, 3))
-    nodes_mat = np.zeros((no_of_nodes, 3))
-    f_ext_mat[:,:ndim] = f_ext.reshape((no_of_nodes, ndim))
-    nodes_mat[:,:ndim] = nodes
-    if ref_point is not None:
-        assert(np.array(ref_point).shape[0] == ndim)
-        nodes_mat[:,:ndim] -= np.array(ref_point)
-
-    # three dimensional array for making cross product possible in vectorized
-    # manner. cross_operator[]
-    cross_operator = np.zeros((no_of_nodes, 3, 3))
-    cross_operator[:,0,1] = - nodes_mat[:,2]
-    cross_operator[:,1,0] = nodes_mat[:,2]
-    cross_operator[:,0,2] = nodes_mat[:,1]
-    cross_operator[:,2,0] = - nodes_mat[:,1]
-    cross_operator[:,1,2] = - nodes_mat[:,0]
-    cross_operator[:,2,1] = nodes_mat[:,0]
-
-    f_res = np.zeros((6))
-    moments = np.einsum('ijk, ik -> ij', cross_operator, f_ext_mat)
-    f_res[3:] = moments.sum(axis=0)
-    f_res[:3] = f_ext_mat.sum(axis=0)
-
-    return f_res
-
-
 def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
-    '''
+    """
     Compare signal x2(t2) [slave] with signal x1(t1) [master] using the specified method.
 
     Parameters
@@ -694,7 +554,7 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
             - 'angle': 1darray with principle angles and 2x 1darrays with singular values of x1 and x2.
             - 'mac': 2darray with mac values and 2x 1darrays with singular values of x1 and x2.
             - 'correlation' : 2darray with cross-correlation and 2darray with auto-correlation of x1.
-    '''
+    """
 
     # make time samples fit
     if t2 is not None:
@@ -773,4 +633,12 @@ def compare_signals(x1, t1, x2, t2=None, method='norm', axis=-1, **kwargs):
     else:
         raise ValueError('Invalid method. Chose either \'norm\', \'angle\', \'mac\' or \'correlation\' with ' \
                          + 'appropriate **kwargs.')
+        
+def make_input_iterable(method):
+    def makeiterable(self, argument):
+        if not isinstance(argument, Iterable):
+            argument = [argument]
+        return method(self, argument)
+    return makeiterable
+
 

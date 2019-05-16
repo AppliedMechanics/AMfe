@@ -20,19 +20,22 @@
 
 # Folders to ignore
 docs/_build
+meshes/
+notebooks/
 results/
 build/
 dist/
 private/
-amfe.egg-info/
 experiments/
+amfe.egg-info/
 experiments/paper_icoev
 .idea/
 .spyproject/
-
+.vscode/
 # specific files to ignore
 amfe/fortran/f90_elementmodule.c
 .project
 MANIFEST
 
 *.hdf5
+/.pydevproject
