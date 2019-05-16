@@ -41,6 +41,9 @@ extensions = [
     'numpydoc'
 ]
 
+# Add numbering figures:
+numfig = True
+
 # Avoid tedious error messages
 numpydoc_show_class_members = False
 # Napoleon Settings
@@ -62,12 +65,12 @@ source_suffix = '.rst'
 #source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = 'contents'
 
 # General information about the project.
 project = 'AMfe'
-copyright = '2016, Lehrstuhl für Angewandte Mechanik'
-author = 'Johannes Rutzmoser'
+copyright = '2017, Lehrstuhl für Angewandte Mechanik'
+author = 'Johannes Rutzmoser, Christian Meyer'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -93,7 +96,7 @@ language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['build']
+exclude_patterns = ['build','_build']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -128,7 +131,9 @@ todo_include_todos = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'sphinx_rtd_theme'
+# html_theme = 'sphinx_rtd_theme'
+html_theme = 'amfe-theme'
+#html_theme ='sphinx_rtd_theme_source'
 
 # 'haiku' # good theme, maybe best for start
 # 'classic'
@@ -142,7 +147,7 @@ html_theme = 'sphinx_rtd_theme'
 #html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
-#html_theme_path = []
+html_theme_path = ['_themes']
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -158,12 +163,12 @@ html_theme = 'sphinx_rtd_theme'
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-#html_favicon = None
+html_favicon = 'static/img/favicon.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['static']
+html_static_path = ['static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

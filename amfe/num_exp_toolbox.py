@@ -1,3 +1,8 @@
+# Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
+# Universitaet Muenchen.
+#
+# Distributed under BSD-3-Clause License. See LICENSE-File for more information
+#
 """
 Numerical Experiments Toolbox.
 
@@ -13,7 +18,7 @@ try:
 except Exception:
     print('Module dill not found. It is only used for the num_exp_toolbox.')
 
-# Stuff for paralle execution
+# Stuff for parallel execution
 def run_dill_encoded(what):
     '''
     Run a dill encoded function, which can be spilled to a process.

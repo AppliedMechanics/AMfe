@@ -1,47 +1,44 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
+# Universitaet Muenchen.
+#
+# Distributed under BSD-3-Clause License. See LICENSE-File for more information
+#
 """
 Running a 3D-tension bar
 """
 
 
-import sys
-import time
-
-import numpy as np
-import scipy as sp
 import amfe
 
 
-import matplotlib.pyplot as plt
-
 mesh_file = amfe.amfe_dir('meshes/test_meshes/bar_Tet4_fine.msh')
+output_file = amfe.amfe_dir('results/bar_tet10/bar_tet4')
 
 # Building the mechanical system
 my_material = amfe.KirchhoffMaterial()
-my_mechanical_system = amfe.MechanicalSystem()
-my_mechanical_system.load_mesh_from_gmsh(mesh_file, 
-                                         29, my_material)
+my_system = amfe.MechanicalSystem()
+my_system.load_mesh_from_gmsh(mesh_file, 29, my_material)
 # Fixations are simple to realize
-my_mechanical_system.apply_dirichlet_boundaries(30, 'xyz')
-my_mechanical_system.apply_dirichlet_boundaries(31, 'yz')
+my_system.apply_dirichlet_boundaries(30, 'xyz')
+my_system.apply_dirichlet_boundaries(31, 'yz')
 
-# make master-slave approach to fix x-direction
-nodes, dofs = my_mechanical_system.mesh_class.set_dirichlet_bc(31, 'x', output='external')
-my_mechanical_system.dirichlet_class.master_slave_list.append([dofs[0], dofs, None])
-my_mechanical_system.dirichlet_class.update()
+# make master-slave approach to add constraint that x-dofs are all the same at right end
+nodes, dofs = my_system.mesh_class.set_dirichlet_bc(31, 'x', output='external')
+my_system.dirichlet_class.apply_master_slave_list([[dofs[0], dofs[1:], None],])
+my_system.dirichlet_class.update()
 
-#%%
+# %%
 
-# static force in y-direction
+# static force in x-direction
 # my_neumann_boundary_list = [[[dofs[0],], 'static', (1E10, ), None]]
-my_mechanical_system.apply_neumann_boundaries(31, 1E12, (1,0,0), lambda t: t)
+my_system.apply_neumann_boundaries(31, 1E12, (1, 0, 0), lambda t: t)
 
 
 # static solution
-amfe.solve_nonlinear_displacement(my_mechanical_system, 10)
-#amfe.solve_linear_displacement(my_mechanical_system)
-export_path = amfe.amfe_dir('results/bar_tet10' + 
-                            time.strftime("_%Y%m%d_%H%M%S") + '/bar_tet4')
-my_mechanical_system.export_paraview(export_path)
+#amfe.solve_nonlinear_displacement(my_system)
+solver = amfe.NonlinearStaticsSolver(my_system, verbose=True)
+solver.solve()
+# amfe.solve_linear_displacement(my_system)
 
-
+my_system.export_paraview(output_file)

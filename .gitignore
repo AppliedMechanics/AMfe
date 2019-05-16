@@ -10,20 +10,32 @@
 *.pvd
 *~
 
+# ignore mesh files because they can be large
+*.msh
+
 # saved numpy-arrays
 *.npy
 *.pdf
 *.dat
 
 # Folders to ignore
-docs/
+docs/_build
+meshes/
+notebooks/
 results/
 build/
+dist/
+private/
+experiments/
 amfe.egg-info/
 experiments/paper_icoev
 .idea/
 .spyproject/
-
+.vscode/
 # specific files to ignore
 amfe/fortran/f90_elementmodule.c
 .project
+MANIFEST
+
+*.hdf5
+/.pydevproject

@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2017, Lehrstuhl fuer Angewandte Mechanik, Technische
+# Universitaet Muenchen.
+#
+# Distributed under BSD-3-Clause License. See LICENSE-File for more information
+#
 """
 Created on Fri Dec 18 15:31:45 2015
 
@@ -48,13 +53,15 @@ print('The vibration modes eigenfrequencies (1/s) are:\n', om/(2*np.pi))
 
 #amfe.solve_linear_displacement(my_system)
 #amfe.solve_nonlinear_displacement(my_system, no_of_load_steps=50)
-#
+
+# time integration
+dt = 1E-2
+T = np.arange(0,4,dt)
 ndof = my_system.dirichlet_class.no_of_constrained_dofs
-my_integrator = amfe.NewmarkIntegrator(my_system, alpha=0.01)
-my_integrator.delta_t = 0.5E-3
-my_integrator.verbose = True
-my_integrator.integrate(np.zeros(ndof), np.zeros(ndof), 
-                                         np.arange(0,4,1E-2))
+q0 = dq0 = np.zeros(ndof)
+solver = amfe.NonlinearDynamicsSolver(my_system, initial_conditions={'q0': q0, 'dq0': dq0}, verbose=True, t_end=4, dt=dt)
+solver.solve()
+# old api: amfe.integrate_nonlinear_system(my_system, q0, dq0, T, dt, alpha=0.01)
 
 
 my_system.export_paraview(output_file)

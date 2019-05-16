@@ -1,0 +1,84 @@
+branches:
+  only:
+    - master
+    - "/^release-.*$/"
+    - "/^v[0-9.]+/"
+
+
+environment:
+
+   matrix:
+
+      - PYTHON_VERSION: 3.5
+        PYDIST: 35
+        MINICONDA: C:\Miniconda3-x64
+        MINGWDIR: C:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw64
+
+      - PYTHON_VERSION: 3.6
+        PYDIST: 36
+        MINICONDA: C:\Miniconda3-x64
+        MINGWDIR: C:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw64
+
+
+init:
+   - "ECHO %PYTHON_VERSION% %MINICONDA%"
+
+install:
+    - "set PATH=%MINICONDA%;%MINICONDA%\\Scripts;%PATH%"
+    - "set PATH=%MINGWDIR%;%MINGWDIR%\\bin;%PATH%"
+    - "set C_INCLUDE_PATH=%MINGWDIR%\\include;%MINGWDIR%\\lib\\gcc\\x86_64-w64-mingw32\\6.3.0\\include"
+    #- "cd C:\\mingw-w64\\x86_64-6.3.0-posix-seh-rt_v5-rev1\\mingw64"
+    #- "dir"
+    #- "cd include"
+    #- "dir"
+    #- "cd .."
+    #- "cd lib"
+    #- "dir"
+    - "conda config --set always_yes yes --set changeps1 no"
+    - "conda update -q conda"
+    - "conda info -a"
+    - "conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy pandas matplotlib h5py setuptools sphinx sphinx_rtd_theme numpydoc nose"
+    - activate test-environment
+    #- "conda install numpy"
+    #- "conda install scipy"
+    #- "conda install pandas"
+    #- "conda install matplotlib"
+    #- "conda install h5py"
+    #- "conda install setuptools"
+    #- "conda install sphinx"
+    #- "conda install sphinx_rtd_theme"
+    #- "conda install numpydoc"
+    #- "conda install nose"
+    #- "cd AppVeyor"
+    - "cd %MINICONDA%\\envs\\test-environment\\Lib"
+    - "dir"
+    - "cd C:\\projects\\github-spielwiese\\AppVeyor"
+    - "copy /Y distutils.cfg %MINICONDA%\\envs\\test-environment\\Lib\\distutils\\distutils.cfg"
+    - "copy /Y cygwinccompiler.py %MINICONDA%\\envs\\test-environment\\Lib\\distutils\\cygwinccompiler.py"
+    - "copy /Y mingw32ccompiler.py %MINICONDA%\\envs\\test-environment\\Lib\\site-packages\\numpy\\distutils\\mingw32ccompiler.py"
+    - "cd .."
+    - "python setup.py develop"
+
+build: off
+
+test_script:
+  - "nosetests"
+
+after_test:
+  - "python setup.py bdist_wheel"
+
+artifacts:
+  - path: dist\*
+
+deploy:
+   description: "AMfe stable build for windows"
+   provider: GitHub
+   auth_token:
+     secure: 9w2YwyYMLgiROCNPdsBTFr4n8/6nY67EmD+R1sE8gqVfo0FA9yJ3kq/1JqtBcxIg
+   #artifact: /^dist\\amfe.*whl$/
+   on:
+     # branch condition deactivated becaus cannot be used with appveyor_repo_tag:true
+     # branch:
+      #  - "master"
+      #  - "/^release-.*$/"
+     appveyor_repo_tag: true

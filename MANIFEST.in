@@ -1,0 +1,11 @@
+# This file includes all distributed files that are not recognized by setup.py
+include README.md
+include LICENSE
+recursive-include docs *.rst build_doc *.bat Makefile *.py
+prune docs/_build
+recursive-include docs/static *
+recursive-include examples *
+recursive-include meshes *
+recursive-include tests *
+prune __pycache__
+global-exclude *.pyc
