@@ -49,7 +49,7 @@ class StructuralComponent(MeshComponent):
             Residual of the holonomic constraint function
 
         """
-        return self._constraints.g(self._mesh.nodes, q, t)
+        return self._constraints.g(self._mesh.nodes.reshape(-1), q, t)
 
     def B(self, q, t):
         r"""
@@ -68,7 +68,7 @@ class StructuralComponent(MeshComponent):
         B : csr_matrix
             Constraint matrix B
         """
-        return self._constraints.B(self._mesh.nodes, q, t)
+        return self._constraints.B(self._mesh.nodes.reshape(-1), q, t)
 
     def b(self, q, t):
         r"""
@@ -87,7 +87,7 @@ class StructuralComponent(MeshComponent):
         b : ndarray
             Rheonomic part b on velocity level
         """
-        return self._constraints.b(self._mesh.nodes, q, t)
+        return self._constraints.b(self._mesh.nodes.reshape(-1), q, t)
 
     def a(self, q, dq, t):
         r"""
@@ -109,7 +109,7 @@ class StructuralComponent(MeshComponent):
         a : ndarray
             Part a of the constraint equation above
         """
-        return self._constraints.a(self._mesh.nodes, q, dq, t)
+        return self._constraints.a(self._mesh.nodes.reshape(-1), q, dq, t)
 
     def M(self, q, dq, t):
         """
