@@ -7,7 +7,7 @@ from amfe.io import amfe_dir
 from amfe.io.mesh import AmfeMeshConverter, GmshAsciiMeshReader, AmfeMeshObjMeshReader, VtkMeshConverter
 from amfe.io.postprocessing.reader import AmfeSolutionReader
 from amfe.io.postprocessing.writer import Hdf5PostProcessorWriter
-from amfe.io.postprocessing.constants import *
+from amfe.io.constants import *
 from amfe.io.postprocessing.tools import write_xdmf_from_hdf5
 from amfe.solver import SolverFactory, AmfeSolution
 from amfe.material import KirchhoffMaterial
@@ -86,7 +86,7 @@ for i_comp, comp in structural_composite.components.items():
     writer.write_timestep(0, u_dict[i_comp], None, None)
 
     mesh = comp._mesh
-    preader = AmfeSolutionReader(writer, comp, is_constrained=False)
+    preader = AmfeSolutionReader(writer, comp)
     amfeMeshReader = AmfeMeshObjMeshReader(mesh)
     path = amfe_dir('meshes/gmsh/simple_beam_metis_10/results/partition_mesh_' + str(i_comp) + '.vtk')
     VTKwriter = VtkMeshConverter(path)
