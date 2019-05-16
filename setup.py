@@ -63,7 +63,7 @@ def query_yes_no(question, default="yes"):
 
 config = {
     'name': 'amfe',
-    'version': '0.2',
+    'version': '1.0',
     'description': 'Nonlinear Finite Element Code with simplicity in mind.',
     'long_description': 'Nonlinear Finite Element Code for \
     Structural Dynamics. \
