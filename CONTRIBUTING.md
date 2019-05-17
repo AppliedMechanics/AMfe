@@ -22,9 +22,9 @@ the issue to you. Try to fix the bug locally. When you are sure that you can fix
 the bug, create a merge request from master. Add your code in the merge request.
 Please follow the guidelines below for good coding style and not forgetting things.
 Add a comment in the merge request that you have finished your code and that it is
-ready for review. A reviewer will review your code and adding comments if you
-still need to enhance your code for being accepted for merge.
-Note: No merge will be accepted without a unit test!
+ready for review. A reviewer will review your code and add comments if you still 
+need to enhance your code for being accepted for merge.
+Note: No merge request will be accepted without a unit test and docstrings!
 
 Checklist:
 
@@ -43,7 +43,7 @@ but really desired to give every author credit)
 you accept the BSD license conditions
 - [ ] If you used compiled code or a package from a private repo, is it correctly introduced in setup.py?
 
-Afterwards you can ask a reviewer to review its code. Afterwards, the maintainer (currently Christian Meyer)
+Afterwards you can ask a reviewer to review your code. Afterwards, the maintainer (currently Christian Meyer)
 decides over the final merge. 
 
 New Features
@@ -52,7 +52,7 @@ New Features
 In general, AMfe is a code that is often used for research. It also provides methods that are quite new or
 still in research. However, if you try out a new method you use, this is ok in your own private branches,
 but it is not intended to become directly a main feature of AMfe. AMfe does only contain features that
-are tested and useful in that sense that research results show its benefit. The usual workflow thus is:
+are tested and useful in that sense that research results show its benefit. Thus the usual workflow is:
 Checkout your private branche, do your research, make your publications and if you can show, it is a useful
 method, you can propose a separate merge request where only the new well working method is proposed to merge.
 This is highly desired, of course. In contrast, untested or even not working features are not welcome.
@@ -65,15 +65,17 @@ Review
 ------
 
 Each Merge Request into developer branch or master merge MUST be reviewed. Other branches are review free.
-Reviewers should ask yourself the following questions when reviewing:
+Reviewers should ask themselves the following questions when reviewing:
 
 - Was this change discussed in the community in case of new functions/features.
-- Is the feature well known in literature or is it new research? In the latter case, are the publications or
-any test that shows the performance of the code
+- Is the feature well known in literature or is it new research? In the latter case, are there publications or
+any tests that show the performance of the code
 - Is the code decoupled from other code (e.g. parameters are low-level datatypes (arrays, floats etc.))?
 - Is the encapsulation of the classes ensured (private properties, public methods)?
 - Does the code meet the checklist above?
 - Is there any code that is duplicated at another part? In this case, can it be refactored?
+- Are the new functions/features tested properly by a unittest?
+- Are there docstrings for the new fuctions/features?
 
 
 Testing
