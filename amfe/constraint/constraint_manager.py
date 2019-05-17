@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from .constraint_assembler import ConstraintAssembler
-from .constraint import DirichletConstraint, FixedDistanceConstraint
+from .constraint import *
 
 
 class ConstraintManager:
@@ -153,6 +153,17 @@ class ConstraintManager:
         constraint: amfe.constraint.DirichletConstraint
         """
         return DirichletConstraint(U, dU, ddU)
+
+    @staticmethod
+    def create_equal_displacement_constraint():
+        """
+        Create a constraint where two dofs have the same displacements
+
+        Returns
+        -------
+        constraint: amfe.constraint.EqualDisplacementConstraint
+        """
+        return EqualDisplacementConstraint()
 
     def add_constraint(self, name, constraint_obj, dofidxs, Xidxs=()):
         """

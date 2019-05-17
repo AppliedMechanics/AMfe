@@ -184,7 +184,9 @@ class PardisoLinearSolver(LinearSolverBase):
         # Check if wrapper_class object is already factorized
         # return self.wrapper_class.solve(b)
         # Solve in one step
-        return self.wrapper_class.run_pardiso(13, b)
+        x = self.wrapper_class.run_pardiso(13, b)
+        self.wrapper_class.clear()
+        return x
 
     def _parse_iparms(self, iparms):
         return dict([(self.IPARM_DICT[key], iparms[key]) for key in iparms])
