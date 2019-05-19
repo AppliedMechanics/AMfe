@@ -13,7 +13,7 @@ have to dig deeper and take a look at the documentation. No worries, though. Jus
 UI-methods.
 """
 from amfe.component.structural_component import StructuralComponent
-from amfe.material import KirchhoffMaterial
+from amfe.material import KirchhoffMaterial, MooneyRivlin
 from amfe.forces import *
 from amfe.neumann.structural_neumann import FixedDirectionNeumann
 from amfe.solver.translators import create_constrained_mechanical_system_from_component
@@ -105,16 +105,48 @@ def create_material(material_type='Kirchhoff', **kwargs):
             if 'rho' in kwargs:
                 rho = kwargs['rho']
             else:
-                rho = 1E4
+                rho = 7.85E3
             if 'plane_stress' in kwargs:
                 plane_stress = kwargs['plane_stress']
             else:
                 plane_stress = True
+            if 'thickness' in kwargs:
+                thickness = kwargs['thickness']
+            else:
+                thickness = 1.0
 
-            return KirchhoffMaterial(E, nu, rho, plane_stress)
+            return KirchhoffMaterial(E, nu, rho, plane_stress, thickness)
+        elif material_type is 'MooneyRivlin':
+            if 'A10' in kwargs:
+                A10 = kwargs['A10']
+            else:
+                A10 = 0.4E3
+            if 'A01' in kwargs:
+                A01 = kwargs['A01']
+            else:
+                A01 = 0.1E3
+            if 'kappa' in kwargs:
+                kappa = kwargs['kappa']
+            else:
+                kappa = 1E5
+            if 'rho' in kwargs:
+                rho = kwargs['rho']
+            else:
+                rho = 0.94E3
+            if 'plane_stress' in kwargs:
+                plane_stress = kwargs['plane_stress']
+            else:
+                plane_stress = True
+            if 'thickness' in kwargs:
+                thickness = kwargs['thickness']
+            else:
+                thickness = 1.0
+
+            return MooneyRivlin(A10, A01, kappa, rho, plane_stress, thickness)
         else:
             raise ValueError('Unknown material-type given. Please use one of these supported types: \n ',
-                             'Kirchhoff'
+                             'Kirchhoff\n',
+                             'MooneyRivlin\n'
                              )
 
 
