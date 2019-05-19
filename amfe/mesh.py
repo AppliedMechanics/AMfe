@@ -900,7 +900,30 @@ class Mesh:
             subdictionary of the mesh's groups with the given nodes only
         """
         return self._get_groups_dict_by_secondary_key(nodeids, 'nodes')
-    
+
+    def create_group(self, name, nodeids=(), elementids=()):
+        """
+        Create a group in Mesh
+
+        Parameters
+        ----------
+        name: str
+            Name of the group
+        nodeids: Iterable
+            list of nodeids added to group
+        elementids: Iterable
+            list of elementids added to group
+
+        Returns
+        -------
+        None
+        """
+        if name in self.groups:
+            raise ValueError('Group {} already exists'.format(name))
+        nodeids = [nodeid for nodeid in nodeids]
+        elementids = [elementid for elementid in elementids]
+        self.groups[name] = {'nodes': nodeids, 'elements': elementids}
+
     def add_element_to_groups(self, new_ele, groups_ele, secondary_key = 'elements'):
         for key in groups_ele:
             if new_ele not in self.groups[key][secondary_key]:

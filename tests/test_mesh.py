@@ -91,6 +91,29 @@ class TestMesh(TestCase):
         for actual, desired in zip(actuals, desireds):
             assert_array_equal(actual, desired)
 
+    def test_create_group(self):
+        elementids = [1, 4, 6, 8]
+        nodeids = np.array([100, 400], dtype=int)
+        desired = {'elements': [1, 4, 6, 8], 'nodes': [100, 400]}
+        self.testmesh.create_group('mygroup', nodeids, elementids)
+        actual_nodes = set(self.testmesh.groups['mygroup']['nodes'])
+        desired_nodes = set(desired['nodes'])
+        actual_elements = set(self.testmesh.groups['mygroup']['elements'])
+        desired_elements = set(desired['elements'])
+        self.assertEqual(actual_nodes, desired_nodes)
+        self.assertEqual(actual_elements, desired_elements)
+
+        with self.assertRaises(ValueError):
+            self.testmesh.create_group('right', nodeids, elementids)
+
+        self.testmesh.create_group('mygroup2', elementids=(4, 8, 1, 6))
+        actual_nodes = set(self.testmesh.groups['mygroup2']['nodes'])
+        desired_nodes = set()
+        actual_elements = set(self.testmesh.groups['mygroup2']['elements'])
+        desired_elements = set(desired['elements'])
+        self.assertEqual(actual_nodes, desired_nodes)
+        self.assertEqual(actual_elements, desired_elements)
+
     def test_get_connectivity_by_elementids(self):
         desireds = [np.array([5, 6, 3], dtype=int), np.array([4, 1], dtype=int)]
         for actual, desired in zip(self.testmesh.get_connectivity_by_elementids([1, 4]), desireds):
