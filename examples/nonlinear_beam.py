@@ -117,7 +117,7 @@ dq0[:len(dq0_raw)] = dq0_raw
 
 mysolver.solve(write_callback, t0, q0, dq0, t_end)
 
-preader = AmfeSolutionReader(writer, my_component, is_constrained=False)
+preader = AmfeSolutionReader(writer, my_component)
 meshreaderobj = AmfeMeshObjMeshReader(mesh)
 
 hdf5resultsfilename = output_file + '_nonlingenalpha_refactoring_lagrange_scaling_augmented_support_motion' + '.hdf5'
