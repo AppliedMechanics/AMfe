@@ -13,11 +13,12 @@ have to dig deeper and take a look at the documentation. No worries, though. Jus
 UI-methods.
 """
 from amfe.component.structural_component import StructuralComponent
-from amfe.material import KirchhoffMaterial
+from amfe.material import KirchhoffMaterial, MooneyRivlin
 from amfe.forces import *
 from amfe.neumann.structural_neumann import FixedDirectionNeumann
 from amfe.solver.translators import create_constrained_mechanical_system_from_component
 from amfe.solver import SolverFactory, AmfeSolution
+from amfe.linalg.linearsolvers import ScipySparseLinearSolver
 
 from amfe.io.mesh import GidJsonMeshReader, AmfeMeshObjMeshReader, GmshAsciiMeshReader
 from amfe.io.mesh import AmfeMeshConverter
@@ -105,16 +106,48 @@ def create_material(material_type='Kirchhoff', **kwargs):
             if 'rho' in kwargs:
                 rho = kwargs['rho']
             else:
-                rho = 1E4
+                rho = 7.85E3
             if 'plane_stress' in kwargs:
                 plane_stress = kwargs['plane_stress']
             else:
                 plane_stress = True
+            if 'thickness' in kwargs:
+                thickness = kwargs['thickness']
+            else:
+                thickness = 1.0
 
-            return KirchhoffMaterial(E, nu, rho, plane_stress)
+            return KirchhoffMaterial(E, nu, rho, plane_stress, thickness)
+        elif material_type is 'MooneyRivlin':
+            if 'A10' in kwargs:
+                A10 = kwargs['A10']
+            else:
+                A10 = 0.4E3
+            if 'A01' in kwargs:
+                A01 = kwargs['A01']
+            else:
+                A01 = 0.1E3
+            if 'kappa' in kwargs:
+                kappa = kwargs['kappa']
+            else:
+                kappa = 1E5
+            if 'rho' in kwargs:
+                rho = kwargs['rho']
+            else:
+                rho = 0.94E3
+            if 'plane_stress' in kwargs:
+                plane_stress = kwargs['plane_stress']
+            else:
+                plane_stress = True
+            if 'thickness' in kwargs:
+                thickness = kwargs['thickness']
+            else:
+                thickness = 1.0
+
+            return MooneyRivlin(A10, A01, kappa, rho, plane_stress, thickness)
         else:
             raise ValueError('Unknown material-type given. Please use one of these supported types: \n ',
-                             'Kirchhoff'
+                             'Kirchhoff\n',
+                             'MooneyRivlin\n'
                              )
 
 
@@ -128,7 +161,7 @@ def assign_material_by_elementids(component, material, elementids):
 
 def set_dirichlet_by_group(component, group_name, direction=('ux'), constraint_name='Dirichlet0'):
     dirichlet = component.constraints.create_dirichlet_constraint()
-    nodeids = component._mesh.get_nodeids_by_groups(group_name)
+    nodeids = component._mesh.get_nodeids_by_groups([group_name])
     supportdofs = component._mapping.get_dofs_by_nodeids(nodeids, direction)
     for dof in supportdofs.reshape(-1):
         component.assign_constraint(constraint_name, dirichlet, np.array([dof], dtype=int), np.array([], dtype=int))
@@ -143,7 +176,7 @@ def set_dirichlet_by_nodeids(component, nodeids, direction=('ux'), constraint_na
 
 def set_neumann_by_group(component, group_name, direction_vector=np.array([0, 1]), neumann_name='Neumann0',
                          F=constant_force(1.0)):
-    neumann = FixedDirectionNeumann(direction_vector, time_func=F)
+    neumann = FixedDirectionNeumann(direction_vector, time_func = F)
     component.assign_neumann(neumann_name, neumann, [group_name], '_groups')
 
 
@@ -157,60 +190,17 @@ def solve_linear_static(component):
     system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
                                                    constraint_formulation='boolean')
 
-    solfac = SolverFactory()
-    solfac.set_system(system)
-    solfac.set_analysis_type('static')
-    solfac.set_large_deflection(False)
-    solfac.set_nonlinear_solver('newton')
-    solfac.set_linear_solver('scipy-sparse')
-
-    solver = solfac.create_solver()
-
-    solution_writer = AmfeSolution()
-
-    def write_callback(t, x, dx, ddx):
-        u, du, ddu = formulation.recover(x, dx, ddx, t)
-        solution_writer.write_timestep(t, u, du, ddu)
+    solver = ScipySparseLinearSolver()
 
     no_of_dofs = system.dimension
     q0 = np.zeros(no_of_dofs)
     dq0 = q0
-    t0 = 0.0
-    t_end = 0.0
-    solver.solve(write_callback, t0, q0, dq0, t_end)
 
-    return solution_writer
+    x = solver.solve(system.K(q0, dq0, 0.0), system.f_ext(q0, dq0, 0.0))
 
-
-def solve_linear_dynamic(component):
-    system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
-                                                   constraint_formulation='lagrange',
-                                                   scaling=10.0, penalty=3.0)
-
-    solfac = SolverFactory()
-    solfac.set_system(system)
-    solfac.set_analysis_type('transient')
-    solfac.set_integrator('genalpha')
-    solfac.set_large_deflection(False)
-    solfac.set_nonlinear_solver('newton')
-    solfac.set_linear_solver('scipy-sparse')
-    solfac.set_acceleration_intializer('zero')
-    solfac.set_dt_initial(0.001)
-
-    solver = solfac.create_solver()
-
+    u, _, _ = formulation.recover(x, q0, q0, 0.0)
     solution_writer = AmfeSolution()
-
-    def write_callback(t, x, dx, ddx):
-        u, du, ddu = formulation.recover(x, dx, ddx, t)
-        solution_writer.write_timestep(t, u, du, ddu)
-
-    no_of_dofs = system.dimension
-    q0 = np.zeros(no_of_dofs)
-    dq0 = q0
-    t0 = 0.0
-    t_end = 0.1
-    solver.solve(write_callback, t0, q0, dq0, t_end)
+    solution_writer.write_timestep(0.0, u, None, None)
 
     return solution_writer
 
@@ -224,30 +214,33 @@ def solve_nonlinear_static(component):
     solfac.set_analysis_type('static')
     solfac.set_large_deflection(True)
     solfac.set_nonlinear_solver('newton')
-    solfac.set_linear_solver('scipy-cg')
+    solfac.set_linear_solver('scipy-sparse')
+    solfac.set_acceleration_intializer('zero')
     solfac.set_newton_maxiter(30)
     solfac.set_newton_atol(1e-6)
     solfac.set_newton_rtol(1e-8)
+    solfac.set_dt_initial(1.0)
 
     solver = solfac.create_solver()
 
     solution_writer = AmfeSolution()
 
-    def write_callback(t, x, dx, ddx):
-        u, du, ddu = formulation.recover(x, dx, ddx, t)
-        solution_writer.write_timestep(t, u, du, ddu)
-
     no_of_dofs = system.dimension
     q0 = np.zeros(no_of_dofs)
     dq0 = q0
     t0 = 0.0
-    t_end = 0.0
+    t_end = 1.0
+
+    def write_callback(t, x, dx, ddx):
+        u, du, ddu = formulation.recover(x, dx, ddx, t)
+        solution_writer.write_timestep(t_end, u, None, None)
+
     solver.solve(write_callback, t0, q0, dq0, t_end)
 
     return solution_writer
 
 
-def solve_nonlinear_dynamic(component):
+def solve_nonlinear_dynamic(component, t0, t_end):
     system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
                                                    constraint_formulation='boolean')
 
@@ -269,14 +262,12 @@ def solve_nonlinear_dynamic(component):
     solution_writer = AmfeSolution()
 
     def write_callback(t, x, dx, ddx):
-        u, du, ddu = formulation.unconstrain(x, dx, ddx, t)
-        solution_writer.write_timestep(t, u, du, ddu)
+        u, du, ddu = formulation.recover(x, dx, ddx, t)
+        solution_writer.write_timestep(t, u, None, None)
 
     no_of_dofs = system.dimension
     q0 = np.zeros(no_of_dofs)
     dq0 = q0
-    t0 = 0.0
-    t_end = 0.1
     solver.solve(write_callback, t0, q0, dq0, t_end)
 
     return solution_writer
