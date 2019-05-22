@@ -21,7 +21,6 @@ Run: 'python setup.py bdist --help-formats' to find out which distribution
 
 import sys
 
-
 def query_yes_no(question, default="yes"):
     '''
     Ask a yes/no question and return their answer.
