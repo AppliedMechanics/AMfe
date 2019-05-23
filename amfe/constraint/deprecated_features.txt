@@ -1,0 +1,80 @@
+FixedDistanceToPlaneConstraint
+
+import theano.tensor as T
+from theano import function as tfunction
+
+def __init__()
+
+        # x1, y1, z1 = T.dscalars('x1', 'y1', 'z1')
+        # x2, y2, z2 = T.dscalars('x2', 'y2', 'z2')
+        # x3, y3, z3 = T.dscalars('x3', 'y3', 'z3')
+        # x4, y4, z4 = T.dscalars('x4', 'y4', 'z4')
+        #
+        # x_12 = x2 - x1
+        # y_12 = y2 - y1
+        # z_12 = z2 - z1
+        #
+        # x_13 = x3 - x1
+        # y_13 = y3 - y1
+        # z_13 = z3 - z1
+        #
+        # x_14 = x4 - x1
+        # y_14 = y4 - y1
+        # z_14 = z4 - z1
+        #
+        # def cross(x_1, y_1, z_1, x_2, y_2, z_2):
+        #     x_3 = y_1 * z_2 - z_1 * y_2
+        #     y_3 = z_1 * x_2 - x_1 * z_2
+        #     z_3 = x_1 * y_2 - y_1 * x_2
+        #     return x_3, y_3, z_3
+        #
+        # x_p, y_p, z_p = cross(x_12, y_12, z_12, x_13, y_13, z_13)
+        # area = T.sqrt(x_p ** 2 + y_p ** 2 + z_p ** 2)
+        # x_n = x_p / area
+        # y_n = y_p / area
+        # z_n = z_p / area
+        #
+        # g = x_14 * x_n + y_14 * y_n + z_14 * z_n
+        #
+        # jac1 = T.grad(g, x1)
+        # jac2 = T.grad(g, y1)
+        # jac3 = T.grad(g, z1)
+        # jac4 = T.grad(g, x2)
+        # jac5 = T.grad(g, y2)
+        # jac6 = T.grad(g, z2)
+        # jac7 = T.grad(g, x3)
+        # jac8 = T.grad(g, y3)
+        # jac9 = T.grad(g, z3)
+        # jac10 = T.grad(g, x4)
+        # jac11 = T.grad(g, y4)
+        # jac12 = T.grad(g, z4)
+        #
+        # jac = T.stack([jac1, jac2, jac3, jac4, jac5, jac6, jac7, jac8, jac9, jac10, jac11, jac12], axis=0)
+        #
+        # self._tjac = tfunction([x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4], jac)
+        # return
+
+    def B(self, X_local, u_local, t):
+        """
+        Return derivative of c_equation with respect to u for a Fixed Distance constraint.
+
+        Parameters
+        ----------
+        X_local: numpy.array
+            X-Coords in reference Domain for degrees of freedom
+            e.g. [x1 x2 y3 y4 z5] if x-direction of node 1 and 2, y-direction node 3 and 4 and z-direction of node 5 is
+            constrained
+        u_local: numpy.array
+            current displacements for the dofs that shall be constrained
+        t: float
+            time
+
+        Returns
+        -------
+        B: ndarray
+            Partial derivative of constraint function g w.r.t. displacements u
+        """
+        x = X_local + u_local
+
+        return self._tjac(*x)
+
