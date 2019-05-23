@@ -266,8 +266,6 @@ class ComponentConnectorTest(TestCase):
         assert_array_equal(self.TestConnector.constraints[(1,2)].todense(), -C_slave_desired)
 
     def test_apply_compatibility_constraint_nointerf(self):
-        self.TestConnector.constraints[(5,1)] = np.array([[1, 0, 0, 0], [0, 1, 0, 0]])
-
         self.TestConnector.apply_compatibility_constraint(1, self.TestComponent_Master, 5, self.TestComponent_nointerf)
 
         self.assertTrue(not self.TestConnector.constraints)
@@ -281,7 +279,7 @@ class ComponentConnectorTest(TestCase):
 
         self.assertTrue('testkey' not in self.TestConnector.constraints)
 
-        self.assertRaises(KeyError, self.TestConnector.delete_connection('wrong_key'))
+        with self.assertRaises(KeyError): self.TestConnector.delete_connection('wrong_key')
 
     def test_assemble_constraint_matrices(self):
         self.TestConnector.apply_compatibility_constraint(1, self.TestComponent_Master, 2, self.TestComponent_Slave)

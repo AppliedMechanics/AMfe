@@ -120,7 +120,7 @@ class MeshComponent(ComponentBase):
         self._f_glob_int = np.zeros(self._C_csr.shape[1])
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
-    def assign_neumann(self, name, condition, tag_values, tag='_groups'):
+    def assign_neumann(self, name, condition, tag_values, tag='_groups', ignore_nonexistent=False):
         """
         Assignment-method for Neumann-boundary-conditions on the component. It tries to assign the condition-object
         based on the given assignment-option.
@@ -135,6 +135,9 @@ class MeshComponent(ComponentBase):
             either group-tags or element-ids, the condition shall be assigned to
         tag : string
             defines the assignment-option. Use either '_groups' or '_eleids'. Default is '_groups'
+        ignore_nonexistent : boolean
+            optional switch to avoid error-message if group is not part of mesh. If switch is set True and the group is
+            missing, no condition is assigned instead.
 
         Returns
         -------
@@ -142,7 +145,18 @@ class MeshComponent(ComponentBase):
         """
         print('Assigning Neumann Condition')
         if tag == '_groups':
-            eleids = self._mesh.get_elementids_by_groups(tag_values)
+            if ignore_nonexistent:
+                eleids = np.array([], dtype=int)
+                valid_groups = []
+
+                for group in tag_values:
+                    if group in self.mesh.groups:
+                        eleids = np.hstack((eleids, self._mesh.get_elementids_by_groups([group])))
+                        valid_groups.append(group)
+
+                tag_values = valid_groups
+            else:
+                eleids = self._mesh.get_elementids_by_groups(tag_values)
         elif tag == '_eleids':
             eleids = tag_values
         else:
