@@ -84,14 +84,10 @@ class ComponentConnector:
             u = np.zeros(X.shape)
 
             self.constraints[master_key] = master_constraints.B(X, u, 0)
-            
-        elif master_key in self.constraints or slave_key in self.constraints:
-            self.delete_connection(master_key)
-            self.delete_connection(slave_key)
 
     def delete_connection(self, key):
         """
-        Method to delete a connection by a given key. Returns an error if the key is not available in the constraints.
+        Method to delete a connection by a given key.
 
         Parameters
         ----------
@@ -102,10 +98,7 @@ class ComponentConnector:
         -------
         None
         """
-        try:
-            del self.constraints[key]
-        except KeyError:
-            pass
+        del self.constraints[key]
 
     def _assemble_constraint_matrices(self, component_ids, component_n_dofs):
         constraints_assembled = np.array([]).reshape(0, np.sum(component_n_dofs))

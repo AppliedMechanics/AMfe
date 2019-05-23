@@ -144,6 +144,9 @@ class TestMesh(TestCase):
         desired = np.array([1, 2, 4], dtype=int)
         assert_array_equal(actual, desired)
 
+        with self.assertRaises(ValueError):
+            self.testmesh.get_elementids_by_groups(['wrong'])
+
     def test_get_nodeid_by_coordinates(self):
         # 2d case
         x, y = 2.0, 0.0

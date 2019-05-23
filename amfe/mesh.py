@@ -282,6 +282,8 @@ class Mesh:
         for group in groups:
             if group in self.groups:
                 elementids.extend(self.groups[group]['elements'])
+            else:
+                raise ValueError('Group {} not found in mesh'.format(group))
         elementids = np.array(elementids)
         elementids = np.unique(elementids)
         return elementids
