@@ -21,12 +21,13 @@ class TestMeshComponent(TestCase):
 
         nodes = [(1, (0.0, 0.0)), (2, (1.0, 0.0)), (3, (1.0, 1.0)), (4, (0.0, 1.0)), (5, (2.0, 0.0)), (6, (2.0, 1.0))]
         elements = [(1, 'Tri3', (5, 6, 3)), (2, 'Tri3', (3, 2, 5)), (3, 'Quad4', (1, 2, 3, 4)),
-                    (4, 'straight_line', (4, 1)), (5, 'straight_line', (5,6))]
+                    (4, 'straight_line', (4, 1)), (5, 'straight_line', (5, 6))]
         groups = {'left': {'elements': [3], 'nodes': []},
                   'right': {'elements': [1, 2], 'nodes': [2, 3, 5, 6]},
                   'left_boundary': {'elements': [4], 'nodes': []},
                   'right_boundary': {'elements': [5], 'nodes': [1, 2]}
                   }
+        tags = {'tag_boundaries': {1: [4], 2: [5]}}
         converter = AmfeMeshConverter()
         for node in nodes:
             converter.build_node(node[0], node[1][0], node[1][1], 0.0)
@@ -34,6 +35,7 @@ class TestMeshComponent(TestCase):
             converter.build_element(element[0], element[1], element[2])
         for group in groups:
             converter.build_group(group, groups[group]['nodes'], groups[group]['elements'])
+        converter.build_tag(tags)
         converter.build_mesh_dimension(2)
 
         self.testmesh = converter.return_mesh()          
@@ -234,6 +236,84 @@ class TestMeshComponent(TestCase):
             'name': {0: 'TestCondition'},
             'tag': {0: '_groups'},
             'property_names': {0: np.array(['left_boundary'])},
+            'neumann_obj': {0: condition}
+        }
+        neumann_df_desired = pd.DataFrame.from_dict(df_dict)
+        assert_frame_equal(neumann_df_actual, neumann_df_desired, check_like=True)
+
+    def test_assign_neumann_by_tags(self):
+        component = StructuralComponent(self.testmesh)
+        tagvalue = 1
+        tagname = 'tag_boundaries'
+        time_func = lambda t: 3.0*t
+        direction = (1, 0)
+        condition = component._neumann.create_fixed_direction_neumann(direction, time_func)
+        component.assign_neumann('TestCondition', condition, [tagvalue], tagname)
+        # It must be set:
+        #   - neumann_df
+        #   - neumann_obj_df
+        neumann_obj_df = component._neumann._neumann_obj_df
+        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_mesh']].values
+        self.assertIsInstance(neumann_obj_array[0, 0]._boundary_element, LineLinearBoundary)
+        self.assertEqual(neumann_obj_array[0, 1], 4)
+        self.assertEqual(neumann_obj_array.shape, (1, 2))
+
+        neumann_df_actual = component._neumann._neumann_df
+        df_dict = {
+            'name': {0: 'TestCondition'},
+            'tag': {0: tagname},
+            'property_names': {0: np.array([1])},
+            'neumann_obj': {0: condition}
+        }
+        neumann_df_desired = pd.DataFrame.from_dict(df_dict)
+        assert_frame_equal(neumann_df_actual, neumann_df_desired, check_like=True)
+
+    def test_assign_neumann_by_groups_nonexistent_group(self):
+        # Test, that nothing happens if group is wrong and switch is set True
+        component = StructuralComponent(self.testmesh)
+        group = 'wrong_group'
+        time_func = lambda t: 3.0 * t
+        direction = (1, 0)
+        condition = component._neumann.create_fixed_direction_neumann(direction, time_func)
+        component.assign_neumann('TestCondition', condition, [group], '_groups', True)
+        # It must be set:
+        #   - neumann_df
+        #   - neumann_obj_df
+        neumann_obj_df = component._neumann._neumann_obj_df
+        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_mesh']].values
+        self.assertEqual(neumann_obj_array.shape, (0, 2))
+
+        neumann_df_actual = component._neumann._neumann_df
+        neumann_df_desired = pd.DataFrame(columns=['name', 'tag', 'property_names', 'neumann_obj'])
+        assert_frame_equal(neumann_df_actual, neumann_df_desired, check_like=True)
+
+        # Test, that error is thrown for a wrong group in the default case
+        with self.assertRaises(ValueError): component.assign_neumann('TestCondition', condition, ['left_boundary',
+                                                                                                  group])
+
+        # Test in case of multiple passed groups, that only existing groups are handled and nothing happens for wrong
+        # ones
+        component = StructuralComponent(self.testmesh)
+        time_func = lambda t: 3.0 * t
+        direction = (1, 0)
+        condition = component._neumann.create_fixed_direction_neumann(direction, time_func)
+        component.assign_neumann('TestCondition', condition, ['right_boundary', 'wrong_group', 'left_boundary'],
+                                 '_groups', True)
+        # It must be set:
+        #   - neumann_df
+        #   - neumann_obj_df
+        neumann_obj_df = component._neumann._neumann_obj_df
+        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_mesh']].values
+        self.assertIsInstance(neumann_obj_array[0, 0]._boundary_element, LineLinearBoundary)
+        self.assertEqual(neumann_obj_array[0, 1], 5)
+        self.assertEqual(neumann_obj_array[1, 1], 4)
+        self.assertEqual(neumann_obj_array.shape, (2, 2))
+
+        neumann_df_actual = component._neumann._neumann_df
+        df_dict = {
+            'name': {0: 'TestCondition'},
+            'tag': {0: '_groups'},
+            'property_names': {0: np.array(['right_boundary', 'left_boundary'])},
             'neumann_obj': {0: condition}
         }
         neumann_df_desired = pd.DataFrame.from_dict(df_dict)

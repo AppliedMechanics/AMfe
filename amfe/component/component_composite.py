@@ -171,7 +171,7 @@ class MeshComponentComposite(ComponentComposite):
         None
         """
         for comp_id, component in self.components.items():
-            component.assign_neumann(name, condition, tag_values, tag)
+            component.assign_neumann(name, condition, tag_values, tag, True)
 
     def assign_constraint(self, name, constraint, dofidxs, Xidxs=()):
         """
