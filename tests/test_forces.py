@@ -26,6 +26,17 @@ class TestForces(TestCase):
 
             self.assertEqual(force_actual, self.f_max)
 
+    def test_linearly_increasing_force(self):
+        t_test = np.array([0, 0.5, 0.99, 1, 1.01, 1.25, 1.75, 2, 2.1])
+        force_desired = np.array([0, 0, 0, 0, 0.02, 0.5, 1.5, 2, 2])
+
+        F = linearly_increasing_force(1, 2, self.f_max)
+
+        for idx, t in enumerate(t_test):
+            force_actual = F(t)
+
+            self.assertAlmostEqual(force_actual, force_desired[idx])
+
     def test_triangular_force(self):
         t_test = np.array([0, 0.5, 0.99, 1, 1.01, 1.25, 1.75, 2, 2.1])
         force_desired = np.array([0, 1, 1.98, 2, 1.98, 1.5, 0.5, 0, 0])
