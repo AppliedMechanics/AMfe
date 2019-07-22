@@ -19,7 +19,7 @@ dimension
 """
 import numpy as np
 
-from amfe.solver.tools import MemoizeStiffness, MemoizeConstant
+from amfe.solver.tools import MemoizeStiffness, MemoizeConstant, MakeConstantCallable
 from amfe.constraint.constraint_formulation_boolean_elimination import BooleanEliminationConstraintFormulation
 from amfe.constraint.constraint_formulation_lagrange_multiplier import SparseLagrangeMultiplierConstraintFormulation
 from amfe.constraint.constraint_formulation_nullspace_elimination import NullspaceConstraintFormulation
@@ -45,15 +45,90 @@ class MechanicalSystem:
     .. math::
         K = \frac{\partial (f_{int} - f_{ext}}{\partial x}
         D = \frac{\partial (f_{int} - f_{ext}}{\partial \dot x}
-    """
-    def __init__(self, dimension, M_func, D_func, K_func, f_ext_func, f_int_func):
 
+    Attributes
+    ----------
+    _dimension : int
+        number of dofs
+    _system_is_linear : boolean
+        flag, that indicates whether system is fully linear or not
+    _constants : set
+        contains tags for constant parts of the system
+
+    """
+    def __init__(self, dimension, M_func, D_func, K_func, f_ext_func, f_int_func=None, constants=tuple()):
+        """
+        The system-behavior is defined during the translator's instantiation. In the default nonlinear case, just hand
+        over the system's callbacks. If a complete or partly linear system shall be defined, either use preset matrices
+        and vectors or set the linear parts by the constants-option. In order to set up a full linear system, either
+        leave f_int undefined, or set the constants-option to ["all"].
+
+        Parameters
+        ----------
+        dimension: int
+            number of dofs
+        M_func: callable, ndarray
+            mass-matrix, either callback or constant array
+        D_func: callable, ndarray
+            damping-matrix, either callback or constant array
+        K_func: callable, ndarray
+            stiffness-matrix, either callback or constant array
+        f_ext_func: callable, ndarray
+            external forces, either callback or constant array
+        f_int_func: callable, None
+            internal forces, either callback or undefined in case of a full linear system
+        constants: tuple
+            strings, that define constant/linear parts of the system. Possible parameters are: "all", "M", "D" and "K"
+        """
         self._dimension = dimension
-        self._M_func = M_func
-        self._K_func = K_func
-        self._f_ext_func = f_ext_func
-        self._f_int_func = f_int_func
-        self._D_func = D_func
+        self._system_is_linear = False
+
+        # Set linear system-parts
+        if 'all' in constants:
+            constants = ('M', 'D', 'K')
+            if f_int_func is not None:
+                print('f_int was passed while constants is set "all". Falling back to nonlinear case.')
+
+        self._constants = set(constants)
+
+        def _check_and_set_attribute(key, func):
+            if callable(func):
+                if key in self._constants:
+                    self._constants.union({key})
+                    return MemoizeConstant(func)
+                else:
+                    return func
+            else:
+                self._constants.union({key})
+                return MakeConstantCallable(func)
+
+        def _linear_f_int(q, dq, t):
+            return self._K_func(q, dq, t) @ q + self._D_func(q, dq, t) @ dq
+
+        self._M_func = _check_and_set_attribute('M', M_func)
+        self._D_func = _check_and_set_attribute('D', D_func)
+        self._K_func = _check_and_set_attribute('K', K_func)
+
+        if f_int_func is None:
+            if 'K' in self._constants and 'D' in self._constants:
+                self._f_int_func = _linear_f_int
+            else:
+                raise ValueError('f_int not passed. Either set K and D constant or pass a nonlinear f_int callback.')
+        else:
+            self._f_int_func = f_int_func
+
+        if set(self._constants) != {'M', 'D', 'K'} or f_int_func is not None:
+            print(self._constants,
+                  'are set to constant values. This is not handled as a linear system. If a linear '
+                  'system is desired, set constants to ("all",).')
+        else:
+            self._system_is_linear = True
+            print('System is set to full linear. Please use linear solvers accordingly.')
+
+        if not callable(f_ext_func):
+            self._f_ext_func = MakeConstantCallable(f_ext_func)
+        else:
+            self._f_ext_func = f_ext_func
 
     def M(self, q, dq, t):
         return self._M_func(q, dq, t)
@@ -74,13 +149,17 @@ class MechanicalSystem:
     def dimension(self):
         return self._dimension
 
+    @property
+    def system_is_linear(self):
+        return self._system_is_linear
+
 
 class MulticomponentMechanicalSystem:
     """
     Translator for a system, that consists of several components.
     """
     def __init__(self, composite, constant_mass=False, constant_damping=False, constraint_formulation='boolean',
-                                                                                            ** formulation_options):
+                                                                                            **formulation_options):
         self.mechanical_systems = dict()
         self.constraint_formulations = dict()
         for comp_id, component in composite.components.items():
@@ -169,7 +248,7 @@ class MulticomponentMechanicalSystem:
 
 
 def create_mechanical_system_from_structural_component(structural_component, constant_mass=False,
-                                                       constant_damping=False):
+                                                       constant_damping=False, all_linear=False):
     """
     Create a MechanicalSystem Object from a structural component
 
@@ -181,21 +260,25 @@ def create_mechanical_system_from_structural_component(structural_component, con
         flag if the mass is constant
     constant_damping : bool
         flag indicating if damping matrix is constant
+    all_linear : bool
+        flag indicating if the system is fully linear
 
     Returns
     -------
     system : MechanicalSystem
         Created MechanicalSystem object describing the Structural Component
     """
-    if constant_mass:
-        M = MemoizeConstant(structural_component.M)
+    constants = tuple()
+    if all_linear:
+        constants += ('all',)
     else:
-        M = structural_component.M
+        if constant_mass:
+            constants += ('M',)
+        if constant_damping:
+            constants += ('D',)
 
-    if constant_damping:
-        D = MemoizeConstant(structural_component.D)
-    else:
-        D = structural_component.D
+    M = structural_component.M
+    D = structural_component.D
 
     f_int = MemoizeStiffness(structural_component.K_and_f_int)
     K = f_int.derivative
@@ -203,13 +286,16 @@ def create_mechanical_system_from_structural_component(structural_component, con
 
     dimension = structural_component.mapping.no_of_dofs
 
-    system = MechanicalSystem(dimension, M, D, K, f_ext, f_int)
+    if all_linear:
+        system = MechanicalSystem(dimension, M, D, K, f_ext, None, constants)
+    else:
+        system = MechanicalSystem(dimension, M, D, K, f_ext, f_int, constants)
     return system
 
 
 def create_constrained_mechanical_system_from_component(structural_component, constant_mass=False,
-                                                        constant_damping=False, constraint_formulation='boolean',
-                                                        **formulation_options):
+                                                        constant_damping=False, all_linear=False,
+                                                        constraint_formulation='boolean', **formulation_options):
     """
     Create a mechanical system from a component where the constraints are applied by a constraint formulation
 
@@ -223,6 +309,8 @@ def create_constrained_mechanical_system_from_component(structural_component, co
         Flag indicating if damping matrix is constant
     constraint_formulation : str {'boolean', 'lagrange', 'nullspace_elimination'}
         String describing the constraint formulation that shall be used
+    all_linear : bool
+        flag indicating if the system is fully linear
     formulation_options : dict
         options passed to the set_options method of the constraint formulation
 
@@ -231,19 +319,24 @@ def create_constrained_mechanical_system_from_component(structural_component, co
     system : amfe.solver.translators.MechanicalSystem
     formulation : amfe.constraint.ConstraintFormulation
     """
-    system_unconstrained = create_mechanical_system_from_structural_component(structural_component)
+    system_unconstrained = create_mechanical_system_from_structural_component(structural_component,
+                                                                              constant_mass=constant_mass,
+                                                                              constant_damping=constant_damping,
+                                                                              all_linear=all_linear)
     constraint_formulation = _create_constraint_formulation(system_unconstrained, structural_component,
                                                             constraint_formulation, **formulation_options)
 
-    if constant_mass:
-        M = MemoizeConstant(constraint_formulation.M)
+    constants = tuple()
+    if all_linear:
+        constants += ('all',)
     else:
-        M = constraint_formulation.M
+        if constant_mass:
+            constants += ('M',)
+        if constant_damping:
+            constants += ('D',)
 
-    if constant_damping:
-        D = MemoizeConstant(constraint_formulation.D)
-    else:
-        D = constraint_formulation.D
+    M = constraint_formulation.M
+    D = constraint_formulation.D
 
     f_int = constraint_formulation.f_int
     K = constraint_formulation.K
@@ -251,7 +344,10 @@ def create_constrained_mechanical_system_from_component(structural_component, co
 
     dimension = constraint_formulation.dimension
 
-    system = MechanicalSystem(dimension, M, D, K, f_ext, f_int)
+    if all_linear:
+        system = MechanicalSystem(dimension, M, D, K, f_ext, None, constants)
+    else:
+        system = MechanicalSystem(dimension, M, D, K, f_ext, f_int, constants)
 
     return system, constraint_formulation
 
