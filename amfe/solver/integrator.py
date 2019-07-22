@@ -20,11 +20,10 @@ In case of static problems the StaticDummyIntegrator has to be called.
 import numpy as np
 from copy import copy
 
-from amfe.linalg import vector_norm
-
 __all__ = [
-    'IntegratorBase',
-    'NonlinearStaticIntegrator',
+    'LinearIntegrationStepper',
+    'NonlinearIntegrationStepper',
+    'NonlinearStatic',
     'GeneralizedAlpha',
     'NewmarkBeta',
     'WBZAlpha',
@@ -32,33 +31,56 @@ __all__ = [
 ]
 
 
-class IntegratorBase:
-    def __init__(self):
-        self.dt = None
-        self._t_n = None
-        self._q_n = None
-        self._dq_n = None
-        self._ddq_n = None
-
-        self._t_p = None
-        self._q_p = None
-        self._dq_p = None
-        self._ddq_p = None
+class IntegrationStepperBase:
+    """
+    Base-class for LinearIntegrationStepper and NonlinearIntegrationStepper
+    """
+    def __init__(self, integrator):
+        self._integrator = integrator
 
     def step(self, t_n, q_n, dq_n, ddq_n):
         raise NotImplementedError('Step function was not implemented for subclass')
 
 
-class LinearIntegrator(IntegratorBase):
-    def __init__(self):
-        super().__init__()
+class LinearIntegrationStepper(IntegrationStepperBase):
+    r"""
+    Stepper for the solution of a linear dynamic system.
+
+    Attributes
+    ----------
+    _integrator : OneStepIntegratorBase
+        integrator-object, that performs the time-integration
+    linear_solver_func : callable
+        solve-function of a linear solver, that solves the linear problem
+
+        .. math::
+            \textbf{A}\vec{x}=\vec{b}
+
+        and gets A, b, keyword-arguments
+    linear_solver_kwargs : dict
+        keyword-arguments for linear solver function
+    """
+    def __init__(self, integrator):
+        """
+        This class provides stepper-functionality to evaluate the next time-step for a linear time-discretized system.
+        It calls the prediction- and correction functions of a predefined integrator and passes the integrator's
+        jacobian and residual to a chosen linear solver. In order to keep the jacobian constant and avoid unnecessary
+        calls of the system-matrices, they are stored during the first time-step.
+
+        Parameters
+        ----------
+        integrator : OneStepIntegratorBase
+            integrator-object, that performs the time-integration
+        """
+        super().__init__(integrator)
         self.linear_solver_func = None
         self.linear_solver_kwargs = dict()
-        self._S = None
 
     def step(self, t_n, q_n, dq_n, ddq_n):
         """
-        Stepper method for solving a time-step by predicting the solution, then solving the system with a selected solver and finally correcting the solution.
+        Stepper method for solving a time-step by predicting the solution, then solving the system with a selected
+        solver and finally correcting the solution. If system-matrices are not set, the initialization-routine for
+        storing them is performed.
 
         Parameters
         ----------
@@ -76,23 +98,62 @@ class LinearIntegrator(IntegratorBase):
         """
 
         print('Solution of time-step ', t_n, ' started...')
-        A, b = self.get_A_b(q_n, dq_n, ddq_n, t_n)
-        ddq = self.linear_solver_func(A, b, **self.linear_solver_kwargs)
-        self.set_correction(ddq)
+        self._integrator.set_prediction(q_n, dq_n, ddq_n, t_n)
+
+        q_p = copy(self._integrator.q_p)
+
+        q_p += self.linear_solver_func(self._integrator.jacobian(q_p), -self._integrator.residual(q_p),
+                                       **self.linear_solver_kwargs)
+
+        self._integrator.set_correction(q_p)
 
         # Return the new solution
-        return self._t_p, self._q_p, self._dq_p, self._ddq_p
-
-    def set_correction(self, ddq):
-        self._ddq_p = ddq
-
-    def get_A_b(self, q_n, dq_n, ddq_n, t_n):
-        raise NotImplementedError('get_A_b is not implemented')
+        return self._integrator.t_p, self._integrator.q_p, self._integrator.dq_p, self._integrator.ddq_p
 
 
-class NonlinearIntegrator(IntegratorBase):
-    def __init__(self):
-        super().__init__()
+class NonlinearIntegrationStepper(IntegrationStepperBase):
+    """
+    Stepper for the solution of a nonlinear dynamic system.
+
+    Attributes
+    ----------
+    _integrator : OneStepIntegratorBase
+        integrator-object, that performs the time-integration
+    nonlinear_solver_func : callable
+        solve-function of a nonlinear solver, that takes a residual-callback, a start value, further arguments for the
+        residual and jacobian-callbacks, a jacobian-callback, the convergence tolerance, another callback and the
+        solver-options
+    _nonlinear_solver_options : dict
+        keyword-arguments for nonlinear solver function
+    _additional_callbacks : tuple
+        further callback-functions, that can be called by the nonlinear solver
+    _rtol : float
+        relative tolerance for the nonlinear solver
+    _atol : float
+        absolute tolerance for the nonlinear solver
+    _default_rtol_scaling : float
+        default scaling-factor for the relative tolerance, which is set to the Newton-solver's start-residual
+    _external_rtol_scaling : float
+        can be set by the user and overrides the default rtol_scaling
+    """
+
+    def __init__(self, integrator):
+        """
+        This class provides stepper-functionality to evaluate the next time-step for a nonlinear time-discretized
+        system. It calls the prediction- and correction functions of a predefined integrator and passes the integrator's
+        jacobian and residual to a chosen nonlinear solver.
+
+        Parameters
+        ----------
+        integrator : OneStepIntegratorBase
+            integrator-object, that performs the time-integration
+
+        Returns
+        -------
+        None
+        """
+
+        super().__init__(integrator)
         self.nonlinear_solver_func = None
         self._nonlinear_solver_options = dict()
         self._additional_callbacks = ()
@@ -118,12 +179,26 @@ class NonlinearIntegrator(IntegratorBase):
         self._nonlinear_solver_options = dic
 
     def newton_callback(self, x_p, res):
-            # Call user defined callbacks
-            for additional_callback in self._additional_callbacks:
-                additional_callback(x_p, res)
-            # Call default_callback
-            self._default_newton_callback(x_p, res)
-            return
+        """
+        Runs a default and user-defined callback-functions during the nonlinear solution-process.
+
+        Parameters
+        ----------
+        x_p : ndarray
+            nonlinear solution
+        res : ndarray
+            residual of nonlinear solver
+
+        Returns
+        -------
+        None
+        """
+        # Call user defined callbacks
+        for additional_callback in self._additional_callbacks:
+            additional_callback(x_p, res)
+        # Call default_callback
+        self._default_newton_callback(x_p, res)
+        return
 
     def step(self, t_n, q_n, dq_n, ddq_n):
         """
@@ -145,103 +220,253 @@ class NonlinearIntegrator(IntegratorBase):
         """
 
         # Predict start for Newton-iteration
-        self.set_prediction(q_n, dq_n, ddq_n, t_n)
+        self._integrator.set_prediction(q_n, dq_n, ddq_n, t_n)
+
+        start_residual = np.linalg.norm(self._integrator.residual(self._integrator.q_p))
+        self._rtol_scaling = start_residual
 
         # Add right callbacks to options and correct atol
         nonlinear_solver_options = self.nonlinear_solver_options
 
+        print('Start residual: {0:6.3E}'.format(start_residual))
+
         # Start Newton Iterations
-        q_p, iteration_info = self.nonlinear_solver_func(self.residual, self._q_p, (), self.jacobian, None,
+        q_p, iteration_info = self.nonlinear_solver_func(self._integrator.residual, self._integrator.q_p, (),
+                                                         self._integrator.jacobian, None,
                                                          self.newton_callback, nonlinear_solver_options)
 
         # Correct all states with the new solution
-        self.set_correction(q_p)
+        self._integrator.set_correction(q_p)
 
         # Print out Info:
-        print('Time: {0:3.6f}, iterations: {1:3d}, residual: {2:6.3E}.'.format(self._t_p, iteration_info[0], iteration_info[1]))
+        print('Time: {0:3.6f}, iterations: {1:3d}, residual: {2:6.3E}.'.format(self._integrator.t_p, iteration_info[0],
+                                                                               iteration_info[1]))
 
         # Return the new solution
-        return self._t_p, self._q_p, self._dq_p, self._ddq_p
+        return self._integrator.t_p, self._integrator.q_p, self._integrator.dq_p, self._integrator.ddq_p
 
     def _default_newton_callback(self, q_p, res):
-        self.set_correction(q_p)
+        self._integrator.set_correction(q_p)
+
+
+class OneStepIntegratorBase:
+    """
+    Base-class for all one-step integration schemes.
+
+    Attributes
+    ----------
+    dt : float
+        time step size
+    _t_n : float
+        previous time
+    _q_n : ndarray
+        primary solution of previous time step
+    _dq_n : ndarray
+        first time-derivative of primary solution of previous time step
+    _ddq_n : ndarray
+        second time-derivative of primary solution of previous time step
+    t_p : float
+        next (predicted) time
+    q_p : ndarray
+        primary solution of next time step (predicted)
+    dq_p : ndarray
+        first time-derivative of primary solution of next time step (predicted)
+    ddq_p : ndarray
+        second time-derivative of primary solution of next time step (predicted)
+    """
+
+    def __init__(self):
+        self.dt = None
+        self._t_n = None
+        self._q_n = None
+        self._dq_n = None
+        self._ddq_n = None
+
+        self.t_p = None
+        self.q_p = None
+        self.dq_p = None
+        self.ddq_p = None
 
     def residual(self, q_p):
-        raise NotImplementedError('Prediction is not implemented for this Integrator')
+        raise NotImplementedError('Residual function was not implemented for subclass')
     
     def jacobian(self, q_p):
-        raise NotImplementedError('Prediction is not implemented for this Integrator')
+        raise NotImplementedError('Jacobian function was not implemented for subclass')
     
     def set_prediction(self, q_n, dq_n, ddq_n, t_n):
-        raise NotImplementedError('Prediction is not implemented for this Integrator')
+        raise NotImplementedError('Prediction function was not implemented for subclass')
     
     def set_correction(self, q_p):
-        raise NotImplementedError('Correction is not implemented for this Integrator')
+        raise NotImplementedError('Correction function was not implemented for subclass')
 
 
-class NonlinearStaticIntegrator(NonlinearIntegrator):
+class NonlinearStatic(OneStepIntegratorBase):
+    """
+    Load-stepping for nonlinear static problems to lower the initial residual for the nonlinear solver in a
+    load-controlled solution procedure. Load-stepping is performed as a pseudo-time-integration. The load-stepping is
+    defined outside by defining the load as function of t.
+
+    Attributes
+    ----------
+    _f_int : callable
+        callback-function for internal forces
+    _f_ext : callable
+        callback function for external forces
+    _K : callable
+        callback for jacobian of internal forces
+    """
     def __init__(self, f_int, f_ext, K):
+        """
+        Parameters
+        ----------
+        f_int : callable
+            K-associated nonlinear function
+        f_ext : callable
+            external Neumann-conditions
+        K : callable
+            derivative of f_int for q
+
+        Returns
+        -------
+        None
+        """
         super().__init__()
         self._f_int = f_int
         self._f_ext = f_ext
         self._K = K
-        
+
     def residual(self, q_p):
+        """
+        Evaluates the nonlinear residual as f_int-f_ext
+
+        Parameters
+        ----------
+        q_p : ndarray
+            primary solution
+
+        Returns
+        -------
+        res : ndarray
+            current residual for q_p
+        """
         zero_array = np.zeros_like(q_p)
-        f_ext = self._f_ext(q_p, zero_array, self._t_p)
-        res = - self._f_int(q_p, zero_array, self._t_p) + f_ext
+        f_ext = self._f_ext(q_p, zero_array, self.t_p)
+        res = self._f_int(q_p, zero_array, self.t_p) - f_ext
         return res
         
     def jacobian(self, q_p):
-        return -self._K(q_p, self._dq_p, self._t_p)
-    
+        """
+        Evaluates the nonlinear jacobian of f_int
+
+        Parameters
+        ----------
+        q_p : ndarray
+            primary solution
+
+        Returns
+        -------
+        jacobian : ndarray
+            current jacobian of f_int, K, for q_p
+        """
+        return self._K(q_p, self.dq_p, self.t_p)
+
     def set_prediction(self, q_n, dq_n, ddq_n, t_n):
+        """
+        Prediction, that evaluates the next load-step and copies the previous solution as initialization for the
+        nonlinear solver.
+
+        Parameters
+        ----------
+        q_n : ndarray
+            primary solution
+        dq_n : None
+            unnecessary time-derivative of q
+        ddq_n : None
+            unnecessary time-derivative of dq
+        t_n : float
+            previous time
+
+        Returns
+        -------
+        None
+        """
         zero_array = np.zeros_like(q_n)
         self._t_n = t_n
         self._q_n = q_n
         self._dq_n = zero_array
         self._ddq_n = zero_array
 
-        self._t_p = self._t_n + self.dt
-        self._q_p = q_n.copy()
-        self._dq_p = zero_array
-        self._ddq_p = zero_array
-
-        self._rtol_scaling = vector_norm(self._f_int(self._q_p, self._dq_p, self._t_p))
+        self.t_p = self._t_n + self.dt
+        self.q_p = self._q_n.copy()
+        self.dq_p = zero_array
+        self.ddq_p = zero_array
         return
     
     def set_correction(self, q_p):
-        self._q_p = q_p
-        self._t_p = self._t_n + self.dt
+        """
+        Updates the primary solution of the next time-step with the new solution.
+
+        Parameters
+        ----------
+        q_p : ndarray
+            primary solution
+
+        Returns
+        -------
+        None
+        """
+        self.q_p = q_p
         return
 
 
-class GeneralizedAlpha(NonlinearIntegrator):
+class GeneralizedAlpha(OneStepIntegratorBase):
+    """
+    Generalized-alpha integration scheme.
+
+    Attributes
+    ----------
+    M : callable
+        Mass Matrix function, signature M(q, dq, ddq, t)
+    f_int : callable
+        Internal restoring force function, signature f_int(q, dq, ddq, t)
+    f_ext : callable
+        External force function, signature, f_ext(q, dq, ddq, t)
+    K : callable
+        Jacobian of f_int, signature K(q, dq, ddq, t)
+    D : callable
+        Linear viscous damping matrix, signature D(q, dq, ddq, t)
+    alpha_m : float
+        Mass-type matrix shifting-factor. Default value is calculated from rho_inf.
+    alpha_f : float
+        Internal-forces shifting-factor. Default value is calculated from rho_inf.
+    beta : float
+        Newmark-parameter. Default value is calculated from alpha_m and alpha_f.
+    gamma : float
+        Newmark-parameter. Default value is calculated from alpha_m and alpha_f.
+    """
     def __init__(self, M, f_int, f_ext, K, D, alpha_m=0.4210526315789474, alpha_f=0.4736842105263158,
                  beta=0.27700831024930755, gamma=0.5526315789473684):
         """
-        Generalized-alpha integration scheme.
-    
         Parameters
         ----------
         M : callable
-            Mass Matrix function, signature M(q, dq, ddq, t)
+            Mass Matrix function, signature M(q, dq, t)
         f_int : callable
-            Internal restoring force function, signature f_int(q, dq, ddq, t)
+            Internal restoring force function, signature f_int(q, dq, t)
         f_ext : callable
-            External force function, signature, f_ext(q, dq, ddq, t)
+            External force function, signature, f_ext(q, dq, t)
         K : callable
-            Jacobian of f_int, signature K(q, dq, ddq, t)
+            Jacobian of f_int, signature K(q, dq, t)
         D : callable
-            Linear viscous damping matrix, signature D(q, dq, ddq, t)
+            Linear viscous damping matrix, signature D(q, dq, t)
         alpha_m : float
-            Mass-type matrix shifting-factor. Default value is calculated from rho_inf.
+            Mass-type matrix shifting-factor
         alpha_f : float
-            Internal-forces shifting-factor. Default value is calculated from rho_inf.
+            Internal-forces shifting-factor
         beta : float
-            Newmark-parameter. Default value is calculated from alpha_m and alpha_f.
+            Newmark-parameter
         gamma : float
-            Newmark-parameter. Default value is calculated from alpha_m and alpha_f.
+            Newmark-parameter
 
         Notes
         -----
@@ -291,42 +516,40 @@ class GeneralizedAlpha(NonlinearIntegrator):
         """
         Return residual for the generalized-alpha time integration scheme.
         """
-
-        t_m = self._get_midstep(self.alpha_m, self._t_n, self._t_p)
+        t_m = self._get_midstep(self.alpha_m, self._t_n, self.t_p)
         q_m = self._get_midstep(self.alpha_m, self._q_n, q_p)
-        dq_m = self._get_midstep(self.alpha_m, self._dq_n, self._dq_p)
-        ddq_m = self._get_midstep(self.alpha_m, self._ddq_n, self._ddq_p)
+        dq_m = self._get_midstep(self.alpha_m, self._dq_n, self.dq_p)
+        ddq_m = self._get_midstep(self.alpha_m, self._ddq_n, self.ddq_p)
 
-        t_f = self._get_midstep(self.alpha_f, self._t_n, self._t_p)
+        t_f = self._get_midstep(self.alpha_f, self._t_n, self.t_p)
         q_f = self._get_midstep(self.alpha_f, self._q_n, q_p)
-        dq_f = self._get_midstep(self.alpha_f, self._dq_n, self._dq_p)
+        dq_f = self._get_midstep(self.alpha_f, self._dq_n, self.dq_p)
 
         M = self.M(q_m, dq_m, t_m)
-        D = self.D(q_f, dq_f, t_f)
         f_int_f = self.f_int(q_f, dq_f, t_f)
         f_ext_f = self.f_ext(q_f, dq_f, t_f)
 
-        res = f_ext_f - M @ ddq_m - D @ dq_f - f_int_f
+        res = M @ ddq_m + f_int_f - f_ext_f
         return res
 
     def jacobian(self, q_p):
         """
         Return Jacobian for the generalized-alpha time integration scheme.
         """
-        t_m = self._get_midstep(self.alpha_m, self._t_n, self._t_p)
+        t_m = self._get_midstep(self.alpha_m, self._t_n, self.t_p)
         q_m = self._get_midstep(self.alpha_m, self._q_n, q_p)
-        dq_m = self._get_midstep(self.alpha_m, self._dq_n, self._dq_p)
+        dq_m = self._get_midstep(self.alpha_m, self._dq_n, self.dq_p)
 
-        t_f = self._get_midstep(self.alpha_f, self._t_n, self._t_p)
+        t_f = self._get_midstep(self.alpha_f, self._t_n, self.t_p)
         q_f = self._get_midstep(self.alpha_f, self._q_n, q_p)
-        dq_f = self._get_midstep(self.alpha_f, self._dq_n, self._dq_p)
+        dq_f = self._get_midstep(self.alpha_f, self._dq_n, self.dq_p)
 
         M = self.M(q_m, dq_m, t_m)
         D = self.D(q_f, dq_f, t_f)
         K = self.K(q_f, dq_f, t_f)
 
-        Jac = -(1 - self.alpha_m) / (self.beta * self.dt ** 2) * M - (1 - self.alpha_f) * self.gamma / (
-                self.beta * self.dt) * D - (1 - self.alpha_f) * K
+        Jac = (1 - self.alpha_m) / (self.beta * self.dt ** 2) * M + (1 - self.alpha_f) * self.gamma / (
+                self.beta * self.dt) * D + (1 - self.alpha_f) * K
 
         return Jac
 
@@ -335,29 +558,26 @@ class GeneralizedAlpha(NonlinearIntegrator):
         Predict variables for the generalized-alpha time integration scheme.
         """
         self._t_n = t_n
-        self._q_n = q_n.copy()
-        self._dq_n = dq_n.copy()
-        self._ddq_n = ddq_n.copy()
+        self._q_n = q_n
+        self._dq_n = dq_n
+        self._ddq_n = ddq_n
 
-        self._q_p = self._q_n + self.dt * dq_n + self.dt ** 2 * (0.5 - self.beta) * ddq_n
-        self._dq_p = self._dq_n + self.dt * (1 - self.gamma) * ddq_n
-        self._ddq_p = np.zeros_like(self._q_p)
-        self._t_p = t_n + self.dt
-
-        self._rtol_scaling = vector_norm(self.f_int(self._q_p, self._dq_p, self._t_p))
+        self.q_p = self._q_n + self.dt * self._dq_n + self.dt ** 2 * (0.5 - self.beta) * self._ddq_n
+        self.dq_p = self._dq_n + self.dt * (1 - self.gamma) * self._ddq_n
+        self.ddq_p = np.zeros_like(self.q_p)
+        self.t_p = t_n + self.dt
         return
     
     def set_correction(self, q_p):
         """
         Correct variables for the generalized-alpha time integration scheme.
         """
-        delta_q_p = q_p - self._q_p
+        delta_q_p = q_p - self.q_p
 
-        self._q_p[:] = q_p[:]
-        self._dq_p += self.gamma / (self.beta * self.dt) * delta_q_p
-        self._ddq_p += 1 / (self.beta * self.dt ** 2) * delta_q_p
+        self.q_p[:] = q_p[:]
+        self.dq_p += self.gamma / (self.beta * self.dt) * delta_q_p
+        self.ddq_p += 1 / (self.beta * self.dt ** 2) * delta_q_p
         return
-# Not tested yet    
 
 
 class NewmarkBeta(GeneralizedAlpha):

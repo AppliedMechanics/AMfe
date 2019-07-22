@@ -12,7 +12,7 @@ from amfe.constraint.constraint_formulation_nullspace_elimination import Nullspa
 from amfe.constraint.constraint_formulation import ConstraintFormulationBase
 from amfe.constraint.constraint_manager import ConstraintManager
 from amfe.solver.nonlinear_solver import NewtonRaphson
-from amfe.solver import GeneralizedAlpha
+from amfe.solver import GeneralizedAlpha, NonlinearIntegrationStepper
 from amfe.solver import AmfeSolution
 
 
@@ -274,8 +274,9 @@ class PendulumConstraintTest(TestCase):
                                           formulation.D,
                                           alpha_m=0.0)
             integrator.dt = 0.025
-            integrator.nonlinear_solver_func = nonlinear_solver.solve
-            integrator.nonlinear_solver_options = {'rtol': 1e-7, 'atol': 1e-6}
+            integration_stepper = NonlinearIntegrationStepper(integrator)
+            integration_stepper.nonlinear_solver_func = nonlinear_solver.solve
+            integration_stepper.nonlinear_solver_options = {'rtol': 1e-7, 'atol': 1e-6}
 
             # Initialize first timestep
             t = 0.0
@@ -291,7 +292,7 @@ class PendulumConstraintTest(TestCase):
 
             # Run Loop
             while t < t_end:
-                t, x, dx, ddx = integrator.step(t, x, dx, ddx)
+                t, x, dx, ddx = integration_stepper.step(t, x, dx, ddx)
                 write_callback(t, x, dx, ddx)
 
         def plot_pendulum_path(u_plot):

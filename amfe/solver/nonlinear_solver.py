@@ -168,7 +168,7 @@ class NewtonRaphson:
             if np.isscalar(Jac):
                 delta_q = 1/Jac * -res
             else:
-                delta_q = -self._options['linear_solver'].solve(Jac, res, **self._options['linear_solver_kwargs'])
+                delta_q = self._options['linear_solver'].solve(Jac, -res, **self._options['linear_solver_kwargs'])
 
             # correct variables
             q += delta_q
