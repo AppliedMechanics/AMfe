@@ -41,7 +41,7 @@ class NewtonRaphson:
         self.callback = None
         return
 
-    def set_options(self, options):
+    def _set_options(self, options):
         """
         Optional method to change convergence-properties during runtime.
         
@@ -138,7 +138,7 @@ class NewtonRaphson:
         # Parse options
         if options is None:
             options = dict()
-        self.set_options(options)
+        self._set_options(options)
 
         # Set callback function
         self.callback = callback

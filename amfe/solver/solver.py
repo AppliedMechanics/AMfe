@@ -18,6 +18,8 @@ from amfe.solver.initializer import *
 from amfe.component import StructuralComponent
 from amfe.solver.integrator import *
 
+from math import isclose
+
 
 __all__ = [
     'Solver',
@@ -64,7 +66,7 @@ class TransientSolver(Solver):
         # start time measurement
         t_clock_start = time()
         # Run Loop
-        while t < t_end:
+        while not isclose(t, t_end) and t < t_end:
             t, q, dq, ddq = self._integrator.step(t, q, dq, ddq)
             write_callback(t, q, dq, ddq)
         # end time measurement
@@ -125,11 +127,12 @@ class SolverFactory:
 
     def __init__(self):
 
-        self.integrators = {'genalpha': self._create_integrator_object_genalpha
+        self.integrators = {'genalpha': self._create_integrator_object_genalpha,
+                            'newmarkbeta': self._create_integrator_object_newmarkbeta,
+                            'loadstepping': self._create_integrator_object_loadstepping
                             }
 
         self._solver = None
-        self._large_deflection = None
         self._analysis_type = None
         self._integrator = None
         self._linear_solver = None
@@ -139,7 +142,7 @@ class SolverFactory:
         self._nonlinear_solver = None
         self._newton_maxiter = 10
         self._newton_atol = 1.0e-8
-        self._newton_rtol = 1.0e-6
+        self._newton_rtol = 0.0
         self._newton_track_condition_number = False
         self._newton_verbose = False
         self._newton_callback = None
@@ -188,13 +191,6 @@ class SolverFactory:
     def set_nonlinear_solver(self, key):
         if key in self.nonlinear_solvers:
             self._nonlinear_solver = key
-
-    def set_large_deflection(self, flag):
-        if isinstance(flag, bool):
-            self._large_deflection = flag
-        else:
-            raise ValueError('flag must be boolean')
-        return
 
     def set_newton_maxiter(self, no):
         self._newton_maxiter = no
@@ -251,28 +247,21 @@ class SolverFactory:
 
     # ---------------------------------------- 2nd level DISTINGUISH ANALYSIS TYPE -----------------------------------
     def _create_static_solver(self):
-        integrator = self._create_integrator_object_nonlinear_static()
         linear_solver = deepcopy(self.linear_solvers[self._linear_solver])
         linear_solver_kwargs = self._linear_solver_kwargs
-        nonlinear_solver, nonlinear_solver_options = self._create_newton_solver(linear_solver, linear_solver_kwargs)
-        integrator.nonlinear_solver_func = nonlinear_solver.solve
-        integrator.nonlinear_solver_options = nonlinear_solver_options
-        integrator.dt = self._dt_initial
-        accelerationinitializer = NullAccelerationInitializer()
-        # Create Solver Object
-        return TransientSolver(integrator, accelerationinitializer)
+        if not self._system.system_is_linear:
+            self._integrator = 'loadstepping'
+            return self._create_transient_solver()
+        else:
+            return linear_solver, linear_solver_kwargs
 
     def _create_transient_solver(self):
-
         linear_solver = deepcopy(self.linear_solvers[self._linear_solver])
         linear_solver_kwargs = self._linear_solver_kwargs
-        if self._large_deflection is not None:
-            if self._large_deflection:
-                return self._create_nonlinear_transient_solver(linear_solver, linear_solver_kwargs)
-            else:
-                return self._create_linear_transient_solver(linear_solver, linear_solver_kwargs)
+        if self._system.system_is_linear:
+            return self._create_linear_transient_solver(linear_solver, linear_solver_kwargs)
         else:
-            raise ValueError('The large_deflection flag has not been set. Call set_large_deflection')
+            return self._create_nonlinear_transient_solver(linear_solver, linear_solver_kwargs)
 
     def _create_newton_solver(self, linear_solver, linear_solver_kwargs):
         if self._nonlinear_solver is not None:
@@ -291,21 +280,26 @@ class SolverFactory:
         else:
             raise ValueError('Nonlinearsolver must be set')
 
-    def _create_nonlinear_transient_solver(self, linear_solver, linear_solver_kwargs):
-            nonlinear_solver, nonlinear_solver_options = self._create_newton_solver(linear_solver, linear_solver_kwargs)
-            if self._integrator == 'genalpha':
-                integrator = self._create_integrator_object_genalpha()
-                integrator.nonlinear_solver_func = nonlinear_solver.solve
-                integrator.nonlinear_solver_options = nonlinear_solver_options
-                integrator.dt = self._dt_initial
-                accelerationinitializer = self._create_acceleration_initializer(linear_solver, linear_solver_kwargs)
-            else:
-                raise ValueError('This kind of integrator is not implemented yet')
-            # Create Solver Object
-            return TransientSolver(integrator, accelerationinitializer)
+    def _create_nonlinear_transient_solver(self, linear_solver, linear_solver_options):
+        nonlinear_solver, nonlinear_solver_options = self._create_newton_solver(linear_solver, linear_solver_options)
+        integrator = self._create_integrator_object()
+        integrator.dt = self._dt_initial
+        integration_stepper = self._create_integration_stepper(integrator, 'nonlinear')
+        integration_stepper.nonlinear_solver_func = nonlinear_solver.solve
+        integration_stepper.nonlinear_solver_options = nonlinear_solver_options
+        accelerationinitializer = self._create_acceleration_initializer(linear_solver, linear_solver_options)
+        # Create Solver Object
+        return TransientSolver(integration_stepper, accelerationinitializer)
 
-    def _create_linear_transient_solver(self, linear_solver, linear_solver_kwargs):
-        return
+    def _create_linear_transient_solver(self, linear_solver, linear_solver_options):
+        integrator = self._create_integrator_object()
+        integrator.dt = self._dt_initial
+        integration_stepper = self._create_integration_stepper(integrator, 'linear')
+        integration_stepper.linear_solver_func = linear_solver.solve
+        integration_stepper.linear_solver_options = linear_solver_options
+        accelerationinitializer = self._create_acceleration_initializer(linear_solver, linear_solver_options)
+        # Create Solver Object
+        return TransientSolver(integration_stepper, accelerationinitializer)
 
     def _create_acceleration_initializer(self, linear_solver, linear_solver_kwargs):
         if self._acceleration_initializer is not None:
@@ -323,6 +317,21 @@ class SolverFactory:
                                                  self._system.K, self._system.D, lin_solver_func, linear_solver_kwargs)
 
     # ------------------------------------------ CREATE INTEGRATOR OBJECTS -------------------------------------------
+    def _create_integration_stepper(self, integrator, opt):
+        if opt is 'linear':
+            return LinearIntegrationStepper(integrator)
+        elif opt is 'nonlinear':
+            return NonlinearIntegrationStepper(integrator)
+        else:
+            raise ValueError('Unsupported type of integration-stepper')
+
+    def _create_integrator_object(self):
+        if self._integrator in self.integrators:
+            return self.integrators[self._integrator]()
+        else:
+            error_msg = 'There is no integrator of type ' + self._integrator + ' implemented yet'
+            raise ValueError(error_msg)
+
     def _create_integrator_object_genalpha(self):
         integrator = GeneralizedAlpha(self._system.M, self._system.f_int, self._system.f_ext, self._system.K,
                                       self._system.D)
@@ -336,6 +345,18 @@ class SolverFactory:
             integrator.gamma = self._gamma
         return integrator
 
+    def _create_integrator_object_newmarkbeta(self):
+        integrator = NewmarkBeta(self._system.M, self._system.f_int, self._system.f_ext, self._system.K, self._system.D)
+        if self._beta is not None:
+            integrator.beta = self._beta
+        if self._gamma is not None:
+            integrator.gamma = self._gamma
+        return integrator
+
+    def _create_integrator_object_loadstepping(self):
+        integrator = NonlinearStatic(self._system.f_int, self._system.f_ext, self._system.K)
+        return integrator
+
     def _create_integrator_object_nonlinear_static(self):
-        integrator = NonlinearStaticIntegrator(self._system.f_int, self._system.f_ext, self._system.K)
+        integrator = NonlinearStatic(self._system.f_int, self._system.f_ext, self._system.K)
         return integrator
