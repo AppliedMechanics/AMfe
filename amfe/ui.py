@@ -31,6 +31,8 @@ import numpy as np
 import os
 from os.path import splitext
 from h5py import File
+from math import isclose
+
 
 __all__ = ['import_mesh_from_file',
            'create_structural_component',
@@ -81,11 +83,11 @@ def create_structural_component(mesh):
 
 
 def create_mechanical_system(structural_component, constant_mass=False,
-                             constant_damping=False, constraint_formulation='boolean',
+                             constant_damping=False, all_linear=False, constraint_formulation='boolean',
                              **formulation_options):
     system, formulation = create_constrained_mechanical_system_from_component(structural_component, constant_mass,
-                                                                              constant_damping, constraint_formulation,
-                                                                              **formulation_options)
+                                                                        constant_damping, all_linear,
+                                                                        constraint_formulation, **formulation_options)
     return system, formulation
 
 
@@ -186,39 +188,76 @@ def set_neumann_by_elementids(component, elementids, direction_vector=np.array([
 
 
 def solve_linear_static(component):
-    system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
-                                                   constraint_formulation='boolean')
+    system, formulation = create_mechanical_system(component, all_linear=True, constraint_formulation='boolean')
 
-    solver = ScipySparseLinearSolver()
+    solfac = SolverFactory()
+    solfac.set_system(system)
+    solfac.set_analysis_type('static')
+    solfac.set_linear_solver('scipy-sparse')
+
+    solver, solver_options = solfac.create_solver()
+
+    solution_writer = AmfeSolution()
+
+    no_of_dofs = system.dimension
+    q0 = np.zeros(no_of_dofs)
+    dq0 = q0
+    ddq0 = dq0
+
+    q = solver.solve(system.K(q0, dq0, 0), system.f_ext(q0, dq0, 0))
+    u, du, ddu = formulation.recover(q, dq0, ddq0, 0)
+    solution_writer.write_timestep(0, u, None, None)
+
+    print('Solution finished')
+    return solution_writer
+
+
+def solve_linear_dynamic(component, t0, t_end, dt, write_timestep=1):
+    system, formulation = create_mechanical_system(component, all_linear=True, constraint_formulation='boolean')
+
+    solfac = SolverFactory()
+    solfac.set_system(system)
+    solfac.set_analysis_type('transient')
+    solfac.set_linear_solver('scipy-sparse')
+    solfac.set_integrator('newmarkbeta')
+    solfac.set_acceleration_intializer('zero')
+    solfac.set_dt_initial(dt)
+
+    solver = solfac.create_solver()
 
     no_of_dofs = system.dimension
     q0 = np.zeros(no_of_dofs)
     dq0 = q0
 
-    x = solver.solve(system.K(q0, dq0, 0.0), system.f_ext(q0, dq0, 0.0))
-
-    u, _, _ = formulation.recover(x, q0, q0, 0.0)
     solution_writer = AmfeSolution()
-    solution_writer.write_timestep(0.0, u, None, None)
 
+    def write_callback(t, x, dx, ddx):
+        cur_ts = int((t-t0) // dt)
+        if abs(cur_ts % write_timestep) <=1e-7:
+            u, du, ddu = formulation.recover(x, dx, ddx, t)
+            solution_writer.write_timestep(t, u, None, None)
+
+    solver.solve(write_callback, t0, q0, dq0, t_end)
+
+    print('Solution finished')
     return solution_writer
 
 
-def solve_nonlinear_static(component):
+def solve_nonlinear_static(component, load_steps):
+
     system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
                                                    constraint_formulation='boolean')
 
     solfac = SolverFactory()
     solfac.set_system(system)
     solfac.set_analysis_type('static')
-    solfac.set_large_deflection(True)
     solfac.set_nonlinear_solver('newton')
     solfac.set_linear_solver('scipy-sparse')
     solfac.set_acceleration_intializer('zero')
-    solfac.set_newton_maxiter(30)
-    solfac.set_newton_atol(1e-6)
-    solfac.set_newton_rtol(1e-8)
-    solfac.set_dt_initial(1.0)
+    solfac.set_newton_maxiter(10)
+    solfac.set_newton_atol(1e-8)
+    solfac.set_newton_rtol(2e-9)
+    solfac.set_dt_initial(1.0/load_steps)
 
     solver = solfac.create_solver()
 
@@ -231,15 +270,17 @@ def solve_nonlinear_static(component):
     t_end = 1.0
 
     def write_callback(t, x, dx, ddx):
-        u, du, ddu = formulation.recover(x, dx, ddx, t)
-        solution_writer.write_timestep(t_end, u, None, None)
+        if isclose(t, t_end):
+            u, du, ddu = formulation.recover(x, dx, ddx, t)
+            solution_writer.write_timestep(t_end, u, None, None)
 
     solver.solve(write_callback, t0, q0, dq0, t_end)
 
+    print('Solution finished')
     return solution_writer
 
 
-def solve_nonlinear_dynamic(component, t0, t_end):
+def solve_nonlinear_dynamic(component, t0, t_end, dt, write_timestep=1):
     system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
                                                    constraint_formulation='boolean')
 
@@ -247,28 +288,30 @@ def solve_nonlinear_dynamic(component, t0, t_end):
     solfac.set_system(system)
     solfac.set_analysis_type('transient')
     solfac.set_integrator('genalpha')
-    solfac.set_large_deflection(True)
     solfac.set_nonlinear_solver('newton')
     solfac.set_linear_solver('scipy-sparse')
     solfac.set_acceleration_intializer('zero')
-    solfac.set_newton_maxiter(30)
-    solfac.set_newton_atol(1e-6)
-    solfac.set_newton_rtol(1e-8)
-    solfac.set_dt_initial(0.001)
+    solfac.set_newton_maxiter(10)
+    solfac.set_newton_atol(1e-8)
+    solfac.set_newton_rtol(2e-11)
+    solfac.set_dt_initial(dt)
 
     solver = solfac.create_solver()
 
     solution_writer = AmfeSolution()
 
     def write_callback(t, x, dx, ddx):
-        u, du, ddu = formulation.recover(x, dx, ddx, t)
-        solution_writer.write_timestep(t, u, None, None)
+        cur_ts = int((t - t0) // dt)
+        if abs(cur_ts % write_timestep) <= 1e-7:
+            u, du, ddu = formulation.recover(x, dx, ddx, t)
+            solution_writer.write_timestep(t, u, None, None)
 
     no_of_dofs = system.dimension
     q0 = np.zeros(no_of_dofs)
     dq0 = q0
     solver.solve(write_callback, t0, q0, dq0, t_end)
 
+    print('Solution finished')
     return solution_writer
 
 

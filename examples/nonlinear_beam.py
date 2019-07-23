@@ -84,14 +84,18 @@ solfac = SolverFactory()
 solfac.set_system(system)
 solfac.set_analysis_type('transient')
 solfac.set_integrator('genalpha')
-solfac.set_large_deflection(True)
 solfac.set_nonlinear_solver('newton')
 solfac.set_linear_solver('scipy-sparse')
 solfac.set_acceleration_intializer('zero')
-solfac.set_newton_maxiter(30)
-solfac.set_newton_atol(1e-6)
-solfac.set_newton_rtol(1e-8)
-solfac.set_dt_initial(0.001)
+solfac.set_newton_maxiter(20)
+solfac.set_newton_atol(1e-8)
+solfac.set_newton_rtol(1e-9)
+solfac.set_dt_initial(0.00001)
+solfac._alpha_f = 0.25
+solfac._alpha_m = 0.25
+solfac._gamma = 0.75
+solfac._beta = 0.390625
+
 
 residuals = list()
 
@@ -105,8 +109,7 @@ def write_callback(t, x, dx, ddx):
 
 
 t0 = 0.0
-t_end = 1.0
-dt = 0.001
+t_end = 0.15
 
 no_of_dofs = system.dimension
 q0 = np.zeros(no_of_dofs)

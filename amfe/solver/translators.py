@@ -268,14 +268,7 @@ def create_mechanical_system_from_structural_component(structural_component, con
     system : MechanicalSystem
         Created MechanicalSystem object describing the Structural Component
     """
-    constants = tuple()
-    if all_linear:
-        constants += ('all',)
-    else:
-        if constant_mass:
-            constants += ('M',)
-        if constant_damping:
-            constants += ('D',)
+    constants = _set_constants(constant_mass, constant_damping, all_linear)
 
     M = structural_component.M
     D = structural_component.D
@@ -287,7 +280,7 @@ def create_mechanical_system_from_structural_component(structural_component, con
     dimension = structural_component.mapping.no_of_dofs
 
     if all_linear:
-        system = MechanicalSystem(dimension, M, D, K, f_ext, None, constants)
+        system = MechanicalSystem(dimension, M, D, K, f_ext, constants=constants)
     else:
         system = MechanicalSystem(dimension, M, D, K, f_ext, f_int, constants)
     return system
@@ -326,14 +319,7 @@ def create_constrained_mechanical_system_from_component(structural_component, co
     constraint_formulation = _create_constraint_formulation(system_unconstrained, structural_component,
                                                             constraint_formulation, **formulation_options)
 
-    constants = tuple()
-    if all_linear:
-        constants += ('all',)
-    else:
-        if constant_mass:
-            constants += ('M',)
-        if constant_damping:
-            constants += ('D',)
+    constants = _set_constants(constant_mass, constant_damping, all_linear)
 
     M = constraint_formulation.M
     D = constraint_formulation.D
@@ -343,13 +329,24 @@ def create_constrained_mechanical_system_from_component(structural_component, co
     f_ext = constraint_formulation.f_ext
 
     dimension = constraint_formulation.dimension
-
     if all_linear:
-        system = MechanicalSystem(dimension, M, D, K, f_ext, None, constants)
+        system = MechanicalSystem(dimension, M, D, K, f_ext, constants=constants)
     else:
         system = MechanicalSystem(dimension, M, D, K, f_ext, f_int, constants)
 
     return system, constraint_formulation
+
+
+def _set_constants(constant_mass, constant_damping, all_linear):
+    constants = tuple()
+    if all_linear:
+        constants += ('all',)
+    else:
+        if constant_mass:
+            constants += ('M',)
+        if constant_damping:
+            constants += ('D',)
+    return constants
 
 
 def _create_constraint_formulation(mechanical_system, component, formulation, **formulation_options):
