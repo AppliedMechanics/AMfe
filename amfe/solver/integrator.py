@@ -562,9 +562,10 @@ class GeneralizedAlpha(OneStepIntegratorBase):
         self._dq_n = dq_n
         self._ddq_n = ddq_n
 
-        self.q_p = self._q_n + self.dt * self._dq_n + self.dt ** 2 * (0.5 - self.beta) * self._ddq_n
-        self.dq_p = self._dq_n + self.dt * (1 - self.gamma) * self._ddq_n
-        self.ddq_p = np.zeros_like(self.q_p)
+        self.q_p = copy(self._q_n)
+        self.dq_p = (1 - self.gamma / self.beta) * self._dq_n + self.dt * (1 - self.gamma / (2 * self.beta)) * self._ddq_n
+        self.ddq_p = -1 / (self.beta * self.dt) * self._dq_n - (1 / (2 * self.beta) - 1) * self._ddq_n
+
         self.t_p = t_n + self.dt
         return
     
