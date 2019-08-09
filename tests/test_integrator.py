@@ -3,7 +3,8 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from amfe.solver.integrator import *
 from numpy.testing import assert_allclose
-from copy import deepcopy
+import matplotlib.pyplot as plt
+from amfe.linalg.linearsolvers import ScipySparseLinearSolver
 
 
 def M(q, dq, t):
@@ -65,9 +66,9 @@ class GeneralizedAlphaTest(TestCase):
         self.integrator.set_prediction(q_0, dq_0, ddq_0, t_0)
 
         self.assertEqual(self.integrator.t_p, 0.1)
-        assert_allclose(self.integrator.q_p, np.array([0, 0, 0, 0.0022299169]))
-        assert_allclose(self.integrator.dq_p, np.array([0, 0, 0, 0.04473684]))
-        assert_allclose(self.integrator.ddq_p, np.array([0, 0, 0, 0], dtype=float))
+        assert_allclose(self.integrator.q_p, np.array([0, 0, 0, 0]))
+        assert_allclose(self.integrator.dq_p, np.array([0, 0, 0, 0.00025]))
+        assert_allclose(self.integrator.ddq_p, np.array([0, 0, 0, -0.805], dtype=float))
 
     def test_residual(self):
         t_0 = 0.0
@@ -81,7 +82,7 @@ class GeneralizedAlphaTest(TestCase):
 
         res = self.integrator.residual(q_n)
 
-        assert_allclose(res, np.array([[-0.015789, 0.181717, 0.37133, 1.050693]]), 1e-06, 1e-06)
+        assert_allclose(res, np.array([[-0.015789, 0.181717, 0.368988, 0.113904]]), 1e-06, 1e-06)
 
     def test_jacobian(self):
         t_0 = 0.0
@@ -162,5 +163,74 @@ class HHTAlphaTest(TestCase):
         self.assertAlmostEqual(self.integrator.alpha_f, 0.052631579)
         self.assertAlmostEqual(self.integrator.beta, 0.27700831024930744)
         self.assertAlmostEqual(self.integrator.gamma, 0.55263157894736841)
+
+
+class LinearOneMassOscillatorTest(TestCase):
+    r"""
+               _____
+    /|     k  |     |
+    /|-/\/\/\-|  m  |
+    /|        |_____|
+
+    """
+    def setUp(self):
+        self.m = 0.1
+        self.k = 0.5
+
+        def M(q, dq, t):
+            return np.array([self.m])
+
+        def K(q, dq, t):
+            return np.array([self.k])
+
+        def f_int(q, dq, t):
+            return np.array([self.k]).dot(q)
+
+        def f_ext(q, dq, t):
+            return np.array([0])
+
+        def D(q, dq, t):
+            return np.array([0])
+
+        self.integrator = GeneralizedAlpha(M, f_int, f_ext, K, D)
+        self.integrator.dt = 0.001
+
+        self.integration_stepper = LinearIntegrationStepper(self.integrator)
+        self.linear_solver = ScipySparseLinearSolver()
+        self.integration_stepper.linear_solver_func = self.linear_solver.solve
+
+    def test_linear_oscillator(self):
+        t_end = 2
+        t0 = 0.0
+        q0 = 0.1
+        q = np.array([q0])
+        dq = np.array([0.0])
+        ddq = np.array([0.0])
+        N_dt = int((t_end-t0)/self.integrator.dt)
+
+        t = t0
+        q_numerical = np.zeros(N_dt)
+        q_numerical[0] = q
+        q_analytical = q_numerical.copy()
+        for i in range(1, N_dt):
+            t, q, dq, ddq = self.integration_stepper.step(t, q, dq, ddq)
+            q_numerical[i] = q[0]
+            q_analytical[i] = q0*np.cos(np.sqrt(self.k/self.m)*t)
+
+        for num, ana in zip(q_numerical, q_analytical):
+            assert_allclose(num, ana, atol=1e-5)
+
+        def plot_oscillator_path(u_plot, label_name):
+            plt.plot(range(0, N_dt), u_plot, label=label_name)
+            plt.title('Linear oscillator-test')
+            return
+
+        # UNCOMMENT THESE LINES IF YOU LIKE TO SEE A TRAJECTORY (THIS CAN NOT BE DONE FOR GITLAB-RUNNER
+        plot_oscillator_path(q_analytical, 'Analytisch')
+        plot_oscillator_path(q_numerical, 'Numerisch')
+        plt.legend()
+        # plt.show()
+
+
 
 
