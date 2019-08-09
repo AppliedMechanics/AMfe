@@ -1,28 +1,30 @@
-# -*- coding: utf-8 -*-
+import configparser
+import sys
+from setuptools import find_packages
+
 """
-Setup file for automatic installation and distribution of AMfe.
-Run: 'python setup.py sdist' for Source Distribution
-Run: 'python setup.py install' for Installation
-Run: 'python setup.py bdist_wheel' for Building Binary-Wheel
+Setup file for automatic installation of AMfe in development mode.
+Run: 'python setup_develop.py sdist' for Source Distribution
+Run: 'python setup_develop.py install' for Installation
+Run: 'python setup_develop.py bdist_wheel' for Building Binary-Wheel
     (recommended for windows-distributions)
     Attention: For every python-minor-version an extra wheel has to be built
     Use environments and install different python versions by using
     conda create -n python34 python=3.4 anaconda
 Run: 'pip install wheelfile.whl' for Installing Binary-Wheel
-Run: 'python setup.py bdist --format=<format> für Binary-Distribution:
+Run: 'python setup_develop.py bdist --format=<format> für Binary-Distribution:
     <format>=gztar|ztar|tar|zip|rpm|pgktool|sdux|wininst|msi
     Recommended: tar|zip|wininst (evtl. msi)
-Run: 'python setup.py bdist --help-formats' to find out which distribution
+Run: 'python setup_develop.py bdist --help-formats' to find out which distribution
     formats are available
 """
 
 # Uncomment next line for debugging
 # DISTUTILS_DEBUG='DEBUG'
 
-import sys
 
 def query_yes_no(question, default="yes"):
-    '''
+    """
     Ask a yes/no question and return their answer.
 
     Parameters
@@ -33,11 +35,11 @@ def query_yes_no(question, default="yes"):
     default: String "yes" or "no"
         The default answer
 
-    Returns:
-    --------
+    Returns
+    -------
     answer: Boolean
         Answer: True if yes, False if no.
-    '''
+    """
 
     valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
     if default is None:
@@ -59,32 +61,6 @@ def query_yes_no(question, default="yes"):
         else:
             sys.stdout.write("Please respond with 'yes' or 'no'.\n")
 
-
-config = {
-    'name': 'amfe',
-    'version': '1.0',
-    'description': 'Nonlinear Finite Element Code with simplicity in mind.',
-    'long_description': 'Nonlinear Finite Element Code for \
-    Structural Dynamics. \
-    This code includes Model Order Reduction Techniques for nonlinear Systems \
-    such as DEIM or ECSW.',
-    'author': 'Johannes Rutzmoser',
-    'url': 'https://github.com/tum-am/amfe',
-    'download_url': 'Where to download it.',
-    'author_email': 'johannes.rutzmoser@tum.de',
-    'maintainer': 'Christian Meyer',
-    'maintainer_email': 'christian.meyer@tum.de',
-    'python_requires': '>=3.7',
-    'install_requires': ['numpy>=1.10', 'scipy>=0.17', 'pandas>=0.23',
-                         'h5py', 'matplotlib', 'vtk==8.1.2', 'tables'],  # carefull: condapackage is pytables not tables
-    'tests_require': ['nose', 'sphinx==1.3.1', 'sphinx_rtd_theme', 'numpydoc'],
-    'packages': ['amfe'],
-    'scripts': [],
-    'entry_points': {},
-    'provides': 'amfe',
-    'platforms': 'Linux, Windows',
-    'license': 'BSD3-License'
-}
 
 no_fortran_str = '''
 
@@ -108,13 +84,24 @@ no_feti_str = '''
 ###############################################################################
 '''
 
+
 if __name__ == '__main__':
+    configuration = configparser.ConfigParser()
+    configuration.read('./meta.cfg')
+    ext_modules = []
+
+    config = {'name': configuration['metadata']['name'],
+              'version': configuration['metadata']['version'],
+              'packages': find_packages()
+              }
+
+    print(sys.argv)
     if 'no_feti' in sys.argv:
         sys.argv.remove('no_feti')
         print(no_feti_str)
     else:
-        pyfeti_ver = 'pyfeti>=0.12'
-        pyfeti_repo = 'git+ssh://git@gitlab.lrz.de/AM/pyfeti.git#egg=pyfeti'
+        pyfeti_ver = configuration['pyfeti']['spec']
+        pyfeti_repo = configuration['pyfeti']['dependency_links']
 
         if 'install_requires' in config:
             config['install_requires'] = config['install_requires'] + [pyfeti_ver]
@@ -129,7 +116,9 @@ if __name__ == '__main__':
         sys.argv.remove('no_fortran')
         print(no_fortran_str)
         from setuptools import setup
+
         setup(**config)
+
     else:
         try:
             from setuptools import setup
@@ -147,6 +136,7 @@ if __name__ == '__main__':
 
             ext_modules = [ext_assembly, ext_element, ext_material]
 
+            print(config)
             setup(ext_modules=ext_modules, **config)
 
         except ImportError:

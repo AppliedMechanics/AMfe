@@ -6,38 +6,58 @@ stages:
     - unittest
     - doctest
     - linttest
+    - cleanup
 
 build_without_fortran:
     stage: build
+    before_script:
+        - export PATH="/home/gitlab-runner/anaconda3/condabin:$PATH"
+        - /home/gitlab-runner/anaconda3/condabin/conda create --name amfe-runner-no_fortran python=3.7
+        - /home/gitlab-runner/anaconda3/bin/python conda_setup.py amfe-runner-no_fortran
+        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-runner-no_fortran/bin:$PATH"
     script:
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-dev/bin:$PATH"
-        - python setup.py develop no_fortran
+        - /home/gitlab-runner/anaconda3/bin/python setup_develop.py develop no_fortran no_feti
 
 build:
     stage: build
+    before_script:
+        - export PATH="/home/gitlab-runner/anaconda3/condabin:$PATH"
+        - /home/gitlab-runner/anaconda3/condabin/conda create --name amfe-runner-fortran python=3.7
+        - /home/gitlab-runner/anaconda3/bin/python conda_setup.py amfe-runner-fortran
+        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-runner-fortran/bin:$PATH"
     script:
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-dev/bin:$PATH"
-        - python setup.py develop
+        - /home/gitlab-runner/anaconda3/bin/python setup_develop.py develop no_feti
 
 unittest:
   stage: unittest
   when: always
+  before_script:
+      - export PATH="/home/gitlab-runner/anaconda3/condabin:$PATH"
+      - /home/gitlab-runner/anaconda3/condabin/conda create --name amfe-runner-fortran python=3.7
+      - /home/gitlab-runner/anaconda3/bin/python conda_setup.py amfe-runner-fortran
+      - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-runner-fortran/bin:$PATH"
   script:
-    - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-dev/bin:$PATH"
-    - python setup.py develop
-    - nosetests --with-coverage --cover-package amfe
+      - /home/gitlab-runner/anaconda3/bin/python setup_develop.py develop no_feti
+      - nosetests --with-coverage --cover-package amfe
 
 documentation_test:
     stage: doctest
     when: always
     script:
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-dev/bin:$PATH"
-        - python setup.py build_sphinx
+        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-runner-fortran/bin:$PATH"
+        - python setup_develop.py build_sphinx
 
 
 language_quality_test:
     stage: linttest
     when: always
     script:
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-dev/bin:$PATH"
+        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-runner-fortran/bin:$PATH"
         - pylint amfe || exit 0 # pylint always exits with nonzero...
+
+cleanup:
+    stage: cleanup
+    when: always
+    script:
+        - /home/gitlab-runner/anaconda3/bin/conda remove --name amfe-runner-no_fortran --all
+        - /home/gitlab-runner/anaconda3/bin/conda remove --name amfe-runner-fortran --all
