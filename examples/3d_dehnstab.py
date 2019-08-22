@@ -25,8 +25,8 @@ my_material = KirchhoffMaterial()
 component.assign_material(my_material, [29], 'S')
 
 # Fixations are simple to realize
-set_dirichlet_by_group(component, [30], ('ux', 'uy', 'uz'))
-set_dirichlet_by_group(component, [31], ('uy', 'uz'))
+set_dirichlet_by_group(component, 30, ('ux', 'uy', 'uz'))
+set_dirichlet_by_group(component, 31, ('uy', 'uz'))
 
 # Special boundary condition: let all x coordinates have equal displacement
 constraint = component.constraints.create_equal_displacement_constraint()
@@ -54,7 +54,6 @@ solfac = SolverFactory()
 
 solfac.set_system(system)
 solfac.set_analysis_type('static')
-solfac.set_large_deflection(True)
 solfac.set_dt_initial(0.05)
 solfac.set_analysis_type('zero')
 solfac.set_linear_solver('pardiso')
