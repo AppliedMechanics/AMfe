@@ -52,7 +52,7 @@ class NeumannManager:
              'fk_neumann_df': np.ones(len(neumann_objects), dtype=int) * dfindex,
              'fk_mapping': -1*np.ones(len(neumann_objects), dtype=int)}
         )
-        self._neumann_obj_df = self._neumann_obj_df.append(df)
+        self._neumann_obj_df = self._neumann_obj_df.append(df, ignore_index=True, verify_integrity=True)
 
         # Create entry for neumann_df describing the whole b.c.
         df_data = {'name': name, 'tag': tag, 'property_names': [property_names], 'neumann_obj': neumannobj}
