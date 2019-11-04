@@ -37,7 +37,6 @@ class NewtonRaphson:
     """
     def __init__(self):
         self._options = dict()
-        self.logger = logging.getLogger('amfe.solver.nonlinear_solver.NewtonRaphson')
         self.callback = None
         return
 
@@ -130,9 +129,10 @@ class NewtonRaphson:
         # Check if tol is passed and write tol in atol if atol is not in options
         if tol is not None:
             if 'atol' in options:
-                self.logger.warning('Attention: atol option has been set in nonlinear solver options,'
-                                    'but it is called with another tol. The tol has no effect.'
-                                    'The atol in options dictionary will be used')
+                logger = logging.getLogger(__name__)
+                logger.warning('Attention: atol option has been set in nonlinear solver options,'
+                               'but it is called with another tol. The tol has no effect.'
+                               'The atol in options dictionary will be used')
             options.setdefault('atol', tol)
 
         # Parse options
