@@ -2,6 +2,8 @@ import configparser
 import sys
 from setuptools import find_packages
 
+from amfe.__init__ import __version__
+
 """
 Setup file for automatic installation of AMfe in development mode.
 Run: 'python setup_develop.py sdist' for Source Distribution
@@ -91,7 +93,7 @@ if __name__ == '__main__':
     ext_modules = []
 
     config = {'name': configuration['metadata']['name'],
-              'version': configuration['metadata']['version'],
+              'version': __version__,
               'packages': find_packages()
               }
 
