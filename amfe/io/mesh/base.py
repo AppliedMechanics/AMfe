@@ -41,7 +41,7 @@ class MeshConverter:
     """
 
     def __init__(self, *args, **kwargs):
-        self.logger = logging.getLogger('amfe.io.MeshConverter')
+        return
 
     def build_no_of_nodes(self, no):
         """
