@@ -49,6 +49,7 @@ class LinearSolverBase:
         """
         pass
 
+
 # Wrappers for third-party linear solvers
 class ScipySparseLinearSolver(LinearSolverBase):
     """
@@ -190,22 +191,23 @@ class PardisoLinearSolver(LinearSolverBase):
 
     def _parse_iparms(self, iparms):
         return dict([(self.IPARM_DICT[key], iparms[key]) for key in iparms])
-    
+
+
 # Own solvers
 class ResidualbasedConjugateGradient:
-    '''
+    """
     Conjugate Gradient-solver, which solves a linear system of equations
     
     A*x = b
     
-    for x. Instead of handing over A and b, a callback of the linear problem's current residual is required, i.e. res = A*x-b.
-    This might be more convenient in certain cases, where it's more implementation-friendly to evaluate the residual instead of 
-    building A and b explicitly.
-    '''
+    for x. Instead of handing over A and b, a callback of the linear problem's current residual is required,
+    i.e., res = A*x-b.
+    This might be more convenient in certain cases, where it's more implementation-friendly to evaluate the residual
+    instead of building A and b explicitly.
+    """
     
     def __init__(self):
         super().__init__()
-        self.logger = logging.getLogger('amfe.linalg.linearsolvers.ResidualbasedConjugateGradient')
         
     def solve(self, residual_callback, x0, tol=1e-05, maxiter=None):
         """
@@ -214,7 +216,8 @@ class ResidualbasedConjugateGradient:
         Parameters
         ----------
         residual_callback : method
-            callback-method of the linear system's residual, which is updated by the solution 'x'. Hence the method has to be of the form 'residual(x)'.
+            callback-method of the linear system's residual, which is updated by the solution 'x'.
+            Hence the method has to be of the form 'residual(x)'.
         x0 : ndarray
             starting guess for the solution
         tol: float, optional
@@ -227,23 +230,22 @@ class ResidualbasedConjugateGradient:
         x : {array, matrix}
             solution vector
         """
-        
+
+        logger = logging.getLogger(__name__)
         sol = x0
         d = residual_callback(np.zeros(sol.shape))
         res = residual_callback(sol)
         
-        precon = np.identity(res.shape[0])
-        
         w = deepcopy(res)
 
-        #Standard Conjugate Gradient
+        # Standard Conjugate Gradient
         conv_crit = np.linalg.norm(res)
 
         cg_iter = 1
         converged = False
         if conv_crit <= tol:
             converged = True
-            self.logger.debug("CG converged due to initial residual=0")
+            logger.debug("CG converged due to initial residual=0")
         while not converged:
             q = -residual_callback(w) + d
                             
@@ -257,11 +259,11 @@ class ResidualbasedConjugateGradient:
             conv_crit = np.linalg.norm(res)
             if conv_crit <= tol:
                 converged = True
-                self.logger.debug(["CG converged at iteration ", cg_iter, ";  Residual: ", conv_crit])
+                logger.debug("CG converged at iteration {};  Residual: {}".format(cg_iter, conv_crit))
                 break
             
             if cg_iter >= maxiter or conv_crit > 1e6:
-                self.logger.debug(["WARNING: CG not converged at iteration ", cg_iter, ";  Residual: ", conv_crit])
+                logger.debug("WARNING: CG not converged at iteration {};  Residual: {}".format(cg_iter, conv_crit))
                 break
             
             beta = np.dot(res.T, res) / np.dot(res_old.T, res_old)
@@ -269,7 +271,7 @@ class ResidualbasedConjugateGradient:
             w = res + beta * w
 
             cg_iter += 1
-            self.logger.debug(["CG iteration ", cg_iter, ";  Residual: ", conv_crit])
+            logger.debug("CG iteration {};  Residual: {}".format(cg_iter, conv_crit))
             
         residual_callback(sol)
             
@@ -277,7 +279,7 @@ class ResidualbasedConjugateGradient:
 
 
 def solve_sparse(A, b, matrix_type='sid'):
-    """
+    r"""
     Abstraction of the solution of the sparse system Ax=b using the fastest
     solver available for sparse and non-sparse matrices.
 
