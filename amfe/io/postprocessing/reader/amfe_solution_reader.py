@@ -27,7 +27,6 @@ class AmfeSolutionReader(PostProcessorReader):
         super().__init__()
         self._amfesolution = amfesolution
         self._meshcomponent = meshcomponent
-        self.logger = logging.getLogger('amfe.postprocessing.reader.AmfeSolutionReader')
         return
 
     def parse(self, builder):
@@ -45,7 +44,8 @@ class AmfeSolutionReader(PostProcessorReader):
         t = np.array(self._amfesolution.t)
         u_unconstrained = np.array(self._amfesolution.q).T
         if self._amfesolution.dq[0] is not None or self._amfesolution.ddq[0] is not None:
-            self.logger.warning('Velocities and Accelerations cannot be written by AmfeSolutionReader')
+            logger = logging.getLogger(__name__)
+            logger.warning('Velocities and Accelerations cannot be written by AmfeSolutionReader')
         mapping = self._meshcomponent.mapping
         no_of_nodes = self._meshcomponent.mesh.no_of_nodes
         # Allocate empty array:
