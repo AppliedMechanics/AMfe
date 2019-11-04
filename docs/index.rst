@@ -12,6 +12,10 @@ AMfe Documentation
 
 AMfe is built in order to provide a simple and lean, yet powerful finite element framework for research purpose.
 
+Release notes
+-------------
+
+API changes and new features can be found in the :doc:`Release Notes<release/index>`
 
 **********************************
 How the documentation is organized
