@@ -31,6 +31,8 @@ amfe.linalg improvements
 amfe.mapping improvements
 -------------------------
 
+- Fixed bug with data type of the mapping indices
+
 amfe.mor improvements
 ---------------------
 
