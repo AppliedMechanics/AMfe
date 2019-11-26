@@ -58,7 +58,6 @@ class VtkMeshConverter(MeshConverter):
         self._eleid2cell = dict()
         self._tags = dict()
         self._groups = dict()
-        self.logger = logging.getLogger('amfe.io.VtkMeshConverter')
         self._nodes_df = pd.DataFrame(columns=['row', 'x', 'y', 'z'])
         self._el_df = pd.DataFrame(columns=['id', 'type', 'connectivity'])
         self._index = 0
@@ -322,7 +321,8 @@ class VtkMeshConverter(MeshConverter):
         elif file_extension == '.vtk':
             vtkwriter = vtk.vtkUnstructuredGridWriter()
         else:
-            self.logger.warning('No file extension given, choose \'vtk\' format')
+            logger = logging.getLogger(__name__)
+            logger.warning('No file extension was given, \'vtk\' format is chosen')
             self._filename = self._filename + '.vtk'
             vtkwriter = vtk.vtkUnstructuredGridWriter()
 
