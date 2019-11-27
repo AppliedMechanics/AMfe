@@ -50,7 +50,7 @@ class TestMapping(TestCase):
                                self.callbacks, self.callbackargs)
 
         nodal2global_desired = pd.DataFrame({'ux': {1: 0, 2: 3, 3: 6, 4: 9}, 'uy': {1: 1, 2: 4, 3: 7, 4: 10},
-                                             'T': {1: 2, 2: 5, 3: 8, 4: -1}})
+                                             'T': {1: 2, 2: 5, 3: 8, 4: -1}}, dtype=np.int64)
 
         assert_frame_equal(mapping.nodal2global, nodal2global_desired)
 

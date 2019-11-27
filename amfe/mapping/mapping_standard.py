@@ -62,7 +62,7 @@ class StandardMapping(MappingBase):
         """
         logger = logging.getLogger(__name__)
         # make empty pandas Dataframe for nodes2global
-        data = -1*np.ones(len(nodeids), dtype=int)
+        data = -1*np.ones(len(nodeids), dtype=np.int64)
         self._nodal2global = pd.DataFrame({key: data for key in fields}, index=nodeids)
         # allocate list for elements2global
         self._elements2global = pd.DataFrame([None]*len(connectivity), columns=['global_dofs'])
