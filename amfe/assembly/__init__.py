@@ -11,9 +11,7 @@ Assembly module.
 Module for assembly algorithms.
 """
 
-# --- ABSTRACT SUPER CLASS ---
-# from .assembly import *  # abstract super class
-
-
 # --- STRUCTURAL ASSEMBLY ---
+from .assembly import *
 from .structural_assembly import *
+from .tools import *

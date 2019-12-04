@@ -4,7 +4,7 @@ from unittest import TestCase
 from copy import deepcopy
 
 from amfe.component.tree_manager import *
-from amfe.component import ComponentBase
+from amfe.component.component_base import ComponentBase
 
 
 class DummyComponent(ComponentBase):
