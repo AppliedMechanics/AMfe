@@ -6,15 +6,11 @@
 #
 
 """
-Component module.
+Morphing module.
 
-Module for partitioned component-structure.
+
 """
 
-from .component_composite import *
-from .component_connector import *
-from .constants import *
-from .mesh_component import *
-from .partitioner import *
-from .structural_component import *
-from .tree_manager import *
+# -- import subfolders
+from .implementer import *
+from .morpher import *
