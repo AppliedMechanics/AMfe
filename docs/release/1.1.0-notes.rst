@@ -16,6 +16,8 @@ amfe.assembly improvements
 amfe.constraint improvements
 ----------------------------
 
+- Added missing creation functions for several constraints
+
 amfe.element improvements
 -------------------------
 
