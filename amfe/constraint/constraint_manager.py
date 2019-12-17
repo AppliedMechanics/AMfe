@@ -73,6 +73,22 @@ class ConstraintManager:
         self._update_flag = True
         return
 
+    def __str__(self):
+        """
+        Returns information about the Constrain-Manager when using print(instance)
+
+        Returns
+        -------
+        info_of_Constraint-Manager: string
+            No of constraint definitions, No of constraints, No of dofs unconstrained, List of applied constraints,
+            Address in RAM
+        """
+        return "--- Info about Constraint-Manager ---\nNo of constraint definitions: {0:,>}\n" \
+               "No of constraints: {1:,}\nNo of dofs unconstrained: {2:,}\nList of applied constraints:\n{3}\n" \
+               "Address in RAM: {4}" \
+               .format(self.no_of_constraint_definitions, self.no_of_constraints, self.no_of_dofs_unconstrained,
+                       self._constraints_df.to_string(columns=['constraint_obj', 'dofidxs', 'name']), id(self))
+
     @property
     def no_of_constraint_definitions(self):
         """

@@ -16,6 +16,7 @@ amfe.assembly improvements
 amfe.constraint improvements
 ----------------------------
 
+- Added str-method to constraint-manager
 - Added missing creation functions for several constraints
 
 amfe.element improvements
