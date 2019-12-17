@@ -143,6 +143,9 @@ class ConstraintManagerTest(TestCase):
         B_desired = np.array([[0, 0, 1], [0, 1, 0]], dtype=float)
         assert_array_equal(B_desired, B.todense())
 
+    def test_str(self):
+        print(self.cm)
+
 
 class PendulumConstraintManagerTest(TestCase):
         """
