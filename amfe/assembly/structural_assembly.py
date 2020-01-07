@@ -15,7 +15,6 @@ routines, as they allow for a huge speedup.
 """
 
 import numpy as np
-import time
 from scipy.sparse import csr_matrix
 
 from .assembly import Assembly
@@ -71,8 +70,6 @@ class StructuralAssembly(Assembly):
         memory-efficient, so for large systems and low RAM this might become an issue...
         """
 
-        t1 = time.clock()
-
         # NOTE
         # the following algorithm only works under the following constraints:
         #   - the mapping starts at zero
@@ -105,7 +102,6 @@ class StructuralAssembly(Assembly):
         # fill C_csr matrix with dummy entries in those places where matrix will be filled in assembly
         C_csr = csr_matrix((vals_global, (row_global, col_global)), shape=(no_of_dofs, no_of_dofs), dtype=float)
 
-        t2 = time.clock()
         return C_csr
 
     def assemble_k_and_f(self, nodes, ele_objects, connectivities, elements2dofs, dofvalues=None, t=0., K_csr=None,
