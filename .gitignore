@@ -13,6 +13,9 @@
 # ignore mesh files because they can be large
 *.msh
 
+# ignore log files
+*.log
+
 # saved numpy-arrays
 *.npy
 *.pdf

@@ -16,6 +16,8 @@ in Optimization
 
 """
 
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -248,7 +250,8 @@ class ConstraintManager:
             ATTENTION: Whether this is needed or not depends on the constraint's type. Take a look at the constraint-
             classes' documentation!
         """
-        print('Adding constraint {} to dofs {} and nodes {}'.format(name, dofidxs, Xidxs))
+        logger = logging.getLogger(__name__)
+        logger.debug('Adding constraint {} to dofs {} and nodes {}'.format(name, dofidxs, Xidxs))
 
         # Create new rows for constraints_df
         df = pd.DataFrame(
