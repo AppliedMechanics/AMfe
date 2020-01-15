@@ -8,12 +8,29 @@
 Running a 3D-tension bar
 """
 #%%
+import logging.config
+import yaml
+
 import numpy as np
 
 from amfe.ui import *
 from amfe.io import amfe_dir
 from amfe.material import KirchhoffMaterial
 from amfe.solver import *
+
+# Define the logging options
+# Set global logging to not set
+logging.basicConfig(level=logging.NOTSET)
+with open('log_example_config.yml', 'r') as file:
+    configuration = yaml.safe_load(file.read())
+    logging.config.dictConfig(configuration)
+
+# Get AMfe logger
+amfelogger = logging.root.getChild('amfe')
+amfelogger.setLevel(logging.INFO)
+# Get a special logger for Dirichlet constraint
+amfeloggerconstraint = amfelogger.getChild('constraint')
+amfeloggerconstraint.setLevel(logging.DEBUG)
 
 mesh_file = amfe_dir('meshes/test_meshes/bar_Tet4_fine.msh')
 output_file = amfe_dir('results/bar_tet10/bar_tet4_pardiso')
