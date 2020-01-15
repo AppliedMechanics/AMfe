@@ -93,7 +93,20 @@ class Mesh:
         self._changed_iconnectivity = True
         # Cache for lazy evaluation of iconnectivity
         self._iconnectivity_df_cached = pd.DataFrame(columns=('iconnectivity',))
-        
+
+    def __str__(self):
+        """
+        Returns information about the mesh instance when using print(instance)
+
+        Returns
+        -------
+        info_of_mesh: string
+            dimension, no of elements, no of boundary elements, no of nodes
+        """
+        return "Info about mesh-object\ndimension of mesh: \t\t{0}\nNo of elements: \t\t{1:,}\n" \
+               "No of boundary elements\t{2:,}\nNo of nodes: \t\t\t{3:,}\nAdress in RAM\t\t\t{4}\n" \
+               .format(self.dimension, self.no_of_elements, self.no_of_boundary_elements, self.no_of_nodes, id(self))
+
     @property
     def el_df(self):
         return self._el_df

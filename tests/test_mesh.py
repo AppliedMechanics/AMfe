@@ -551,6 +551,9 @@ class TestMesh(TestCase):
         for actual_arr, desired_arr in zip(actual, desired):
             assert_array_equal(desired_arr, actual_arr)
 
+    def test_str(self):
+        print(self.testmesh)
+
 
 class TestPartitionedMesh(TestCase):
     def setUp(self):
@@ -655,7 +658,6 @@ class TestPartitionedMesh(TestCase):
         neighbors_actual = self.testmesh.get_value_by_elementid_and_tag(2, 'partitions_neighbors')
 
         assert_array_equal(neighbors_actual, neighbors_desired)
-
 
 
 if __name__ == '__main__':
