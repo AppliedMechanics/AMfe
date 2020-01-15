@@ -69,6 +69,18 @@ class TestMapping(TestCase):
                                self.callbackargs)
         self.assertEqual(mapping.no_of_dofs, 11)
 
+    def test_no_of_elements(self):
+        mapping = StandardMapping()
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity, self.dofs_by_element, self.callbacks,
+                               self.callbackargs)
+        self.assertEqual(mapping.no_of_elements, len(self.dofs_by_element))
+
+    def test_str(self):
+        mapping = StandardMapping()
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity, self.dofs_by_element, self.callbacks,
+                               self.callbackargs)
+        print(mapping)
+
     def test_get_dofs_by_ids(self):
         mapping = StandardMapping()
         mapping.update_mapping(self.fields, self.nodeids, self.connectivity, self.dofs_by_element, self.callbacks,
