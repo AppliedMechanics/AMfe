@@ -28,6 +28,8 @@ amfe.fortran improvements
 amfe.io improvements
 --------------------
 
+- Fixed bug in vtkmeshconverter with Elemental Groups and integer groupnames
+
 amfe.linalg improvements
 ------------------------
 
