@@ -279,7 +279,7 @@ class VtkMeshConverter(MeshConverter):
                 vtkarray.FillComponent(0, 0)
                 vtkarray.SetName(tagname)
                 for tagvalue, eleids in tag_dict.items():
-                    vtkids = [self._eleid2cell[eleid] for eleid in eleids]
+                    vtkids = [self._el_df.index[self._el_df['id'] == eleid][0] for eleid in eleids]
                     for vtkid in vtkids:
                         vtkarray.SetTuple1(vtkid, int(tagvalue))
                 self._vtkelements.GetCellData().AddArray(vtkarray)
@@ -297,7 +297,7 @@ class VtkMeshConverter(MeshConverter):
                     vtkelements = vtk.vtkIntArray()
                     vtkelements.SetNumberOfComponents(1)
                     vtkelements.SetNumberOfTuples(self._vtkelements.GetNumberOfCells())
-                    vtkelements.SetName(groupname + '_elements')
+                    vtkelements.SetName(str(groupname) + '_elements')
                     vtkelements.FillComponent(0, 0)
                     for elementid in elementids:
                         vtkelements.SetTuple1(elementid, 1)
@@ -307,7 +307,7 @@ class VtkMeshConverter(MeshConverter):
                     vtknodes = vtk.vtkIntArray()
                     vtknodes.SetNumberOfComponents(1)
                     vtknodes.SetNumberOfTuples(self._vtknodes.GetNumberOfPoints())
-                    vtknodes.SetName(groupname + '_nodes')
+                    vtknodes.SetName(str(groupname) + '_nodes')
                     vtknodes.FillComponent(0, 0)
 
                     for nodeid in nodeids:
