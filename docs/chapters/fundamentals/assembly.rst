@@ -6,6 +6,7 @@ The assembly module has the following tasks:
 * Generate Mapping tables from local dofs to global dofs
 
 * Assemble global matrices and vectors such as
+
     - mass matrix
     - tangent stiffness matrix
     - internal force vector
