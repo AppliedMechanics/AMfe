@@ -29,6 +29,7 @@ amfe.io improvements
 --------------------
 
 - Fixed bug in vtkmeshconverter with Elemental Groups and integer groupnames
+- Extended Solution-Reader to export velocities and accelerations
 
 amfe.linalg improvements
 ------------------------
