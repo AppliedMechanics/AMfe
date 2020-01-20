@@ -1,7 +1,7 @@
-amfe.boundary module
+amfe.forces module
 ====================
 
-.. automodule:: amfe.boundary
+.. automodule:: amfe.forces
     :members:
     :undoc-members:
     :show-inheritance:

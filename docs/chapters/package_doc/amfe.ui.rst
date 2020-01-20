@@ -1,7 +1,7 @@
-amfe.mesh_tying module
+amfe.ui module
 ====================
 
-.. automodule:: amfe.mesh_tying
+.. automodule:: amfe.ui
     :members:
     :undoc-members:
     :show-inheritance:

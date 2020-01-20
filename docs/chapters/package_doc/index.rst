@@ -18,26 +18,20 @@ Core-Modules of the AMfe-Package
 .. toctree::
 
    amfe.assembly
-   amfe.boundary
+   amfe.component
    amfe.constraint
    amfe.element
-   amfe.material
-   amfe.mechanical_system
-   amfe.mesh
-   amfe.mesh_tying
-   amfe.num_exp_toolbox
+   amfe.fortran
+   amfe.io
+   amfe.linalg
+   amfe.mapping
+   amfe.mor
+   amfe.neumann
+   amfe.parametric
    amfe.solver
+   amfe.forces
+   amfe.material
+   amfe.mesh
    amfe.structural_dynamics
    amfe.tools
-
-
-
-
-Model Reduction Modules
-=======================
-
-.. toctree::
-
-    amfe.reduced_basis
-    amfe.hyper_red
-    amfe.quadratic_manifold
+   amfe.ui
