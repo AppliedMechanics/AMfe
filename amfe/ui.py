@@ -235,7 +235,7 @@ def solve_linear_dynamic(component, t0, t_end, dt, write_timestep=1):
         cur_ts = int((t-t0) // dt)
         if abs(cur_ts % write_timestep) <=1e-7:
             u, du, ddu = formulation.recover(x, dx, ddx, t)
-            solution_writer.write_timestep(t, u, None, None)
+            solution_writer.write_timestep(t, u, du, ddu)
 
     solver.solve(write_callback, t0, q0, dq0, t_end)
 
@@ -304,7 +304,7 @@ def solve_nonlinear_dynamic(component, t0, t_end, dt, write_timestep=1):
         cur_ts = int((t - t0) // dt)
         if abs(cur_ts % write_timestep) <= 1e-7:
             u, du, ddu = formulation.recover(x, dx, ddx, t)
-            solution_writer.write_timestep(t, u, None, None)
+            solution_writer.write_timestep(t, u, du, ddu)
 
     no_of_dofs = system.dimension
     q0 = np.zeros(no_of_dofs)
@@ -315,7 +315,7 @@ def solve_nonlinear_dynamic(component, t0, t_end, dt, write_timestep=1):
     return solution_writer
 
 
-def write_results_to_paraview(solution, component, paraviewfilename):
+def write_results_to_paraview(solution, component, paraviewfilename, displacements_only=True):
     """
     Writes results to an xdmf paraview file
 
@@ -327,6 +327,10 @@ def write_results_to_paraview(solution, component, paraviewfilename):
         MeshComponent Object that contains the information of the simulated MeshComponent the results belong to
     paraviewfilename : str
         Full path to the file were the Paraview results shall be written
+    displacements_only : bool
+        In static models, there are no velocities and accelerations, that need plotting. Therefore switch off that
+        functionality. This is default, because it is rarely needed to plot velocities and accelerations in dynamic
+        cases as well.
     """
     paraviewfilename = splitext(paraviewfilename)[0]
 
@@ -346,8 +350,19 @@ def write_results_to_paraview(solution, component, paraviewfilename):
     fielddict = {'displacement': {'mesh_entity_type': MeshEntityType.NODE,
                                   'data_type': PostProcessDataType.VECTOR,
                                   'hdf5path': '/results/displacement'
-                                 }
+                                  }
                  }
+
+    if not displacements_only:
+        fielddict.update({'velocity': {'mesh_entity_type': MeshEntityType.NODE,
+                                       'data_type': PostProcessDataType.VECTOR,
+                                       'hdf5path': '/results/velocity'
+                                       },
+                          'acceleration': {'mesh_entity_type': MeshEntityType.NODE,
+                                           'data_type': PostProcessDataType.VECTOR,
+                                           'hdf5path': '/results/acceleration'
+                                           }
+                          })
 
     with open(xdmfresultsfilename, 'wb') as xdmffp:
         with File(hdf5resultsfilename, mode='r') as hdf5fp:

@@ -44,7 +44,8 @@ ui.set_neumann_by_group(model, 'neumann', np.array([0.0, -1.0]), 'Load', F)
 
 solution_writer = ui.solve_linear_dynamic(model, 0.0, 1.0, 0.0001, 10)
 
-ui.write_results_to_paraview(solution_writer, model, amfe_dir('results/gmsh/ui_example_beam_linear_dynamic'))
+ui.write_results_to_paraview(solution_writer, model, amfe_dir('results/gmsh/ui_example_beam_linear_dynamic'),
+                             problem_is_static=False)
 
 ###################################################
 ###  Nonlinear heterogeneous cantilever beam    ###
@@ -91,4 +92,5 @@ ui.set_neumann_by_group(model, 'z_neumann', np.array([0.0, -1.0]), 'Load', F)
 
 solution_writer = ui.solve_nonlinear_dynamic(model, 0.0, 0.1, 0.0001, 10)
 
-ui.write_results_to_paraview(solution_writer, model, amfe_dir('results/gmsh/ui_example_beam_nonlinear_dynamic'))
+ui.write_results_to_paraview(solution_writer, model, amfe_dir('results/gmsh/ui_example_beam_nonlinear_dynamic'),
+                             problem_is_static=False)
