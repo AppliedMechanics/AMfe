@@ -138,7 +138,7 @@ def create_material(material_type='Kirchhoff', **kwargs):
             if 'plane_stress' in kwargs:
                 plane_stress = kwargs['plane_stress']
             else:
-                plane_stress = True
+                plane_stress = False
             if 'thickness' in kwargs:
                 thickness = kwargs['thickness']
             else:
