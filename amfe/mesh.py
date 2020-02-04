@@ -1114,7 +1114,7 @@ class Mesh:
             for n_ele in target_eleids:
                 nodes = self.get_connectivity_by_elementids([n_ele])[0]
                 nodes[nodes == old_node] = int(new_node)
-                self._el_df.set_value(n_ele, 'connectivity', nodes)
+                self._el_df.at[n_ele, 'connectivity'] = nodes
         self._changed_iconnectivity = True
 
     def get_value_by_elementid_and_tag(self, ele_id, tag):

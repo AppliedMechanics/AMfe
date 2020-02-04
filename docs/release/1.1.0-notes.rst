@@ -88,4 +88,4 @@ Other changes
 - list of examples in doc updated
 - list of packages in doc updated
 - The __init__ system has been changed such that only one level downwards must be imported by the user.
-
+- Fixed bug with deprecated pandas API. The methods get_values and set_values was replaced by .to_numpy and .at methods.

@@ -135,7 +135,7 @@ class TestNeumannManager(TestCase):
         self.neumann_man.assign_neumann_by_eleids(neumannbc, eleids, ele_shapes, tag='_eleids',
                                                   property_names=eleids, name='TestCondition')
         fks = [100, 105]
-        local_ids = self.neumann_man.el_df.index.get_values()
+        local_ids = self.neumann_man.el_df.index.to_numpy()
         for fk, local_id in zip(fks, local_ids):
             self.neumann_man.write_mapping_key(fk, local_id)
         ele_obj, fk_mesh, fk_mapping, = self.neumann_man.get_ele_obj_fk_mesh_and_fk_mapping()
@@ -161,7 +161,7 @@ class TestNeumannManager(TestCase):
                                                   property_names=eleids, name='TestCondition')
         neumann_obj_df = self.neumann_man.el_df
         fk = 100
-        local_id = neumann_obj_df.index.get_values()[0]
+        local_id = neumann_obj_df.index.to_numpy()[0]
         self.neumann_man.write_mapping_key(fk, local_id)
         actual = self.neumann_man.el_df.loc[local_id, 'fk_mapping']
         self.assertEqual(actual, fk)
