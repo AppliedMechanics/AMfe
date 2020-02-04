@@ -209,12 +209,12 @@ class MeshComponent(ComponentBase):
         volume_connectivites = self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values
         dofs_by_elements = [element.dofs() for element in self._ele_obj_df['ele_obj'].values]
         volume_callbacks = [self.write_mapping_key]*len(dofs_by_elements)
-        volume_callbackargs = self._ele_obj_df.index.get_values()
+        volume_callbackargs = self._ele_obj_df.index.to_numpy()
 
         boundary_connectivities = self._neumann.el_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values
         dofs_by_elements_boundary = [element.dofs() for element in self._neumann.el_df['neumann_obj'].values]
         boundary_callbacks = [self._neumann.write_mapping_key]*len(dofs_by_elements_boundary)
-        boundary_callbackargs = self._neumann.el_df.index.get_values()
+        boundary_callbackargs = self._neumann.el_df.index.to_numpy()
 
         connectivities = np.concatenate([volume_connectivites, boundary_connectivities])
         dofs_by_elements.extend(dofs_by_elements_boundary)
