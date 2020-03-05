@@ -46,6 +46,8 @@ amfe.mor improvements
 amfe.neumann improvements
 -------------------------
 
+- added str method to neumann manager
+
 amfe.parametric improvements
 ----------------------------
 
@@ -62,6 +64,8 @@ amfe.material improvements
 
 amfe.mesh improvements
 ----------------------
+
+- added str method to mesh
 
 amfe.structural_dynamics improvements
 -------------------------------------

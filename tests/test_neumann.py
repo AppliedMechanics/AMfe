@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Test for checking Neumann conditions.
-'''
+"""
 
 from unittest import TestCase
 import numpy as np
@@ -71,7 +71,42 @@ class TestNeumannManager(TestCase):
         self.test_boundary = DummyBoundary()
         self.test_direct = np.array([1, -1])
         self.time_func = lambda t: 2
-        
+
+    def test_str(self):
+        eleids1 = [2, 7]
+        eleids2 = [3, 9]
+        ele_shapes1 = ['Tri3', 'Quad4']
+        ele_shapes2 = ['Tri3', 'Tri3']
+        time_func1 = lambda t: 3.0*t
+        time_func2 = lambda t: 2.4*t**2
+        neumannbc1 = self.neumann_man.create_fixed_direction_neumann((1, 0), time_func1)
+        neumannbc2 = self.neumann_man.create_normal_following_neumann(time_func2)
+
+        self.neumann_man.assign_neumann_by_eleids(neumannbc1, eleids1, ele_shapes1, tag='_eleids',
+                                                  property_names=eleids1, name='TestCondition1')
+        self.neumann_man.assign_neumann_by_eleids(neumannbc2, eleids2, ele_shapes2, tag='_eleids',
+                                                  property_names=eleids2, name='TestCondition2')
+
+        neumann_obj_df = self.neumann_man.el_df
+        neumann_obj_array = neumann_obj_df[['neumann_obj', 'fk_mesh']].values
+        print(self.neumann_man)
+
+    def test_no_of_condition_definitions(self):
+        eleids1 = [2, 7]
+        eleids2 = [3, 9]
+        ele_shapes1 = ['Tri3', 'Quad4']
+        ele_shapes2 = ['Tri3', 'Tri3']
+        time_func1 = lambda t: 3.0 * t
+        time_func2 = lambda t: 2.4 * t ** 2
+        neumannbc1 = self.neumann_man.create_fixed_direction_neumann((1, 0), time_func1)
+        neumannbc2 = self.neumann_man.create_normal_following_neumann(time_func2)
+
+        self.neumann_man.assign_neumann_by_eleids(neumannbc1, eleids1, ele_shapes1, tag='_eleids',
+                                                  property_names=eleids1, name='TestCondition1')
+        self.neumann_man.assign_neumann_by_eleids(neumannbc2, eleids2, ele_shapes2, tag='_eleids',
+                                                  property_names=eleids2, name='TestCondition2')
+        self.assertEqual(self.neumann_man.no_of_condition_definitions, 2)
+
     def test_create_neumann(self):
         neumann = self.neumann_man.create_fixed_direction_neumann(direction=self.test_direct)
         self.assertIsInstance(neumann, FixedDirectionNeumann)
