@@ -28,6 +28,32 @@ class NeumannManager:
         self._neumann_obj_df['fk_mesh'] = self._neumann_obj_df['fk_mesh'].astype(int)
         self._neumann_obj_df['fk_mapping'] = self._neumann_obj_df['fk_mapping'].astype(int)
 
+    def __str__(self):
+        """
+        Returns information about the Neumann-Manager when using print(instance)
+
+        Returns
+        -------
+        info_of_Neumann-Manager: string
+        #     no of condition definitions, list of applied conditions with linked objects, Address in RAM
+        """
+        return "--- Info about Neumann-Manager ---\nNo of conditions definitions: {0:,>}\n" \
+               "List of applied conditions:\n{1:,>}\nAddress in RAM: {2}\n"\
+               .format(self.no_of_condition_definitions, self._neumann_df.to_string(columns=['name', 'property_names']),
+                       id(self))
+
+    @property
+    def no_of_condition_definitions(self):
+        """
+        Returns the number of neumann conditions that have different names
+
+        Returns
+        -------
+        n: int
+            number of neumann condidtions that have different names
+        """
+        return len(self._neumann_df['name'].unique())
+
     @property
     def fields(self):
         fields_list = list(set([field for ele_obj in self._neumann_obj_df['neumann_obj'].unique()
