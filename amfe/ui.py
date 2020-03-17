@@ -15,7 +15,7 @@ UI-methods.
 from amfe.component.structural_component import StructuralComponent
 from amfe.material import KirchhoffMaterial, MooneyRivlin
 from amfe.forces import *
-from amfe.neumann.structural_neumann import FixedDirectionNeumann
+from amfe.neumann.structural_neumann import FixedDirectionNeumann, NormalFollowingNeumann
 from amfe.solver.translators import create_constrained_mechanical_system_from_component
 from amfe.solver import SolverFactory, AmfeSolution
 from amfe.linalg.linearsolvers import ScipySparseLinearSolver
@@ -175,9 +175,39 @@ def set_dirichlet_by_nodeids(component, nodeids, direction=('ux'), constraint_na
         component.assign_constraint(constraint_name, dirichlet, np.array([dof], dtype=int), np.array([], dtype=int))
 
 
-def set_neumann_by_group(component, group_name, direction_vector=np.array([0, 1]), neumann_name='Neumann0',
+def set_neumann_by_group(component, group_name, direction, following=False, neumann_name='Neumann0',
                          F=constant_force(1.0)):
-    neumann = FixedDirectionNeumann(direction_vector, time_func = F)
+    """
+    Sets a neumann condition on a component by addressing the group in the mesh.
+
+    Parameters
+    ----------
+    component : component
+        component the neumann condition should be added
+    group_name : str
+        name or number of group where neumann should be added
+    direction : array_like
+        direction of the force.
+    following : bool
+        Use following = True to keep the direction relative to the body frame.
+        If following is set to false (default), the direction is fixed.
+    neumann_name : str
+        name of the condition, defined by user
+    F : function
+         pointer to function with signature  float func(float: t)
+    """
+    if direction == 'normal':
+        if following:
+            neumann = NormalFollowingNeumann(time_func=F)
+        else:
+            raise NotImplementedError('There is no implementation for normal direction that is fixed with inertial'
+                                      'frame')
+    else:
+        direction = np.array(direction, dtype=float)  # This would raise an error if cannot be transformed to array
+        if following:
+            raise NotImplementedError('There is no implementation for forces that follow the body frame')
+        else:
+            neumann = FixedDirectionNeumann(direction, time_func=F)
     component.assign_neumann(neumann_name, neumann, [group_name], '_groups')
 
 
