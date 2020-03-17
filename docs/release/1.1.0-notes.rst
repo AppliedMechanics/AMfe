@@ -76,6 +76,9 @@ amfe.tools improvements
 amfe.ui improvements
 --------------------
 
+- added option 'normal' to set_neumann_by_group in order to set a neumann condition with a following normal direction
+to surface
+
 
 Deprecated features
 ===================
