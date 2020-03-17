@@ -32,6 +32,7 @@ import os
 from os.path import splitext
 from h5py import File
 from math import isclose
+import logging
 
 
 __all__ = ['import_mesh_from_file',
@@ -92,64 +93,64 @@ def create_mechanical_system(structural_component, constant_mass=False,
 
 
 def create_material(material_type='Kirchhoff', **kwargs):
-    if kwargs is None:
-        print('No material-parameters were given. I am setting them to default.')
-    else:
-        if material_type is 'Kirchhoff':
-            if 'E' in kwargs:
-                E = kwargs['E']
-            else:
-                E = 210E9
-            if 'nu' in kwargs:
-                nu = kwargs['nu']
-            else:
-                nu = 0.3
-            if 'rho' in kwargs:
-                rho = kwargs['rho']
-            else:
-                rho = 7.85E3
-            if 'plane_stress' in kwargs:
-                plane_stress = kwargs['plane_stress']
-            else:
-                plane_stress = True
-            if 'thickness' in kwargs:
-                thickness = kwargs['thickness']
-            else:
-                thickness = 1.0
-
-            return KirchhoffMaterial(E, nu, rho, plane_stress, thickness)
-        elif material_type is 'MooneyRivlin':
-            if 'A10' in kwargs:
-                A10 = kwargs['A10']
-            else:
-                A10 = 0.4E3
-            if 'A01' in kwargs:
-                A01 = kwargs['A01']
-            else:
-                A01 = 0.1E3
-            if 'kappa' in kwargs:
-                kappa = kwargs['kappa']
-            else:
-                kappa = 1E5
-            if 'rho' in kwargs:
-                rho = kwargs['rho']
-            else:
-                rho = 0.94E3
-            if 'plane_stress' in kwargs:
-                plane_stress = kwargs['plane_stress']
-            else:
-                plane_stress = False
-            if 'thickness' in kwargs:
-                thickness = kwargs['thickness']
-            else:
-                thickness = 1.0
-
-            return MooneyRivlin(A10, A01, kappa, rho, plane_stress, thickness)
+    if len(kwargs) == 0:
+        logger = logging.getLogger(__name__)
+        logger.debug('No material-parameters were given. I am setting them to default.')
+    if material_type is 'Kirchhoff':
+        if 'E' in kwargs:
+            E = kwargs['E']
         else:
-            raise ValueError('Unknown material-type given. Please use one of these supported types: \n ',
-                             'Kirchhoff\n',
-                             'MooneyRivlin\n'
-                             )
+            E = 210E9
+        if 'nu' in kwargs:
+            nu = kwargs['nu']
+        else:
+            nu = 0.3
+        if 'rho' in kwargs:
+            rho = kwargs['rho']
+        else:
+            rho = 7.85E3
+        if 'plane_stress' in kwargs:
+            plane_stress = kwargs['plane_stress']
+        else:
+            plane_stress = True
+        if 'thickness' in kwargs:
+            thickness = kwargs['thickness']
+        else:
+            thickness = 1.0
+
+        return KirchhoffMaterial(E, nu, rho, plane_stress, thickness)
+    elif material_type is 'MooneyRivlin':
+        if 'A10' in kwargs:
+            A10 = kwargs['A10']
+        else:
+            A10 = 0.4E3
+        if 'A01' in kwargs:
+            A01 = kwargs['A01']
+        else:
+            A01 = 0.1E3
+        if 'kappa' in kwargs:
+            kappa = kwargs['kappa']
+        else:
+            kappa = 1E5
+        if 'rho' in kwargs:
+            rho = kwargs['rho']
+        else:
+            rho = 0.94E3
+        if 'plane_stress' in kwargs:
+            plane_stress = kwargs['plane_stress']
+        else:
+            plane_stress = False
+        if 'thickness' in kwargs:
+            thickness = kwargs['thickness']
+        else:
+            thickness = 1.0
+
+        return MooneyRivlin(A10, A01, kappa, rho, plane_stress, thickness)
+    else:
+        raise ValueError('Unknown material-type given. Please use one of these supported types: \n ',
+                         'Kirchhoff\n',
+                         'MooneyRivlin\n'
+                         )
 
 
 def assign_material_by_group(component, material, group_name):
