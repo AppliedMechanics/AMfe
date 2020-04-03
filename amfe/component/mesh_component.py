@@ -37,6 +37,28 @@ class MeshComponent(ComponentBase):
         self._assembly = Assembly()
         self._constraints = ConstraintManager()
 
+    def __str__(self):
+        """
+        Returns information about the Component when using print(instance)
+
+        Returns
+        -------
+        info_of_Component: string
+        #     address in RAM, info about mesh, info about the constraints, info about the neumann-conditions,
+        info about the material
+        """
+
+        str_id = "Address in RAM: {}\n" .format(id(self))
+        str_mesh = "MESH:\n\t" + self.mesh.__str__().replace("\n", "\n\t") + "\n"
+        str_constraints = "CONSTRAINTS:\n\t" + self.constraints.__str__().replace("\n", "\n\t") + "\n"
+        str_neumann = "NEUMANN:\n\t" + self.neumann.__str__().replace("\n", "\n\t") + "\n"
+        str_material = "MATERIAL:\n\tlist of assigned materials:\n"
+        str_material_list = pd.DataFrame(self.get_materials(), columns=['material']).to_string()
+        str_material_list = "\t\t" + str_material_list.replace("\n", "\n\t\t") + "\n"
+
+        return "\n----- Info about Component -----\n" + str_id + str_mesh + str_constraints + \
+               str_neumann + str_material + str_material_list
+
     # -- PROPERTIES --------------------------------------------------------------------------------------
     @property
     def ele_obj(self):

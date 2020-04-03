@@ -13,6 +13,11 @@ New features
 amfe.assembly improvements
 --------------------------
 
+amfe.component improvements
+---------------------------
+
+- Added str-method to component
+
 amfe.constraint improvements
 ----------------------------
 

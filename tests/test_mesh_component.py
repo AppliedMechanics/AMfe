@@ -50,6 +50,10 @@ class TestMeshComponent(TestCase):
     def tearDown(self):
         pass
 
+    def test_str(self):
+        component = StructuralComponent(self.testmesh)
+        print(component)
+
     def test_assembly_getter(self):
         component = StructuralComponent(self.testmesh)
         self.assertIsInstance(component.assembly, Assembly)
