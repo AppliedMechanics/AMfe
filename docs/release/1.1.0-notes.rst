@@ -16,6 +16,8 @@ amfe.assembly improvements
 amfe.component improvements
 ---------------------------
 
+- Partitioner redefines partition-ids of a mesh, such that unique combinations of tags and partition-ids are new
+  partition-ids, e.g. combination of manual partitioning with surface-groups and automatic partitions
 - Added str-method to component
 
 amfe.constraint improvements
