@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import h5py
 import pickle
-from numpy.testing import assert_allclose, assert_array_equal
+from numpy.testing import assert_allclose, assert_array_equal, assert_array_almost_equal
 from pandas.testing import assert_frame_equal
 
 from amfe.component import StructuralComponent
@@ -37,6 +37,8 @@ from amfe.io.postprocessing.writer import Hdf5PostProcessorWriter
 from amfe.io.postprocessing.base import PostProcessorWriter
 
 from amfe.mesh import Mesh
+
+from .tools import CustomDictAssertTest
 
 
 class DummyMeshConverter(MeshConverter):
@@ -169,6 +171,7 @@ def clean_test_outputs():
 class IOTest(TestCase):
     def setUp(self):
         clean_test_outputs()
+        self.custom_asserter = CustomDictAssertTest()
 
     def tearDown(self):
         pass
@@ -602,6 +605,135 @@ class IOTest(TestCase):
         self.assertEqual(mesh._no_of_nodes, 113)
         self.assertEqual(mesh._no_of_elements, 112)
         self.assertEqual(mesh._dimension, dimension_desired)
+
+    def test_gmshascii_to_dummy_physical_surfaces_and_partitions(self):
+        # Desired nodes
+        nodes_desired = [(1, 0.0, 0.0, 0.0),
+                         (2, 0.0, 5.0, 0.0),
+                         (3, 5.0, 5.0, 0.0),
+                         (4, 5.0, 0.0, 0.0),
+                         (5, 10.0, 0.0, 0.0),
+                         (6, 10.0, 5.0, 0.0),
+                         (7, 0.0, 10.0, 0.0),
+                         (8, 10.0, 10.0, 0.0),
+                         (9, 2.499999999996199, 0.0, 0.0),
+                         (10, 5, 2.499999999996199, 0),
+                         (11, 2.5, 5, 0),
+                         (12, 0, 2.5, 0),
+                         (13, 7.176360840382222, 0, 0),
+                         (14, 7.176360840382227, 5, 0),
+                         (15, 5, 2.5, 0),
+                         (16, 2.499999999996199, 5, 0),
+                         (17, 7.176360840382222, 5, 0),
+                         (18, 5, 10, 0),
+                         (19, 0, 7.176360840382227, 0),
+                         (20, 2.5, 2.5, 0),
+                         (21, 1.2499999999981, 1.25, 0),
+                         (22, 1.25, 3.75, 0),
+                         (23, 3.7499999999981, 1.2499999999981, 0),
+                         (24, 3.750000000001901, 3.749999999998099, 0),
+                         (25, 8.22303669484285, 2.552255592639131, 0),
+                         (26, 6.540735812640291, 1.811426457748249, 0),
+                         (27, 6.3023563126068, 3.480526007198198, 0),
+                         (28, 2.842729718643214, 7.449413862174849, 0),
+                         (29, 6.088180420191112, 7.499999999999999, 0),
+                         (30, 8.316135315143335, 6.875, 0),
+                         (31, 1.335682429659853, 6.156443675639268, 0)]
+
+        # Desired elements
+        # (internal name of Triangle Nnode 3 is 'Tri3')
+        elements_desired = [(1, 'straight_line', [2, 12]),
+                            (2, 'straight_line', [12, 1]),
+                            (3, 'straight_line', [5, 6]),
+                            (4, 'straight_line', [6, 8]),
+                            (5, 'straight_line', [7, 19]),
+                            (6, 'straight_line', [19, 2]),
+                            (7, 'Tri3', [24, 23, 10]),
+                            (8, 'Tri3', [20, 23, 24]),
+                            (9, 'Tri3', [4, 23, 9]),
+                            (10, 'Tri3', [3, 24, 10]),
+                            (11, 'Tri3', [9, 23, 20]),
+                            (12, 'Tri3', [9, 20, 21]),
+                            (13, 'Tri3', [1, 21, 12]),
+                            (14, 'Tri3', [12, 21, 20]),
+                            (15, 'Tri3', [11, 20, 24]),
+                            (16, 'Tri3', [11, 22, 20]),
+                            (17, 'Tri3', [12, 20, 22]),
+                            (18, 'Tri3', [3, 11, 24]),
+                            (19, 'Tri3', [2, 22, 11]),
+                            (20, 'Tri3', [2, 12, 22]),
+                            (21, 'Tri3', [4, 10, 23]),
+                            (22, 'Tri3', [1, 9, 21]),
+                            (23, 'Tri3', [5, 25, 13]),
+                            (24, 'Tri3', [6, 14, 25]),
+                            (25, 'Tri3', [14, 27, 25]),
+                            (26, 'Tri3', [13, 25, 26]),
+                            (27, 'Tri3', [4, 13, 26]),
+                            (28, 'Tri3', [4, 26, 15]),
+                            (29, 'Tri3', [25, 27, 26]),
+                            (30, 'Tri3', [3, 15, 27]),
+                            (31, 'Tri3', [3, 27, 14]),
+                            (32, 'Tri3', [15, 26, 27]),
+                            (33, 'Tri3', [5, 6, 25]),
+                            (34, 'Tri3', [7, 28, 18]),
+                            (35, 'Tri3', [3, 28, 16]),
+                            (36, 'Tri3', [7, 19, 28]),
+                            (37, 'Tri3', [3, 29, 28]),
+                            (38, 'Tri3', [8, 29, 30]),
+                            (39, 'Tri3', [3, 17, 29]),
+                            (40, 'Tri3', [8, 18, 29]),
+                            (41, 'Tri3', [19, 31, 28]),
+                            (42, 'Tri3', [2, 16, 31]),
+                            (43, 'Tri3', [16, 28, 31]),
+                            (44, 'Tri3', [6, 30, 17]),
+                            (45, 'Tri3', [2, 31, 19]),
+                            (46, 'Tri3', [17, 30, 29]),
+                            (47, 'Tri3', [18, 28, 29]),
+                            (48, 'Tri3', [6, 8, 30])]
+
+        dimension_desired = 2
+        groups_desired = [('x_dirichlet-line', [], [1, 2, 5, 6]),
+                          ('x_neumann', [], [3, 4]),
+                          ('surface_left', [], [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]),
+                          ('surface_right', [], [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]),
+                          ('surface_top', [], [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48])]
+
+        tags_desired = {'no_of_mesh_partitions': {1: [1, 2, 5, 6, 7, 9, 10, 20, 21, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48],
+                                                  2: [3, 4, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 22]},
+                        'partition_id': {2: [1, 2, 4, 5, 6, 13, 14, 16, 17, 19, 20, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48],
+                                         1: [3, 7, 8, 9, 10, 11, 12, 15, 18, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]},
+                        'partitions_neighbors': {(None,): [1, 2, 5, 6, 7, 9, 10, 20, 21, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48],
+                                                 (2,): [3, 8, 11, 12, 15, 18, 22],
+                                                 (1,): [4, 13, 14, 16, 17, 19]},
+                        'elemental_group': {4: [1, 2],
+                                            6: [3],
+                                            11: [4],
+                                            13: [5, 6],
+                                            1: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
+                                            2: [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33],
+                                            3: [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]}}
+
+        # Define input file path
+        file = amfe_dir('tests/meshes/3_surfaces_2_partitions_mesh.msh')
+        # Define Reader Object, initialized with AmfeMeshConverter
+        reader = GmshAsciiMeshReader(file)
+        # Parse dummy mesh
+        dummy = DummyMeshConverter()
+        reader.parse(dummy)
+        mesh = dummy.return_mesh()
+
+        # Check nodes
+        for i, node in enumerate(nodes_desired):
+            self.assertEqual(mesh._nodes[i], node)
+        # Check elements
+        for i, element in enumerate(elements_desired):
+            self.assertEqual(mesh._elements[mesh._elements.index(element)], element)
+        # Check mesh dimension
+        self.assertEqual(mesh._dimension, dimension_desired)
+        self.assertEqual(mesh._groups, groups_desired)
+        self.custom_asserter.assert_dict_almost_equal(mesh._tags, tags_desired)
+        self.assertEqual(mesh._no_of_nodes, 31)
+        self.assertEqual(mesh._no_of_elements, 48)
 
     def test_amfemeshobj_to_dummy(self):
         # Desired nodes
