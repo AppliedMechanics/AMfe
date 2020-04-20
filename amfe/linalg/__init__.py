@@ -17,5 +17,3 @@ from .orth import *
 from .MKLutils import *
 from .tools import *
 
-# import subfolder
-from .lib import *

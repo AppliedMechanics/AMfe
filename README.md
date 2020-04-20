@@ -1,16 +1,23 @@
 AMfe - Finite Element Research Code at the Chair of Applied Mechanics
 =====================================================================
 
-(c) 2018 Lehrstuhl für Angewandte Mechanik, Technische Universität München
+(c) 2020 Lehrstuhl für Angewandte Mechanik, Technische Universität München
 
 
 This Finite Element Research code is developed, maintained and used by a part of the numerics group of AM.
 
 Coverage Report for Master:
-[![coverage report](https://gitlab.lrz.de/AMCode/AMfe/badges/master/coverage.svg)](https://gitlab.lrz.de/AMCode/AMfe/commits/master)
+[![coverage report](https://gitlab.lrz.de/AM/AMfe/badges/master/coverage.svg)](https://gitlab.lrz.de/AM/AMfe/commits/master)
 
 Pipeline Status:
-[![pipeline status](https://gitlab.lrz.de/AMCode/AMfe/badges/master/pipeline.svg)](https://gitlab.lrz.de/AMCode/AMfe/commits/master)
+[![pipeline status](https://gitlab.lrz.de/AM/AMfe/badges/master/pipeline.svg)](https://gitlab.lrz.de/AM/AMfe/commits/master)
+
+Wheel built for latest release (stable):
+[ AMfe_linux_x86_64.whl ](https://gitlab.lrz.de/AM/AMfe/-/jobs/artifacts/master/download?job=build_wheel_for_linux)
+
+Latest developer version (beta):
+[ AMfe_linux_x86_64.whl ](https://gitlab.lrz.de/AM/AMfe/-/jobs/artifacts/developer/download?job=build_wheel_for_linux)
+
 
 **Important Info:** The project has been moved recently. So please update your remote via:
 
@@ -29,16 +36,20 @@ Overview:
 Installation of AMfe
 --------------------
 
+### Development Version
+
 Before installing the AMfe package, check, if the latest python version and all necessary modules are installed.
 For managing the python packages, the **Python distribution Anaconda** is **highly recommended**.
 It has a very easy and effective packaging system and can thus handle all Python sources needed for this project.
 For installation and usage of Anaconda checkout http://docs.continuum.io/anaconda/install#anaconda-install.
 
+The following packages should be installed for a development version via conda install command:
+
    - Python version 3.7 or higher
-   - `numpy`, `scipy`, `pandas`, `h5py`, `matplotlib`, `dill`
+   - `numpy`, `scipy`, `pandas`, `h5py`, `matplotlib`, `vtk==8.1.2`, `pytables`, `mkl`
    - for fast fortran execution a running fortran compiler (e.g. gcc and gfortran)
    - for building the documentation `sphinx`, `numpydoc`, `sphinx_rtd_theme`
-   - for testing `nose`
+   - for testing `nose`, `coverage`
    - for checking the code readability: `pylint`
 
 I recommend to create a separate environment in anaconda for your amfe installation.
@@ -47,7 +58,7 @@ requirements (such as python 2.7 instead 3.7).
 
 For getting the package type
 
-    git clone https://gitlab.lrz.de/AMCode/AMfe.git
+    git clone https://gitlab.lrz.de/AM/AMfe.git
 
 in your console. Git will clone the repository into the current folder.
 For installing the package in development mode run
@@ -56,35 +67,53 @@ For installing the package in development mode run
     conda create --name <environment-name-of-choice> python=3.7
     conda activate <environment-name-of-choice> 
     python conda_setup.py
-    python setup_develop.py develop [no_fortran] [no_feti]
+    python setup.py develop [no_fortran]
 
-in the main folder. This should build the fortran routines and install the python module in-place,
-i.e. when you do changes to the source code they will be used the next time the module is loaded.
+in the main folder. The conda_setup.py file installs the dependencies via conda.
+It is recommended to install the dependencies with conda because setup.py can only install them via pip which
+can lead to an unclean conda environment.
+
+The `python setup.py develop` command builds the fortran routines and installs the python module in-place,
+i.e., when you do changes to the source code they will be used the next time the module is loaded.
 
 If you do not want to install the FORTRAN-routines, you can add the flag `no_fortran` to your installation command:
 
     python setup_develop.py develop no_fortran
 
-If no FORTRAN-compile is found, the installation will work only with the `no_fortran`-flag.
+If no FORTRAN-compiler is found, the installation will work only with the `no_fortran`-flag.
 
-There is also the option to use the domain decomposition solver library PYFETI. As this is very experimental, one can 
-switch it off by adding the `no_feti`-flag:
 
-    python setup.py develop no_feti
-    
-Of course this can be combined with the `no_fortran`-flag:
+### Production version
 
-    python setup_develop.py develop no_fortran no_feti
+If you do not develop AMfe you can install AMfe with conda dependencies via
+
+    cd AMfe
+    conda create --name <environment-name-of-choice> python=3.7
+    conda activate <environment-name-of-choice> 
+    python conda_setup.py
+    python setup.py install [no_fortran]
+
+If you like to use pip for your installation the easiest installation is to download the latest
+wheel file
+[ AMfe_linux_x86_64.whl ](https://gitlab.lrz.de/AM/AMfe/-/jobs/artifacts/master/download?job=build_wheel_for_linux)
+and run
+
+    pip install AMfe_linux_x86_64.whl
+
+
 
 Documentation
 -------------
-Further documentation to this code is in the folder `docs/`. For building the documentation, go to the `docs/` folder
-and type
+
+The documentation of the latest master version can be found at
+[ https://am.pages.gitlab.lrz.de/AMfe/ ](https://am.pages.gitlab.lrz.de/AMfe/index.html)
+
+The documentation can also be built from source by going into the folder `docs/` and running
 
     make html
 
 The documentation will be built in the folder `docs/` available as html in `_build`.
-If the command above does not work, the execution of `python setup.py build_sphinx` in the main-folder
+If the command above does not work, try to run `python setup.py build_sphinx` in the main-folder
 also builds the documentation.
 
 Workflow for Pre- and Postprocessing

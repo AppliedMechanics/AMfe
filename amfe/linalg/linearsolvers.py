@@ -10,7 +10,6 @@ Module contains linear equation solvers
 from scipy.linalg import solve as scipysolve
 from scipy.sparse import csr_matrix, issparse
 from scipy.sparse.linalg import spsolve, cg
-from .lib import PardisoWrapper
 from copy import deepcopy
 import numpy as np
 import logging
@@ -132,65 +131,79 @@ class ScipyConjugateGradientLinearSolver(LinearSolverBase):
         return x
 
 
-class PardisoLinearSolver(LinearSolverBase):
+try:
+    from .lib import PardisoWrapper
 
-    MTYPES = {'sym': 1,
-              'spd': 2,
-              'sid': -2,
-              'nonsym': 11,
-              }
+    class PardisoLinearSolver(LinearSolverBase):
 
-    # info:
-    # For changing iparms that are not listed here, just add a name for the iparm parameter
-    # Then you can pass an options dictionary to change the iparms
-    IPARM_DICT = {'refinement_steps': 7,
-                  'pivoting_perturbation': 9,
-                  'scaling': 10,
-                  'transposed': 11,
-                  'maximum_weighted_matching': 12,
-                  'indefinite_pivoting': 20,
-                  'partial_solve': 30,
-                  'storage_mode': 59,
+        MTYPES = {'sym': 1,
+                  'spd': 2,
+                  'sid': -2,
+                  'nonsym': 11,
                   }
 
-    def __init__(self):
-        super().__init__()
-        self.wrapper_class = None
+        # info:
+        # For changing iparms that are not listed here, just add a name for the iparm parameter
+        # Then you can pass an options dictionary to change the iparms
+        IPARM_DICT = {'refinement_steps': 7,
+                      'pivoting_perturbation': 9,
+                      'scaling': 10,
+                      'transposed': 11,
+                      'maximum_weighted_matching': 12,
+                      'indefinite_pivoting': 20,
+                      'partial_solve': 30,
+                      'storage_mode': 59,
+                      }
 
-    def solve(self, A, b, mtype='nonsym', **iparms):
-        """
+        def __init__(self):
+            super().__init__()
+            self.wrapper_class = None
 
-        Parameters
-        ----------
-        A : csr_matrix or ndarray
-            Matrix A
-        b : ndarray
-            Right hand side
-        mtype : {'sid', 'sym', 'spd', 'nonsym'}
-            Matrix type (symmetric indefinite, symmetric, symmetric positive definite, nonsymmetric)
-        iparms : dict
-            e.g. {'transposed': 1, 'scaling': 1}
+        def solve(self, A, b, mtype='nonsym', **iparms):
+            """
 
-        Returns
-        -------
-        x : ndarray
-            solution
-        """
-        A = csr_matrix(A)
-        # Notes:
-        # saddle point problem: use iparms: scaling and maximum_weighted_matching
-        self.wrapper_class = PardisoWrapper(A, mtype=self.MTYPES[mtype], iparm=self._parse_iparms(iparms))
+            Parameters
+            ----------
+            A : csr_matrix or ndarray
+                Matrix A
+            b : ndarray
+                Right hand side
+            mtype : {'sid', 'sym', 'spd', 'nonsym'}
+                Matrix type (symmetric indefinite, symmetric, symmetric positive definite, nonsymmetric)
+            iparms : dict
+                e.g. {'transposed': 1, 'scaling': 1}
 
-        # Notes:
-        # Check if wrapper_class object is already factorized
-        # return self.wrapper_class.solve(b)
-        # Solve in one step
-        x = self.wrapper_class.run_pardiso(13, b)
-        self.wrapper_class.clear()
-        return x
+            Returns
+            -------
+            x : ndarray
+                solution
+            """
+            A = csr_matrix(A)
+            # Notes:
+            # saddle point problem: use iparms: scaling and maximum_weighted_matching
+            self.wrapper_class = PardisoWrapper(A, mtype=self.MTYPES[mtype], iparm=self._parse_iparms(iparms))
 
-    def _parse_iparms(self, iparms):
-        return dict([(self.IPARM_DICT[key], iparms[key]) for key in iparms])
+            # Notes:
+            # Check if wrapper_class object is already factorized
+            # return self.wrapper_class.solve(b)
+            # Solve in one step
+            x = self.wrapper_class.run_pardiso(13, b)
+            self.wrapper_class.clear()
+            return x
+
+        def _parse_iparms(self, iparms):
+            return dict([(self.IPARM_DICT[key], iparms[key]) for key in iparms])
+
+except Exception as e:
+
+    logger = logging.getLogger(__name__)
+    logger.warning('PardisoLinearSolver could not be loaded. Possibly mkllib is not installed properly')
+
+    class PardisoLinearSolver:
+        def __init__(self, *args, **kwargs):
+            raise ImportError('PardisoLinearSolver is not available on your system,'
+                              'probably because mkllib could not be found.'
+                              'If you use anaconda distribution, try: conda install mkl')
 
 
 # Own solvers
@@ -318,8 +331,11 @@ def solve_sparse(A, b, matrix_type='sid'):
     """
     if issparse(A):
         # if use_pardiso:
-        solver = PardisoLinearSolver()
-        x = solver.solve(A, b, matrix_type)
+        try:
+            solver = PardisoLinearSolver()
+            x = solver.solve(A, b, matrix_type)
+        except Exception:
+            x = scipysolve(A, b)
         # else:
         # use scipy solver instead
         # x = spsolve(A, b)

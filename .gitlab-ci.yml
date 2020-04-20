@@ -3,61 +3,84 @@
 
 stages:
     - build
-    - unittest
-    - doctest
-    - linttest
-    - cleanup
+    - test
+    - deploy
+
+default:
+  tags:
+    - docker
+  image: hyperred/amfe-gitlab-ci:0.1.2
+  # This image already sets the path variable such that the python
+  # is in /opt/conda/envs/amfe-dev/bin/python (the clean environment from docker image)
 
 build_without_fortran:
-    stage: build
-    before_script:
-        - export PATH="/home/gitlab-runner/anaconda3/condabin:$PATH"
-        - /home/gitlab-runner/anaconda3/condabin/conda create --name amfe-runner-no_fortran python=3.7
-        - /home/gitlab-runner/anaconda3/bin/python conda_setup.py amfe-runner-no_fortran
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-runner-no_fortran/bin:$PATH"
-    script:
-        - /home/gitlab-runner/anaconda3/bin/python setup_develop.py develop no_fortran no_feti
+  stage: build
+  script:
+    - python setup.py develop no_fortran
 
-build:
-    stage: build
-    before_script:
-        - export PATH="/home/gitlab-runner/anaconda3/condabin:$PATH"
-        - /home/gitlab-runner/anaconda3/condabin/conda create --name amfe-runner-fortran python=3.7
-        - /home/gitlab-runner/anaconda3/bin/python conda_setup.py amfe-runner-fortran
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-runner-fortran/bin:$PATH"
-    script:
-        - /home/gitlab-runner/anaconda3/bin/python setup_develop.py develop no_feti
+build_with_fortran:
+  stage: build
+  script:
+    - /opt/conda/bin/conda install numpy -n amfe-dev
+    - python setup.py develop
 
 unittest:
-  stage: unittest
-  when: always
-  before_script:
-      - export PATH="/home/gitlab-runner/anaconda3/condabin:$PATH"
-      - /home/gitlab-runner/anaconda3/condabin/conda create --name amfe-runner-fortran python=3.7
-      - /home/gitlab-runner/anaconda3/bin/python conda_setup.py amfe-runner-fortran
-      - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-runner-fortran/bin:$PATH"
+  stage: test
   script:
-      - /home/gitlab-runner/anaconda3/bin/python setup_develop.py develop no_feti
-      - nosetests --with-coverage --cover-package amfe
+    - /opt/conda/bin/conda install numpy -n amfe-dev
+    - python setup.py develop
+    - /opt/conda/bin/conda install nose coverage pylint mkl -n amfe-dev
+    - nosetests --with-coverage --cover-package amfe
+
 
 documentation_test:
-    stage: doctest
-    when: always
-    script:
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-runner-fortran/bin:$PATH"
-        - python setup_develop.py build_sphinx
+  stage: test
+  when: always
+  script:
+    - /opt/conda/bin/conda install numpy -n amfe-dev
+    - python setup.py develop
+    - python setup.py build_sphinx
 
 
 language_quality_test:
-    stage: linttest
-    when: always
-    script:
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-runner-fortran/bin:$PATH"
-        - pylint amfe || exit 0 # pylint always exits with nonzero...
+  stage: test
+  when: always
+  script:
+    - /opt/conda/bin/conda install pylint -n amfe-dev
+    - pylint amfe || exit 0 # pylint always exits with nonzero...
 
-cleanup:
-    stage: cleanup
-    when: always
-    script:
-        - /home/gitlab-runner/anaconda3/bin/conda remove --name amfe-runner-no_fortran --all
-        - /home/gitlab-runner/anaconda3/bin/conda remove --name amfe-runner-fortran --all
+build_wheel_for_linux_developer:
+  stage: deploy
+  script:
+    - /opt/conda/bin/conda install numpy -n amfe-dev
+    - python setup.py bdist_wheel
+  artifacts:
+    name: AMfe-linux
+    paths:
+      - dist/*.whl
+    expire_in: 2 months
+  only:
+    - developer
+
+build_wheel_for_linux_master:
+  stage: deploy
+  script:
+    - /opt/conda/bin/conda install numpy -n amfe-dev
+    - python setup.py bdist_wheel
+  artifacts:
+    name: AMfe-linux
+    paths:
+      - dist/*.whl
+  only:
+    - master
+
+pages:
+  stage: deploy
+  script:
+    - /opt/conda/bin/conda install numpy -n amfe-dev
+    - python setup.py develop
+    - sphinx-build -b html -d docs/_build/doctrees   ./docs docs/_build/html
+    - mv docs/_build/html public
+  artifacts:
+    paths:
+      - public
