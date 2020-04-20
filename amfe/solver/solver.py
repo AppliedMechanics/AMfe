@@ -113,9 +113,9 @@ class SolverFactory:
                       'modal'
                       ]
 
-    linear_solvers = {'scipy-sparse': ScipySparseLinearSolver(),
-                      'pardiso': PardisoLinearSolver(),
-                      'scipy-cg': ScipyConjugateGradientLinearSolver(),
+    linear_solvers = {'scipy-sparse': ScipySparseLinearSolver,
+                      'pardiso': PardisoLinearSolver,
+                      'scipy-cg': ScipyConjugateGradientLinearSolver,
                       }
 
     nonlinear_solvers = {'newton': NewtonRaphson()
@@ -247,7 +247,7 @@ class SolverFactory:
 
     # ---------------------------------------- 2nd level DISTINGUISH ANALYSIS TYPE -----------------------------------
     def _create_static_solver(self):
-        linear_solver = deepcopy(self.linear_solvers[self._linear_solver])
+        linear_solver = self.linear_solvers[self._linear_solver]()
         linear_solver_kwargs = self._linear_solver_kwargs
         if not self._system.system_is_linear:
             self._integrator = 'loadstepping'
@@ -256,7 +256,7 @@ class SolverFactory:
             return linear_solver, linear_solver_kwargs
 
     def _create_transient_solver(self):
-        linear_solver = deepcopy(self.linear_solvers[self._linear_solver])
+        linear_solver = self.linear_solvers[self._linear_solver]()
         linear_solver_kwargs = self._linear_solver_kwargs
         if self._system.system_is_linear:
             return self._create_linear_transient_solver(linear_solver, linear_solver_kwargs)

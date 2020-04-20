@@ -1,14 +1,10 @@
-import configparser
 import sys
-from setuptools import find_packages
-
-from amfe.__init__ import __version__
 
 """
 Setup file for automatic installation of AMfe in development mode.
-Run: 'python setup_develop.py sdist' for Source Distribution
-Run: 'python setup_develop.py install' for Installation
-Run: 'python setup_develop.py bdist_wheel' for Building Binary-Wheel
+Run: 'python setup.py sdist' for Source Distribution
+Run: 'python setup.py install' for Installation
+Run: 'python setup.py bdist_wheel' for Building Binary-Wheel
     (recommended for windows-distributions)
     Attention: For every python-minor-version an extra wheel has to be built
     Use environments and install different python versions by using
@@ -79,51 +75,20 @@ no_extension_str = '''
 ###############################################################################
 '''
 
-no_feti_str = '''
-
-###############################################################################
-###############    Import of PYFETI-library is disabled!     ##################
-###############################################################################
-'''
-
-
 if __name__ == '__main__':
-    configuration = configparser.ConfigParser()
-    configuration.read('./meta.cfg')
+    from setuptools.config import read_configuration
+    config_raw = read_configuration('./meta.cfg')
+    config = dict()
+    config.update(config_raw['metadata'])
+    config.update(config_raw['options'])
     ext_modules = []
-
-    config = {'name': configuration['metadata']['name'],
-              'version': __version__,
-              'packages': find_packages()
-              }
-
-    print(sys.argv)
-    if 'no_feti' in sys.argv:
-        sys.argv.remove('no_feti')
-        print(no_feti_str)
-    else:
-        pyfeti_ver = configuration['pyfeti']['spec']
-        pyfeti_repo = configuration['pyfeti']['dependency_links']
-
-        if 'install_requires' in config:
-            config['install_requires'] = config['install_requires'] + [pyfeti_ver]
-        else:
-            config['install_requires'] = [pyfeti_ver]
-        if 'dependency_links' in config:
-            config['dependency_links'] = config['dependency_links'] + [pyfeti_repo]
-        else:
-            config['dependency_links'] = [pyfeti_repo]
 
     if 'no_fortran' in sys.argv:
         sys.argv.remove('no_fortran')
-        print(no_fortran_str)
         from setuptools import setup
-
         setup(**config)
-
     else:
         try:
-            from setuptools import setup
             from numpy.distutils.core import Extension, setup
             ext_assembly = Extension(name='amfe.f90_assembly',
                                      sources=['amfe/fortran/assembly.f90'],
@@ -137,18 +102,15 @@ if __name__ == '__main__':
                                      language='f90',)
 
             ext_modules = [ext_assembly, ext_element, ext_material]
+            config.update({'ext_modules': ext_modules})
+            setup(**config)
 
-            print(config)
-            setup(ext_modules=ext_modules, **config)
-
-        except ImportError:
+        except ModuleNotFoundError:
             # from distutils.core import setup
-            from setuptools import setup
             print(no_extension_str)
-            answer = query_yes_no('Fortran files cannot be installed. \
+            print('Fortran files cannot be installed. \
                                   It is recommended to abort installation and \
                                   first install numpy. Then retry \
-                                  installation of AMfe. \
-                                  Do you want to continue installation?', 'no')
-            if answer:
-                setup(**config)
+                                  installation of AMfe.')
+            raise ImportError('Numpy not found')
+

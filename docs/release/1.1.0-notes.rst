@@ -41,6 +41,8 @@ amfe.io improvements
 amfe.linalg improvements
 ------------------------
 
+- Allow to use Amfe without mkl being installed (no dependency on pardiso solver)
+
 amfe.mapping improvements
 -------------------------
 
@@ -99,10 +101,12 @@ Other changes
 =============
 
 - Release notes have been added
-- Setup.py was divided in conda setup und setup develop
+- A conda setup script was added to enable conda users to easily install dependencies for amfe
 - Setup.py general improvements
 - list of examples in doc updated
 - list of packages in doc updated
 - The __init__ system has been changed such that only one level downwards must be imported by the user.
 - Fixed bug with deprecated pandas API. The methods get_values and set_values was replaced by .to_numpy and .at methods.
 - Added a tools module for test-methods
+- Gitlab CI was updated to use docker images
+- Automatic wheel build in gitlab-ci
