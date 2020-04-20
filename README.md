@@ -13,10 +13,10 @@ Pipeline Status:
 [![pipeline status](https://gitlab.lrz.de/AM/AMfe/badges/master/pipeline.svg)](https://gitlab.lrz.de/AM/AMfe/commits/master)
 
 Wheel built for latest release (stable):
-[ AMfe_linux_x86_64.whl ](https://gitlab.lrz.de/AM/AMfe/-/jobs/artifacts/master/download?job=build_wheel_for_linux)
+[ AMfe_linux_x86_64.whl ](https://gitlab.lrz.de/AM/AMfe/-/jobs/artifacts/master/download?job=build_wheel_for_linux_master)
 
 Latest developer version (beta):
-[ AMfe_linux_x86_64.whl ](https://gitlab.lrz.de/AM/AMfe/-/jobs/artifacts/developer/download?job=build_wheel_for_linux)
+[ AMfe_linux_x86_64.whl ](https://gitlab.lrz.de/AM/AMfe/-/jobs/artifacts/developer/download?job=build_wheel_for_linux_developer)
 
 
 **Important Info:** The project has been moved recently. So please update your remote via:
