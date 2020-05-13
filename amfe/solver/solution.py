@@ -40,7 +40,7 @@ class AmfeSolutionBase:
     def __exit__(self, exc_type, value, traceback):
         pass
 
-    def write_timestep(self, t, q, dq=None, ddq=None):
+    def write_timestep(self, t, q, dq=None, ddq=None, strain=None, stress=None):
         """
         This function is called to write a timestep into the solution container
 
@@ -53,7 +53,11 @@ class AmfeSolutionBase:
         dq : numpy.array (optional)
             first time derivative of solution vector at time t
         ddq : numpy.array (optional)
-            second time derivative of solution vectot at time t
+            second time derivative of solution vector at time t
+        stress : ndarray
+            nodal stresses
+        strain : ndarray
+            nodal strains
 
         Returns
         -------
@@ -78,6 +82,10 @@ class AmfeSolution(AmfeSolutionBase):
         list of ndarrays containing the first time derivative of the solution vectors if available
     ddq : list
         list of ndarrays containing the second time derivative of the solution vectors if available
+    stress : ndarray
+        nodal stresses
+    strain : ndarray
+        nodal strains
     """
     def __init__(self):
         """
@@ -90,8 +98,10 @@ class AmfeSolution(AmfeSolutionBase):
         self.q = []
         self.dq = []
         self.ddq = []
+        self.stress = []
+        self.strain = []
 
-    def write_timestep(self, t, q, dq=None, ddq=None):
+    def write_timestep(self, t, q, dq=None, ddq=None, strain=None, stress=None):
         """
         This function is called to write a timestep into the solution container
 
@@ -105,6 +115,10 @@ class AmfeSolution(AmfeSolutionBase):
             first time derivative of solution vector at time t
         ddq : numpy.array (optional)
             second time derivative of solution vector at time t
+        stress : ndarray
+            nodal stresses
+        strain : ndarray
+            nodal strains
 
         Returns
         -------
@@ -115,6 +129,8 @@ class AmfeSolution(AmfeSolutionBase):
         self.q.append(q)
         self.dq.append(dq)
         self.ddq.append(ddq)
+        self.stress.append(stress)
+        self.strain.append(strain)
 
 
 class AmfeSolutionAsync(AmfeSolutionBase):
@@ -145,7 +161,7 @@ class AmfeSolutionAsync(AmfeSolutionBase):
         # If Queue is full, the solver must wait until a timestep is popped through the get() method
         self.queue = asyncio.Queue(maxsize=size)
 
-    async def write_timestep(self, t, q, dq=None, ddq=None):
+    async def write_timestep(self, t, q, dq=None, ddq=None, strain=None, stress=None):
         """
         Coroutine that waits for writing the passed timestep into the Queue
 
@@ -159,6 +175,10 @@ class AmfeSolutionAsync(AmfeSolutionBase):
             first time derivative of solution vector at time t
         ddq : numpy.array (optional)
             second time derivative of solution vectot at time t
+        stress : ndarray
+            nodal stresses
+        strain : ndarray
+            nodal strains
 
         Returns
         -------
@@ -168,7 +188,9 @@ class AmfeSolutionAsync(AmfeSolutionBase):
         sol = {'t': t,
                'q': q,
                'dq': dq,
-               'ddq': ddq
+               'ddq': ddq,
+               'strain': strain,
+               'stress': stress
                }
         # Wait until the timestep has been put into the Queue
         print("Put timestep {} into Queue".format(t))
@@ -310,7 +332,7 @@ class AmfeSolutionHdf5(AmfeSolutionBase):
         # Ensure that file is closed
         self._fp.close()
 
-    def _allocate(self, n_dim, is_dq, is_ddq):
+    def _allocate(self, n_dim, is_dq, is_ddq, is_strain, is_stress):
         """
         Private method that allocates the table
 
@@ -322,6 +344,10 @@ class AmfeSolutionHdf5(AmfeSolutionBase):
             Flag if dq will be saved
         is_ddq : bool
             Flag if ddq will be saved
+        is_strain : bool
+            Flag if strain will be saved
+        is_stress : bool
+            Flag if stress will be saved
 
         Returns
         -------
@@ -332,6 +358,10 @@ class AmfeSolutionHdf5(AmfeSolutionBase):
             new_key_values.update({'dq': Float64Col(shape=n_dim)})
         if is_ddq:
             new_key_values.update({'ddq': Float64Col(shape=n_dim)})
+        if is_strain:
+            new_key_values.update({'strain': Float64Col(shape=(n_dim, 6))})
+        if is_stress:
+            new_key_values.update({'stress': Float64Col(shape=(n_dim, 6))})
         self._tabledict.update(new_key_values)
         root = self._fp.root
         sim1 = self._fp.create_group(root, self._path_to_table)
@@ -339,7 +369,7 @@ class AmfeSolutionHdf5(AmfeSolutionBase):
         self._wp = self._table.row
         self._is_allocated = True
 
-    def write_timestep(self, t, q, dq=None, ddq=None):
+    def write_timestep(self, t, q, dq=None, ddq=None, strain=None, stress=None):
         """
         This function is called to write a timestep into the Hdf solution container
 
@@ -353,6 +383,10 @@ class AmfeSolutionHdf5(AmfeSolutionBase):
             first time derivative of solution vector at time t
         ddq : numpy.array (optional)
             second time derivative of solution vectot at time t
+        stress : ndarray
+            nodal stresses
+        strain : ndarray
+            nodal strains
 
         Returns
         -------
@@ -372,8 +406,16 @@ class AmfeSolutionHdf5(AmfeSolutionBase):
                 is_ddq = False
             else:
                 is_ddq = True
+            if strain is None:
+                is_strain = False
+            else:
+                is_strain = True
+            if stress is None:
+                is_stress = False
+            else:
+                is_stress = True
             # call allocate function to create table
-            self._allocate(n_dim, is_dq, is_ddq)
+            self._allocate(n_dim, is_dq, is_ddq, is_strain, is_stress)
         # Write t and q
         self._wp['t'] = t
         self._wp['q'] = q
@@ -382,6 +424,10 @@ class AmfeSolutionHdf5(AmfeSolutionBase):
             self._wp['dq'] = dq
         if ddq is not None:
             self._wp['ddq'] = ddq
+        if strain is not None:
+            self._wp['strain'] = strain
+        if stress is not None:
+            self._wp['stress'] = stress
         self._wp.append()
         # If buffer is full, call flush() to write current buffer to disk
         # (Note: Possibly pytables have already called the flush function by itself it it thinks that it is time
@@ -462,7 +508,7 @@ async def _solve_async_fun(container, writer_func, solver_func):
             # Ask for a timestep from the queue
             sol = await container.get()
             # Call writer callback
-            writer_func(sol['t'], sol['q'], sol['dq'], sol['ddq'])
+            writer_func(sol['t'], sol['q'], sol['dq'], sol['ddq'], sol['strain'], sol['stress'])
 
     # Create tasks for writing and solving
     print("Create Tasks for Writing and Solving... ", end="")

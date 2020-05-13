@@ -168,6 +168,7 @@ class Hdf5PostProcessorWriter(PostProcessorWriter):
                 data[nodesiloc, :] = data[:, :]
             else:
                 raise NotImplementedError('Field Data Type {} is not supported for converting'.format(field_type.name))
+
             dataset = fp.create_array(resultsroot, name, data)
             dataset.attrs.data_type = field_type.name
             dataset.attrs.mesh_entitiy_type = mesh_entity_type.name

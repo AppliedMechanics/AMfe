@@ -19,6 +19,7 @@ amfe.component improvements
 - Partitioner redefines partition-ids of a mesh, such that unique combinations of tags and partition-ids are new
   partition-ids, e.g. combination of manual partitioning with surface-groups and automatic partitions
 - Added str-method to component
+- Added caller for strains- and stresses-assembly
 
 amfe.constraint improvements
 ----------------------------
@@ -37,6 +38,7 @@ amfe.io improvements
 
 - Fixed bug in vtkmeshconverter with Elemental Groups and integer groupnames
 - Extended Solution-Reader to export velocities and accelerations
+- Added normal and shear strains and stresses to exportable fields
 
 amfe.linalg improvements
 ------------------------
@@ -89,6 +91,7 @@ amfe.ui improvements
 
 - added option 'normal' to set_neumann_by_group in order to set a neumann condition with a following normal direction
 to surface
+- UI exports strains and stresses by default
 
 
 Deprecated features

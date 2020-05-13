@@ -22,7 +22,7 @@ ui.set_dirichlet_by_group(model, 'dirichlet', ('ux'), 'Dirichlet_x')
 ui.set_dirichlet_by_nodeids(model, [1], ('uy'), 'Dirichlet_y')
 
 F = constant_force(5E7)
-ui.set_neumann_by_group(model, 'neumann', np.array([0.0, -1.0]), 'Load', F)
+ui.set_neumann_by_group(model, 'neumann', np.array([0.0, -1.0]), neumann_name='Load', F=F)
 
 solution_writer = ui.solve_linear_static(model)
 
@@ -40,12 +40,12 @@ ui.set_dirichlet_by_group(model, 'dirichlet', ('ux'), 'Dirichlet_x')
 ui.set_dirichlet_by_nodeids(model, [1], ('uy'), 'Dirichlet_y')
 
 F = triangular_force(0, 0.01, 0.02, 1E7)
-ui.set_neumann_by_group(model, 'neumann', np.array([0.0, -1.0]), 'Load', F)
+ui.set_neumann_by_group(model, 'neumann', np.array([0.0, -1.0]), neumann_name='Load', F=F)
 
 solution_writer = ui.solve_linear_dynamic(model, 0.0, 1.0, 0.0001, 10)
 
 ui.write_results_to_paraview(solution_writer, model, amfe_dir('results/gmsh/ui_example_beam_linear_dynamic'),
-                             problem_is_static=False)
+                             displacements_only=False)
 
 ###################################################
 ###  Nonlinear heterogeneous cantilever beam    ###
@@ -69,12 +69,11 @@ ui.set_dirichlet_by_group(model, 'x_dirichlet_line', ('ux'), 'Dirichlet_x')
 ui.set_dirichlet_by_group(model, 'xy_dirichlet_point', ('uy'), 'Dirichlet_y')
 
 F = linearly_increasing_force(0, 1.00001, 1.2E5)
-ui.set_neumann_by_group(model, 'z_neumann', np.array([0.0, -1.0]), 'Load', F)
+ui.set_neumann_by_group(model, 'z_neumann', np.array([0.0, -1.0]), neumann_name='Load', F=F)
 
 solution_writer = ui.solve_nonlinear_static(model, load_steps=10)
 
 ui.write_results_to_paraview(solution_writer, model, amfe_dir('results/gmsh/ui_example_beam_nonlinear'))
-
 
 ###########################################################
 ###  Dynamic nonlinear heterogeneous cantilever beam    ###
@@ -88,9 +87,9 @@ ui.set_dirichlet_by_group(model, 'x_dirichlet_line', ('ux'), 'Dirichlet_x')
 ui.set_dirichlet_by_group(model, 'xy_dirichlet_point', ('uy'), 'Dirichlet_y')
 
 F = triangular_force(0, 0.015, 0.03, 8E5)
-ui.set_neumann_by_group(model, 'z_neumann', np.array([0.0, -1.0]), 'Load', F)
+ui.set_neumann_by_group(model, 'z_neumann', np.array([0.0, -1.0]), neumann_name='Load', F=F)
 
 solution_writer = ui.solve_nonlinear_dynamic(model, 0.0, 0.1, 0.0001, 10)
 
 ui.write_results_to_paraview(solution_writer, model, amfe_dir('results/gmsh/ui_example_beam_nonlinear_dynamic'),
-                             problem_is_static=False)
+                             displacements_only=False)

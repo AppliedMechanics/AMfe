@@ -428,7 +428,6 @@ within the NeoHookean material!')
             self._plane_stress = plane_stress
             self.notify()
 
-
     def S_Sv_and_C(self, E):
         ''' '''
 
