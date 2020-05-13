@@ -24,6 +24,8 @@ from amfe.constraint.constraint_formulation_boolean_elimination import BooleanEl
 from amfe.constraint.constraint_formulation_lagrange_multiplier import SparseLagrangeMultiplierConstraintFormulation
 from amfe.constraint.constraint_formulation_nullspace_elimination import NullspaceConstraintFormulation
 
+import logging
+
 __all__ = [
     'MechanicalSystem',
     'MulticomponentMechanicalSystem',

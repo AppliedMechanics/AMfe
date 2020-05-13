@@ -36,6 +36,7 @@ class MeshComponent(ComponentBase):
         self._neumann = NeumannManager()
         self._assembly = Assembly()
         self._constraints = ConstraintManager()
+        self._elements_on_nodes = np.zeros(mesh.no_of_nodes)
 
     def __str__(self):
         """
@@ -140,6 +141,18 @@ class MeshComponent(ComponentBase):
         self._C_csr = self._assembly.preallocate(self._mapping.no_of_dofs, self._mapping.elements2global)
         self._M_csr = self._C_csr.copy()
         self._f_glob_int = np.zeros(self._C_csr.shape[1])
+        self._update_elements_on_nodes()
+
+    def _update_elements_on_nodes(self):
+        logger = logging.getLogger(__name__)
+        logger.debug('Update number of elements on nodes...')
+        self._elements_on_nodes = np.zeros(self._mesh.no_of_nodes)
+        for nodeidx in range(self._mesh.no_of_nodes):
+            nodeids = self._mesh.get_nodeids_by_nodeidxs([nodeidx])
+            element_ids_all = self._mesh.get_elementids_by_nodeids(nodeids)
+            element_ids = np.intersect1d(self._ele_obj_df['fk_mesh'].values, element_ids_all)
+            self._elements_on_nodes[nodeidx] = element_ids.size
+        logger.debug('Update number of elements on nodes finished.')
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
     def assign_neumann(self, name, condition, tag_values, tag='_groups', ignore_nonexistent=False):

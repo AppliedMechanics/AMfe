@@ -48,6 +48,7 @@ class StructuralComponentTest(TestCase):
                 self.connectivity = None
                 self.el_df = pd.DataFrame({'shape': ['Tri3'], 'is_boundary': [False],
                                            'connectivity': [np.array([1, 2, 3], dtype=int)]})
+                self.no_of_nodes = 3
 
             @property
             def no_of_elements(self):

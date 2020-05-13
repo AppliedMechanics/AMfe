@@ -75,6 +75,9 @@ class TestMesh(TestCase):
         with self.assertRaises(ValueError) as err:
             mesh = Mesh(dimension=1)
 
+    def test_element_ids(self):
+        assert_array_equal(self.testmesh.element_ids, self._eleids)
+
     def test_no_of_properties(self):
         self.assertEqual(self.testmesh.no_of_nodes, 6)
         self.assertEqual(self.testmesh.no_of_elements, 3)
@@ -132,6 +135,21 @@ class TestMesh(TestCase):
     def test_get_elementids_by_elementidxs(self):
         actual = self.testmesh.get_elementids_by_elementidxs([3, 0])
         desired = np.array([4, 1], dtype=int)
+        assert_array_equal(actual, desired)
+
+    def test_get_elementids_by_nodeids(self):
+        actual = self.testmesh.get_elementids_by_nodeids([1])
+        desired = np.array([3, 4], dtype=int)
+        assert_array_equal(actual, desired)
+        actual = self.testmesh.get_elementids_by_nodeids([3, 1])
+        desired = np.array([1, 2, 3, 4], dtype=int)
+        assert_array_equal(actual, desired)
+        actual = self.testmesh.get_elementids_by_nodeids((3, 1))
+        assert_array_equal(actual, desired)
+        actual = self.testmesh.get_elementids_by_nodeids(np.array([3, 1]))
+        assert_array_equal(actual, desired)
+        actual = self.testmesh.get_elementids_by_nodeids([0])
+        desired = np.array([], dtype=int)
         assert_array_equal(actual, desired)
 
     def test_get_elementidxs_by_groups(self):

@@ -238,6 +238,9 @@ def solve_linear_static(component):
     q = solver.solve(system.K(q0, dq0, 0), system.f_ext(q0, dq0, 0))
     u, du, ddu = formulation.recover(q, dq0, ddq0, 0)
     solution_writer.write_timestep(0, u, None, None)
+    logger = logging.getLogger(__name__)
+    logger.info('Strains and stresses are currently not supported for linear models. Only nonlinear kinematics are '
+                'currently used during their calculation.')
 
     print('Solution finished')
     return solution_writer
@@ -269,6 +272,10 @@ def solve_linear_dynamic(component, t0, t_end, dt, write_timestep=1):
             solution_writer.write_timestep(t, u, du, ddu)
 
     solver.solve(write_callback, t0, q0, dq0, t_end)
+
+    logger = logging.getLogger(__name__)
+    logger.info('Strains and stresses are currently not supported for linear models. Only nonlinear kinematics are '
+                'currently used during their calculation.')
 
     print('Solution finished')
     return solution_writer
@@ -303,7 +310,8 @@ def solve_nonlinear_static(component, load_steps):
     def write_callback(t, x, dx, ddx):
         if isclose(t, t_end):
             u, du, ddu = formulation.recover(x, dx, ddx, t)
-            solution_writer.write_timestep(t_end, u, None, None)
+            strains, stresses = component.strains_and_stresses(u, du, t)
+            solution_writer.write_timestep(t, u, None, None, strains, stresses)
 
     solver.solve(write_callback, t0, q0, dq0, t_end)
 
@@ -335,7 +343,8 @@ def solve_nonlinear_dynamic(component, t0, t_end, dt, write_timestep=1):
         cur_ts = int((t - t0) // dt)
         if abs(cur_ts % write_timestep) <= 1e-7:
             u, du, ddu = formulation.recover(x, dx, ddx, t)
-            solution_writer.write_timestep(t, u, du, ddu)
+            strains, stresses = component.strains_and_stresses(u, du, t)
+            solution_writer.write_timestep(t, u, du, ddu, strains, stresses)
 
     no_of_dofs = system.dimension
     q0 = np.zeros(no_of_dofs)
@@ -346,7 +355,8 @@ def solve_nonlinear_dynamic(component, t0, t_end, dt, write_timestep=1):
     return solution_writer
 
 
-def write_results_to_paraview(solution, component, paraviewfilename, displacements_only=True):
+def write_results_to_paraview(solution, component, paraviewfilename, displacements_only=True,
+                              plot_strains_and_stresses=True):
     """
     Writes results to an xdmf paraview file
 
@@ -394,6 +404,24 @@ def write_results_to_paraview(solution, component, paraviewfilename, displacemen
                                            'hdf5path': '/results/acceleration'
                                            }
                           })
+
+    if plot_strains_and_stresses:
+        fielddict['strains_normal'] = {'mesh_entity_type': MeshEntityType.NODE,
+                                  'data_type': PostProcessDataType.VECTOR,
+                                  'hdf5path': '/results/strains_normal'
+                                  }
+        fielddict['stresses_normal'] = {'mesh_entity_type': MeshEntityType.NODE,
+                                'data_type': PostProcessDataType.VECTOR,
+                                'hdf5path': '/results/stresses_normal'
+                                }
+        fielddict['strains_shear'] = {'mesh_entity_type': MeshEntityType.NODE,
+                                       'data_type': PostProcessDataType.VECTOR,
+                                       'hdf5path': '/results/strains_shear'
+                                       }
+        fielddict['stresses_shear'] = {'mesh_entity_type': MeshEntityType.NODE,
+                                        'data_type': PostProcessDataType.VECTOR,
+                                        'hdf5path': '/results/stresses_shear'
+                                        }
 
     with open(xdmfresultsfilename, 'wb') as xdmffp:
         with File(hdf5resultsfilename, mode='r') as hdf5fp:
