@@ -110,3 +110,4 @@ Other changes
 - Added a tools module for test-methods
 - Gitlab CI was updated to use docker images
 - Automatic wheel build in gitlab-ci
+- Cleaned up IO-tests

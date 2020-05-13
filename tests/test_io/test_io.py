@@ -5,16 +5,10 @@ Tests for testing io module
 
 from unittest import TestCase
 import os
-import numpy as np
 import pandas as pd
-import h5py
-import pickle
-from numpy.testing import assert_allclose, assert_array_equal, assert_array_almost_equal
+from numpy.testing import assert_allclose, assert_array_equal
 from pandas.testing import assert_frame_equal
 
-from amfe.component import StructuralComponent
-from amfe.material import KirchhoffMaterial
-from amfe.solver import AmfeSolution, AmfeSolutionHdf5
 # Import I/O tools
 from amfe.io.tools import check_dir, amfe_dir
 
@@ -28,17 +22,9 @@ from amfe.io.mesh.base import MeshConverter
 
 # Import Postprocessing Tools
 from amfe.io.postprocessing import *
-from amfe.io.postprocessing.tools import *
-# Import Postprocessing Reader
-from amfe.io.postprocessing.reader import AmfeHdf5PostProcessorReader, AmfeSolutionReader
 
-# Import Postprocessingwriter
-from amfe.io.postprocessing.writer import Hdf5PostProcessorWriter
-from amfe.io.postprocessing.base import PostProcessorWriter
-
-from amfe.mesh import Mesh
-
-from .tools import CustomDictAssertTest
+from tests.tools import CustomDictAssertTest
+from .tools import load_object, create_amfe_obj, clean_test_outputs
 
 
 class DummyMeshConverter(MeshConverter):
@@ -78,94 +64,6 @@ class DummyMeshConverter(MeshConverter):
 
     def return_mesh(self):
         return self
-
-
-class DummyPostProcessorWriter(PostProcessorWriter):
-    def __init__(self, meshreaderobj):
-        super().__init__(meshreaderobj)
-        self._meshreader = meshreaderobj
-        self._fields = dict()
-
-    def write_field(self, name, field_type, t, data, index, mesh_entity_type):
-        fielddict = {'data_type': field_type,
-                     'timesteps': t,
-                     'index': index,
-                     'mesh_entity_type': mesh_entity_type,
-                     'data': data
-                     }
-        if name in fielddict:
-            raise ValueError('Field already written')
-        self._fields.update({name: fielddict})
-
-    def return_result(self):
-        return self._fields
-
-
-def create_amfe_obj():
-    # Define input file path
-    meshobj = Mesh(dimension=2)
-
-    nodes = np.array([[1.345600000e-02, 3.561675700e-02],
-                      [5.206839561e-01, 3.740820950e-02],
-                      [3.851982918e-02, 5.460016703e-01],
-                      [5.457667372e-01, 5.477935420e-01],
-                      [1.027911912e+00, 3.919966200e-02],
-                      [6.358365836e-02, 1.056386584e+00],
-                      [1.040469476e+00, 5.445628213e-01],
-                      [5.582746582e-01, 1.053154002e+00],
-                      [1.052965658e+00, 1.049921420e+00],
-                      [1.535139868e+00, 4.099111450e-02],
-                      [1.547697432e+00, 5.463542738e-01],
-                      [1.547656658e+00, 1.046688838e+00],
-                      [2.042367825e+00, 4.278256700e-02],
-                      [2.042357741e+00, 5.431194119e-01],
-                      [2.042347658e+00, 1.043456257e+00]], dtype=float)
-
-    connectivity = [np.array([13, 15, 9, 14, 12, 11], dtype=int),
-                    np.array([9, 6, 5, 8, 4, 7], dtype=int),
-                    np.array([9, 5, 13, 7, 10, 11], dtype=int),
-                    np.array([1, 5, 6, 2, 4, 3], dtype=int),
-                    np.array([5, 13, 10], dtype=int),
-                    np.array([1, 5, 2], dtype=int),
-                    np.array([6, 1, 3], dtype=int),
-                    np.array([9, 6, 8], dtype=int),
-                    np.array([13, 15, 14], dtype=int),
-                    np.array([15, 9, 12], dtype=int)]
-
-    data = {'shape': ['Tri6', 'Tri6', 'Tri6', 'Tri6', 'quadratic_line',
-                      'quadratic_line', 'quadratic_line', 'quadratic_line',
-                      'quadratic_line', 'quadratic_line'],
-            'connectivity': connectivity,
-            'is_boundary': [False, False, False, False, True, True, True, True, True, True]
-            }
-    indices = list(np.arange(1, 11))
-
-    meshobj.el_df = pd.DataFrame(data, index=indices)
-
-    meshobj.groups = {'left': {'nodes': [], 'elements': [2, 4]},
-                      'right': {'nodes': [], 'elements': [1, 3]},
-                      'left_boundary': {'nodes': [], 'elements': [7]},
-                      'right_boundary': {'nodes': [], 'elements': [9]},
-                      'top_boundary': {'nodes': [], 'elements': [8, 10]},
-                      'left_dirichlet': {'nodes': [1, 3, 6], 'elements': []}}
-
-    nodeids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-
-    meshobj.nodes_df = pd.DataFrame({'x': nodes[:, 0], 'y': nodes[:, 1]}, index=nodeids)
-    return meshobj
-
-
-def clean_test_outputs():
-    directory = amfe_dir('results/.tests/')
-    check_dir(directory + 'test.txt')
-    directory = amfe_dir('results/.tests/')
-    for f in os.listdir(directory):
-        if f == 'hdf5_dummy.hdf5' or f == 'hdf5postprocessing.hdf5':
-            return
-        filename = directory + f
-        if os.path.isfile(filename):
-            os.remove(filename)
-    return
 
 
 class IOTest(TestCase):
@@ -864,164 +762,6 @@ class IOTest(TestCase):
         self.assertListEqual(actual_list_2, desired_list_2)
         self.assertListEqual(actual_list_3, desired_list_3)
 
-
-class PostProcessorTest(TestCase):
-    def setUp(self):
-        clean_test_outputs()
-
-    def tearDown(self):
-        pass
-
-    def _create_fields(self, dim=3):
-        amfemesh = create_amfe_obj()
-        self.meshreader = AmfeMeshObjMeshReader(amfemesh)
-
-        self.timesteps = np.arange(0, 0.8, 0.2)  # 4 timesteps
-        no_of_nodes = amfemesh.no_of_nodes
-        no_of_cells = amfemesh.no_of_elements
-        no_of_dofs = no_of_nodes * dim
-        # q = np.random.rand(no_of_dofs * len(timesteps)).reshape(no_of_dofs, len(timesteps))
-        q = np.ones((no_of_dofs, len(self.timesteps)))
-        q[:, 0] = q[:, 0] * 0.0
-        q[:, 1] = q[:, 1] * 0.1
-        q[:, 2] = q[:, 2] * 0.2
-        q[:, 3] = q[:, 3] * 0.3
-        q2 = -q
-
-        s = np.arange(no_of_cells * len(self.timesteps)).reshape(no_of_cells, len(self.timesteps))
-        volume_indices = amfemesh.el_df[amfemesh.el_df['is_boundary'] == False].index.values
-
-        self.fields_desired = {'Nodefield1': {'data_type': PostProcessDataType.VECTOR, 'timesteps': self.timesteps,
-                                              'data': q, 'index': amfemesh.nodes_df.index.values,
-                                              'mesh_entity_type': MeshEntityType.NODE},
-                               'Nodefield2': {'data_type': PostProcessDataType.VECTOR, 'timesteps': self.timesteps,
-                                              'data': q2, 'index': amfemesh.nodes_df.index.values,
-                                              'mesh_entity_type': MeshEntityType.NODE},
-                               'Elementfield1': {'data_type': PostProcessDataType.SCALAR, 'timesteps': self.timesteps,
-                                                 'data': s, 'index': volume_indices,
-                                                 'mesh_entity_type': MeshEntityType.ELEMENT}
-                               }
-        self.fields_no_of_nodes = no_of_nodes
-        self.fields_no_of_timesteps = len(self.timesteps)
-
-    def test_hdf5_postprocessor_writer_and_reader(self):
-        self._create_fields()
-
-        filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
-
-        if os.path.isfile(filename):
-            os.remove(filename)
-
-        writer = Hdf5PostProcessorWriter(self.meshreader, filename, '/myresults')
-        fields = self.fields_desired
-        for fieldname in fields:
-            field = fields[fieldname]
-            if field['data_type'] == PostProcessDataType.VECTOR:
-                data = field['data'].reshape(self.fields_no_of_nodes, 3, self.fields_no_of_timesteps)
-            else:
-                data = field['data']
-            writer.write_field(fieldname, field['data_type'], field['timesteps'],
-                               data, field['index'], field['mesh_entity_type'])
-
-        self._create_fields()
-
-        h5filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
-
-        postprocessorreader = AmfeHdf5PostProcessorReader(h5filename,
-                                                          meshrootpath='/mesh',
-                                                          resultsrootpath='/myresults')
-        meshreader = Hdf5MeshReader(h5filename, '/mesh')
-        postprocessorwriter = DummyPostProcessorWriter(meshreader)
-        postprocessorreader.parse(postprocessorwriter)
-        fields = postprocessorwriter.return_result()
-        # Check no of fields:
-        self.assertEqual(len(fields.keys()), len(self.fields_desired.keys()))
-        # Check each field:
-        for fieldname in self.fields_desired:
-            field_actual = fields[fieldname]
-            field_desired = self.fields_desired[fieldname]
-            assert_array_equal(field_actual['timesteps'], field_desired['timesteps'])
-            assert_array_equal(field_actual['data_type'], field_desired['data_type'])
-            assert_array_equal(field_actual['data'], field_desired['data'])
-            assert_array_equal(field_actual['index'], field_desired['index'])
-            assert_array_equal(field_actual['mesh_entity_type'], field_desired['mesh_entity_type'])
-
-    def test_write_xdmf_from_hdf5(self):
-        self._create_fields()
-        filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
-        with h5py.File(filename, mode='r') as hdf5_fp:
-            filename = amfe_dir('results/.tests/hdf5postprocessing.xdmf')
-            with open(filename, 'wb') as xdmf_fp:
-                fielddict = self.fields_desired
-                for key in fielddict:
-                    fielddict[key].update({'hdf5path': '/myresults/{}'.format(key)})
-                    timesteps = fielddict[key]['timesteps']
-                # timesteps = np.arange(0, 0.8, 0.2)  # 4 timesteps
-                write_xdmf_from_hdf5(xdmf_fp, hdf5_fp, '/mesh/nodes', '/mesh/topology', timesteps, fielddict)
-
-    def test_amfe_solution_reader(self):
-        self._create_fields(2)
-
-        amfesolution = AmfeSolution()
-        sol = self.fields_desired['Nodefield1']
-        for t, q in zip(sol['timesteps'], sol['data'].T):
-            amfesolution.write_timestep(t, q, q, q)
-
-        mesh = create_amfe_obj()
-        meshcomponent = StructuralComponent(mesh)
-        # Set a material to get a mapping
-        material = KirchhoffMaterial()
-        meshcomponent.assign_material(material, 'Tri6', 'S', 'shape')
-
-        postprocessorreader = AmfeSolutionReader(amfesolution, meshcomponent)
-
-        meshreader = AmfeMeshObjMeshReader(mesh)
-        postprocessorwriter = DummyPostProcessorWriter(meshreader)
-        postprocessorreader.parse(postprocessorwriter)
-        fields_actual = postprocessorwriter.return_result()
-
-        field_desired = sol
-        q = field_desired['data']
-        dofs_x = meshcomponent.mapping.get_dofs_by_nodeids(meshcomponent.mesh.nodes_df.index.values, ('ux'))
-        dofs_y = meshcomponent.mapping.get_dofs_by_nodeids(meshcomponent.mesh.nodes_df.index.values, ('uy'))
-        q_x = q[dofs_x, :]
-        q_y = q[dofs_y, :]
-        data = np.empty((0, 3, 4), dtype=float)
-        for node in meshcomponent.mesh.get_nodeidxs_by_all():
-                data = np.concatenate((data, np.array([[q_x[node], q_y[node], np.zeros(q_x.shape[1])]])), axis=0)
-        field_desired['data'] = data
-        # Check no of fields:
-        self.assertEqual(len(fields_actual.keys()), 3)
-        # Check each field:
-        field_displacement_actual = fields_actual['displacement']
-        assert_array_equal(field_displacement_actual['timesteps'], field_desired['timesteps'])
-        assert_array_equal(field_displacement_actual['data_type'], field_desired['data_type'])
-        assert_array_equal(field_displacement_actual['data'], field_desired['data'])
-        assert_array_equal(field_displacement_actual['index'], field_desired['index'])
-        assert_array_equal(field_displacement_actual['mesh_entity_type'], field_desired['mesh_entity_type'])
-        field_velocity_actual = fields_actual['velocity']
-        assert_array_equal(field_velocity_actual['timesteps'], field_desired['timesteps'])
-        assert_array_equal(field_velocity_actual['data_type'], field_desired['data_type'])
-        assert_array_equal(field_velocity_actual['data'], field_desired['data'])
-        assert_array_equal(field_velocity_actual['index'], field_desired['index'])
-        assert_array_equal(field_velocity_actual['mesh_entity_type'], field_desired['mesh_entity_type'])
-        field_acceleration_actual = fields_actual['acceleration']
-        assert_array_equal(field_acceleration_actual['timesteps'], field_desired['timesteps'])
-        assert_array_equal(field_acceleration_actual['data_type'], field_desired['data_type'])
-        assert_array_equal(field_acceleration_actual['data'], field_desired['data'])
-        assert_array_equal(field_acceleration_actual['index'], field_desired['index'])
-        assert_array_equal(field_acceleration_actual['mesh_entity_type'], field_desired['mesh_entity_type'])
-
-
-def save_object(obj, filename):
-    with open(filename, 'wb') as output:
-        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
-
-
-def load_object(filename):
-    with open(filename, 'rb') as input:
-        obj = pickle.load(input)
-    return obj
 
 # Example for testing one certain test:
 # if __name__ == '__main__':
