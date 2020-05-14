@@ -18,6 +18,7 @@ from amfe.forces import *
 from amfe.neumann.structural_neumann import FixedDirectionNeumann, NormalFollowingNeumann
 from amfe.solver.translators import create_constrained_mechanical_system_from_component
 from amfe.solver import SolverFactory, AmfeSolution
+from amfe.structural_dynamics import vibration_modes
 
 from amfe.io.mesh import GidJsonMeshReader, AmfeMeshObjMeshReader, GmshAsciiMeshReader
 from amfe.io.mesh import AmfeMeshConverter
@@ -44,6 +45,7 @@ __all__ = ['import_mesh_from_file',
            'solve_linear_static',
            'solve_nonlinear_static',
            'solve_nonlinear_dynamic',
+           'solve_modes',
            'write_results_to_paraview',
            ]
 
@@ -431,6 +433,52 @@ def solve_nonlinear_dynamic(system, formulation, component, t0, t_end, dt, write
 
     print('Solution finished')
     return solution_writer
+
+
+def solve_modes(system, formulation, no_of_modes=10, x0=None, dx0=None, t0=0.0, hertz=True):
+    """
+    Computes the modes of a system, and returns them in a AmfeSolution container
+
+    Parameters
+    ----------
+    system : MechanicalSystem
+        mechanical system
+    formulation : ConstraintFormulation
+        A ConstraintFormulation object that can recover the nodal unconstrained displacements of the component
+        from the constrained states of the system
+    no_of_modes : int
+        number of modes to compute
+    x0 : array_like
+        state vector at which the system is linearized
+    dx0 : array_like
+        derivative of the state vector at which the system is linearized
+    t0 : array_like
+        time at which the system is linearized
+    hertz: bool
+        specifies if frequency is measured in Hertz, If False, then the unit 1/s (omega) is used
+
+    Returns
+    -------
+    modes : AmfeSolution
+        AMfeSolution container containing the modes as timesteps. The times are the frequencies of the modes and
+        the displacements the corresponding mode shapes.
+    """
+
+    if x0 is None:
+        x0 = np.zeros(system.dimension)
+    if dx0 is None:
+        dx0 = np.zeros(system.dimension)
+
+    omega, V = vibration_modes(system.K(x0, dx0, t0),
+                               system.M(x0, dx0, t0),
+                               no_of_modes)
+    modes = AmfeSolution()
+    for om, phi in zip(omega, V.T):
+        if hertz:
+            om = om/(2*np.pi)
+        u_unconstr = formulation.u(phi, 0.0)
+        modes.write_timestep(om, u_unconstr)
+    return modes
 
 
 def write_results_to_paraview(solution, component, paraviewfilename, displacements_only=True,
