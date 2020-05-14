@@ -4,7 +4,7 @@ from amfe.io.tools import amfe_dir
 from amfe.forces import constant_force, triangular_force, linearly_increasing_force
 
 ###################################################
-###     Simple linear-elastic cantilever beam   ###
+#       Simple linear-elastic cantilever beam     #
 ###################################################
 
 # Cantilever beam with dimensions 10m x 1m (L x H)
@@ -22,14 +22,15 @@ ui.set_dirichlet_by_group(model, 'dirichlet', ('ux'), 'Dirichlet_x')
 ui.set_dirichlet_by_nodeids(model, [1], ('uy'), 'Dirichlet_y')
 
 F = constant_force(5E7)
-ui.set_neumann_by_group(model, 'neumann', np.array([0.0, -1.0]), neumann_name='Load', F=F)
+ui.set_neumann_by_group(model, 'neumann', np.array([0.0, -1.0]), neumann_name='Load', f=F)
 
-solution_writer = ui.solve_linear_static(model)
+system, formulation = ui.create_constrained_mechanical_system_from_component(model, all_linear=True)
+solution_container = ui.solve_linear_static(system, formulation, model)
 
-ui.write_results_to_paraview(solution_writer, model, amfe_dir('results/gmsh/ui_example_beam_linear'))
+ui.write_results_to_paraview(solution_container, model, amfe_dir('results/gmsh/ui_example_beam_linear'))
 
 ###########################################################
-###  Dynamic linear heterogeneous cantilever beam    ###
+#      Dynamic linear heterogeneous cantilever beam       #
 ###########################################################
 
 model = ui.create_structural_component(mesh)
@@ -40,15 +41,16 @@ ui.set_dirichlet_by_group(model, 'dirichlet', ('ux'), 'Dirichlet_x')
 ui.set_dirichlet_by_nodeids(model, [1], ('uy'), 'Dirichlet_y')
 
 F = triangular_force(0, 0.01, 0.02, 1E7)
-ui.set_neumann_by_group(model, 'neumann', np.array([0.0, -1.0]), neumann_name='Load', F=F)
+ui.set_neumann_by_group(model, 'neumann', np.array([0.0, -1.0]), neumann_name='Load', f=F)
 
-solution_writer = ui.solve_linear_dynamic(model, 0.0, 1.0, 0.0001, 10)
+system, formulation = ui.create_constrained_mechanical_system_from_component(model, all_linear=True)
+solution_container = ui.solve_linear_dynamic(system, formulation, model, 0.0, 1.0, 0.0001, 10)
 
-ui.write_results_to_paraview(solution_writer, model, amfe_dir('results/gmsh/ui_example_beam_linear_dynamic'),
+ui.write_results_to_paraview(solution_container, model, amfe_dir('results/gmsh/ui_example_beam_linear_dynamic'),
                              displacements_only=False)
 
 ###################################################
-###  Nonlinear heterogeneous cantilever beam    ###
+#    Nonlinear heterogeneous cantilever beam      #
 ###################################################
 
 # Cantilever beam with layers of soft and stiff material and dimensions 5m x 1m (L x H)
@@ -69,14 +71,15 @@ ui.set_dirichlet_by_group(model, 'x_dirichlet_line', ('ux'), 'Dirichlet_x')
 ui.set_dirichlet_by_group(model, 'xy_dirichlet_point', ('uy'), 'Dirichlet_y')
 
 F = linearly_increasing_force(0, 1.00001, 1.2E5)
-ui.set_neumann_by_group(model, 'z_neumann', np.array([0.0, -1.0]), neumann_name='Load', F=F)
+ui.set_neumann_by_group(model, 'z_neumann', np.array([0.0, -1.0]), neumann_name='Load', f=F)
 
-solution_writer = ui.solve_nonlinear_static(model, load_steps=10)
+system, formulation = ui.create_constrained_mechanical_system_from_component(model)
+solution_container = ui.solve_nonlinear_static(system, formulation, model, load_steps=10)
 
-ui.write_results_to_paraview(solution_writer, model, amfe_dir('results/gmsh/ui_example_beam_nonlinear'))
+ui.write_results_to_paraview(solution_container, model, amfe_dir('results/gmsh/ui_example_beam_nonlinear'))
 
 ###########################################################
-###  Dynamic nonlinear heterogeneous cantilever beam    ###
+#    Dynamic nonlinear heterogeneous cantilever beam      #
 ###########################################################
 model = ui.create_structural_component(mesh)
 
@@ -87,9 +90,10 @@ ui.set_dirichlet_by_group(model, 'x_dirichlet_line', ('ux'), 'Dirichlet_x')
 ui.set_dirichlet_by_group(model, 'xy_dirichlet_point', ('uy'), 'Dirichlet_y')
 
 F = triangular_force(0, 0.015, 0.03, 8E5)
-ui.set_neumann_by_group(model, 'z_neumann', np.array([0.0, -1.0]), neumann_name='Load', F=F)
+ui.set_neumann_by_group(model, 'z_neumann', np.array([0.0, -1.0]), neumann_name='Load', f=F)
 
-solution_writer = ui.solve_nonlinear_dynamic(model, 0.0, 0.1, 0.0001, 10)
+system, formulation = ui.create_constrained_mechanical_system_from_component(model)
+solution_writer = ui.solve_nonlinear_dynamic(system, formulation, model, 0.0, 0.1, 0.0001, 10)
 
 ui.write_results_to_paraview(solution_writer, model, amfe_dir('results/gmsh/ui_example_beam_nonlinear_dynamic'),
                              displacements_only=False)
