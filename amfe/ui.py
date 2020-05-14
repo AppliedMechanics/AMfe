@@ -18,13 +18,9 @@ from amfe.forces import *
 from amfe.neumann.structural_neumann import FixedDirectionNeumann, NormalFollowingNeumann
 from amfe.solver.translators import create_constrained_mechanical_system_from_component
 from amfe.solver import SolverFactory, AmfeSolution
-from amfe.linalg.linearsolvers import ScipySparseLinearSolver
 
 from amfe.io.mesh import GidJsonMeshReader, AmfeMeshObjMeshReader, GmshAsciiMeshReader
 from amfe.io.mesh import AmfeMeshConverter
-from amfe.io.postprocessing.reader import AmfeSolutionReader
-from amfe.io.postprocessing.writer import Hdf5PostProcessorWriter
-from amfe.io.postprocessing.tools import write_xdmf_from_hdf5
 from amfe.io.postprocessing import *
 
 import numpy as np
@@ -38,6 +34,7 @@ import logging
 __all__ = ['import_mesh_from_file',
            'create_structural_component',
            'create_material',
+           'create_mechanical_system',
            'assign_material_by_group',
            'assign_material_by_elementids',
            'set_dirichlet_by_group',
@@ -70,9 +67,9 @@ def import_mesh_from_file(filename):
     """
     _, extension = splitext(filename)
     if extension in formats:
-        reader = formats[extension](filename)
+        mreader = formats[extension](filename)
         converter = AmfeMeshConverter()
-        reader.parse(converter)
+        mreader.parse(converter)
         return converter.return_mesh()
     else:
         raise ValueError('No reader available for files with fileextension {}'.format(extension), 'Please use a mesh ',
@@ -87,8 +84,9 @@ def create_mechanical_system(structural_component, constant_mass=False,
                              constant_damping=False, all_linear=False, constraint_formulation='boolean',
                              **formulation_options):
     system, formulation = create_constrained_mechanical_system_from_component(structural_component, constant_mass,
-                                                                        constant_damping, all_linear,
-                                                                        constraint_formulation, **formulation_options)
+                                                                              constant_damping, all_linear,
+                                                                              constraint_formulation,
+                                                                              **formulation_options)
     return system, formulation
 
 
@@ -177,7 +175,7 @@ def set_dirichlet_by_nodeids(component, nodeids, direction=('ux'), constraint_na
 
 
 def set_neumann_by_group(component, group_name, direction, following=False, neumann_name='Neumann0',
-                         F=constant_force(1.0)):
+                         f=constant_force(1.0)):
     """
     Sets a neumann condition on a component by addressing the group in the mesh.
 
@@ -194,12 +192,12 @@ def set_neumann_by_group(component, group_name, direction, following=False, neum
         If following is set to false (default), the direction is fixed.
     neumann_name : str
         name of the condition, defined by user
-    F : function
+    f : function
          pointer to function with signature  float func(float: t)
     """
     if direction == 'normal':
         if following:
-            neumann = NormalFollowingNeumann(time_func=F)
+            neumann = NormalFollowingNeumann(time_func=f)
         else:
             raise NotImplementedError('There is no implementation for normal direction that is fixed with inertial'
                                       'frame')
@@ -208,19 +206,35 @@ def set_neumann_by_group(component, group_name, direction, following=False, neum
         if following:
             raise NotImplementedError('There is no implementation for forces that follow the body frame')
         else:
-            neumann = FixedDirectionNeumann(direction, time_func=F)
+            neumann = FixedDirectionNeumann(direction, time_func=f)
     component.assign_neumann(neumann_name, neumann, [group_name], '_groups')
 
 
 def set_neumann_by_elementids(component, elementids, direction_vector=np.array([0, 1]), neumann_name='Neumann0',
-                              F=constant_force(1.0)):
-    neumann = FixedDirectionNeumann(direction_vector, time_func=F)
+                              f=constant_force(1.0)):
+    neumann = FixedDirectionNeumann(direction_vector, time_func=f)
     component.assign_neumann(neumann_name, neumann, elementids, '_eleids')
 
 
-def solve_linear_static(component):
-    system, formulation = create_mechanical_system(component, all_linear=True, constraint_formulation='boolean')
+def solve_linear_static(system, formulation, component):
+    """
+    Solves a linear, static MechanicalSystem.
 
+    Parameters
+    ----------
+    system : MechanicalSystem
+        MechanicalSystem object describing the equilibrium forces
+    formulation : ConstraintFormulation
+        A ConstraintFormulation object that can recover the nodal unconstrained displacements of the component
+        from the constrained states of the system
+    component : StructuralComponent
+        Structural Component belonging to the system
+
+    Returns
+    -------
+    solution : AmfeSolution
+        Simple Container for solutions of AMfe simulations
+    """
     solfac = SolverFactory()
     solfac.set_system(system)
     solfac.set_analysis_type('static')
@@ -246,9 +260,33 @@ def solve_linear_static(component):
     return solution_writer
 
 
-def solve_linear_dynamic(component, t0, t_end, dt, write_timestep=1):
-    system, formulation = create_mechanical_system(component, all_linear=True, constraint_formulation='boolean')
+def solve_linear_dynamic(system, formulation, component, t0, t_end, dt, write_each=1):
+    """
+    Solves a linear, dynamic MechanicalSystem from t0 to t_end with dt as intermediate steps.
 
+    Parameters
+    ----------
+    system : MechanicalSystem
+        MechanicalSystem object describing the equations of motion
+    formulation : ConstraintFormulation
+        A ConstraintFormulation object that can recover the nodal unconstrained displacements of the component
+        from the constrained states of the system
+    component : StructuralComponent
+        StructuralComponent belonging to the system
+    t0 : float
+        initial time
+    t_end : float
+        final time
+    dt : float
+        increment between time steps
+    write_each : int
+        Specifies that the solver writes every n'th solution (eg. type 2 to write every second timestep)
+
+    Returns
+    -------
+    solution : amfe.solution.AmfeSolution
+        AmfeSolution container that contains the solution
+    """
     solfac = SolverFactory()
     solfac.set_system(system)
     solfac.set_analysis_type('transient')
@@ -267,7 +305,7 @@ def solve_linear_dynamic(component, t0, t_end, dt, write_timestep=1):
 
     def write_callback(t, x, dx, ddx):
         cur_ts = int((t-t0) // dt)
-        if abs(cur_ts % write_timestep) <=1e-7:
+        if abs(cur_ts % write_each) <= 1e-7:
             u, du, ddu = formulation.recover(x, dx, ddx, t)
             solution_writer.write_timestep(t, u, du, ddu)
 
@@ -281,11 +319,28 @@ def solve_linear_dynamic(component, t0, t_end, dt, write_timestep=1):
     return solution_writer
 
 
-def solve_nonlinear_static(component, load_steps):
+def solve_nonlinear_static(system, formulation, component, load_steps):
+    """
+    Solves a MechanicalSystem using a nonlinear static method using newton for the nonlinear solver.
+    The deformation is divided into an amount of intermediate steps which are defined in the number of load_steps.
 
-    system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
-                                                   constraint_formulation='boolean')
+    Parameters
+    ----------
+    system : MechanicalSystem
+        Created MechanicalSystem object describing the Structural Component
+    formulation : ConstraintFormulation
+        A ConstraintFormulation object that can recover the nodal unconstrained displacements of the component
+        from the constrained states of the system
+    component : StructuralComponent
+        StructuralComponent belonging to the system
+    load_steps : int
+        Number of load steps used for the solution
 
+    Returns
+    -------
+    solution : amfe.solution.AmfeSolution
+        Simple Container for solutions of AMfe simulations
+    """
     solfac = SolverFactory()
     solfac.set_system(system)
     solfac.set_analysis_type('static')
@@ -319,10 +374,33 @@ def solve_nonlinear_static(component, load_steps):
     return solution_writer
 
 
-def solve_nonlinear_dynamic(component, t0, t_end, dt, write_timestep=1):
-    system, formulation = create_mechanical_system(component, constant_mass=True, constant_damping=True,
-                                                   constraint_formulation='boolean')
+def solve_nonlinear_dynamic(system, formulation, component, t0, t_end, dt, write_each=1):
+    """
+    Solves a system
 
+    Parameters
+    ----------
+    system : MechanicalSystem
+        Created MechanicalSystem object describing the Structural Component
+    formulation : ConstraintFormulation
+        A ConstraintFormulation object that can recover the nodal unconstrained displacements of the component
+        from the constrained states of the system
+    component : StructuralComponent
+        StructuralComponent belonging to the system
+    t0 : float
+        initial time
+    t_end : float
+        final time
+    dt : float
+        increment between time steps
+    write_each : int
+        Specifies that the solver writes every n'th solution (eg. type 2 to write every second timestep)
+
+    Returns
+    -------
+    solution : amfe.solution.AmfeSolution
+        Simple Container for solutions of AMfe simulations
+    """
     solfac = SolverFactory()
     solfac.set_system(system)
     solfac.set_analysis_type('transient')
@@ -341,7 +419,7 @@ def solve_nonlinear_dynamic(component, t0, t_end, dt, write_timestep=1):
 
     def write_callback(t, x, dx, ddx):
         cur_ts = int((t - t0) // dt)
-        if abs(cur_ts % write_timestep) <= 1e-7:
+        if abs(cur_ts % write_each) <= 1e-7:
             u, du, ddu = formulation.recover(x, dx, ddx, t)
             strains, stresses = component.strains_and_stresses(u, du, t)
             solution_writer.write_timestep(t, u, du, ddu, strains, stresses)
@@ -356,7 +434,7 @@ def solve_nonlinear_dynamic(component, t0, t_end, dt, write_timestep=1):
 
 
 def write_results_to_paraview(solution, component, paraviewfilename, displacements_only=True,
-                              plot_strains_and_stresses=True):
+                              write_strains_and_stresses=True):
     """
     Writes results to an xdmf paraview file
 
@@ -372,6 +450,8 @@ def write_results_to_paraview(solution, component, paraviewfilename, displacemen
         In static models, there are no velocities and accelerations, that need plotting. Therefore switch off that
         functionality. This is default, because it is rarely needed to plot velocities and accelerations in dynamic
         cases as well.
+    write_strains_and_stresses : bool
+        Flag if strains and stresses shall be exported to paraview
     """
     paraviewfilename = splitext(paraviewfilename)[0]
 
@@ -405,23 +485,23 @@ def write_results_to_paraview(solution, component, paraviewfilename, displacemen
                                            }
                           })
 
-    if plot_strains_and_stresses:
+    if write_strains_and_stresses:
         fielddict['strains_normal'] = {'mesh_entity_type': MeshEntityType.NODE,
-                                  'data_type': PostProcessDataType.VECTOR,
-                                  'hdf5path': '/results/strains_normal'
-                                  }
-        fielddict['stresses_normal'] = {'mesh_entity_type': MeshEntityType.NODE,
-                                'data_type': PostProcessDataType.VECTOR,
-                                'hdf5path': '/results/stresses_normal'
-                                }
-        fielddict['strains_shear'] = {'mesh_entity_type': MeshEntityType.NODE,
                                        'data_type': PostProcessDataType.VECTOR,
-                                       'hdf5path': '/results/strains_shear'
+                                       'hdf5path': '/results/strains_normal'
                                        }
-        fielddict['stresses_shear'] = {'mesh_entity_type': MeshEntityType.NODE,
+        fielddict['stresses_normal'] = {'mesh_entity_type': MeshEntityType.NODE,
                                         'data_type': PostProcessDataType.VECTOR,
-                                        'hdf5path': '/results/stresses_shear'
+                                        'hdf5path': '/results/stresses_normal'
                                         }
+        fielddict['strains_shear'] = {'mesh_entity_type': MeshEntityType.NODE,
+                                      'data_type': PostProcessDataType.VECTOR,
+                                      'hdf5path': '/results/strains_shear'
+                                      }
+        fielddict['stresses_shear'] = {'mesh_entity_type': MeshEntityType.NODE,
+                                       'data_type': PostProcessDataType.VECTOR,
+                                       'hdf5path': '/results/stresses_shear'
+                                       }
 
     with open(xdmfresultsfilename, 'wb') as xdmffp:
         with File(hdf5resultsfilename, mode='r') as hdf5fp:
