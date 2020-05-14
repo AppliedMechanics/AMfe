@@ -12,3 +12,4 @@ We thank the following contributors:
 
 Guilherme Jenovecio for many discussions and ideas about code structure and implementation of Partitioning I/O Functions
 Gabriel Erwin Gruber for implementation of many of the g and B functions of the constraints module
+Ferdinand Elhardt for implementation of __str__ functions and enhancements in docs and ui
