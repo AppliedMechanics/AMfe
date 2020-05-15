@@ -89,7 +89,8 @@ amfe.tools improvements
 amfe.ui improvements
 --------------------
 - added method to compute the modes of a system
-
+- UI exports strains and stresses by default
+- created tests for methods in amfe.ui
 - in all solvers, changed argument from taking a Component to MechanicalSystem
 - added option 'normal' to set_neumann_by_group in order to set a neumann condition with a following normal direction
 to surface
