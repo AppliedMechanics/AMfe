@@ -64,5 +64,5 @@ Additional hints for windows users
 """"""""""""""""""""""""""""""""""
 
 The compilation of fortran extensions may cause problems on windows-platforms.
-Here are some hints on how to install the routines on windows:
+
 

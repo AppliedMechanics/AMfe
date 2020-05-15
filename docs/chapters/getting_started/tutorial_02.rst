@@ -3,7 +3,7 @@ Tutorial 2: Modal Analysis
 
 In this tutorial we want do a modal analysis. It is applied on the example
 from the first tutorial. If you are not familiar with how to set up a
-:py:class:`MechanicalSystem <amfe.mechanical_system.MechanicalSystem>` instance,
+:py:class:`MechanicalSystem <amfe.solver.translators.MechanicalSystem>` instance,
 new materials and meshes, it is recommended to read :doc:`tutorial_01` first.
 
 Problem
@@ -38,17 +38,31 @@ Setting up new simulation, mesh and material
 As we have the same geometry, mesh and materials as in :doc:`tutorial_01`,
 we enter the same commands::
 
-  import amfe
-  my_system = amfe.MechanicalSystem()
-  input_file = amfe.amfe_dir('meshes/gmsh/pressure_corner.msh')
-  output_file = amfe.amfe_dir('results/pressure_corner/pressure_corner_modes')
-  my_material = amfe.KirchhoffMaterial(E=210E9, nu=0.3, rho=7.86E3, plane_stress=True, thickness=0.1)
-  my_system.load_mesh_from_gmsh(input_file, 11, my_material)
-  my_system.apply_dirichlet_boundaries(9, 'x')
-  my_system.apply_dirichlet_boundaries(10, 'y')
+    from amfe.io import amfe_dir
+    import amfe.ui
 
-.. todo::
-  Check if parameter 2 in Mesh is correctly described (see Tutorial 1)
+    input_file = amfe_dir('meshes/gmsh/pressure_corner.msh')
+    output_file_deformation = amfe_dir('results/pressure_corner/pressure_corner_nonlinear_deformation')
+    output_file_modes = amfe_dir('results/pressure_corner/pressure_corner_linear_modes')
+
+    # --- Load Mesh ---
+    my_mesh = amfe.ui.import_mesh_from_file(input_file)
+
+    # --- Setting up new component ---
+    my_component = amfe.ui.create_structural_component(my_mesh)
+
+    # --- Define materials and assign it to component ---
+    my_material = amfe.ui.create_material('Kirchhoff', E=210E9, nu=0.3, rho=7.86E3, plane_stress=True, thickness=0.1)
+    amfe.ui.assign_material_by_group(my_component, my_material, 11)
+
+    # --- Apply boundary conditions ---
+    amfe.ui.set_dirichlet_by_group(my_component, 9, 'ux', 'Dirichlet0')
+    amfe.ui.set_dirichlet_by_group(my_component, 10, 'uy', 'Dirichlet1')
+
+    # --- Translate the Component to a MechanicalSystem ---
+    my_system, my_formulation = amfe.ui.create_mechanical_system(my_component)
+
+
 
 .. note::
   In this example we do not apply any Neumann boundary conditions
@@ -59,23 +73,28 @@ we enter the same commands::
 
 Solve
 ^^^^^
+Solve and write modal analysis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The function :func:`vibration_modes(MechanicalSystem, save=True) <amfe.vibration_modes>`
-solves the eigenproblem to the linearized system::
+We can easily run a modal analysis with AMfe. Using the function :py:meth:`amfe.ui.solve_modes` with the arguments
+`system`, `formulation` and `number of modes` we come to the modes which are stored in
+a :py:class:`amfe.solver.solution.AmfeSolution` object::
 
-  omega, V = amfe.vibration_modes(my_system, n=10, save=True)
+    modes = amfe.ui.solve_modes(my_system, my_formulation, no_of_modes=10, hertz=True)
 
-The first parameter is the MechanicalSystem instance of the problem.
-The second parameter gives the number of vibration modes one is interested in
-and the last parameter is a flag that activates saving the modes for
-paraview export.
-
+Here, `system` is an instance of the :py:class:`amfe.solver.translators.MechanicalSystem` and `formulation`
+is an instance of
+:py:class:`amfe.constraint.constraint_formulation_boolean_elimination.BooleanEliminationConstraintFormulation`.
 
 
-For viewing the results one can either use the returned variables (here omega and phi)
-or one can export the results to paraview. via::
+We use the same function as we used before when we exported the deformation solution. But instead of 'my_solution'
+we pass the 'modes'. Therefore, we type::
 
-  my_system.export_paraview(output_file)
+  amfe.ui.write_results_to_paraview(modes, my_component, output_file_modes)
+
+As before, you can view the modal simulation using the open source postprocessing
+tool `Paraview <http://www.paraview.org/>`_.
+Note that the modes are separated using time steps, mode 1 is timestep 0, mode 2 is timestep 1 and so on.
 
 
 Results
@@ -89,11 +108,19 @@ Results
 :numref:`tut2modes` shows the first six modes of the linearized pressure corner.
 
 
-The eigenfequencies in Hertz::
+As the eigenfrequencies are stored as timesteps in the amfesolution container we can get them by::
 
-  import numpy as np
-  f = omega/(2*np.pi)
-  f
-  array([  125.88198294,   296.66446201,   921.61100677,   994.45027039,
+  print(modes.t)
+  [  125.88198294,   296.66446201,   921.61100677,   994.45027039,
         1316.94610541,  1634.31575078,  2441.74646491,  2990.53919312,
-        3530.41461115,  3688.88210744])
+        3530.41461115,  3688.88210744]
+
+
+Next steps
+^^^^^^^^^^^
+
+When you’re comfortable with the basic functions in AMfe, read the next tutorial or try one of the examples provided
+in the examples-folder. Or get familiar with the sourcecode of the methods in :py:class:`amfe.ui` as they basically
+use main methods and classes provided in AMfe. The simplified usage gives you a good hint how to use AMfe and its
+most powerful features. Therefore, the Module :py:mod:`amfe.ui` provides you an easy template to copy and modify
+it in order to adapt it step by step to your problem.
