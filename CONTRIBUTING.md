@@ -37,7 +37,7 @@ Checklist:
 which can be found in setup.py
 - [ ] Add your name with a comment what you have fixed in the THANKS.txt (This is voluntary,
 but really desired to give every author credit)
-- [ ] Add a release-note in the release-notes.txt (in docs/release)
+- [ ] Add a release-note in the X.Y.Z-notes.txt (in docs/release where X.X.X stands for the next released version)
 - [ ] If it is a new major function, perhaps add a tutorial/example etc. in the main documentation
 - [ ] Check that the code you use is BSD license compatible! If it is your own code, note that
 you accept the BSD license conditions
@@ -75,7 +75,7 @@ any tests that show the performance of the code
 - Does the code meet the checklist above?
 - Is there any code that is duplicated at another part? In this case, can it be refactored?
 - Are the new functions/features tested properly by a unittest?
-- Are there docstrings for the new fuctions/features?
+- Are there docstrings for the new functions/features?
 
 
 Testing

@@ -12,6 +12,7 @@ In this module you can find some examples for force-functions. You can apply the
 import numpy as np
 
 __all__ = ['constant_force',
+           'linearly_increasing_force',
            'triangular_force',
            'step_force']
 
@@ -33,6 +34,43 @@ def constant_force(value):
     """
     def f(t):
         return value
+    return f
+
+
+def linearly_increasing_force(t_start, t_end, f_max):
+    """
+    Returns a linearly increasing force:
+
+            f_max at t_end
+            -------------
+           /
+          / |
+         /  |
+        /   |
+    ----    |__ t_end
+        |__ t_start
+
+    Parameters
+    ----------
+    t_start: float
+        time where linear force starts to raise
+    t_end: float
+        time where force reaches maximum
+    f_max: float
+        maximum value of force
+
+    Returns
+    -------
+    f: callable
+        function f(t)
+    """
+    def f(t):
+        if t <= t_start:
+            return 0.0
+        elif t_start < t <= t_end:
+            return f_max * (t-t_start) / (t_end-t_start)
+        else:
+            return f_max
     return f
 
 

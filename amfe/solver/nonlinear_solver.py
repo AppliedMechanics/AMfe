@@ -37,11 +37,10 @@ class NewtonRaphson:
     """
     def __init__(self):
         self._options = dict()
-        self.logger = logging.getLogger('amfe.solver.nonlinear_solver.NewtonRaphson')
         self.callback = None
         return
 
-    def set_options(self, options):
+    def _set_options(self, options):
         """
         Optional method to change convergence-properties during runtime.
         
@@ -130,15 +129,16 @@ class NewtonRaphson:
         # Check if tol is passed and write tol in atol if atol is not in options
         if tol is not None:
             if 'atol' in options:
-                self.logger.warning('Attention: atol option has been set in nonlinear solver options,'
-                                    'but it is called with another tol. The tol has no effect.'
-                                    'The atol in options dictionary will be used')
+                logger = logging.getLogger(__name__)
+                logger.warning('Attention: atol option has been set in nonlinear solver options,'
+                               'but it is called with another tol. The tol has no effect.'
+                               'The atol in options dictionary will be used')
             options.setdefault('atol', tol)
 
         # Parse options
         if options is None:
             options = dict()
-        self.set_options(options)
+        self._set_options(options)
 
         # Set callback function
         self.callback = callback
@@ -168,7 +168,7 @@ class NewtonRaphson:
             if np.isscalar(Jac):
                 delta_q = 1/Jac * -res
             else:
-                delta_q = -self._options['linear_solver'].solve(Jac, res, **self._options['linear_solver_kwargs'])
+                delta_q = self._options['linear_solver'].solve(Jac, -res, **self._options['linear_solver_kwargs'])
 
             # correct variables
             q += delta_q

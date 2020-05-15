@@ -9,6 +9,11 @@ from pandas.testing import assert_frame_equal, assert_series_equal
 from amfe.component.partitioner import *
 from amfe.component.structural_component import StructuralComponent
 from collections.abc import Iterable
+from amfe.io.tools import amfe_dir
+from amfe.io.mesh import AmfeMeshConverter, GmshAsciiMeshReader
+from copy import copy
+from .tools import CustomDictAssertTest
+import pprint
 
 
 class DummyMapping:
@@ -36,6 +41,7 @@ class DummyMaterial1:
     def __init__(self):
         pass
 
+
 class DummyMaterial2:
     def __init__(self):
         pass
@@ -43,6 +49,7 @@ class DummyMaterial2:
 
 class TestPartitioner(TestCase):
     def setUp(self):
+        self.custom_asserter = CustomDictAssertTest()
         self.testmesh = Mesh(dimension=2)
         '''
         Testmesh:                Partition:
@@ -103,6 +110,138 @@ class TestPartitioner(TestCase):
 
     def tearDown(self):
         pass
+
+    def test_set_partition_tags_by_tag_type(self):
+        # Desired nodes
+        mesh = Mesh(2)
+        nodes = {'x': np.array([0., 0., 5., 5., 10., 10., 0., 10., 2.5, 5., 2.5, 0., 7.17636084, 7.17636084, 5., 2.5, 7.17636084, 5., 0., 2.5, 1.25, 1.25, 3.75, 3.75, 8.22303669, 6.54073581, 6.30235631, 2.84272972, 6.08818042, 8.31613532, 1.33568243]),
+                'y': np.array([0., 5., 5., 0., 0., 5., 10., 10., 0., 2.5, 5., 2.5, 0., 5., 2.5, 5., 5., 10., 7.17636084, 2.5, 1.25, 3.75, 1.25, 3.75, 2.55225559, 1.81142646, 3.48052601, 7.44941386, 7.5, 6.875, 6.15644368])}
+
+        mesh.nodes_df = pd.DataFrame.from_dict(nodes)
+        mesh.nodes_df.index = range(1, 32)
+
+        # Desired elements
+        # (internal name of Triangle Nnode 3 is 'Tri3')
+        elements = {'shape': np.array(['straight_line', 'straight_line', 'straight_line', 'straight_line',
+                                       'straight_line', 'straight_line', 'Tri3', 'Tri3', 'Tri3', 'Tri3',
+                                       'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3',
+                                       'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3',
+                                       'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3',
+                                       'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3',
+                                       'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3'], dtype=object),
+                    'is_boundary': np.array([ True,  True,  True,  True,  True,  True, False, False, False,
+                                           False, False, False, False, False, False, False, False, False,
+                                           False, False, False, False, False, False, False, False, False,
+                                           False, False, False, False, False, False, False, False, False,
+                                           False, False, False, False, False, False, False, False, False,
+                                           False, False, False]),
+                    'connectivity': np.array([np.array([ 2, 12]), np.array([12,  1]), np.array([5, 6]), np.array([6, 8]),
+                                           np.array([ 7, 19]), np.array([19,  2]), np.array([24, 23, 10]),
+                                           np.array([20, 23, 24]), np.array([ 4, 23,  9]), np.array([ 3, 24, 10]),
+                                           np.array([ 9, 23, 20]), np.array([ 9, 20, 21]), np.array([ 1, 21, 12]),
+                                           np.array([12, 21, 20]), np.array([11, 20, 24]), np.array([11, 22, 20]),
+                                           np.array([12, 20, 22]), np.array([ 3, 11, 24]), np.array([ 2, 22, 11]),
+                                           np.array([ 2, 12, 22]), np.array([ 4, 10, 23]), np.array([ 1,  9, 21]),
+                                           np.array([ 5, 25, 13]), np.array([ 6, 14, 25]), np.array([14, 27, 25]),
+                                           np.array([13, 25, 26]), np.array([ 4, 13, 26]), np.array([ 4, 26, 15]),
+                                           np.array([25, 27, 26]), np.array([ 3, 15, 27]), np.array([ 3, 27, 14]),
+                                           np.array([15, 26, 27]), np.array([ 5,  6, 25]), np.array([ 7, 28, 18]),
+                                           np.array([ 3, 28, 16]), np.array([ 7, 19, 28]), np.array([ 3, 29, 28]),
+                                           np.array([ 8, 29, 30]), np.array([ 3, 17, 29]), np.array([ 8, 18, 29]),
+                                           np.array([19, 31, 28]), np.array([ 2, 16, 31]), np.array([16, 28, 31]),
+                                           np.array([ 6, 30, 17]), np.array([ 2, 31, 19]), np.array([17, 30, 29]),
+                                           np.array([18, 28, 29]), np.array([ 6,  8, 30])], dtype=object),
+                    'no_of_mesh_partitions': np.array([1, 1, 2, 2, 1, 1, 1, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
+                    'partition_id': np.array([2, 2, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 1, 2, 2, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]),
+                    'partitions_neighbors': np.array([None, None, 2, 1, None, None, None, 2, None, None, 2, 2, 1, 1, 2, 1, 1, 2, 1, None, None, 2, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None,
+                                                      None, None, None, None, None, None, None, None, None], dtype=object),
+                    'elemental_group': np.array([4,  4,  6, 11, 13, 13,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  3, 3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3])}
+
+        mesh._el_df = pd.DataFrame.from_dict(elements)
+        mesh._el_df.index = range(1, 49)
+
+        groups = {'surface_left': {'elements': [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
+                                    'nodes': []},
+                 'surface_right': {'elements': [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33],
+                                   'nodes': []},
+                 'surface_top': {'elements': [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48],
+                                 'nodes': []},
+                 'x_dirichlet-line': {'elements': [1, 2, 5, 6], 'nodes': []},
+                 'x_neumann': {'elements': [3, 4], 'nodes': []}}
+
+        mesh.groups = groups
+
+        #Desired Mesh
+        mesh_desired = Mesh(2)
+        mesh_desired.nodes_df = copy(mesh.nodes_df)
+
+        elements_desired = {'shape': np.array(['straight_line', 'straight_line', 'straight_line', 'straight_line',
+                                       'straight_line', 'straight_line', 'Tri3', 'Tri3', 'Tri3', 'Tri3',
+                                       'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3',
+                                       'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3',
+                                       'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3',
+                                       'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3',
+                                       'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3', 'Tri3'], dtype=object),
+                    'is_boundary': np.array([True, True, True, True, True, True, False, False, False,
+                                             False, False, False, False, False, False, False, False, False,
+                                             False, False, False, False, False, False, False, False, False,
+                                             False, False, False, False, False, False, False, False, False,
+                                             False, False, False, False, False, False, False, False, False,
+                                             False, False, False]),
+                    'connectivity': np.array([np.array([2, 12]), np.array([12, 1]), np.array([5, 6]), np.array([6, 8]),
+                                              np.array([7, 19]), np.array([19, 2]), np.array([24, 23, 10]),
+                                              np.array([20, 23, 24]), np.array([4, 23, 9]), np.array([3, 24, 10]),
+                                              np.array([9, 23, 20]), np.array([9, 20, 21]), np.array([1, 21, 12]),
+                                              np.array([12, 21, 20]), np.array([11, 20, 24]), np.array([11, 22, 20]),
+                                              np.array([12, 20, 22]), np.array([3, 11, 24]), np.array([2, 22, 11]),
+                                              np.array([2, 12, 22]), np.array([4, 10, 23]), np.array([1, 9, 21]),
+                                              np.array([5, 25, 13]), np.array([6, 14, 25]), np.array([14, 27, 25]),
+                                              np.array([13, 25, 26]), np.array([4, 13, 26]), np.array([4, 26, 15]),
+                                              np.array([25, 27, 26]), np.array([3, 15, 27]), np.array([3, 27, 14]),
+                                              np.array([15, 26, 27]), np.array([5, 6, 25]), np.array([7, 28, 18]),
+                                              np.array([3, 28, 16]), np.array([7, 19, 28]), np.array([3, 29, 28]),
+                                              np.array([8, 29, 30]), np.array([3, 17, 29]), np.array([8, 18, 29]),
+                                              np.array([19, 31, 28]), np.array([2, 16, 31]), np.array([16, 28, 31]),
+                                              np.array([6, 30, 17]), np.array([2, 31, 19]), np.array([17, 30, 29]),
+                                              np.array([18, 28, 29]), np.array([6, 8, 30])], dtype=object),
+                    'no_of_mesh_partitions': np.array(
+                        [2, 2, 2, 2, 1, 2, 2, 2, 2, 3, 2, 2 ,2, 2, 3, 3, 2, 4, 3, 2, 2, 2, 1, 2, 2, 1, 2, 2, 1, 3, 3, 2,
+                         2, 1, 4, 1, 3, 1, 3, 1, 1, 3, 3, 2, 2, 2, 1, 2]),
+                    'partition_id': np.array(
+                        [1, 1, 3, 4, 4, 4, 2, 2, 2, 2, 2, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+                         3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]),
+                    'partitions_neighbors': np.array(
+                        [4, 2, 4, 3, None, 1, 3, 1, 3, (3, 4), 1, 1, 2, 2, (1, 4), (2, 4), 2, (1, 3, 4), (2, 4), 4, 3, 1,
+                         None, 4, 4, None, 2, 2, None, (2, 4), (2, 4), 2, 4, None, (1, 2, 3), None, (2, 3), None,
+                         (2, 3), None, None, (1, 2), (1, 2), 3, 1, 3, None, 3], dtype=object),
+                    'elemental_group': np.array(
+                        [4, 4, 6, 11, 13, 13, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+                         2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3])}
+
+        mesh_desired._el_df = pd.DataFrame.from_dict(elements_desired)
+        mesh_desired._el_df.index = range(1, 49)
+
+        groups_desired = {'surface_left': {'elements': [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
+                                   'nodes': []},
+                  'surface_right': {'elements': [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33],
+                                    'nodes': []},
+                  'surface_top': {'elements': [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48],
+                                  'nodes': []},
+                  'x_dirichlet-line': {'elements': [1, 2, 5, 6], 'nodes': []},
+                  'x_neumann': {'elements': [3, 4], 'nodes': []}}
+
+        mesh_desired.groups = groups_desired
+
+        self.partitioner.set_partition_tags_by_group(mesh, 'surface')
+
+        self.custom_asserter.assert_dict_equal(mesh._el_df['shape'], mesh_desired._el_df['shape'])
+        self.custom_asserter.assert_dict_equal(mesh._el_df['is_boundary'], mesh_desired._el_df['is_boundary'])
+        self.custom_asserter.assert_dict_equal(mesh._el_df['connectivity'], mesh_desired._el_df['connectivity'])
+        self.custom_asserter.assert_dict_equal(mesh._el_df['partition_id'], mesh_desired._el_df['partition_id'])
+        self.custom_asserter.assert_dict_equal(mesh._el_df['partitions_neighbors'],
+                                               mesh_desired._el_df['partitions_neighbors'])
+        self.custom_asserter.assert_dict_equal(mesh._el_df['no_of_mesh_partitions'], mesh_desired._el_df['no_of_mesh_partitions'])
+        self.custom_asserter.assert_dict_equal(mesh._el_df['elemental_group'], mesh_desired._el_df['elemental_group'])
 
     def test_separate_common_nodes_of_partitions(self):
         nodes_desired = np.array([[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [2.0, 0.0], [2.0, 1.0], [3.0, 1.0],

@@ -1,0 +1,145 @@
+========================
+AMfe 1.0.0 Release Notes
+========================
+
+
+Highlights of this release
+--------------------------
+
+The Amfe package originally developed by Johannes Rutzmoser
+has been refactored to a fully new structure.
+Amfe now consists of many decoupled subpackages.
+The code has been refactored in such a way that many classes are much more decoupled
+from each other and thus more flexible.
+
+Furthermore, this refactoring led to a structure that is much easier to extend or subclass.
+For instance, several mapping algorithms could be possible by just writing a subclass of the Mapping class.
+
+
+New features
+============
+
+amfe.assembly improvements
+--------------------------
+
+- The assembly now expects a numpy array to write to it such that it does not preallocate new memory
+- The assembly for constraints is straight-forward
+
+amfe.component improvements
+---------------------------
+
+- A basic class called component is provided that is used as a facade for the other finite element classes.
+- Components can be connected to a tree to provide a datastructure for substructuring and parallel computing
+
+
+amfe.constraint improvements
+----------------------------
+
+- Nonlinear constraints are now possible
+
+amfe.element improvements
+-------------------------
+
+- Minor improvements
+
+amfe.fortran improvements
+-------------------------
+
+-
+
+amfe.io improvements
+--------------------
+
+- The I/O of Meshes and Postprocessing Data is fully decoupled from the rest of the code
+- A Reader Writer system with the builder pattern has been established to decouple read and write mechanisms
+- GiD Json format is now readable
+
+amfe.linalg improvements
+------------------------
+
+-
+
+amfe.mapping improvements
+-------------------------
+
+- The mapping now supports subclassing to have other mappings than AMfe provides by default
+
+
+amfe.mor improvements
+---------------------
+
+- The Model reduction functions are fully decoupled from the other classes such that also other systems than AMfe Finite Element models could be reduced
+- The Polynomial Expansion now is a basic feature
+
+amfe.neumann improvements
+-------------------------
+
+- The Neumann Conditions now have a Neumann manager that makes the bookkeeping of several Neumann conditions
+
+amfe.parametric improvements
+----------------------------
+
+- First mesh morphing techniques are implemented to change the mesh geometry parametrically
+- FFD morphing
+- RBF morphing
+
+amfe.solver improvements
+------------------------
+
+- The solvers have been decoupled from other classes
+- The time integration is subdivided in several classes that are responsible for different steps
+- Seperate class for running the integration at all until the specified end time
+- Seperate class to provide initial condition for the acceleration
+- Seperate class to handle the residuals and the Jacobians for different time integration schemes
+- A solver factory has been created to easily configure a complex solver object
+
+amfe.forces improvements
+------------------------
+
+- Basic force distributions are provided by the forces module
+
+amfe.material improvements
+--------------------------
+
+-
+
+amfe.mesh improvements
+----------------------
+
+- The mesh now supports Groups and Tags
+- The mesh is decoupled from other classes
+
+amfe.structural_dynamics improvements
+-------------------------------------
+
+- Decoupling from other classes has been achieved
+
+amfe.tools improvements
+-----------------------
+
+-
+
+amfe.ui improvements
+--------------------
+
+- A User Interface has been added for users that do not go too deep into AMfe's class structure
+
+
+Deprecated features
+===================
+
+- Only second order systems are supported by now
+- Direct Assembly for reduced systems was removed
+- Quadratic Manifold features was removed
+- Time step adaption was removed
+
+Backwards incompatible changes
+==============================
+
+- Nearly all due to large API changes
+
+
+Other changes
+=============
+
+- Many tests have been written to enhance code coverage from 40 % to about 77 % coverage

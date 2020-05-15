@@ -18,9 +18,26 @@ class MappingBase(ABC):
 
         self._elements2global = pd.DataFrame({'global_dofs': []})
 
+    def __str__(self):
+        """
+        Returns information about the StandardMapping when using print(instance)
+
+        Returns
+        -------
+        info_of_StandardMapping: string
+        #     no_of_dofs, no_of_mapped_elements, address_RAM
+        """
+        return "--- Info about StandardMapping ---\nNo of dof: {0:,>}\nNo of mapped elements: {1}\n" \
+               "Address in RAM: {2}\n"\
+               .format(self.no_of_dofs, self.no_of_elements, id(self))
+
     @property
     def no_of_dofs(self):
         return len(np.unique(np.concatenate(self._elements2global['global_dofs'].values)))
+
+    @property
+    def no_of_elements(self):
+        return len(self._elements2global)
 
     @property
     def nodal2global(self):

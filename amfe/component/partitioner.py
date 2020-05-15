@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from amfe.mesh import Mesh
+from amfe.tools import invert_dictionary_with_iterables
 
 
 class PartitionerBase:
@@ -49,7 +50,32 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
     """
     def __init__(self):
         super().__init__()
-    
+
+    def set_partition_tags_by_group(self, mesh, group_subname='surface'):
+        """
+        Resets partition tags in a mesh such that each combination of previous partition-id and tag-type-value is
+        unique. Hence for example no partition is on two different surfaces any more, as it might result from the
+        partitioning algorithm.
+
+        Parameters
+        ----------
+        mesh : Mesh
+            mesh-object with partitions
+        group_subname : str
+            keyword, that shall be searched in the group-names
+
+        Returns
+        -------
+        None
+        """
+        elements_by_tags = self._select_element_subset_by_group(mesh, group_subname)
+
+        elements_by_partition_ids = self._get_element_subset_by_partition_ids(mesh)
+
+        partition_map = self._create_new_partition_map(mesh, elements_by_tags, elements_by_partition_ids)
+
+        mesh.el_df = self._update_elements_with_new_partition_ids(mesh.el_df, partition_map, mesh.nodes_df)
+
     def separate_partitioned_component(self, component):
         """
         Seperates a component, which has a mesh, into several components of the same type. Hence its mesh has to be
@@ -204,3 +230,95 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
                 common_full_ele = np.intersect1d(full_mat_ele, full_phys_ele)
                 assign_eleids = np.intersect1d(common_full_ele, new_component.mesh.el_df.index)
                 new_component.assign_material(material, assign_eleids, phys, '_eleids')
+
+    @staticmethod
+    def _select_element_subset_by_group(mesh, group_subname):
+        subgroups = dict()
+
+        group_names = tuple(mesh.groups.keys())
+        for group in group_names:
+            if group_subname in group:
+                ele_ids = mesh.get_elementids_by_groups((group,))
+                if len(ele_ids) is not 0:
+                    subgroups[group] = ele_ids
+
+        return subgroups
+
+    @staticmethod
+    def _get_element_subset_by_partition_ids(mesh):
+        partitions_old_list = mesh.get_uniques_by_tag('partition_id')
+        partition_id_2_eleids_old = dict()
+        for part_id in partitions_old_list:
+            partition_id_2_eleids_old[part_id] = mesh.get_elementids_by_tags('partition_id', part_id)
+
+        return partition_id_2_eleids_old
+
+    @staticmethod
+    def _create_new_partition_map(mesh, element_set_1, element_set_2):
+        partition_id = 1
+        partition_map = dict()
+        eles_that_have_partition_id = np.array([])
+
+        for group_id, group_eles in element_set_1.items():
+            for part_id, part_eles in element_set_2.items():
+                new_eles = np.intersect1d(group_eles, part_eles)
+                if new_eles.size is not 0:
+                    partition_map[partition_id] = new_eles
+                    eles_that_have_partition_id = np.append(eles_that_have_partition_id, new_eles)
+                    partition_id += 1
+
+        eles_without_partition = np.setdiff1d(mesh.el_df.index.values, eles_that_have_partition_id)
+        if eles_without_partition.size is not 0:
+            for eleid in eles_without_partition:
+                nodeids = mesh.get_nodeids_by_elementids(eleid)
+                match_found = False
+                for part_id, part_eles in partition_map.items():
+                    for part_ele in part_eles:
+                        other_ele_nodeids = mesh.get_nodeids_by_elementids(part_ele)
+                        if np.intersect1d(nodeids, other_ele_nodeids).size > 1:
+                            partition_map[part_id] = np.append(partition_map[part_id], eleid)
+                            match_found = True
+                            break
+                    if match_found:
+                        break
+
+        return partition_map
+
+    @staticmethod
+    def _update_elements_with_new_partition_ids(el_df, partition_map, nodes_df):
+        ele2partition_dict = invert_dictionary_with_iterables(partition_map)
+        ele2partition_map = pd.DataFrame.from_dict(ele2partition_dict, orient='index')
+        el_df['partition_id'] = ele2partition_map
+
+        def check_neighbor(element1, element2):
+            is_neighbor = False
+            if element1['partition_id'] is not element2['partition_id']:
+                for node1 in element1['connectivity']:
+                    for node2 in element2['connectivity']:
+                        if np.isclose(nodes_df.loc[node1].to_numpy(), nodes_df.loc[node2].to_numpy()).all():
+                            is_neighbor = True
+                            break
+                    if is_neighbor:
+                        break
+            return is_neighbor
+
+        for eleid, element in el_df.iterrows():
+            no_of_partitions = 1
+            partition_neighbors = tuple()
+            for other_eleid, other_element in el_df.iterrows():
+                if other_eleid is not eleid and other_element['partition_id'] not in partition_neighbors and \
+                        check_neighbor(element, other_element):
+                    partition_neighbors += (other_element['partition_id'],)
+            no_of_partitions += len(partition_neighbors)
+            if len(partition_neighbors) is 0:
+                partition_neighbors = None
+            elif len(partition_neighbors) is 1:
+                partition_neighbors = partition_neighbors[0]
+            else:
+                partition_neighbors = list(partition_neighbors)
+                partition_neighbors.sort()
+                partition_neighbors = tuple(partition_neighbors)
+            el_df.at[eleid, 'partitions_neighbors'] = partition_neighbors
+            el_df.at[eleid, 'no_of_mesh_partitions'] = no_of_partitions
+
+        return el_df

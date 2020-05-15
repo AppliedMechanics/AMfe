@@ -361,7 +361,7 @@ class Assembly():
         C_matrix: f_a = C_deim @ f_u
 
         Parameters:
-        ----------
+        -----------
         None
 
         Return:

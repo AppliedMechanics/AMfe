@@ -25,11 +25,11 @@ from amfe.mor.hyper_red import *
 from amfe.structural_dynamics import vibration_modes
 
 studies = []
-# studies.append('full_ti')
-studies.append('create_basis_1')
+studies.append('full_ti')
+#studies.append('create_basis_1')
 #studies.append('red_ti')
 #studies.append('ecsw')
-studies.append('poly3')
+#studies.append('poly3')
 
 Omega = 31.0
 
@@ -46,7 +46,7 @@ component = create_structural_component(mesh)
 # Assign material
 component.assign_material(material, [7], 'S')
 # Assign Dirichlet Boundaries
-set_dirichlet_by_group(component, [8], ('ux', 'uy'))
+set_dirichlet_by_group(component, 8, ('ux', 'uy'))
 # Assign Neumann Boundaries
 force = component.neumann.create_fixed_direction_neumann(np.array([0, -1], dtype=float),
                                                          lambda t: 1E8*np.sin(Omega*t))
@@ -61,7 +61,6 @@ system, formulation = create_constrained_mechanical_system_from_component(compon
 solfac = SolverFactory()
 solfac.set_system(system)
 solfac.set_dt_initial(0.001)
-solfac.set_large_deflection(True)
 solfac.set_newton_maxiter(30)
 solfac.set_newton_atol(1e-6)
 solfac.set_newton_rtol(1e-8)

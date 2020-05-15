@@ -38,7 +38,6 @@ from .tet4 import *
 from .tet10 import *
 from .hexa8 import *
 from .hexa20 import *
-# from .prism6 import *  # no stiffness
 from .bar_2d_lumped import *
 from .linear_beam import *
 

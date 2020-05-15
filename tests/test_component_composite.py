@@ -36,6 +36,7 @@ class ComponentCompositeTest(TestCase):
                 self.nodes = np.empty((0, dimension), dtype=float)
                 self.connectivity = None
                 self.el_df = pd.DataFrame(columns=['shape', 'is_boundary', 'connectivity'])
+                self.no_of_nodes = 0
 
             @property
             def no_of_elements(self):

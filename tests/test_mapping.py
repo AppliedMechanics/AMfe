@@ -50,7 +50,7 @@ class TestMapping(TestCase):
                                self.callbacks, self.callbackargs)
 
         nodal2global_desired = pd.DataFrame({'ux': {1: 0, 2: 3, 3: 6, 4: 9}, 'uy': {1: 1, 2: 4, 3: 7, 4: 10},
-                                             'T': {1: 2, 2: 5, 3: 8, 4: -1}})
+                                             'T': {1: 2, 2: 5, 3: 8, 4: -1}}, dtype=np.int64)
 
         assert_frame_equal(mapping.nodal2global, nodal2global_desired)
 
@@ -68,6 +68,18 @@ class TestMapping(TestCase):
         mapping.update_mapping(self.fields, self.nodeids, self.connectivity, self.dofs_by_element, self.callbacks,
                                self.callbackargs)
         self.assertEqual(mapping.no_of_dofs, 11)
+
+    def test_no_of_elements(self):
+        mapping = StandardMapping()
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity, self.dofs_by_element, self.callbacks,
+                               self.callbackargs)
+        self.assertEqual(mapping.no_of_elements, len(self.dofs_by_element))
+
+    def test_str(self):
+        mapping = StandardMapping()
+        mapping.update_mapping(self.fields, self.nodeids, self.connectivity, self.dofs_by_element, self.callbacks,
+                               self.callbackargs)
+        print(mapping)
 
     def test_get_dofs_by_ids(self):
         mapping = StandardMapping()

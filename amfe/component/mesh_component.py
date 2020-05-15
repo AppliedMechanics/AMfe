@@ -36,6 +36,29 @@ class MeshComponent(ComponentBase):
         self._neumann = NeumannManager()
         self._assembly = Assembly()
         self._constraints = ConstraintManager()
+        self._elements_on_nodes = np.zeros(mesh.no_of_nodes)
+
+    def __str__(self):
+        """
+        Returns information about the Component when using print(instance)
+
+        Returns
+        -------
+        info_of_Component: string
+        #     address in RAM, info about mesh, info about the constraints, info about the neumann-conditions,
+        info about the material
+        """
+
+        str_id = "Address in RAM: {}\n" .format(id(self))
+        str_mesh = "MESH:\n\t" + self.mesh.__str__().replace("\n", "\n\t") + "\n"
+        str_constraints = "CONSTRAINTS:\n\t" + self.constraints.__str__().replace("\n", "\n\t") + "\n"
+        str_neumann = "NEUMANN:\n\t" + self.neumann.__str__().replace("\n", "\n\t") + "\n"
+        str_material = "MATERIAL:\n\tlist of assigned materials:\n"
+        str_material_list = pd.DataFrame(self.get_materials(), columns=['material']).to_string()
+        str_material_list = "\t\t" + str_material_list.replace("\n", "\n\t\t") + "\n"
+
+        return "\n----- Info about Component -----\n" + str_id + str_mesh + str_constraints + \
+               str_neumann + str_material + str_material_list
 
     # -- PROPERTIES --------------------------------------------------------------------------------------
     @property
@@ -118,6 +141,18 @@ class MeshComponent(ComponentBase):
         self._C_csr = self._assembly.preallocate(self._mapping.no_of_dofs, self._mapping.elements2global)
         self._M_csr = self._C_csr.copy()
         self._f_glob_int = np.zeros(self._C_csr.shape[1])
+        self._update_elements_on_nodes()
+
+    def _update_elements_on_nodes(self):
+        logger = logging.getLogger(__name__)
+        logger.debug('Update number of elements on nodes...')
+        self._elements_on_nodes = np.zeros(self._mesh.no_of_nodes)
+        for nodeidx in range(self._mesh.no_of_nodes):
+            nodeids = self._mesh.get_nodeids_by_nodeidxs([nodeidx])
+            element_ids_all = self._mesh.get_elementids_by_nodeids(nodeids)
+            element_ids = np.intersect1d(self._ele_obj_df['fk_mesh'].values, element_ids_all)
+            self._elements_on_nodes[nodeidx] = element_ids.size
+        logger.debug('Update number of elements on nodes finished.')
 
     # -- ASSIGN NEUMANN CONDITION METHODS -----------------------------------------------------------------
     def assign_neumann(self, name, condition, tag_values, tag='_groups', ignore_nonexistent=False):
@@ -209,12 +244,12 @@ class MeshComponent(ComponentBase):
         volume_connectivites = self._ele_obj_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values
         dofs_by_elements = [element.dofs() for element in self._ele_obj_df['ele_obj'].values]
         volume_callbacks = [self.write_mapping_key]*len(dofs_by_elements)
-        volume_callbackargs = self._ele_obj_df.index.get_values()
+        volume_callbackargs = self._ele_obj_df.index.to_numpy()
 
         boundary_connectivities = self._neumann.el_df.join(self._mesh.el_df, on='fk_mesh')['connectivity'].values
         dofs_by_elements_boundary = [element.dofs() for element in self._neumann.el_df['neumann_obj'].values]
         boundary_callbacks = [self._neumann.write_mapping_key]*len(dofs_by_elements_boundary)
-        boundary_callbackargs = self._neumann.el_df.index.get_values()
+        boundary_callbackargs = self._neumann.el_df.index.to_numpy()
 
         connectivities = np.concatenate([volume_connectivites, boundary_connectivities])
         dofs_by_elements.extend(dofs_by_elements_boundary)

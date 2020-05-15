@@ -12,11 +12,12 @@ It returns the solution to A x = b and expects two to four parameters:
 
 - A is the sparse matrix of the linear equation A x = b
 - b is the right hand side vector
-- matrix_type specifies the type of the matrix to choose the best solver for this type of linear equation.
-  The following values are possible:
-     - 'symm' (default): for symmetric matrices
-     - 'spd': for symmetric positive definite matrices
-     - 'unsymm': for not symmetric matrices (the most general case)
+- matrix_type specifies the type of the matrix to choose the best solver for this type of linear equation. The following values are possible:
+
+  - 'symm' (default): for symmetric matrices
+  - 'spd': for symmetric positive definite matrices
+  - 'unsymm': for not symmetric matrices (the most general case)
+
 - verbose is a flag if the solver prints some information during solve process. It can be set to true or false (default).
 
 

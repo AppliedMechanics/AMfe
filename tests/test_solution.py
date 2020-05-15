@@ -25,30 +25,34 @@ from amfe.solver import AmfeSolution, AmfeSolutionHdf5, solve_async
 class DummySolver:
     def __init__(self):
         self.ndof = 100
+        self.strains = None
 
     def solve(self, callback, callbackargs=(), t0=0.0, tend=1.0, dt=0.01):
-        t, q, dq, ddq = self._initialize(t0, tend, dt, self.ndof)
+        t, q, dq, ddq, strains, stresses = self._initialize(t0, tend, dt, self.ndof)
 
         t = np.arange(t0, tend, dt)
 
         for i, t_current in enumerate(t):
-            callback(t_current, q[i, :], dq[i, :], ddq[i, :], *callbackargs)
+            callback(t_current, q[i, :], dq[i, :], ddq[i, :], strains[i, :, :], stresses[i, :, :], *callbackargs)
 
     async def solve_async(self, callback, callbackargs=(), t0=0.0, tend=1, dt=0.01):
-        t, q, dq, ddq = self._initialize(t0, tend, dt, self.ndof)
+        t, q, dq, ddq, strains, stresses = self._initialize(t0, tend, dt, self.ndof)
 
         t = np.arange(t0, tend, dt)
 
         for i, t_current in enumerate(t):
-            await callback(t_current, q[i, :], dq[i, :], ddq[i, :], *callbackargs)
+            await callback(t_current, q[i, :], dq[i, :], ddq[i, :], strains[i, :, :], stresses[i, :, :], *callbackargs)
 
-    @staticmethod
-    def _initialize(t0, tend, dt, ndof):
+    def _initialize(self, t0, tend, dt, ndof):
         t = np.arange(t0, tend, dt)
         q = np.array([np.arange(0, ndof)*scale for scale in t])
         dq = q.copy()
         ddq = q.copy()
-        return t, q, dq, ddq
+        if self.strains is None:
+            self.strains = np.array([np.random.rand(ndof, 6) * scale for scale in t])
+        strains = self.strains
+        stresses = strains.copy()
+        return t, q, dq, ddq, strains, stresses
 
 
 class AmfeSolutionTest(TestCase):
@@ -133,6 +137,40 @@ class AmfeSolutionTest(TestCase):
         self.assertEqual(len(solution.t), 2)
         self.assertIsNone(solution.dq[0])
         self.assertIsNone(solution.dq[1])
+
+        # q and strains
+        solution = AmfeSolution()
+        strains1 = np.random.rand(60, 6)
+        strains2 = np.random.rand(60, 6)
+
+        solution.write_timestep(t1, q1, strain=strains1)
+        solution.write_timestep(t2, q2, strain=strains2)
+        self.assertEqual(solution.t[0], t1)
+        self.assertEqual(solution.t[1], t2)
+        assert_array_equal(solution.q[0], q1)
+        assert_array_equal(solution.q[1], q2)
+        assert_array_equal(solution.strain[0], strains1)
+        assert_array_equal(solution.strain[1], strains2)
+        self.assertIsNone(solution.stress[0])
+        self.assertIsNone(solution.stress[1])
+
+        # q, strains and stresses
+        solution = AmfeSolution()
+        strains1 = np.random.rand(60, 6)
+        strains2 = np.random.rand(60, 6)
+        stresses1 = np.random.rand(60, 6)
+        stresses2 = np.random.rand(60, 6)
+
+        solution.write_timestep(t1, q1, strain=strains1, stress=stresses1)
+        solution.write_timestep(t2, q2, strain=strains2, stress=stresses2)
+        self.assertEqual(solution.t[0], t1)
+        self.assertEqual(solution.t[1], t2)
+        assert_array_equal(solution.q[0], q1)
+        assert_array_equal(solution.q[1], q2)
+        assert_array_equal(solution.strain[0], strains1)
+        assert_array_equal(solution.strain[1], strains2)
+        assert_array_equal(solution.stress[0], stresses1)
+        assert_array_equal(solution.stress[1], stresses2)
         return
 
 
@@ -153,6 +191,10 @@ class AmfeSolutionHdf5Test(TestCase):
         dq2 = np.arange(30, 90, dtype=float)
         ddq1 = np.arange(40, 100, dtype=float)
         ddq2 = np.arange(50, 110, dtype=float)
+        strains1 = np.random.rand(60, 6)
+        strains2 = np.random.rand(60, 6)
+        stresses1 = np.random.rand(60, 6)
+        stresses2 = np.random.rand(60, 6)
         t1 = 0.1
         t2 = 0.5
 
@@ -228,6 +270,88 @@ class AmfeSolutionHdf5Test(TestCase):
             self.assertEqual(dataset[1]['t'], t2)
             self.assertEqual(len(dataset), 2)
 
+        # only q and strain
+        h5amfe = AmfeSolutionHdf5(filename, 'Sim1', tablename='testcase')
+        with h5amfe as writer:
+            # Only q and strain
+            writer.write_timestep(t1, q1, strain=strains1)
+            writer.write_timestep(t2, q2, strain=strains2)
+
+        with h5py.File(filename, mode='r') as fp:
+            dataset = fp['Sim1/testcase']
+
+            assert_array_equal(dataset[0]['q'], q1)
+            assert_array_equal(dataset[1]['q'], q2)
+            assert_array_equal(dataset[0]['strain'], strains1)
+            assert_array_equal(dataset[1]['strain'], strains2)
+            self.assertEqual(dataset[0]['t'], t1)
+            self.assertEqual(dataset[1]['t'], t2)
+            self.assertEqual(len(dataset), 2)
+
+        # only q and stress
+        h5amfe = AmfeSolutionHdf5(filename, 'Sim1', tablename='testcase')
+        with h5amfe as writer:
+            # Only q and stress
+            writer.write_timestep(t1, q1, stress=stresses1)
+            writer.write_timestep(t2, q2, stress=stresses2)
+
+        with h5py.File(filename, mode='r') as fp:
+            dataset = fp['Sim1/testcase']
+
+            assert_array_equal(dataset[0]['q'], q1)
+            assert_array_equal(dataset[1]['q'], q2)
+            assert_array_equal(dataset[0]['stress'], stresses1)
+            assert_array_equal(dataset[1]['stress'], stresses2)
+            self.assertEqual(dataset[0]['t'], t1)
+            self.assertEqual(dataset[1]['t'], t2)
+            self.assertEqual(len(dataset), 2)
+
+        # only q, dq, strain and stress
+        h5amfe = AmfeSolutionHdf5(filename, 'Sim1', tablename='testcase')
+        with h5amfe as writer:
+            # Only q, dq, strain and stress
+            writer.write_timestep(t1, q1, dq1, strain=strains1, stress=stresses1)
+            writer.write_timestep(t2, q2, dq2, strain=strains2, stress=stresses2)
+
+        with h5py.File(filename, mode='r') as fp:
+            dataset = fp['Sim1/testcase']
+
+            assert_array_equal(dataset[0]['q'], q1)
+            assert_array_equal(dataset[1]['q'], q2)
+            assert_array_equal(dataset[0]['dq'], dq1)
+            assert_array_equal(dataset[1]['dq'], dq2)
+            assert_array_equal(dataset[0]['strain'], strains1)
+            assert_array_equal(dataset[1]['strain'], strains2)
+            assert_array_equal(dataset[0]['stress'], stresses1)
+            assert_array_equal(dataset[1]['stress'], stresses2)
+            self.assertEqual(dataset[0]['t'], t1)
+            self.assertEqual(dataset[1]['t'], t2)
+            self.assertEqual(len(dataset), 2)
+
+        # q, dq, ddq, strain and stress
+        h5amfe = AmfeSolutionHdf5(filename, 'Sim1', tablename='testcase')
+        with h5amfe as writer:
+            # q, dq, ddq, strain and stress
+            writer.write_timestep(t1, q1, dq1, ddq1, strains1, stresses1)
+            writer.write_timestep(t2, q2, dq2, ddq2, strains2, stresses2)
+
+        with h5py.File(filename, mode='r') as fp:
+            dataset = fp['Sim1/testcase']
+
+            assert_array_equal(dataset[0]['q'], q1)
+            assert_array_equal(dataset[1]['q'], q2)
+            assert_array_equal(dataset[0]['dq'], dq1)
+            assert_array_equal(dataset[1]['dq'], dq2)
+            assert_array_equal(dataset[0]['ddq'], ddq1)
+            assert_array_equal(dataset[1]['ddq'], ddq2)
+            assert_array_equal(dataset[0]['strain'], strains1)
+            assert_array_equal(dataset[1]['strain'], strains2)
+            assert_array_equal(dataset[0]['stress'], stresses1)
+            assert_array_equal(dataset[1]['stress'], stresses2)
+            self.assertEqual(dataset[0]['t'], t1)
+            self.assertEqual(dataset[1]['t'], t2)
+            self.assertEqual(len(dataset), 2)
+
 
 class AsyncSolutionHdf5Test(TestCase):
     def setUp(self):
@@ -262,7 +386,7 @@ class AsyncSolutionHdf5Test(TestCase):
         # Test if results have been written into hdf5 correctly
         with h5py.File(filename, mode='r') as fp:
             # Get the desired results from solver
-            t, q, dq, ddq = mysolver._initialize(t0, tend, dt, mysolver.ndof)
+            t, q, dq, ddq, strains, stresses = mysolver._initialize(t0, tend, dt, mysolver.ndof)
 
             # Get dataset
             dataset = fp['Sim1/asyncsolution']
@@ -274,6 +398,10 @@ class AsyncSolutionHdf5Test(TestCase):
             assert_array_equal(dataset[1]['dq'], dq[1, :])
             assert_array_equal(dataset[0]['ddq'], ddq[0, :])
             assert_array_equal(dataset[1]['ddq'], ddq[1, :])
+            assert_array_equal(dataset[0]['strain'], strains[0, :, :])
+            assert_array_equal(dataset[1]['strain'], strains[1, :, :])
+            assert_array_equal(dataset[0]['stress'], stresses[0, :, :])
+            assert_array_equal(dataset[1]['stress'], stresses[1, :, :])
             self.assertEqual(dataset[0]['t'], t[0])
             self.assertEqual(dataset[1]['t'], t[1])
             # test if all entries have been written

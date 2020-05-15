@@ -7,10 +7,16 @@
 """
 Module providing a ConstraintManager
 
-On constraint-implementation see literature:
-Gould, N.I.M. e.a. (1998) - On the Solution of Equality Constrained Quadratic Programming Problems Arising in
-Optimization
+On constraint-implementation see literature [Gould1998]_ [Bauchau2010]_ :
+
+.. [Gould1998] Gould, N.I.M. e.a. (1998) - On the Solution of Equality Constrained Quadratic Programming Problems Arising
+in Optimization
+
+.. [Bauchau2010] Bauchau, Olivier Andre. Flexible multibody dynamics. Vol. 176. Springer Science & Business Media, 2010.
+
 """
+
+import logging
 
 import numpy as np
 import pandas as pd
@@ -69,6 +75,22 @@ class ConstraintManager:
         self._update_flag = True
         return
 
+    def __str__(self):
+        """
+        Returns information about the Constrain-Manager when using print(instance)
+
+        Returns
+        -------
+        info_of_Constraint-Manager: string
+            No of constraint definitions, No of constraints, No of dofs unconstrained, List of applied constraints,
+            Address in RAM
+        """
+        return "--- Info about Constraint-Manager ---\nNo of constraint definitions: {0:,>}\n" \
+               "No of constraints: {1:,}\nNo of dofs unconstrained: {2:,}\nList of applied constraints:\n{3}\n" \
+               "Address in RAM: {4}" \
+               .format(self.no_of_constraint_definitions, self.no_of_constraints, self.no_of_dofs_unconstrained,
+                       self._constraints_df.to_string(columns=['constraint_obj', 'dofidxs', 'name']), id(self))
+
     @property
     def no_of_constraint_definitions(self):
         """
@@ -124,17 +146,6 @@ class ConstraintManager:
         self._update_flag = True
     
     @staticmethod
-    def create_fixed_distance_constraint():
-        """
-        Create a constraint that preserves a fixed distance
-
-        Returns
-        -------
-        constraint: amfe.constraint.FixedDistanceConstraint
-        """
-        return FixedDistanceConstraint()
-
-    @staticmethod
     def create_dirichlet_constraint(U=lambda t: 0., dU=lambda t: 0., ddU=lambda t: 0.):
         """
         Create a Dirichlet constraint
@@ -155,6 +166,39 @@ class ConstraintManager:
         return DirichletConstraint(U, dU, ddU)
 
     @staticmethod
+    def create_fixed_distance_constraint():
+        """
+        Create a constraint that preserves a fixed distance
+
+        Returns
+        -------
+        constraint: amfe.constraint.FixedDistanceConstraint
+        """
+        return FixedDistanceConstraint()
+
+    @staticmethod
+    def create_fixed_distance_to_line_constraint():
+        """
+        Create a constraint that preserve a fixed distance to line
+
+        Returns
+        -------
+        constraint: amfe.constraint.FixedDistanceConstraint
+        """
+        return FixedDistanceToLineConstraint()
+
+    @staticmethod
+    def create_nodes_collinear_2D_constraint():
+        """
+        Create a constraint that defines collinearity (three points on a line).
+
+        Returns
+        -------
+        constraint: amfe.constraint.NodesCollinear2DConstraint
+        """
+        return NodesCollinear2DConstraint()
+
+    @staticmethod
     def create_equal_displacement_constraint():
         """
         Create a constraint where two dofs have the same displacements
@@ -164,6 +208,29 @@ class ConstraintManager:
         constraint: amfe.constraint.EqualDisplacementConstraint
         """
         return EqualDisplacementConstraint()
+
+    @staticmethod
+    def create_fixed_distance_to_plane_constraint():
+        """
+        Create a constraint that defines a fixed distance to plane constraint where three nodes define the plane
+        and one node has a fixed distance to it
+
+        Returns
+        -------
+        constraint: amfe.constraint.TestFixedDistanceToPlaneConstraint
+        """
+        return FixedDistanceToPlaneConstraint()
+
+    @staticmethod
+    def create_nodes_coplanar_constraint():
+        """
+        Create a constraint that defines a nodes coplanar constraint between four nodes
+
+        Returns
+        -------
+        constraint: amfe.constraint.NodesCoplanarConstraint
+        """
+        return NodesCoplanarConstraint()
 
     def add_constraint(self, name, constraint_obj, dofidxs, Xidxs=()):
         """
@@ -183,7 +250,8 @@ class ConstraintManager:
             ATTENTION: Whether this is needed or not depends on the constraint's type. Take a look at the constraint-
             classes' documentation!
         """
-        print('Adding constraint {} to dofs {} and nodes {}'.format(name, dofidxs, Xidxs))
+        logger = logging.getLogger(__name__)
+        logger.debug('Adding constraint {} to dofs {} and nodes {}'.format(name, dofidxs, Xidxs))
 
         # Create new rows for constraints_df
         df = pd.DataFrame(

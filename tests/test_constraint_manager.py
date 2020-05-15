@@ -1,36 +1,20 @@
 """Test Routine for constraint manager"""
 
-from unittest import TestCase
+from unittest import TestCase, skip
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_array_equal, assert_allclose
 from pandas.testing import assert_frame_equal
 
 from amfe.constraint.constraint_manager import ConstraintManager
+from amfe.constraint.constraint import *
 
 
 class ConstraintManagerTest(TestCase):
     def setUp(self):
         self.cm = ConstraintManager(3)
-
-        class DummyDirichletConstraint:
-
-            NO_OF_CONSTRAINTS = 1
-
-            def __init__(self, u_constr):
-                self.u_constr = u_constr
-
-            def after_assignment(self, dofids):
-                return
-
-            def constraint_func(self, X_local, u_local, t):
-                return u_local - self.u_constr
-            
-            def jacobian(self, X_local, u_local, t):
-                return np.array([1])
-
-        self.diric_constraint = DummyDirichletConstraint(0)
-        self.diric_constraint2 = DummyDirichletConstraint(0.5)
+        self.diric_constraint = self.cm.create_dirichlet_constraint(U=lambda t: 0, dU=lambda t: 0, ddU=lambda t: 0)
+        self.diric_constraint2 = self.cm.create_dirichlet_constraint(U=lambda t: t ** 2, dU=lambda t: 3 * t, ddU=lambda t: 2)
 
     def tearDown(self):
         self.cm = None
@@ -38,6 +22,34 @@ class ConstraintManagerTest(TestCase):
     def _add_two_dirichlet_constraints(self):
         self.cm.add_constraint('Dirich0', self.diric_constraint, [2], [])
         self.cm.add_constraint('Dirich0', self.diric_constraint, [1], [])
+
+    def test_create_fixed_distance_constraint(self):
+        self.fixed_d_constraint = self.cm.create_fixed_distance_constraint()
+        self.assertTrue(isinstance(self.fixed_d_constraint, FixedDistanceConstraint))
+
+    def test_create_dirichlet_constraint(self):
+        self.assertTrue(isinstance(self.diric_constraint, DirichletConstraint))
+
+    def test_create_fixed_distance_to_line_constraint(self):
+        self.fixed_d_line_constraint = self.cm.create_fixed_distance_to_line_constraint()
+        self.assertTrue(isinstance(self.fixed_d_line_constraint, FixedDistanceToLineConstraint))
+
+    def test_create_nodes_collinear_2D_constraint(self):
+        self.nodes_coll_constraint = self.cm.create_nodes_collinear_2D_constraint()
+        self.assertTrue(isinstance(self.nodes_coll_constraint, NodesCollinear2DConstraint))
+
+    def test_create_equal_displacement_constraint(self):
+        self.nodes_equal_displ_constraint = self.cm.create_equal_displacement_constraint()
+        self.assertTrue(isinstance(self.nodes_equal_displ_constraint, EqualDisplacementConstraint))
+
+    @skip("temporarily disabled because constraint-class has to be reimplemented")
+    def test_create_fixed_distance_to_plane_constraint(self):
+        self.fixed_d_plane_constraint = self.cm.create_fixed_distance_to_plane_constraint()
+        self.assertTrue(isinstance(self.fixed_d_plane_constraint, FixedDistanceToPlaneConstraint))
+
+    def test_create_nodes_coplanar_constraint(self):
+        self.nodes_cop_constraint = self.cm.create_nodes_coplanar_constraint()
+        self.assertTrue(isinstance(self.nodes_cop_constraint, NodesCoplanarConstraint))
 
     def test_no_of_constraint_definitions(self):
         self._add_two_dirichlet_constraints()
@@ -130,6 +142,9 @@ class ConstraintManagerTest(TestCase):
         B = self.cm.B(X, u, t)
         B_desired = np.array([[0, 0, 1], [0, 1, 0]], dtype=float)
         assert_array_equal(B_desired, B.todense())
+
+    def test_str(self):
+        print(self.cm)
 
 
 class PendulumConstraintManagerTest(TestCase):

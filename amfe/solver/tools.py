@@ -5,6 +5,7 @@ import numpy as np
 __all__ = ['MemoizeJac',
            'MemoizeStiffness',
            'MemoizeConstant',
+           'MakeConstantCallable'
            ]
 
 
@@ -68,3 +69,16 @@ class MemoizeStiffness(object):
         else:
             self(q, dq, t, *args)
         return self.jac
+
+
+class MakeConstantCallable(object):
+    """
+    Object, that stores an object at initialization and provides a caller-method of the same name, which returns the
+    stored object. This is especially recommended for callback-functions for objects, that would be constructed anew at
+    each call, but won't change.
+    """
+    def __init__(self, constant):
+        self._cache = constant
+
+    def __call__(self, *args, **kwargs):
+        return self._cache

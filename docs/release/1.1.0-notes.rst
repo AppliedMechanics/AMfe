@@ -1,0 +1,120 @@
+========================
+AMfe 1.1.0 Release Notes
+========================
+
+
+Highlights of this release
+--------------------------
+
+
+New features
+============
+
+amfe.assembly improvements
+--------------------------
+
+amfe.component improvements
+---------------------------
+
+- Partitioner redefines partition-ids of a mesh, such that unique combinations of tags and partition-ids are new
+  partition-ids, e.g. combination of manual partitioning with surface-groups and automatic partitions
+- Added str-method to component
+- Added caller for strains- and stresses-assembly
+
+amfe.constraint improvements
+----------------------------
+
+- Added str-method to constraint-manager
+- Added missing creation functions for several constraints
+
+amfe.element improvements
+-------------------------
+
+amfe.fortran improvements
+-------------------------
+
+amfe.io improvements
+--------------------
+
+- Fixed bug in vtkmeshconverter with Elemental Groups and integer groupnames
+- Extended Solution-Reader to export velocities and accelerations
+- Added normal and shear strains and stresses to exportable fields
+
+amfe.linalg improvements
+------------------------
+
+- Allow to use Amfe without mkl being installed (no dependency on pardiso solver)
+
+amfe.mapping improvements
+-------------------------
+
+- Fixed bug with data type of the mapping indices
+- Added method to return the number of mapped elements
+
+amfe.mor improvements
+---------------------
+
+amfe.neumann improvements
+-------------------------
+
+- added str method to neumann manager
+
+amfe.parametric improvements
+----------------------------
+
+amfe.solver improvements
+------------------------
+
+- Prediction step in Generalized Alpha scheme changed
+
+amfe.forces improvements
+------------------------
+
+amfe.material improvements
+--------------------------
+
+amfe.mesh improvements
+----------------------
+
+- added str method to mesh
+
+amfe.structural_dynamics improvements
+-------------------------------------
+
+amfe.tools improvements
+-----------------------
+
+- added invertion methods for dictionaries
+
+amfe.ui improvements
+--------------------
+- added method to compute the modes of a system
+- UI exports strains and stresses by default
+- created tests for methods in amfe.ui
+- in all solvers, changed argument from taking a Component to MechanicalSystem
+- added option 'normal' to set_neumann_by_group in order to set a neumann condition with a following normal direction
+to surface
+- UI exports strains and stresses by default
+
+
+Deprecated features
+===================
+
+Backwards incompatible changes
+==============================
+
+Other changes
+=============
+
+- Release notes have been added
+- A conda setup script was added to enable conda users to easily install dependencies for amfe
+- Setup.py general improvements
+- list of examples in doc updated
+- list of packages in doc updated
+- The __init__ system has been changed such that only one level downwards must be imported by the user.
+- updated tutorial 1 in documentation
+- Fixed bug with deprecated pandas API. The methods get_values and set_values was replaced by .to_numpy and .at methods.
+- Added a tools module for test-methods
+- Gitlab CI was updated to use docker images
+- Automatic wheel build in gitlab-ci
+- Cleaned up IO-tests

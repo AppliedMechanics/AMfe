@@ -9,6 +9,7 @@ Table of Contents
    chapters/fundamentals/index
    chapters/examples/index
    Package <chapters/package_doc/index>
+   release/index
    notes
 
 ******************

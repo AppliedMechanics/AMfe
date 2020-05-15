@@ -3,41 +3,84 @@
 
 stages:
     - build
-    - unittest
-    - doctest
-    - linttest
+    - test
+    - deploy
+
+default:
+  tags:
+    - docker
+  image: hyperred/amfe-gitlab-ci:0.1.2
+  # This image already sets the path variable such that the python
+  # is in /opt/conda/envs/amfe-dev/bin/python (the clean environment from docker image)
 
 build_without_fortran:
-    stage: build
-    script:
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-dev/bin:$PATH"
-        - python setup.py develop no_fortran
+  stage: build
+  script:
+    - python setup.py develop no_fortran
 
-build:
-    stage: build
-    script:
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-dev/bin:$PATH"
-        - python setup.py develop
+build_with_fortran:
+  stage: build
+  script:
+    - /opt/conda/bin/conda install numpy -n amfe-dev
+    - python setup.py develop
 
 unittest:
-  stage: unittest
-  when: always
+  stage: test
   script:
-    - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-dev/bin:$PATH"
+    - /opt/conda/bin/conda install numpy -n amfe-dev
     - python setup.py develop
+    - /opt/conda/bin/conda install nose coverage pylint mkl -n amfe-dev
     - nosetests --with-coverage --cover-package amfe
 
+
 documentation_test:
-    stage: doctest
-    when: always
-    script:
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-dev/bin:$PATH"
-        - python setup.py build_sphinx
+  stage: test
+  when: always
+  script:
+    - /opt/conda/bin/conda install numpy -n amfe-dev
+    - python setup.py develop
+    - python setup.py build_sphinx
 
 
 language_quality_test:
-    stage: linttest
-    when: always
-    script:
-        - export PATH="/home/gitlab-runner/anaconda3/envs/amfe-dev/bin:$PATH"
-        - pylint amfe || exit 0 # pylint always exits with nonzero...
+  stage: test
+  when: always
+  script:
+    - /opt/conda/bin/conda install pylint -n amfe-dev
+    - pylint amfe || exit 0 # pylint always exits with nonzero...
+
+build_wheel_for_linux_developer:
+  stage: deploy
+  script:
+    - /opt/conda/bin/conda install numpy -n amfe-dev
+    - python setup.py bdist_wheel
+  artifacts:
+    name: AMfe-linux
+    paths:
+      - dist/*.whl
+    expire_in: 2 months
+  only:
+    - developer
+
+build_wheel_for_linux_master:
+  stage: deploy
+  script:
+    - /opt/conda/bin/conda install numpy -n amfe-dev
+    - python setup.py bdist_wheel
+  artifacts:
+    name: AMfe-linux
+    paths:
+      - dist/*.whl
+  only:
+    - master
+
+pages:
+  stage: deploy
+  script:
+    - /opt/conda/bin/conda install numpy -n amfe-dev
+    - python setup.py develop
+    - sphinx-build -b html -d docs/_build/doctrees   ./docs docs/_build/html
+    - mv docs/_build/html public
+  artifacts:
+    paths:
+      - public

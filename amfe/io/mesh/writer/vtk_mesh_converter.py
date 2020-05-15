@@ -58,7 +58,6 @@ class VtkMeshConverter(MeshConverter):
         self._eleid2cell = dict()
         self._tags = dict()
         self._groups = dict()
-        self.logger = logging.getLogger('amfe.io.VtkMeshConverter')
         self._nodes_df = pd.DataFrame(columns=['row', 'x', 'y', 'z'])
         self._el_df = pd.DataFrame(columns=['id', 'type', 'connectivity'])
         self._index = 0
@@ -280,7 +279,7 @@ class VtkMeshConverter(MeshConverter):
                 vtkarray.FillComponent(0, 0)
                 vtkarray.SetName(tagname)
                 for tagvalue, eleids in tag_dict.items():
-                    vtkids = [self._eleid2cell[eleid] for eleid in eleids]
+                    vtkids = [self._el_df.index[self._el_df['id'] == eleid][0] for eleid in eleids]
                     for vtkid in vtkids:
                         vtkarray.SetTuple1(vtkid, int(tagvalue))
                 self._vtkelements.GetCellData().AddArray(vtkarray)
@@ -298,7 +297,7 @@ class VtkMeshConverter(MeshConverter):
                     vtkelements = vtk.vtkIntArray()
                     vtkelements.SetNumberOfComponents(1)
                     vtkelements.SetNumberOfTuples(self._vtkelements.GetNumberOfCells())
-                    vtkelements.SetName(groupname + '_elements')
+                    vtkelements.SetName(str(groupname) + '_elements')
                     vtkelements.FillComponent(0, 0)
                     for elementid in elementids:
                         vtkelements.SetTuple1(elementid, 1)
@@ -308,7 +307,7 @@ class VtkMeshConverter(MeshConverter):
                     vtknodes = vtk.vtkIntArray()
                     vtknodes.SetNumberOfComponents(1)
                     vtknodes.SetNumberOfTuples(self._vtknodes.GetNumberOfPoints())
-                    vtknodes.SetName(groupname + '_nodes')
+                    vtknodes.SetName(str(groupname) + '_nodes')
                     vtknodes.FillComponent(0, 0)
 
                     for nodeid in nodeids:
@@ -322,7 +321,8 @@ class VtkMeshConverter(MeshConverter):
         elif file_extension == '.vtk':
             vtkwriter = vtk.vtkUnstructuredGridWriter()
         else:
-            self.logger.warning('No file extension given, choose \'vtk\' format')
+            logger = logging.getLogger(__name__)
+            logger.warning('No file extension was given, \'vtk\' format is chosen')
             self._filename = self._filename + '.vtk'
             vtkwriter = vtk.vtkUnstructuredGridWriter()
 

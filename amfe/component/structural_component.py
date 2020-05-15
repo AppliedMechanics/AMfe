@@ -4,7 +4,8 @@
 #
 
 from scipy.sparse import csc_matrix
-
+import numpy as np
+import logging
 from .mesh_component import MeshComponent
 from amfe.assembly.structural_assembly import StructuralAssembly
 from amfe.component.constants import ELEPROTOTYPEHELPERLIST, SHELLELEPROTOTYPEHELPERLIST
@@ -31,6 +32,8 @@ class StructuralComponent(MeshComponent):
         self._M_csr = None
         self._f_glob_int = None
         self._f_glob_ext = None
+        self._stresses = None
+        self._strains = None
 
     def g_holo(self, q, t):
         """
@@ -277,3 +280,36 @@ class StructuralComponent(MeshComponent):
                                                          neumann_connectivities, neumann_dofs, q, t,
                                                          f_glob=self._f_glob_ext)
         return self._f_glob_ext
+
+    def strains_and_stresses(self, q, dq, t):
+        """
+        Update strain- and stress-fields
+
+        Parameters
+        ----------
+        q : ndarray
+            Displacement field in voigt notation.
+        dq : ndarray
+            Velocity field in voigt notation.
+        t : float
+            time
+
+        Returns
+        -------
+        strains : ndarray
+            nodal strains for each node
+
+        stresses : ndarray
+            nodal stresses for each node
+        """
+        logger = logging.getLogger(__name__)
+        logger.info('assembling strains and stresses...')
+
+        K_csr, f_glob, self._stresses, self._strains = self._assembly.assemble_k_f_S_E(self._mesh.nodes, self.ele_obj,
+                                                      self._mesh.get_iconnectivity_by_elementids(
+                                                          self._ele_obj_df['fk_mesh'].values),
+                                                      self._mapping.get_dofs_by_ids(
+                                                          self._ele_obj_df['fk_mapping'].values), self._elements_on_nodes, q, t,
+                                                      self._C_csr, self._f_glob_int)
+
+        return self._strains, self._stresses

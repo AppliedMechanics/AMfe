@@ -93,7 +93,27 @@ class Mesh:
         self._changed_iconnectivity = True
         # Cache for lazy evaluation of iconnectivity
         self._iconnectivity_df_cached = pd.DataFrame(columns=('iconnectivity',))
-        
+
+    def __str__(self):
+        """
+        Returns information about the mesh instance when using print(instance)
+
+        Returns
+        -------
+        info_of_mesh: string
+            dimension, no of elements, no of boundary elements, no of nodes
+        """
+        return "Info about mesh-object\ndimension of mesh: \t\t{0}\nNo of elements: \t\t{1:,}\n" \
+               "No of boundary elements\t{2:,}\nNo of nodes: \t\t\t{3:,}\nAdress in RAM\t\t\t{4}\n" \
+               .format(self.dimension, self.no_of_elements, self.no_of_boundary_elements, self.no_of_nodes, id(self))
+
+    @property
+    def element_ids(self):
+        """
+        Returns all element-ids, that are part of the mesh
+        """
+        return self._el_df.index.values
+
     @property
     def el_df(self):
         return self._el_df
@@ -305,7 +325,7 @@ class Mesh:
 
     def get_elementids_by_elementidxs(self, elementidxs):
         """
-        Returns elementids belonging to elements with elementidxs in connectivity array
+        Returns elementids of elements at the given dataframe-indices
 
         Parameters
         ----------
@@ -317,6 +337,38 @@ class Mesh:
             ids of the elements
         """
         return self._el_df.iloc[elementidxs].index.values
+
+    def get_elementids_by_nodeids(self, nodeids):
+        """
+        Returns elementids of elements, that have at least on of the given nodeids in their connectivity
+
+        Parameters
+        ----------
+        nodeids : iterable
+            nodeids, the connectivity has to be searched for
+
+        Returns
+        -------
+        eleids : ndarray
+            elementids, that belong to the node
+        """
+        #eleids = np.array([], dtype=int)
+        #for element_id in self.element_ids:
+#            connectivity = self.get_connectivity_by_elementids(np.array([element_id]))
+#            for nodeid in nodeids:
+#                if nodeid in connectivity[0]:
+#                    eleids = np.append(eleids, np.array([element_id]))
+#                    break
+
+        def df_fun(arr):
+            for nodeid in nodeids:
+                if nodeid in arr:
+                    return True
+            return False
+
+        eleids = self._el_df.index[self._el_df['connectivity'].apply(df_fun)].values
+
+        return eleids
 
     def get_nodeid_by_coordinates(self, x, y, z=None, epsilon=1e-12):
         """
@@ -1101,7 +1153,7 @@ class Mesh:
             for n_ele in target_eleids:
                 nodes = self.get_connectivity_by_elementids([n_ele])[0]
                 nodes[nodes == old_node] = int(new_node)
-                self._el_df.set_value(n_ele, 'connectivity', nodes)
+                self._el_df.at[n_ele, 'connectivity'] = nodes
         self._changed_iconnectivity = True
 
     def get_value_by_elementid_and_tag(self, ele_id, tag):

@@ -12,7 +12,7 @@ from amfe.constraint.constraint_formulation_nullspace_elimination import Nullspa
 from amfe.constraint.constraint_formulation import ConstraintFormulationBase
 from amfe.constraint.constraint_manager import ConstraintManager
 from amfe.solver.nonlinear_solver import NewtonRaphson
-from amfe.solver import GeneralizedAlpha
+from amfe.solver import GeneralizedAlpha, NonlinearIntegrationStepper
 from amfe.solver import AmfeSolution
 
 
@@ -254,6 +254,7 @@ class PendulumConstraintTest(TestCase):
 
         sol_lagrange = AmfeSolution()
         sol_nullspace = AmfeSolution()
+        phi_analytical = []
 
         formulations = [(formulation_lagrange, sol_lagrange), (formulation_nullspace, sol_nullspace)]
         # Define state: 90deg to the right
@@ -274,8 +275,9 @@ class PendulumConstraintTest(TestCase):
                                           formulation.D,
                                           alpha_m=0.0)
             integrator.dt = 0.025
-            integrator.nonlinear_solver_func = nonlinear_solver.solve
-            integrator.nonlinear_solver_options = {'rtol': 1e-7, 'atol': 1e-6}
+            integration_stepper = NonlinearIntegrationStepper(integrator)
+            integration_stepper.nonlinear_solver_func = nonlinear_solver.solve
+            integration_stepper.nonlinear_solver_options = {'rtol': 1e-7, 'atol': 1e-6}
 
             # Initialize first timestep
             t = 0.0
@@ -289,19 +291,30 @@ class PendulumConstraintTest(TestCase):
             # Call write timestep for initial conditions
             write_callback(t, x, dx, ddx)
 
+            i = 0
             # Run Loop
             while t < t_end:
-                t, x, dx, ddx = integrator.step(t, x, dx, ddx)
+                phi_analytical.append(np.pi / 2 * np.cos(np.sqrt(self.g / self.L) * t))
+                t, x, dx, ddx = integration_stepper.step(t, x, dx, ddx)
                 write_callback(t, x, dx, ddx)
+                i += 1
 
-        def plot_pendulum_path(u_plot):
-            plt.scatter(self.X[2]+[u[2] for u in u_plot], self.X[3]+[u[3] for u in u_plot])
-            plt.title('Pendulum-test: Positional curve of rigid pendulum under gravitation')
-            return
+            phi_analytical.append(np.pi / 2 * np.cos(np.sqrt(self.g / self.L) * t))
 
-        # UNCOMMENT THESE LINES IF YOU LIKE TO SEE A TRAJECTORY (THIS CAN NOT BE DONE FOR GITLAB-RUNNER
-        # plot_pendulum_path(sol_lagrange.q)
-        # plot_pendulum_path(sol_nullspace.q)
+        def plot_pendulum_path(u_plot, label_name):
+            return plt.scatter(self.X[2]+[u[2] for u in u_plot], self.X[3]+[u[3] for u in u_plot], label=label_name)
+
+
+        plt.title('Pendulum-test: Positional curve of rigid pendulum under gravitation')
+        lagrange = plot_pendulum_path(sol_lagrange.q, 'Lagrange')
+        nullspace = plot_pendulum_path(sol_nullspace.q, 'Nullspace')
+        # ANALYTICAL SOLUTION FOR SMALL ANGLES
+        #analytical = plt.scatter([self.L*np.sin(phi) for phi in phi_analytical], [-self.L*np.cos(phi) for phi in phi_analytical], label='Analytical')
+        axes = plt.gca()
+        axes.set_xlim([-2.1, 2.1])
+        axes.set_ylim([-2.1, 2.1])
+        plt.legend(handles=[lagrange, nullspace])#, analytical])
+        # UNCOMMENT NEXT LINE IF YOU LIKE TO SEE A TRAJECTORY (THIS CAN NOT BE DONE FOR GITLAB-RUNNER)
         # plt.show()
 
         # test if nullspace formulation is almost equal to lagrangian
@@ -311,5 +324,4 @@ class PendulumConstraintTest(TestCase):
             x_lagrange = self.X.reshape(-1) + q_lagrange
             x_nullspace = self.X.reshape(-1) + q_nullspace
             assert_allclose(np.array([np.linalg.norm(x_lagrange[2:] - x_lagrange[:2])]), np.array([self.L]), atol=1e-3)
-            assert_allclose(np.array([np.linalg.norm(x_nullspace[2:] - x_nullspace[:2])]), np.array([self.L]),
-                            atol=1e-1)
+            assert_allclose(np.array([np.linalg.norm(x_nullspace[2:] - x_nullspace[:2])]), np.array([self.L]), atol=1e-1)

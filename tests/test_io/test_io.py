@@ -5,21 +5,15 @@ Tests for testing io module
 
 from unittest import TestCase
 import os
-import numpy as np
 import pandas as pd
-import h5py
-import pickle
 from numpy.testing import assert_allclose, assert_array_equal
 from pandas.testing import assert_frame_equal
 
-from amfe.component import StructuralComponent
-from amfe.material import KirchhoffMaterial
-from amfe.solver import AmfeSolution, AmfeSolutionHdf5
 # Import I/O tools
 from amfe.io.tools import check_dir, amfe_dir
 
 # Import Mesh Reader
-from amfe.io.mesh.reader import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, AmfeMeshObjMeshReader,\
+from amfe.io.mesh.reader import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, AmfeMeshObjMeshReader, \
     Hdf5MeshReader
 
 # Import Mesh Writer
@@ -28,15 +22,9 @@ from amfe.io.mesh.base import MeshConverter
 
 # Import Postprocessing Tools
 from amfe.io.postprocessing import *
-from amfe.io.postprocessing.tools import *
-# Import Postprocessing Reader
-from amfe.io.postprocessing.reader import AmfeHdf5PostProcessorReader, AmfeSolutionReader
 
-# Import Postprocessingwriter
-from amfe.io.postprocessing.writer import Hdf5PostProcessorWriter
-from amfe.io.postprocessing.base import PostProcessorWriter
-
-from amfe.mesh import Mesh
+from tests.tools import CustomDictAssertTest
+from .tools import load_object, create_amfe_obj, clean_test_outputs
 
 
 class DummyMeshConverter(MeshConverter):
@@ -78,97 +66,10 @@ class DummyMeshConverter(MeshConverter):
         return self
 
 
-class DummyPostProcessorWriter(PostProcessorWriter):
-    def __init__(self, meshreaderobj):
-        super().__init__(meshreaderobj)
-        self._meshreader = meshreaderobj
-        self._fields = dict()
-
-    def write_field(self, name, field_type, t, data, index, mesh_entity_type):
-        fielddict = {'data_type': field_type,
-                     'timesteps': t,
-                     'index': index,
-                     'mesh_entity_type': mesh_entity_type,
-                     'data': data
-                     }
-        if name in fielddict:
-            raise ValueError('Field already written')
-        self._fields.update({name: fielddict})
-
-    def return_result(self):
-        return self._fields
-
-
-def create_amfe_obj():
-    # Define input file path
-    meshobj = Mesh(dimension=2)
-
-    nodes = np.array([[1.345600000e-02, 3.561675700e-02],
-                              [5.206839561e-01, 3.740820950e-02],
-                              [3.851982918e-02, 5.460016703e-01],
-                              [5.457667372e-01, 5.477935420e-01],
-                              [1.027911912e+00, 3.919966200e-02],
-                              [6.358365836e-02, 1.056386584e+00],
-                              [1.040469476e+00, 5.445628213e-01],
-                              [5.582746582e-01, 1.053154002e+00],
-                              [1.052965658e+00, 1.049921420e+00],
-                              [1.535139868e+00, 4.099111450e-02],
-                              [1.547697432e+00, 5.463542738e-01],
-                              [1.547656658e+00, 1.046688838e+00],
-                              [2.042367825e+00, 4.278256700e-02],
-                              [2.042357741e+00, 5.431194119e-01],
-                              [2.042347658e+00, 1.043456257e+00]], dtype=float)
-
-    connectivity = [np.array([13, 15,  9, 14, 12, 11], dtype=int),
-                            np.array([9, 6, 5, 8, 4, 7], dtype=int),
-                            np.array([9,  5, 13,  7,  10, 11], dtype=int),
-                            np.array([1, 5, 6, 2, 4, 3], dtype=int),
-                            np.array([5, 13,  10], dtype=int),
-                            np.array([1, 5, 2], dtype=int),
-                            np.array([6, 1, 3], dtype=int),
-                            np.array([9, 6, 8], dtype=int),
-                            np.array([13, 15, 14], dtype=int),
-                            np.array([15,  9, 12], dtype=int)]
-
-    data = {'shape': ['Tri6', 'Tri6', 'Tri6', 'Tri6', 'quadratic_line',
-                      'quadratic_line', 'quadratic_line', 'quadratic_line',
-                      'quadratic_line', 'quadratic_line'],
-            'connectivity': connectivity,
-            'is_boundary': [False, False, False, False, True, True, True, True, True, True]
-            }
-    indices = list(np.arange(1, 11))
-
-    meshobj.el_df = pd.DataFrame(data, index=indices)
-
-    meshobj.groups = {'left': {'nodes': [], 'elements': [2, 4]},
-                      'right': {'nodes': [], 'elements': [1, 3]},
-                      'left_boundary': {'nodes': [], 'elements': [7]},
-                      'right_boundary': {'nodes': [], 'elements': [9]},
-                      'top_boundary': {'nodes': [], 'elements': [8, 10]},
-                      'left_dirichlet': {'nodes': [1, 3, 6], 'elements': []}}
-
-    nodeids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-
-    meshobj.nodes_df = pd.DataFrame({'x': nodes[:, 0], 'y': nodes[:, 1]}, index=nodeids)
-    return meshobj
-
-
-def clean_test_outputs():
-    directory = amfe_dir('results/.tests/')
-    check_dir(directory + 'test.txt')
-    directory = amfe_dir('results/.tests/')
-    for f in os.listdir(directory):
-        if f == 'hdf5_dummy.hdf5' or f == 'hdf5postprocessing.hdf5':
-            return
-        filename = directory + f
-        if os.path.isfile(filename):
-            os.remove(filename)
-    return
-
-
 class IOTest(TestCase):
     def setUp(self):
         clean_test_outputs()
+        self.custom_asserter = CustomDictAssertTest()
 
     def tearDown(self):
         pass
@@ -272,33 +173,33 @@ class IOTest(TestCase):
     def test_dummy_to_amfe(self):
         # Desired nodes
         nodes_input = [(1, 1.345600000e-02, 3.561675700e-02, 0.000000000e+00),
-                         (2, 5.206839561e-01, 3.740820950e-02, 6.193195000e-04),
-                         (3, 3.851982918e-02, 5.460016703e-01, 4.489461500e-03),
-                         (4, 5.457667372e-01, 5.477935420e-01, 6.984401105e-04),
-                         (5, 1.027911912e+00, 3.919966200e-02, 1.238639000e-03),
-                         (6, 6.358365836e-02, 1.056386584e+00, 8.978923000e-03),
-                         (7, 1.040469476e+00, 5.445628213e-01, 1.301993398e-03),
-                         (8, 5.582746582e-01, 1.053154002e+00, 7.377279750e-03),
-                         (9, 1.052965658e+00, 1.049921420e+00, 5.775636500e-03),
-                         (10, 1.535139868e+00, 4.099111450e-02, 1.857958500e-03),
-                         (11, 1.547697432e+00, 5.463542738e-01, 1.921312898e-03),
-                         (12, 1.547656658e+00, 1.046688838e+00, 4.173993250e-03),
-                         (13, 2.042367825e+00, 4.278256700e-02, 2.477278000e-03),
-                         (14, 2.042357741e+00, 5.431194119e-01, 2.524814000e-03),
-                         (15, 2.042347658e+00, 1.043456257e+00, 2.572350000e-03)]
+                       (2, 5.206839561e-01, 3.740820950e-02, 6.193195000e-04),
+                       (3, 3.851982918e-02, 5.460016703e-01, 4.489461500e-03),
+                       (4, 5.457667372e-01, 5.477935420e-01, 6.984401105e-04),
+                       (5, 1.027911912e+00, 3.919966200e-02, 1.238639000e-03),
+                       (6, 6.358365836e-02, 1.056386584e+00, 8.978923000e-03),
+                       (7, 1.040469476e+00, 5.445628213e-01, 1.301993398e-03),
+                       (8, 5.582746582e-01, 1.053154002e+00, 7.377279750e-03),
+                       (9, 1.052965658e+00, 1.049921420e+00, 5.775636500e-03),
+                       (10, 1.535139868e+00, 4.099111450e-02, 1.857958500e-03),
+                       (11, 1.547697432e+00, 5.463542738e-01, 1.921312898e-03),
+                       (12, 1.547656658e+00, 1.046688838e+00, 4.173993250e-03),
+                       (13, 2.042367825e+00, 4.278256700e-02, 2.477278000e-03),
+                       (14, 2.042357741e+00, 5.431194119e-01, 2.524814000e-03),
+                       (15, 2.042347658e+00, 1.043456257e+00, 2.572350000e-03)]
         # Desired elements
         # (internal name of Triangle Nnode 3 is 'Tri3')
         elements_input = [(1, 'Tri6', [13, 15, 9, 14, 12, 11]),
-                            (2, 'Tri6', [9, 6, 5, 8, 4, 7]),
-                            (3, 'Tri6', [9, 5, 13, 7, 10, 11]),
-                            (4, 'Tri6', [1, 5, 6, 2, 4, 3]),
-                            (5, 'quadratic_line', [5, 13, 10]),
-                            (6, 'quadratic_line', [1, 5, 2]),
-                            (7, 'quadratic_line', [6, 1, 3]),
-                            (8, 'quadratic_line', [9, 6, 8]),
-                            (9, 'quadratic_line', [13, 15, 14]),
-                            (10, 'quadratic_line', [15, 9, 12])
-                            ]
+                          (2, 'Tri6', [9, 6, 5, 8, 4, 7]),
+                          (3, 'Tri6', [9, 5, 13, 7, 10, 11]),
+                          (4, 'Tri6', [1, 5, 6, 2, 4, 3]),
+                          (5, 'quadratic_line', [5, 13, 10]),
+                          (6, 'quadratic_line', [1, 5, 2]),
+                          (7, 'quadratic_line', [6, 1, 3]),
+                          (8, 'quadratic_line', [9, 6, 8]),
+                          (9, 'quadratic_line', [13, 15, 14]),
+                          (10, 'quadratic_line', [15, 9, 12])
+                          ]
         groups_input = [
             ('left', [], [2, 4]),
             ('right', [], [1, 3]),
@@ -357,33 +258,33 @@ class IOTest(TestCase):
     def set_dummy_input(self):
         # Desired nodes
         self.nodes_input = [(1, 1.345600000e-02, 3.561675700e-02, 0.000000000e+00),
-                       (2, 5.206839561e-01, 3.740820950e-02, 6.193195000e-04),
-                       (3, 3.851982918e-02, 5.460016703e-01, 4.489461500e-03),
-                       (4, 5.457667372e-01, 5.477935420e-01, 6.984401105e-04),
-                       (50, 1.027911912e+00, 3.919966200e-02, 1.238639000e-03),
-                       (6, 6.358365836e-02, 1.056386584e+00, 8.978923000e-03),
-                       (7, 1.040469476e+00, 5.445628213e-01, 1.301993398e-03),
-                       (8, 5.582746582e-01, 1.053154002e+00, 7.377279750e-03),
-                       (9, 1.052965658e+00, 1.049921420e+00, 5.775636500e-03),
-                       (10, 1.535139868e+00, 4.099111450e-02, 1.857958500e-03),
-                       (11, 1.547697432e+00, 5.463542738e-01, 1.921312898e-03),
-                       (12, 1.547656658e+00, 1.046688838e+00, 4.173993250e-03),
-                       (13, 2.042367825e+00, 4.278256700e-02, 2.477278000e-03),
-                       (14, 2.042357741e+00, 5.431194119e-01, 2.524814000e-03),
-                       (15, 2.042347658e+00, 1.043456257e+00, 2.572350000e-03)]
+                            (2, 5.206839561e-01, 3.740820950e-02, 6.193195000e-04),
+                            (3, 3.851982918e-02, 5.460016703e-01, 4.489461500e-03),
+                            (4, 5.457667372e-01, 5.477935420e-01, 6.984401105e-04),
+                            (50, 1.027911912e+00, 3.919966200e-02, 1.238639000e-03),
+                            (6, 6.358365836e-02, 1.056386584e+00, 8.978923000e-03),
+                            (7, 1.040469476e+00, 5.445628213e-01, 1.301993398e-03),
+                            (8, 5.582746582e-01, 1.053154002e+00, 7.377279750e-03),
+                            (9, 1.052965658e+00, 1.049921420e+00, 5.775636500e-03),
+                            (10, 1.535139868e+00, 4.099111450e-02, 1.857958500e-03),
+                            (11, 1.547697432e+00, 5.463542738e-01, 1.921312898e-03),
+                            (12, 1.547656658e+00, 1.046688838e+00, 4.173993250e-03),
+                            (13, 2.042367825e+00, 4.278256700e-02, 2.477278000e-03),
+                            (14, 2.042357741e+00, 5.431194119e-01, 2.524814000e-03),
+                            (15, 2.042347658e+00, 1.043456257e+00, 2.572350000e-03)]
         # Desired elements
         # (internal name of Triangle Nnode 3 is 'Tri3')
         self.elements_input = [(1, 'Tri6', [13, 15, 9, 14, 12, 11]),
-                          (2, 'Tri6', [9, 6, 50, 8, 4, 7]),
-                          (3, 'Tri6', [9, 50, 13, 7, 10, 11]),
-                          (4, 'Tri6', [1, 50, 6, 2, 4, 3]),
-                          (5, 'quadratic_line', [50, 13, 10]),
-                          (6, 'quadratic_line', [1, 50, 2]),
-                          (7, 'quadratic_line', [6, 1, 3]),
-                          (8, 'quadratic_line', [9, 6, 8]),
-                          (9, 'quadratic_line', [13, 15, 14]),
-                          (10, 'quadratic_line', [15, 9, 12])
-                          ]
+                               (2, 'Tri6', [9, 6, 50, 8, 4, 7]),
+                               (3, 'Tri6', [9, 50, 13, 7, 10, 11]),
+                               (4, 'Tri6', [1, 50, 6, 2, 4, 3]),
+                               (5, 'quadratic_line', [50, 13, 10]),
+                               (6, 'quadratic_line', [1, 50, 2]),
+                               (7, 'quadratic_line', [6, 1, 3]),
+                               (8, 'quadratic_line', [9, 6, 8]),
+                               (9, 'quadratic_line', [13, 15, 14]),
+                               (10, 'quadratic_line', [15, 9, 12])
+                               ]
         self.groups_input = [
             ('left', [], [2, 4]),
             ('right', [], [1, 3]),
@@ -564,7 +465,7 @@ class IOTest(TestCase):
         # old ordering: [5, 42, 60, 30, 21, 45, 75, 65, 44, 32, 22,
         # 63, 47, 64, 76, 67, 49, 66, 77, 78]
         element_57_desired = (57, 'Hexa20', [5, 42, 60, 30, 21, 45, 75, 65, 44, 63, 64,
-                                              32, 49, 77, 78, 66, 22, 47, 76, 67])
+                                             32, 49, 77, 78, 66, 22, 47, 76, 67])
 
         dimension_desired = 3
         # Define input file path
@@ -602,6 +503,135 @@ class IOTest(TestCase):
         self.assertEqual(mesh._no_of_nodes, 113)
         self.assertEqual(mesh._no_of_elements, 112)
         self.assertEqual(mesh._dimension, dimension_desired)
+
+    def test_gmshascii_to_dummy_physical_surfaces_and_partitions(self):
+        # Desired nodes
+        nodes_desired = [(1, 0.0, 0.0, 0.0),
+                         (2, 0.0, 5.0, 0.0),
+                         (3, 5.0, 5.0, 0.0),
+                         (4, 5.0, 0.0, 0.0),
+                         (5, 10.0, 0.0, 0.0),
+                         (6, 10.0, 5.0, 0.0),
+                         (7, 0.0, 10.0, 0.0),
+                         (8, 10.0, 10.0, 0.0),
+                         (9, 2.499999999996199, 0.0, 0.0),
+                         (10, 5, 2.499999999996199, 0),
+                         (11, 2.5, 5, 0),
+                         (12, 0, 2.5, 0),
+                         (13, 7.176360840382222, 0, 0),
+                         (14, 7.176360840382227, 5, 0),
+                         (15, 5, 2.5, 0),
+                         (16, 2.499999999996199, 5, 0),
+                         (17, 7.176360840382222, 5, 0),
+                         (18, 5, 10, 0),
+                         (19, 0, 7.176360840382227, 0),
+                         (20, 2.5, 2.5, 0),
+                         (21, 1.2499999999981, 1.25, 0),
+                         (22, 1.25, 3.75, 0),
+                         (23, 3.7499999999981, 1.2499999999981, 0),
+                         (24, 3.750000000001901, 3.749999999998099, 0),
+                         (25, 8.22303669484285, 2.552255592639131, 0),
+                         (26, 6.540735812640291, 1.811426457748249, 0),
+                         (27, 6.3023563126068, 3.480526007198198, 0),
+                         (28, 2.842729718643214, 7.449413862174849, 0),
+                         (29, 6.088180420191112, 7.499999999999999, 0),
+                         (30, 8.316135315143335, 6.875, 0),
+                         (31, 1.335682429659853, 6.156443675639268, 0)]
+
+        # Desired elements
+        # (internal name of Triangle Nnode 3 is 'Tri3')
+        elements_desired = [(1, 'straight_line', [2, 12]),
+                            (2, 'straight_line', [12, 1]),
+                            (3, 'straight_line', [5, 6]),
+                            (4, 'straight_line', [6, 8]),
+                            (5, 'straight_line', [7, 19]),
+                            (6, 'straight_line', [19, 2]),
+                            (7, 'Tri3', [24, 23, 10]),
+                            (8, 'Tri3', [20, 23, 24]),
+                            (9, 'Tri3', [4, 23, 9]),
+                            (10, 'Tri3', [3, 24, 10]),
+                            (11, 'Tri3', [9, 23, 20]),
+                            (12, 'Tri3', [9, 20, 21]),
+                            (13, 'Tri3', [1, 21, 12]),
+                            (14, 'Tri3', [12, 21, 20]),
+                            (15, 'Tri3', [11, 20, 24]),
+                            (16, 'Tri3', [11, 22, 20]),
+                            (17, 'Tri3', [12, 20, 22]),
+                            (18, 'Tri3', [3, 11, 24]),
+                            (19, 'Tri3', [2, 22, 11]),
+                            (20, 'Tri3', [2, 12, 22]),
+                            (21, 'Tri3', [4, 10, 23]),
+                            (22, 'Tri3', [1, 9, 21]),
+                            (23, 'Tri3', [5, 25, 13]),
+                            (24, 'Tri3', [6, 14, 25]),
+                            (25, 'Tri3', [14, 27, 25]),
+                            (26, 'Tri3', [13, 25, 26]),
+                            (27, 'Tri3', [4, 13, 26]),
+                            (28, 'Tri3', [4, 26, 15]),
+                            (29, 'Tri3', [25, 27, 26]),
+                            (30, 'Tri3', [3, 15, 27]),
+                            (31, 'Tri3', [3, 27, 14]),
+                            (32, 'Tri3', [15, 26, 27]),
+                            (33, 'Tri3', [5, 6, 25]),
+                            (34, 'Tri3', [7, 28, 18]),
+                            (35, 'Tri3', [3, 28, 16]),
+                            (36, 'Tri3', [7, 19, 28]),
+                            (37, 'Tri3', [3, 29, 28]),
+                            (38, 'Tri3', [8, 29, 30]),
+                            (39, 'Tri3', [3, 17, 29]),
+                            (40, 'Tri3', [8, 18, 29]),
+                            (41, 'Tri3', [19, 31, 28]),
+                            (42, 'Tri3', [2, 16, 31]),
+                            (43, 'Tri3', [16, 28, 31]),
+                            (44, 'Tri3', [6, 30, 17]),
+                            (45, 'Tri3', [2, 31, 19]),
+                            (46, 'Tri3', [17, 30, 29]),
+                            (47, 'Tri3', [18, 28, 29]),
+                            (48, 'Tri3', [6, 8, 30])]
+
+        dimension_desired = 2
+        groups_desired = [('x_dirichlet-line', [], [1, 2, 5, 6]),
+                          ('x_neumann', [], [3, 4]),
+                          ('surface_left', [], [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]),
+                          ('surface_right', [], [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]),
+                          ('surface_top', [], [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48])]
+
+        tags_desired = {'no_of_mesh_partitions': {1: [1, 2, 5, 6, 7, 9, 10, 20, 21, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48],
+                                                  2: [3, 4, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 22]},
+                        'partition_id': {2: [1, 2, 4, 5, 6, 13, 14, 16, 17, 19, 20, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48],
+                                         1: [3, 7, 8, 9, 10, 11, 12, 15, 18, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]},
+                        'partitions_neighbors': {(None,): [1, 2, 5, 6, 7, 9, 10, 20, 21, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48],
+                                                 (2,): [3, 8, 11, 12, 15, 18, 22],
+                                                 (1,): [4, 13, 14, 16, 17, 19]},
+                        'elemental_group': {4: [1, 2],
+                                            6: [3],
+                                            11: [4],
+                                            13: [5, 6],
+                                            1: [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
+                                            2: [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33],
+                                            3: [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]}}
+
+        # Define input file path
+        file = amfe_dir('tests/meshes/3_surfaces_2_partitions_mesh.msh')
+        # Define Reader Object, initialized with AmfeMeshConverter
+        reader = GmshAsciiMeshReader(file)
+        # Parse dummy mesh
+        dummy = DummyMeshConverter()
+        reader.parse(dummy)
+        mesh = dummy.return_mesh()
+
+        # Check nodes
+        for i, node in enumerate(nodes_desired):
+            self.assertEqual(mesh._nodes[i], node)
+        # Check elements
+        for i, element in enumerate(elements_desired):
+            self.assertEqual(mesh._elements[mesh._elements.index(element)], element)
+        # Check mesh dimension
+        self.assertEqual(mesh._dimension, dimension_desired)
+        self.assertEqual(mesh._groups, groups_desired)
+        self.custom_asserter.assert_dict_almost_equal(mesh._tags, tags_desired)
+        self.assertEqual(mesh._no_of_nodes, 31)
+        self.assertEqual(mesh._no_of_elements, 48)
 
     def test_amfemeshobj_to_dummy(self):
         # Desired nodes
@@ -672,9 +702,9 @@ class IOTest(TestCase):
         self.assertTrue('no_of_mesh_partitions' in mesh_obj.el_df)
         self.assertTrue('partition_id' in mesh_obj.el_df)
         self.assertTrue('partitions_neighbors' in mesh_obj.el_df)
-        
-        desired_list_1 = [1,1,2,2]
-        desired_list_2 = [1,1,1,2]
+
+        desired_list_1 = [1, 1, 2, 2]
+        desired_list_2 = [1, 1, 1, 2]
         desired_list_3 = [None, None, 2, 1]
         actual_list_1 = mesh_obj.el_df['no_of_mesh_partitions'].tolist()
         actual_list_2 = mesh_obj.el_df['partition_id'].tolist()
@@ -703,11 +733,11 @@ class IOTest(TestCase):
         actual_list_1 = mesh_obj.el_df['no_of_mesh_partitions'].tolist()
         actual_list_2 = mesh_obj.el_df['partition_id'].tolist()
         actual_list_3 = mesh_obj.el_df['partitions_neighbors'].tolist()
-        
+
         self.assertListEqual(actual_list_1, desired_list_1)
         self.assertListEqual(actual_list_2, desired_list_2)
         self.assertListEqual(actual_list_3, desired_list_3)
-        
+
     def test_gmsh_parser_with_8_partitions(self):
 
         msh_filename = amfe_dir('tests/meshes/retangule_5_by_2_quad_par_8_irreg.msh')
@@ -727,149 +757,10 @@ class IOTest(TestCase):
         desired_list_1 = load_object(amfe_dir('tests/pickle_obj/l1.pkl'))
         desired_list_2 = load_object(amfe_dir('tests/pickle_obj/l2.pkl'))
         desired_list_3 = load_object(amfe_dir('tests/pickle_obj/l3.pkl'))
-        
+
         self.assertListEqual(actual_list_1, desired_list_1)
         self.assertListEqual(actual_list_2, desired_list_2)
         self.assertListEqual(actual_list_3, desired_list_3)
-
-
-class PostProcessorTest(TestCase):
-    def setUp(self):
-        clean_test_outputs()
-
-    def tearDown(self):
-        pass
-
-    def _create_fields(self):
-        amfemesh = create_amfe_obj()
-        self.meshreader = AmfeMeshObjMeshReader(amfemesh)
-
-        self.timesteps = np.arange(0, 0.8, 0.2)  # 4 timesteps
-        no_of_nodes = amfemesh.no_of_nodes
-        no_of_cells = amfemesh.no_of_elements
-        dim = 3
-        no_of_dofs = no_of_nodes * dim
-        # q = np.random.rand(no_of_dofs * len(timesteps)).reshape(no_of_dofs, len(timesteps))
-        q = np.ones((no_of_dofs, len(self.timesteps)))
-        q[:, 0] = q[:, 0] * 0.0
-        q[:, 1] = q[:, 1] * 0.1
-        q[:, 2] = q[:, 2] * 0.2
-        q[:, 3] = q[:, 3] * 0.3
-        q2 = -q
-
-        s = np.arange(no_of_cells * len(self.timesteps)).reshape(no_of_cells, len(self.timesteps))
-        volume_indices = amfemesh.el_df[amfemesh.el_df['is_boundary'] == False].index.values
-
-        self.fields_desired = {'Nodefield1': {'data_type': PostProcessDataType.VECTOR, 'timesteps': self.timesteps,
-                                              'data': q, 'index': amfemesh.nodes_df.index.values,
-                                              'mesh_entity_type': MeshEntityType.NODE},
-                               'Nodefield2': {'data_type': PostProcessDataType.VECTOR, 'timesteps': self.timesteps,
-                                              'data': q2, 'index': amfemesh.nodes_df.index.values,
-                                              'mesh_entity_type': MeshEntityType.NODE},
-                               'Elementfield1': {'data_type': PostProcessDataType.SCALAR, 'timesteps': self.timesteps,
-                                                 'data': s, 'index': volume_indices,
-                                                 'mesh_entity_type': MeshEntityType.ELEMENT}
-                               }
-        self.fields_no_of_nodes = no_of_nodes
-        self.fields_no_of_timesteps = len(self.timesteps)
-
-    def test_hdf5_postprocessor_writer_and_reader(self):
-        self._create_fields()
-
-        filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
-
-        if os.path.isfile(filename):
-            os.remove(filename)
-
-        writer = Hdf5PostProcessorWriter(self.meshreader, filename, '/myresults')
-        fields = self.fields_desired
-        for fieldname in fields:
-            field = fields[fieldname]
-            if field['data_type'] == PostProcessDataType.VECTOR:
-                data = field['data'].reshape(self.fields_no_of_nodes, 3, self.fields_no_of_timesteps)
-            else:
-                data = field['data']
-            writer.write_field(fieldname, field['data_type'], field['timesteps'],
-                               data, field['index'], field['mesh_entity_type'])
-
-        self._create_fields()
-
-        h5filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
-
-        postprocessorreader = AmfeHdf5PostProcessorReader(h5filename,
-                                                          meshrootpath='/mesh',
-                                                          resultsrootpath='/myresults')
-        meshreader = Hdf5MeshReader(h5filename, '/mesh')
-        postprocessorwriter = DummyPostProcessorWriter(meshreader)
-        postprocessorreader.parse(postprocessorwriter)
-        fields = postprocessorwriter.return_result()
-        # Check no of fields:
-        self.assertEqual(len(fields.keys()), len(self.fields_desired.keys()))
-        # Check each field:
-        for fieldname in self.fields_desired:
-            field_actual = fields[fieldname]
-            field_desired = self.fields_desired[fieldname]
-            assert_array_equal(field_actual['timesteps'], field_desired['timesteps'])
-            assert_array_equal(field_actual['data_type'], field_desired['data_type'])
-            assert_array_equal(field_actual['data'], field_desired['data'])
-            assert_array_equal(field_actual['index'], field_desired['index'])
-            assert_array_equal(field_actual['mesh_entity_type'], field_desired['mesh_entity_type'])
-
-    def test_write_xdmf_from_hdf5(self):
-        self._create_fields()
-        filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
-        with h5py.File(filename, mode='r') as hdf5_fp:
-            filename = amfe_dir('results/.tests/hdf5postprocessing.xdmf')
-            with open(filename, 'wb') as xdmf_fp:
-                fielddict = self.fields_desired
-                for key in fielddict:
-                    fielddict[key].update({'hdf5path': '/myresults/{}'.format(key)})
-                    timesteps = fielddict[key]['timesteps']
-                # timesteps = np.arange(0, 0.8, 0.2)  # 4 timesteps
-                write_xdmf_from_hdf5(xdmf_fp, hdf5_fp, '/mesh/nodes', '/mesh/topology', timesteps, fielddict)
-
-    def test_amfe_solution_reader(self):
-        self._create_fields()
-
-        amfesolution = AmfeSolution()
-        sol = self.fields_desired['Nodefield1']
-        for t, q in zip(sol['timesteps'], sol['data'].T):
-            amfesolution.write_timestep(t, q)
-
-        mesh = create_amfe_obj()
-        meshcomponent = StructuralComponent(mesh)
-        # Set a material to get a mapping
-        material = KirchhoffMaterial()
-        meshcomponent.assign_material(material, 'Tri6', 'S', 'shape')
-
-        postprocessorreader = AmfeSolutionReader(amfesolution, meshcomponent)
-
-        #meshreader = AmfeMeshObjMeshReader(mesh)
-        #postprocessorwriter = DummyPostProcessorWriter(meshreader)
-        # postprocessorreader.parse(postprocessorwriter)
-        # fields = postprocessorwriter.return_result()
-        # Check no of fields:
-#        self.assertEqual(len(fields.keys()), len(self.fields_desired.keys()))
-        # Check each field:
-        #for fieldname in self.fields_desired:
-#            field_actual = fields[fieldname]
-#            field_desired = self.fields_desired[fieldname]
-#            assert_array_equal(field_actual['timesteps'], field_desired['timesteps'])
-#            assert_array_equal(field_actual['data_type'], field_desired['data_type'])
-#            assert_array_equal(field_actual['data'], field_desired['data'])
-#            assert_array_equal(field_actual['index'], field_desired['index'])
-#            assert_array_equal(field_actual['mesh_entity_type'], field_desired['mesh_entity_type'])
-
-
-def save_object(obj, filename):
-    with open(filename, 'wb') as output:
-        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
-
-
-def load_object(filename):
-    with open(filename, 'rb') as input:
-        obj = pickle.load(input)
-    return obj
 
 
 # Example for testing one certain test:

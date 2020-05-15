@@ -75,6 +75,9 @@ class TestMesh(TestCase):
         with self.assertRaises(ValueError) as err:
             mesh = Mesh(dimension=1)
 
+    def test_element_ids(self):
+        assert_array_equal(self.testmesh.element_ids, self._eleids)
+
     def test_no_of_properties(self):
         self.assertEqual(self.testmesh.no_of_nodes, 6)
         self.assertEqual(self.testmesh.no_of_elements, 3)
@@ -132,6 +135,21 @@ class TestMesh(TestCase):
     def test_get_elementids_by_elementidxs(self):
         actual = self.testmesh.get_elementids_by_elementidxs([3, 0])
         desired = np.array([4, 1], dtype=int)
+        assert_array_equal(actual, desired)
+
+    def test_get_elementids_by_nodeids(self):
+        actual = self.testmesh.get_elementids_by_nodeids([1])
+        desired = np.array([3, 4], dtype=int)
+        assert_array_equal(actual, desired)
+        actual = self.testmesh.get_elementids_by_nodeids([3, 1])
+        desired = np.array([1, 2, 3, 4], dtype=int)
+        assert_array_equal(actual, desired)
+        actual = self.testmesh.get_elementids_by_nodeids((3, 1))
+        assert_array_equal(actual, desired)
+        actual = self.testmesh.get_elementids_by_nodeids(np.array([3, 1]))
+        assert_array_equal(actual, desired)
+        actual = self.testmesh.get_elementids_by_nodeids([0])
+        desired = np.array([], dtype=int)
         assert_array_equal(actual, desired)
 
     def test_get_elementidxs_by_groups(self):
@@ -551,6 +569,9 @@ class TestMesh(TestCase):
         for actual_arr, desired_arr in zip(actual, desired):
             assert_array_equal(desired_arr, actual_arr)
 
+    def test_str(self):
+        print(self.testmesh)
+
 
 class TestPartitionedMesh(TestCase):
     def setUp(self):
@@ -655,7 +676,6 @@ class TestPartitionedMesh(TestCase):
         neighbors_actual = self.testmesh.get_value_by_elementid_and_tag(2, 'partitions_neighbors')
 
         assert_array_equal(neighbors_actual, neighbors_desired)
-
 
 
 if __name__ == '__main__':

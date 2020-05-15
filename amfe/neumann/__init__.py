@@ -12,6 +12,5 @@ Module to apply and manage different kinds of Neumann conditions
 """
 
 from .neumann_manager import *
-from .neumann_base import *
 from .structural_neumann import *
 from .tools import *

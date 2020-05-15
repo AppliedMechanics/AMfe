@@ -8,12 +8,29 @@
 Running a 3D-tension bar
 """
 #%%
+import logging.config
+import yaml
+
 import numpy as np
 
 from amfe.ui import *
 from amfe.io import amfe_dir
 from amfe.material import KirchhoffMaterial
 from amfe.solver import *
+
+# Define the logging options
+# Set global logging to not set
+logging.basicConfig(level=logging.NOTSET)
+with open('log_example_config.yml', 'r') as file:
+    configuration = yaml.safe_load(file.read())
+    logging.config.dictConfig(configuration)
+
+# Get AMfe logger
+amfelogger = logging.root.getChild('amfe')
+amfelogger.setLevel(logging.INFO)
+# Get a special logger for Dirichlet constraint
+amfeloggerconstraint = amfelogger.getChild('constraint')
+amfeloggerconstraint.setLevel(logging.DEBUG)
 
 mesh_file = amfe_dir('meshes/test_meshes/bar_Tet4_fine.msh')
 output_file = amfe_dir('results/bar_tet10/bar_tet4_pardiso')
@@ -25,8 +42,8 @@ my_material = KirchhoffMaterial()
 component.assign_material(my_material, [29], 'S')
 
 # Fixations are simple to realize
-set_dirichlet_by_group(component, [30], ('ux', 'uy', 'uz'))
-set_dirichlet_by_group(component, [31], ('uy', 'uz'))
+set_dirichlet_by_group(component, 30, ('ux', 'uy', 'uz'))
+set_dirichlet_by_group(component, 31, ('uy', 'uz'))
 
 # Special boundary condition: let all x coordinates have equal displacement
 constraint = component.constraints.create_equal_displacement_constraint()
@@ -54,7 +71,6 @@ solfac = SolverFactory()
 
 solfac.set_system(system)
 solfac.set_analysis_type('static')
-solfac.set_large_deflection(True)
 solfac.set_dt_initial(0.05)
 solfac.set_analysis_type('zero')
 solfac.set_linear_solver('pardiso')

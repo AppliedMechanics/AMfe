@@ -3,6 +3,8 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
 
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -58,8 +60,9 @@ class StandardMapping(MappingBase):
         -------
         None
         """
+        logger = logging.getLogger(__name__)
         # make empty pandas Dataframe for nodes2global
-        data = -1*np.ones(len(nodeids), dtype=int)
+        data = -1*np.ones(len(nodeids), dtype=np.int64)
         self._nodal2global = pd.DataFrame({key: data for key in fields}, index=nodeids)
         # allocate list for elements2global
         self._elements2global = pd.DataFrame([None]*len(connectivity), columns=['global_dofs'])
@@ -73,7 +76,7 @@ class StandardMapping(MappingBase):
                                                                                                     callbacks,
                                                                                                     callbackargs)):
 
-            print('Added element {:10d} of {:10d}'.format(index, no_of_elements))
+            logger.debug('Added element {:10d} of {:10d}'.format(index, no_of_elements))
             # iterate over dofs of element
             global_dofs_for_element = []
             for localdofnumber, dofinfo in enumerate(element_dofinfos):

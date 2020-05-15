@@ -1,0 +1,34 @@
+version: 1
+# --- Formatters
+formatters:
+  simple:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# --- Handlers
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple
+    stream: ext://sys.stdout
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: simple
+    filename: amfelog.log
+    maxBytes: 1024
+    backupCount: 5
+# --- Loggers
+loggers:
+  amfe:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: no
+  amfe.constraint:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: yes
+# --- root
+root:
+  level: NOTSET
+  handlers: [console]
+  propagate: yes
