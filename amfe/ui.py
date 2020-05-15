@@ -197,12 +197,15 @@ def set_neumann_by_group(component, group_name, direction, following=False, neum
     f : function
          pointer to function with signature  float func(float: t)
     """
-    if direction == 'normal':
-        if following:
-            neumann = NormalFollowingNeumann(time_func=f)
+    if isinstance(direction, str):
+        if direction == 'normal':
+            if following:
+                neumann = NormalFollowingNeumann(time_func=f)
+            else:
+                raise NotImplementedError('There is no implementation for normal direction that is fixed with inertial'
+                                          'frame')
         else:
-            raise NotImplementedError('There is no implementation for normal direction that is fixed with inertial'
-                                      'frame')
+            raise ValueError('direction {} not supported'.format(direction))
     else:
         direction = np.array(direction, dtype=float)  # This would raise an error if cannot be transformed to array
         if following:
@@ -212,9 +215,42 @@ def set_neumann_by_group(component, group_name, direction, following=False, neum
     component.assign_neumann(neumann_name, neumann, [group_name], '_groups')
 
 
-def set_neumann_by_elementids(component, elementids, direction_vector=np.array([0, 1]), neumann_name='Neumann0',
+def set_neumann_by_elementids(component, elementids, direction, following=False, neumann_name='Neumann0',
                               f=constant_force(1.0)):
-    neumann = FixedDirectionNeumann(direction_vector, time_func=f)
+    """
+    Sets a neumann condition on a component by addressing elementids in the mesh.
+
+    Parameters
+    ----------
+    component : component
+        component the neumann condition should be added
+    elementids : list or ndarray of integers
+        elementids to which the condition is assigned to
+    direction : array_like
+        direction of the force.
+    following : bool
+        Use following = True to keep the direction relative to the body frame.
+        If following is set to false (default), the direction is fixed.
+    neumann_name : str
+        name of the condition, defined by user
+    f : function
+         pointer to function with signature  float func(float: t)
+    """
+    if isinstance(direction, str):
+        if direction == 'normal':
+            if following:
+                neumann = NormalFollowingNeumann(time_func=f)
+            else:
+                raise NotImplementedError('There is no implementation for normal direction that is fixed with inertial'
+                                          'frame')
+        else:
+            raise ValueError('direction {} not supported'.format(direction))
+    else:
+        direction = np.array(direction, dtype=float)  # This would raise an error if cannot be transformed to array
+        if following:
+            raise NotImplementedError('There is no implementation for forces that follow the body frame')
+        else:
+            neumann = FixedDirectionNeumann(direction, time_func=f)
     component.assign_neumann(neumann_name, neumann, elementids, '_eleids')
 
 
