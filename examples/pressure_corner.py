@@ -4,55 +4,42 @@
 # Distributed under BSD-3-Clause License. See LICENSE-File for more information
 #
 """
-Example showing a corner with pressure
+Example showing a corner with pressure following the Tutorial 1
 """
 
-from matplotlib import pyplot as plt
+# --- Preparation ---
+from amfe.io import amfe_dir
+import amfe.ui
 
-import amfe
-from amfe import hyper_red
+input_file = amfe_dir('meshes/gmsh/pressure_corner.msh')
+output_file_deformation = amfe_dir('results/pressure_corner/pressure_corner_nonlinear_deformation')
+output_file_modes = amfe_dir('results/pressure_corner/pressure_corner_linear_modes')
 
-input_file = amfe.amfe_dir('meshes/gmsh/pressure_corner.msh')
-output_file = amfe.amfe_dir('results/pressure_corner/pressure_corner')
+# --- Load Mesh ---
+my_mesh = amfe.ui.import_mesh_from_file(input_file)
 
+# --- Setting up new component ---
+my_component = amfe.ui.create_structural_component(my_mesh)
 
-my_material = amfe.KirchhoffMaterial(E=210E9, nu=0.3, rho=1E4, plane_stress=True)
-my_system = amfe.MechanicalSystem(stress_recovery=True)
-my_system.load_mesh_from_gmsh(input_file, 11, my_material)
-my_system.apply_dirichlet_boundaries(9, 'x')
-my_system.apply_dirichlet_boundaries(10, 'y')
-my_system.apply_neumann_boundaries(12, 1E10, 'normal', lambda t: t)
+# --- Define materials and assign it to component ---
+my_material = amfe.ui.create_material('Kirchhoff', E=210E9, nu=0.3, rho=7.86E3, plane_stress=True, thickness=0.1)
+amfe.ui.assign_material_by_group(my_component, my_material, 11)
 
+# --- Apply boundary conditions ---
+amfe.ui.set_dirichlet_by_group(my_component, 9, 'ux', 'Dirichlet0')
+amfe.ui.set_dirichlet_by_group(my_component, 10, 'uy', 'Dirichlet1')
 
-#amfe.solve_linear_displacement(my_system)
-snapshots = amfe.solve_nonlinear_displacement(my_system, no_of_load_steps=50,
-                                  track_niter=True)
+amfe.ui.set_neumann_by_group(my_component, 12, 'normal', following=True, neumann_name='Neumann0', f=lambda t: 1E7*t)
 
-my_system.export_paraview(output_file)
+# --- Translate the Component to a MechanicalSystem ---
+my_system, my_formulation = amfe.ui.create_mechanical_system(my_component)
 
-#%% POD reduction
-sigma, V_pod = amfe.pod(my_system)
-plt.semilogy(sigma, 'x-')
-plt.grid()
+# --- Solve and write deformation analysis ---
+my_solution = amfe.ui.solve_nonlinear_static(my_system, my_formulation, my_component, 50)
+amfe.ui.write_results_to_paraview(my_solution, my_component, output_file_deformation)
 
-#%% POD hyper reduction
+# --- Solve and write modal analysis ---
+modes = amfe.ui.solve_modes(my_system, my_formulation, no_of_modes=10, hertz=True)
+amfe.ui.write_results_to_paraview(modes, my_component, output_file_modes)
 
-n = 10
-V = V_pod[:,:n]
-my_hyper_system = hyper_red.reduce_mechanical_system_ecsw(my_system, V)
-
-#%%
-snapshots_red = V.T @ snapshots
-
-my_hyper_system.reduce_mesh(snapshots_red, tau=0.001)
-
-amfe.solve_nonlinear_displacement(my_hyper_system, no_of_load_steps=50,
-                                  track_niter=True)
-
-my_hyper_system.export_paraview(output_file + '_hyper_red')
-
-#%% Modal analysis
-
-omega, V = amfe.vibration_modes(my_system, save=True)
-
-my_system.export_paraview(output_file + '_modes')
+print(modes.t)

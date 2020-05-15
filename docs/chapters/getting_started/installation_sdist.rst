@@ -25,7 +25,7 @@ The Amfe package includes some fortran routines which has to be built in the dev
 Thus, you will need a fortran compiler, such as gfortran to compile the fortran-sources.
 If you do not want to compile the fortran routines you may also use equivalent python routines
 which do not need to be compiled.
-However this is not recommended if you want to run large finite element models because the
+However, this is not recommended if you want to run large finite element models because the
 performance of fortran routines is much better.
 
 Use::
@@ -40,4 +40,3 @@ Additional hints for windows users
 """"""""""""""""""""""""""""""""""
 
 The compilation of fortran extensions may cause problems on windows-platforms.
-Here are some hints on how to install the routines on windows:
