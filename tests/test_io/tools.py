@@ -51,11 +51,16 @@ def create_amfe_obj():
                       'quadratic_line', 'quadratic_line', 'quadratic_line',
                       'quadratic_line', 'quadratic_line'],
             'connectivity': connectivity,
-            'is_boundary': [False, False, False, False, True, True, True, True, True, True]
+            'is_boundary': [False, False, False, False, True, True, True, True, True, True],
+            'domain': [2, 1, 2, 1, 0, 0, 0, 0, 0, 0],
+            'weight': [0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
             }
+
     indices = list(np.arange(1, 11))
 
     meshobj.el_df = pd.DataFrame(data, index=indices)
+    meshobj.el_df['domain'] = meshobj.el_df['domain'].astype(pd.Int64Dtype())
+    meshobj.el_df['weight'] = meshobj.el_df['weight'].astype(float)
 
     meshobj.groups = {'left': {'nodes': [], 'elements': [2, 4]},
                       'right': {'nodes': [], 'elements': [1, 3]},

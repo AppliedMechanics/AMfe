@@ -35,7 +35,7 @@ class Hdf5MeshConverter(MeshConverter):
         self._nodes_current_row = 0
         self._node_preallocation = self.Preallocation.UNKNOWN
         self._nodeids2row = dict()
-        self._tag_dict = dict()
+        self._tags = dict()
         self._connectivity = list()
         self._ele_indices = list()
         self._eleshapes = list()
@@ -96,30 +96,17 @@ class Hdf5MeshConverter(MeshConverter):
     def build_mesh_dimension(self, dim):
         pass
 
-    def build_tag(self, tag_dict):
-        """
-        Builds a tag with following dict given in tag_dict
-
-        Parameters
-        ----------
-        tag_dict : dict
-            dict with following format:
-            { tagname1 : { tagvalue1 : [elementids],
-                           tagvalue2 : [elementids],
-                           ...
-                         },
-              tagname2 : { tagvalue1 : [elementids],
-                           tagvalue2 : [elementids]
-                           ...
-                         },
-              ...
-            }
-
-        Returns
-        -------
-        None
-        """
-        self._tag_dict.update(tag_dict)
+    def build_tag(self, tag_name, values2elements, dtype=None, default=None):
+        # append tag information
+        if dtype is None:
+            dtype = object
+        self._tags.update({tag_name: {'values2elements': values2elements,
+                                      'dtype': dtype,
+                                      'default': default
+                                      }
+                           }
+                          )
+        return None
 
     def return_mesh(self):
         self._prepare_return()
@@ -153,28 +140,22 @@ class Hdf5MeshConverter(MeshConverter):
 
         self._tag_names = list()
 
-        for tag_name, tag_dict in self._tag_dict.items():
+        name2scalars = dict()
+        for tag_name, tag_dict in self._tags.items():
             self._el_df[tag_name] = None
             if tag_dict is not None:
                 currentscalar = -1
-                name2scalars = dict()
-                if tag_dict is not None:
-                    for tag_value, elem_list in tag_dict.items():
-                        # Check if tag_value is string
-                        # if it is a string map the string to a scalar because xdmf does not support strings
-                        if isinstance(tag_value, str):
-                            name2scalars.update({tag_value: currentscalar})
-                            tag_value = currentscalar
-                            currentscalar -= 1
-                        try:
-                            self._el_df.loc[elem_list, (tag_name)] = tag_value
-                        except:
-                            temp_list = self._el_df[tag_name].tolist()
-                            for elem in elem_list:
-                                temp_list[elem] = tag_value
-                            self._el_df[tag_name] = temp_list
+
+                for tag_value, elem_list in tag_dict['values2elements'].items():
+                    # Check if tag_value is string
+                    # if it is a string map the string to a scalar because xdmf does not support strings
+                    if isinstance(tag_value, str):
+                        name2scalars.update({tag_value: currentscalar})
+                        tag_value = currentscalar
+                        currentscalar -= 1
+                    self._el_df.loc[elem_list, tag_name] = tag_value
             self._tag_names.extend([tag_name])
-            self._tag_dict[tag_name].update({'name2scalars': name2scalars})
+            self._tags[tag_name].update({'name2scalars': name2scalars})
 
     @check_filename_or_filepointer(File, open_file, 1, writeable=True)
     def _write_hdf5(self, hdf_fp):
@@ -218,8 +199,12 @@ class Hdf5MeshConverter(MeshConverter):
 
             for tag in self._tag_names:
                 # write values for each element type
-                tag_values = el_df_by_shape[tag].fillna(np.nan).values
-                hdf_fp.create_array(tag_group_pointers[tag], etype, tag_values.astype(float), shape=tag_values.shape)
+                if self._tags[tag]['default'] is None:
+                    default = np.nan
+                else:
+                    default = self._tags[tag]['default']
+                tag_values = el_df_by_shape[tag].fillna(default).values
+                hdf_fp.create_array(tag_group_pointers[tag], etype, tag_values.astype(self._tags[tag]['dtype']), shape=tag_values.shape)
 
         eleid_table.flush()
 

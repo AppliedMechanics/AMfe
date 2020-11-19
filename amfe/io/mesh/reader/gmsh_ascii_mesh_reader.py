@@ -177,11 +177,40 @@ class GmshAsciiMeshReader(MeshReader):
 
         # Build elements
         groupentities = dict()
-        elemental_tags = dict()
-        tag_entities = {'no_of_mesh_partitions': {},
-                        'partition_id': {},
-                        'partitions_neighbors': {},
-                        }
+
+        tag_physical_group = {'name': 'physical_group',
+                              'dtype': int,
+                              'default': 0,
+                              'value2elements': {}}
+
+        tag_elementary_model_entity = {'name': 'elementary_model_entity',
+                                       'dtype': int,
+                                       'default': 0,
+                                       'value2elements': {}}
+
+        tag_no_of_mesh_partitions = {'name': 'no_of_mesh_partitions',
+                                     'dtype': int,
+                                     'default': 0,
+                                     'value2elements': {},
+                                     }
+
+        tag_partition_id = {'name': 'partition_id',
+                            'dtype': int,
+                            'default': 0,
+                            'value2elements': {}
+                            }
+
+        tag_partitions_neighbors = {'name': 'partitions_neighbors',
+                                   'dtype': object,
+                                   'default': (),
+                                   'value2elements': {}
+                                   }
+
+        tagattrs = ['physical_group', 'elementary_model_entity', 'partition_id', 'no_of_partitions',
+                    'partitions_neighbors']
+        tagdicts = [tag_physical_group, tag_elementary_model_entity, tag_partition_id, tag_no_of_mesh_partitions,
+                    tag_partitions_neighbors]
+
         has_partitions = False
         for ele_string in list_imported_elements:
             element = ListElement(ele_string, self.eletypes)
@@ -194,42 +223,40 @@ class GmshAsciiMeshReader(MeshReader):
                 groupentities[element.physical_group].append(element.id)
             else:
                 groupentities.update({element.physical_group: [element.id]})
-            if element.tag in elemental_tags:
-                elemental_tags[element.tag].append(element.id)
-            else:
-                elemental_tags.update({element.tag: [element.id]})
 
             # add element to tags
-            if element.no_of_tags > 3:
+            if element.no_of_partitions is not None:
                 has_partitions = True
 
-                no_of_mesh_partitions, partition_id, *partition_neighbors = element.tag_list
-                elem_tag_dict = {'no_of_mesh_partitions': no_of_mesh_partitions,
-                                 'partition_id': partition_id,
-                                 'partitions_neighbors': tuple(partition_neighbors)}
-
-                # add partitions_neighbors to line-elements
+                # add partitions_neighbors to line-elements (because this is not done for 2d Meshes by Gmsh
                 if element.type == self.eletypes[1]:
                     for other_ele_string in list_imported_elements:
                         other_element = ListElement(other_ele_string, self.eletypes)
-                        if other_element.id is not element.id and other_element.type == element.type and other_element.tag_list[1] != elem_tag_dict['partition_id']:
+                        if other_element.id is not element.id and other_element.type == element.type and other_element.partition_id != element.partition_id:
                             for node in element.connectivity:
-                                if node in other_element.connectivity and other_element.tag_list[1] not in elem_tag_dict['partitions_neighbors']:
-                                    elem_tag_dict['no_of_mesh_partitions'] += 1
-                                    if elem_tag_dict['partitions_neighbors'] == (None,):
-                                        elem_tag_dict['partitions_neighbors'] = (other_element.tag_list[1],)
+                                if node in other_element.connectivity and other_element.partition_id not in element.partitions_neighbors:
+                                    element.no_of_partitions += 1
+                                    if element.partitions_neighbors == (None,):
+                                        element.partitions_neighbors = (other_element.partition_id,)
                                     else:
-                                        if isinstance(elem_tag_dict['partitions_neighbors'], Iterable):
-                                            elem_tag_dict['partitions_neighbors'] += (other_element.tag_list[1],)
+                                        if isinstance(element.partitions_neighbors, Iterable):
+                                            element.partitions_neighbors += (other_element.partition_id,)
                                         else:
-                                            elem_tag_dict['partitions_neighbors'] = tuple((elem_tag_dict['partitions_neighbors'], other_element.tag_list[1]))
+                                            element.partitions_neighbors = tuple((element.partitions_neighbors, other_element.partition_id))
+                element.partitions_neighbors = tuple(element.partitions_neighbors)
+            if not has_partitions:
+                tagdicts = [tag_physical_group, tag_elementary_model_entity]
+            else:
+                tagdicts = [tag_physical_group, tag_elementary_model_entity, tag_partition_id,
+                            tag_no_of_mesh_partitions,
+                            tag_partitions_neighbors]
 
-                for tag_name, dict_tag in tag_entities.items():
-                    elem_tag_value = elem_tag_dict[tag_name]
-                    if elem_tag_value in dict_tag:
-                        dict_tag[elem_tag_value].append(element.id)
-                    else:
-                        dict_tag[elem_tag_value] = [element.id]
+            for tagdict, tagattr in zip(tagdicts, tagattrs):
+                value = getattr(element, tagattr)
+                if value in tagdict['value2elements']:
+                    tagdict['value2elements'][value].append(element.id)
+                else:
+                    tagdict['value2elements'].update({value: [element.id]})
 
         # Build groups
         for group in groupentities:
@@ -238,14 +265,8 @@ class GmshAsciiMeshReader(MeshReader):
             else:
                 builder.build_group(group, [], groupentities[group])
 
-        # Build tags
-        if has_partitions:
-            tags_dict = tag_entities
-            tags_dict.update({'elemental_group': elemental_tags})
-        else:
-            tags_dict = {'elemental_group': elemental_tags}
-
-        builder.build_tag(tags_dict)
+        for tagdict in tagdicts:
+            builder.build_tag(tagdict['name'], tagdict['value2elements'], tagdict['dtype'], tagdict['default'])
 
         builder.build_mesh_dimension(self._dimension)
         return
@@ -286,14 +307,21 @@ class ListElement:
         self.connectivity = self.connectivity.tolist()
 
         self.physical_group = int(elementinfo[3])
-        self.tag = int(elementinfo[4])
+        self.elementary_model_entity = int(elementinfo[4])
 
         if self.no_of_tags > 3:
-            self.tag_list = [abs(int(tag)) for tag in elementinfo[3:3 + self.no_of_tags][2:]]
+            partition_info = [abs(int(tag)) for tag in elementinfo[3:3 + self.no_of_tags][2:]]
 
-            if self.no_of_tags == 3:
-                self.tag_list.extend([None, None])
-            elif self.no_of_tags == 4:
-                self.tag_list.extend([None])
+            self.no_of_partitions = partition_info[0]
+            try:
+                self.partition_id = partition_info[1]
+            except IndexError:
+                self.partition_id = None
+            try:
+                self.partitions_neighbors = partition_info[2:]
+            except IndexError:
+                self.partitions_neighbors = []
+
         else:
-            self.tag_list = []
+            self.no_of_partitions = None
+
