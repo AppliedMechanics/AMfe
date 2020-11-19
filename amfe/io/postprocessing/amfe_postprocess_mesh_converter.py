@@ -205,31 +205,16 @@ class AmfePostprocessMeshConverter(MeshConverter):
         self._groups.update(group)
         return
 
-    def build_tag(self, tag_dict):
-        """
-        Builds a tag with following dict given in tag_dict
-
-        Parameters
-        ----------
-        tag_dict : dict
-            dict with following format:
-            { tagname1 : { tagvalue1 : [elementids],
-                           tagvalue2 : [elementids],
-                           ...
-                         },
-              tagname2 : { tagvalue1 : [elementids],
-                           tagvalue2 : [elementids]
-                           ...
-                         },
-              ...
-            }
-
-        Returns
-        -------
-        None
-        """
+    def build_tag(self, tag_name, values2elements, dtype=None, default=None):
         # append tag information
-        self._tags.update(tag_dict)
+        if dtype is None:
+            dtype = object
+        self._tags.update({tag_name: {'values2elements': values2elements,
+                                      'dtype': dtype,
+                                      'default': default
+                                      }
+                           }
+                          )
         return None
 
     def return_mesh(self):
@@ -275,17 +260,33 @@ class AmfePostprocessMeshConverter(MeshConverter):
         el_df = pd.DataFrame(data, index=self._el_df_indices)
 
         # Write tags into the dataframe
-        for tag_name, tag_value_dict in self._tags.items():
-            el_df[tag_name] = None
+        for tag_name, tag_dict in self._tags.items():
+            tag_value_dict = tag_dict['values2elements']
+            dtype = tag_dict['dtype']
+            default = tag_dict['default']
+            if dtype is int:
+                dtype = pd.Int64Dtype()
+                if default is None:
+                    default = pd.NA
+            if dtype is float and default is None:
+                default = np.nan
+
+            try:
+                el_df[tag_name] = default
+            except ValueError:
+                el_df[tag_name] = pd.NaT
+                el_df[tag_name] = el_df[tag_name].apply(lambda x: ())
+
+            el_df[tag_name] = el_df[tag_name].astype(dtype)
+
             if tag_value_dict is not None:
                 for tag_value, elem_list in tag_value_dict.items():
                     try:
-                        el_df.loc[elem_list, (tag_name)] = tag_value
+                        el_df[tag_name] = el_df[tag_name].astype(object)
+                        for ele in elem_list:
+                            el_df.at[ele, tag_name] = tag_value
                     except:
-                        temp_list = el_df[tag_name].tolist()
-                        for elem in elem_list:
-                            temp_list[elem] = tag_value
-                        el_df[tag_name] = temp_list
+                        el_df.loc[elem_list, tag_name] = tag_value
 
         # Building the meshcontainer for return
         meshcontainer = {'nodes': nodes_df,

@@ -612,7 +612,7 @@ class Mesh:
         """
         return self.nodes_df.iloc[nodeidxs, :].index.values
 
-    def insert_tag(self, tag_name, tag_value_dict=None):
+    def insert_tag(self, tag_name, tag_value_dict=None, dtype=None, default=None):
         """
         This function adds an extra column in the el_df
         with name equal the "tag_name" parameter . By default
@@ -632,8 +632,20 @@ class Mesh:
         -------
             None
         """
+        if dtype is int:
+            dtype = pd.Int64Dtype()
+            if default is None:
+                default = pd.NA
+        if dtype is float and default is None:
+            default = np.nan
 
-        self.el_df[tag_name] = None
+        try:
+            self.el_df[tag_name] = default
+        except ValueError:
+            self.el_df[tag_name] = pd.NaT
+            self.el_df[tag_name] = self.el_df[tag_name].apply(lambda x: ())
+
+        self.el_df[tag_name] = self.el_df[tag_name].astype(dtype)
 
         if tag_value_dict is not None:
             self._change_tag_values_by_dict(tag_name, tag_value_dict)
@@ -679,15 +691,12 @@ class Mesh:
             None
         """
         for tag_value, elem_list in tag_value_dict.items():
-            try:
-                self._el_df.loc[elem_list, (tag_name)] = tag_value
-            except:
-                temp_list = self._el_df[tag_name].tolist()
-                temp_ele_ids = self._el_df.index.tolist()
-                for elem in elem_list:
-                    temp_list[temp_ele_ids.index(elem)] = tag_value
-
-                self._el_df[tag_name] = temp_list
+            if isinstance(tag_value, Iterable):
+                self._el_df[tag_name] = self._el_df[tag_name].astype(object)
+                for ele in elem_list:
+                    self._el_df.at[ele, tag_name] = tag_value
+            else:
+                self._el_df.loc[elem_list, tag_name] = tag_value
 
         return None
 

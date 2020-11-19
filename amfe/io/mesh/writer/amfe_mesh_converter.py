@@ -102,9 +102,16 @@ class AmfeMeshConverter(MeshConverter):
         self._groups.update(group)
         return
 
-    def build_tag(self, tag_dict):
+    def build_tag(self, tag_name, values2elements, dtype=None, default=None):
         # append tag information
-        self._tags.update(tag_dict)
+        if dtype is None:
+            dtype = object
+        self._tags.update({tag_name: {'values2elements': values2elements,
+                                      'dtype': dtype,
+                                      'default': default
+                                      }
+                           }
+                          )
         return None
 
     def return_mesh(self):
@@ -149,6 +156,6 @@ class AmfeMeshConverter(MeshConverter):
         self._mesh.groups = self._groups
         
         for tag_name, tag_dict in self._tags.items():
-            self._mesh.insert_tag(tag_name, tag_dict)
+            self._mesh.insert_tag(tag_name, tag_dict['values2elements'], tag_dict['dtype'], tag_dict['default'])
 
         return self._mesh

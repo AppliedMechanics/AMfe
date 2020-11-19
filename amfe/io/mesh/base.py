@@ -157,24 +157,26 @@ class MeshConverter:
         """
         pass
 
-    def build_tag(self, tag_dict):
+    def build_tag(self, tag_name, values2elements, dtype=None, default=None):
         """
         Builds a tag with following dict given in tag_dict
 
         Parameters
         ----------
-        tag_dict : dict
+        tag_name: str
+            tag name
+        values2elements: dict
             dict with following format:
-            { tagname1 : { tagvalue1 : [elementids],
-                           tagvalue2 : [elementids],
+            { tagvalue1 : [elementids],
+              tagvalue2 : [elementids],
                            ...
-                         },
-              tagname2 : { tagvalue1 : [elementids],
-                           tagvalue2 : [elementids]
-                           ...
-                         },
-              ...
             }
+
+        dtype: { int, float, object }
+            data type for this tag. Only int, float or object is allowed
+
+        default:
+            default value for elementids with no tagvalue
 
         Returns
         -------

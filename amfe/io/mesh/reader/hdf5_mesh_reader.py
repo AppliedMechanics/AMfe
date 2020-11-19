@@ -10,7 +10,7 @@ Hdf5 mesh reader for I/O module.
 """
 
 import numpy as np
-from tables import File, open_file
+from tables import File, open_file, Int64Atom, Float64Atom
 
 from amfe.io.mesh.base import MeshReader
 from amfe.io.tools import check_filename_or_filepointer
@@ -150,7 +150,6 @@ class Hdf5MeshReader(MeshReader):
             builder.build_element(eid, etype, connectivity)
 
         tag_group = infile.get_node(self._meshrootpath, 'tags')
-        build_tags_dict = dict()
         for tag in tag_group._f_iter_nodes(classname='Group'):
             tagname = tag._v_name
             current_tag_dict = dict()
@@ -169,7 +168,22 @@ class Hdf5MeshReader(MeshReader):
                     else:
                         current_tag_dict.update({tag_value: tag_elementids})
             for tag_value in current_tag_dict:
-                current_tag_dict[tag_value] = np.unique(np.array([current_tag_dict[tag_value]]))
-            build_tags_dict.update({tagname: current_tag_dict})
-        builder.build_tag(build_tags_dict)
+                current_tag_dict[tag_value] = np.unique(np.array([current_tag_dict[tag_value]])).tolist()
+            dtype = None
+            for shape in tag._f_iter_nodes():
+                if isinstance(shape.atom, Int64Atom):
+                    if dtype is None:
+                        dtype = int
+                    elif dtype == int:
+                        pass
+                    else:
+                        dtype = object
+                elif isinstance(shape.atom, Float64Atom):
+                    if dtype is None:
+                        dtype = float
+                    elif dtype == float:
+                        pass
+                    else:
+                        dtype = object
+            builder.build_tag(tagname, current_tag_dict, dtype)
         return
