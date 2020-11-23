@@ -200,30 +200,41 @@ class VtkMeshConverter(MeshConverter):
         """
         pass
 
-    def build_tag(self, tag_dict):
+    def build_tag(self, tag_name, values2elements, dtype=None, default=None):
         """
         Builds a tag with following dict given in tag_dict
 
         Parameters
         ----------
-        tag_dict : dict
+        tag_name: str
+            tag name
+        values2elements: dict
             dict with following format:
-            { tagname1 : { tagvalue1 : [elementids],
-                           tagvalue2 : [elementids],
+            { tagvalue1 : [elementids],
+              tagvalue2 : [elementids],
                            ...
-                         },
-              tagname2 : { tagvalue1 : [elementids],
-                           tagvalue2 : [elementids]
-                           ...
-                         },
-              ...
             }
+
+        dtype: { int, float, object }
+            data type for this tag. Only int, float or object is allowed
+
+        default:
+            default value for elementids with no tagvalue
 
         Returns
         -------
         None
         """
-        self._tags.update(tag_dict)
+        # append tag information
+        if dtype is None:
+            dtype = object
+        self._tags.update({tag_name: {'values2elements': values2elements,
+                                      'dtype': dtype,
+                                      'default': default
+                                      }
+                           }
+                          )
+        return None
 
     def return_mesh(self):
         """
@@ -273,12 +284,19 @@ class VtkMeshConverter(MeshConverter):
             self._vtkelements.SetPoints(self._vtknodes)
 
             for tagname, tag_dict in self._tags.items():
-                vtkarray = vtk.vtkIntArray()
+                if tag_dict['dtype'] == int:
+                    vtkarray = vtk.vtkIntArray()
+                elif tag_dict['dtype'] == float:
+                    vtkarray = vtk.vtkFloatArray()
+                else:
+                    logger = logging.getLogger(__name__)
+                    logger.warning('Tag that is not float or int cannot be written to vtkfile')
+                    continue
                 vtkarray.SetNumberOfComponents(1)
                 vtkarray.SetNumberOfTuples(self._vtkelements.GetNumberOfCells())
                 vtkarray.FillComponent(0, 0)
                 vtkarray.SetName(tagname)
-                for tagvalue, eleids in tag_dict.items():
+                for tagvalue, eleids in tag_dict['values2elements'].items():
                     vtkids = [self._el_df.index[self._el_df['id'] == eleid][0] for eleid in eleids]
                     for vtkid in vtkids:
                         vtkarray.SetTuple1(vtkid, int(tagvalue))

@@ -18,4 +18,4 @@ from .ui import *
 
 __author__ = 'Christian Meyer, Christopher Lerch, Johannes Rutzmoser, Fabian Gruber, Andreas Seibold'
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'

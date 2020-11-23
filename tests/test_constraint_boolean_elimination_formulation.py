@@ -51,7 +51,7 @@ class BooleanEliminationFormulationTest(TestCase):
             return csr_matrix(np.array([[1, 0, 0]], dtype=float, ndmin=2))
 
         def B_holo_dense(u, t):
-            return B_holo(u, t).todense()
+            return B_holo(u, t).toarray()
 
         self.no_of_constraints = 1
         self.no_of_dofs_unconstrained = 3

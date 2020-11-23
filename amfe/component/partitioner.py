@@ -304,21 +304,21 @@ class PartitionedMeshComponentSeparator(PartitionedComponentSeparator):
 
         for eleid, element in el_df.iterrows():
             no_of_partitions = 1
-            partition_neighbors = tuple()
+            partitions_neighbors = tuple()
             for other_eleid, other_element in el_df.iterrows():
-                if other_eleid is not eleid and other_element['partition_id'] not in partition_neighbors and \
+                if other_eleid is not eleid and other_element['partition_id'] not in partitions_neighbors and \
                         check_neighbor(element, other_element):
-                    partition_neighbors += (other_element['partition_id'],)
-            no_of_partitions += len(partition_neighbors)
-            if len(partition_neighbors) is 0:
-                partition_neighbors = None
-            elif len(partition_neighbors) is 1:
-                partition_neighbors = partition_neighbors[0]
+                    partitions_neighbors += (other_element['partition_id'],)
+            no_of_partitions += len(partitions_neighbors)
+            if len(partitions_neighbors) is 0:
+                partitions_neighbors = None
+            elif len(partitions_neighbors) is 1:
+                partitions_neighbors = partitions_neighbors[0]
             else:
-                partition_neighbors = list(partition_neighbors)
-                partition_neighbors.sort()
-                partition_neighbors = tuple(partition_neighbors)
-            el_df.at[eleid, 'partitions_neighbors'] = partition_neighbors
+                partitions_neighbors = list(partitions_neighbors)
+                partitions_neighbors.sort()
+                partitions_neighbors = tuple(partitions_neighbors)
+            el_df.at[eleid, 'partitions_neighbors'] = partitions_neighbors
             el_df.at[eleid, 'no_of_mesh_partitions'] = no_of_partitions
 
         return el_df

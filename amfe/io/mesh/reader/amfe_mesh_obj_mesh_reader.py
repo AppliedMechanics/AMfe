@@ -11,6 +11,9 @@ AMfe mesh object reader for I/O module.
 
 from amfe.io.mesh.base import MeshReader
 
+import pandas as pd
+import numpy as np
+
 __all__ = [
     'AmfeMeshObjMeshReader'
     ]
@@ -62,4 +65,25 @@ class AmfeMeshObjMeshReader(MeshReader):
             builder.build_group(group,
                                 self._meshobj.groups[group]['nodes'],
                                 self._meshobj.groups[group]['elements'])
+        # build tags
+        no_tags = ['shape', 'connectivity', 'is_boundary']
+        for column in self._meshobj.el_df.columns:
+            if column in no_tags:
+                continue
+            dfcol = self._meshobj.el_df[column]
+            uniquevalues = dfcol.unique()
+            tagsdict = dict()
+            default = None
+            dtype = object
+            for d in [int, np.int, pd.Int64Dtype(), pd.Int32Dtype()]:
+                if d == dfcol.dtype:
+                    dtype = int
+            if dfcol.dtype in [float, np.float]:
+                dtype = float
+            for uniquevalue in uniquevalues:
+                if pd.isna(uniquevalue):
+                    default = None
+                    continue
+                tagsdict.update({uniquevalue: dfcol[dfcol == uniquevalue].index.tolist()})
+            builder.build_tag(column, tagsdict, dtype, default)
         return

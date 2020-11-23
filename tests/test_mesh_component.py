@@ -27,7 +27,6 @@ class TestMeshComponent(TestCase):
                   'left_boundary': {'elements': [4], 'nodes': []},
                   'right_boundary': {'elements': [5], 'nodes': [1, 2]}
                   }
-        tags = {'tag_boundaries': {1: [4], 2: [5]}}
         converter = AmfeMeshConverter()
         for node in nodes:
             converter.build_node(node[0], node[1][0], node[1][1], 0.0)
@@ -35,7 +34,7 @@ class TestMeshComponent(TestCase):
             converter.build_element(element[0], element[1], element[2])
         for group in groups:
             converter.build_group(group, groups[group]['nodes'], groups[group]['elements'])
-        converter.build_tag(tags)
+        converter.build_tag('tag_boundaries', {1: [4], 2: [5]}, int, 0)
         converter.build_mesh_dimension(2)
 
         self.testmesh = converter.return_mesh()          
