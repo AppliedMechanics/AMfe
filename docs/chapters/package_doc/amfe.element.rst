@@ -1,6 +1,12 @@
 amfe.element module
 ===================
 
+.. toctree::
+   :maxdepth: 2
+
+   amfe.element.shapefunction
+
+
 .. automodule:: amfe.element
     :members:
     :undoc-members:
