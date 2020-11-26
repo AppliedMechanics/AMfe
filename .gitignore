@@ -21,6 +21,10 @@
 *.pdf
 *.dat
 
+# ignore test outputs
+.results
+.coverage
+
 # Folders to ignore
 docs/_build
 meshes/
@@ -36,7 +40,7 @@ experiments/paper_icoev
 .spyproject/
 .vscode/
 # specific files to ignore
-amfe/fortran/f90_elementmodule.c
+src/amfe/fortran/f90_elementmodule.c
 .project
 MANIFEST
 

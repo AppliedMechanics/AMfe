@@ -77,10 +77,17 @@ no_extension_str = '''
 
 if __name__ == '__main__':
     from setuptools.config import read_configuration
+    from setuptools import find_packages
     config_raw = read_configuration('./meta.cfg')
     config = dict()
     config.update(config_raw['metadata'])
     config.update(config_raw['options'])
+    packages = find_packages('src')
+    package_dir = {'': 'src'}
+    config['packages'] = packages
+    config['package_dir'] = package_dir
+    config['include_package_data'] = True
+    config['zip_safe'] = False
     ext_modules = []
 
     if 'no_fortran' in sys.argv:
@@ -91,14 +98,14 @@ if __name__ == '__main__':
         try:
             from numpy.distutils.core import Extension, setup
             ext_assembly = Extension(name='amfe.f90_assembly',
-                                     sources=['amfe/fortran/assembly.f90'],
+                                     sources=['src/amfe/fortran/assembly.f90'],
                                      language='f90',)
             ext_element = Extension(name='amfe.f90_element',
-                                    sources=['amfe/fortran/element.pyf',
-                                             'amfe/fortran/element.f90'],
+                                    sources=['src/amfe/fortran/element.pyf',
+                                             'src/amfe/fortran/element.f90'],
                                     language='f90',)
             ext_material = Extension(name='amfe.f90_material',
-                                     sources=['amfe/fortran/material.f90'],
+                                     sources=['src/amfe/fortran/material.f90'],
                                      language='f90',)
 
             ext_modules = [ext_assembly, ext_element, ext_material]

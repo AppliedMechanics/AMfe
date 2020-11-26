@@ -29,8 +29,9 @@ unittest:
   script:
     - /opt/conda/bin/conda install numpy -n amfe-dev
     - python setup.py develop
-    - /opt/conda/bin/conda install nose coverage pylint mkl -n amfe-dev
-    - nosetests --with-coverage --cover-package amfe
+    - /opt/conda/bin/conda install pytest coverage pylint mkl -n amfe-dev
+    - coverage run --source=./src/amfe/ -m pytest
+    - coverage report
 
 
 documentation_test:

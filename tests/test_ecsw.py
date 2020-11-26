@@ -6,6 +6,7 @@
 
 
 from unittest import TestCase
+from os.path import join, dirname, abspath
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_array_equal
@@ -13,7 +14,6 @@ from numpy.linalg import norm
 
 from amfe.mor.hyper_red.ecsw import sparse_nnls, ecsw_assemble_G_and_b, ecsw_get_weights_by_component
 from amfe.mor.ui import create_ecsw_hyperreduced_component_from_weights
-from amfe.io.tools import amfe_dir
 from amfe.io.mesh.reader import GidJsonMeshReader
 from amfe.io.mesh.writer import AmfeMeshConverter
 from amfe.mor.hyper_red.ecsw_assembly import EcswAssembly
@@ -80,7 +80,8 @@ class TestNnls(TestCase):
 class TestEcsw(TestCase):
     def setUp(self):
         # Define input file path
-        file = amfe_dir('tests/meshes/gid_json_4_tets.json')
+        here = dirname(abspath(__file__))
+        file = join(here, 'meshes', 'gid_json_4_tets.json')
         # Define Reader Object, initialized with AmfeMeshConverter
         reader = GidJsonMeshReader(file)
 

@@ -4,6 +4,7 @@
 #
 
 from unittest import TestCase
+from os.path import join, dirname, abspath
 import numpy as np
 from numpy.testing import assert_array_equal
 
@@ -11,7 +12,6 @@ from amfe.ui import *
 from amfe.component import MeshComponent
 from amfe.mesh import Mesh
 from amfe.material import Material
-from amfe.io.tools import amfe_dir
 from amfe.forces import *
 from amfe.neumann.structural_neumann import FixedDirectionNeumann, NormalFollowingNeumann
 from amfe.solver.translators import create_constrained_mechanical_system_from_component
@@ -20,8 +20,9 @@ from amfe.solver import AmfeSolution
 
 class TestUi(TestCase):
     def setUp(self):
-        self.input_file_1 = amfe_dir('tests/meshes/2_partitions_2quad_mesh.msh')
-        self.input_file_2 = amfe_dir('tests/meshes/gid_json_4_tets.json')
+        self.here = dirname(abspath(__file__))
+        self.input_file_1 = join(self.here, 'meshes', '2_partitions_2quad_mesh.msh')
+        self.input_file_2 = join(self.here, 'meshes', 'gid_json_4_tets.json')
 
         class DummyMaterial:
             def __init__(self, name):
@@ -33,7 +34,7 @@ class TestUi(TestCase):
         pass
 
     def test_import_mesh_from_file(self):
-        input_file_3 = amfe_dir('tests/meshes/not_a_mesh_for_testing.txt')
+        input_file_3 = join(self.here, 'meshes', 'not_a_mesh_for_testing.txt')
         testmesh_1 = import_mesh_from_file(self.input_file_1)
         testmesh_2 = import_mesh_from_file(self.input_file_2)
         # check if raises error for no valid mesh file
