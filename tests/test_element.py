@@ -6,7 +6,6 @@ Test for checking the stiffness matrices.
 import unittest
 import numpy as np
 import scipy as sp
-import nose
 
 from numpy.testing import assert_allclose, assert_almost_equal
 from amfe.element import Tri3, Tri6, Quad4, Quad8, Tet4, Tet10, Hexa8, Hexa20, LinearBeam3D
@@ -61,13 +60,11 @@ class ElementTest(unittest.TestCase):
         self.my_material = KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
         self.my_element = element(self.my_material)
 
-    @nose.tools.nottest
-    def jacobi_test_element(self, rtol=2E-4, atol=1E-6):
+    def jacobi_check_element(self, rtol=2E-4, atol=1E-6):
         K, f = self.my_element.k_and_f_int(self.X, self.u, t=0)
         K_finite_diff = jacobian(self.my_element.f_int, self.X, self.u, t=0)
         np.testing.assert_allclose(K, K_finite_diff, rtol=rtol, atol=atol)
 
-    @nose.tools.nottest
     def check_python_vs_fortran(self):
         # python routine
         self.my_element._compute_tensors_python(self.X, self.u, t=0)
@@ -125,7 +122,7 @@ class Tri3Test(ElementTest):
         self.initialize_element(Tri3, X_tri3)
 
     def test_jacobi(self):
-        self.jacobi_test_element()
+        self.jacobi_check_element()
 
     def test_mass(self):
         X = np.array([0,0,3,1,2,2.])
@@ -139,7 +136,7 @@ class Tri6Test(ElementTest):
         self.initialize_element(Tri6, X_tri6)
 
     def test_jacobi(self):
-        self.jacobi_test_element(rtol=1E-3)
+        self.jacobi_check_element(rtol=1E-3)
 
 
 class Quad4Test(ElementTest):
@@ -147,7 +144,7 @@ class Quad4Test(ElementTest):
         self.initialize_element(Quad4, X_quad4)
 
     def test_jacobi(self):
-        self.jacobi_test_element()
+        self.jacobi_check_element()
 
 
 class Quad8Test(ElementTest):
@@ -155,28 +152,28 @@ class Quad8Test(ElementTest):
         self.initialize_element(Quad8, X_quad8)
 
     def test_jacobi(self):
-        self.jacobi_test_element(rtol=1E-3)
+        self.jacobi_check_element(rtol=1E-3)
 
 class Tet4Test(ElementTest):
     def setUp(self):
         self.initialize_element(Tet4, X_tet4)
 
     def test_jacobi(self):
-        self.jacobi_test_element()
+        self.jacobi_check_element()
 
 class Tet10Test(ElementTest):
     def setUp(self):
         self.initialize_element(Tet10, X_tet10)
 
     def test_jacobi(self):
-        self.jacobi_test_element(rtol=2E-3)
+        self.jacobi_check_element(rtol=2E-3)
 
 class Hexa8Test(ElementTest):
     def setUp(self):
         self.initialize_element(Hexa8, X_hexa8)
 
     def test_jacobi(self):
-        self.jacobi_test_element(rtol=2E-3)
+        self.jacobi_check_element(rtol=2E-3)
 
     def test_mass(self):
         my_material = KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
@@ -189,7 +186,7 @@ class Hexa20Test(ElementTest):
         self.initialize_element(Hexa20, X_hexa20)
 
     def test_jacobi(self):
-        self.jacobi_test_element(rtol=5E-3)
+        self.jacobi_check_element(rtol=5E-3)
 
     def test_mass(self):
         my_material = KirchhoffMaterial(E=60, nu=1/4, rho=1, thickness=1)
@@ -214,7 +211,7 @@ class MaterialTest3D(ElementTest):
         print('Material parameters A10, A01 and kappa:', A10, A01, kappa)
         my_material = MooneyRivlin(A10, A01, kappa, rho)
         self.my_element.material = my_material
-        self.jacobi_test_element(rtol=1E-3)
+        self.jacobi_check_element(rtol=1E-3)
 
     def test_Neo(self):
         mu, kappa, rho = sp.rand(3)*1E3 + 100
@@ -222,7 +219,7 @@ class MaterialTest3D(ElementTest):
 #        mu /= 4
         my_material = NeoHookean(mu, kappa, rho)
         self.my_element.material = my_material
-        self.jacobi_test_element(rtol=5E-4)
+        self.jacobi_check_element(rtol=5E-4)
 
 class MaterialTest2D(ElementTest):
     '''
@@ -237,7 +234,7 @@ class MaterialTest2D(ElementTest):
         A10, A01, kappa, rho = sp.rand(4)*1E3 + 100
         my_material = MooneyRivlin(A10, A01, kappa, rho)
         self.my_element.material = my_material
-        self.jacobi_test_element(rtol=5E-4)
+        self.jacobi_check_element(rtol=5E-4)
 
     def test_Neo(self):
         mu, kappa, rho = sp.rand(3)*1E3 + 100
@@ -245,7 +242,7 @@ class MaterialTest2D(ElementTest):
         kappa *= 100
         my_material = NeoHookean(mu, kappa, rho)
         self.my_element.material = my_material
-        self.jacobi_test_element()
+        self.jacobi_check_element()
 
 
 

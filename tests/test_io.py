@@ -4,13 +4,19 @@ Tests for testing io module
 """
 
 from unittest import TestCase
+from os.path import join, abspath, dirname
+from os import makedirs
 import os
+import numpy as np
 import pandas as pd
-from numpy.testing import assert_allclose, assert_array_equal
+import h5py
+import pickle
+from numpy.testing import assert_allclose, assert_array_equal, assert_array_almost_equal
 from pandas.testing import assert_frame_equal
 
-# Import I/O tools
-from amfe.io.tools import check_dir, amfe_dir
+from amfe.component import StructuralComponent
+from amfe.material import KirchhoffMaterial
+from amfe.solver import AmfeSolution, AmfeSolutionHdf5
 
 # Import Mesh Reader
 from amfe.io.mesh.reader import GidAsciiMeshReader, GidJsonMeshReader, GmshAsciiMeshReader, AmfeMeshObjMeshReader, \
@@ -22,9 +28,18 @@ from amfe.io.mesh.base import MeshConverter
 
 # Import Postprocessing Tools
 from amfe.io.postprocessing import *
+from amfe.io.postprocessing.tools import *
+# Import Postprocessing Reader
+from amfe.io.postprocessing.reader import AmfeHdf5PostProcessorReader, AmfeSolutionReader
+
+# Import Postprocessingwriter
+from amfe.io.postprocessing.writer import Hdf5PostProcessorWriter
+from amfe.io.postprocessing.base import PostProcessorWriter
+
+from amfe.mesh import Mesh
 
 from tests.tools import CustomDictAssertTest
-from .tools import load_object, create_amfe_obj, clean_test_outputs
+from .io_tools import load_object, create_amfe_obj, clean_test_outputs
 
 
 class DummyMeshConverter(MeshConverter):
@@ -68,9 +83,32 @@ class DummyMeshConverter(MeshConverter):
         return self
 
 
+class DummyPostProcessorWriter(PostProcessorWriter):
+    def __init__(self, meshreaderobj):
+        super().__init__(meshreaderobj)
+        self._meshreader = meshreaderobj
+        self._fields = dict()
+
+    def write_field(self, name, field_type, t, data, index, mesh_entity_type):
+        fielddict = {'data_type': field_type,
+                     'timesteps': t,
+                     'index': index,
+                     'mesh_entity_type': mesh_entity_type,
+                     'data': data
+                     }
+        if name in fielddict:
+            raise ValueError('Field already written')
+        self._fields.update({name: fielddict})
+
+    def return_result(self):
+        return self._fields
+
+
 class IOTest(TestCase):
     def setUp(self):
-        clean_test_outputs()
+        directory = join(dirname(abspath(__file__)), '.results')
+        if os.path.exists(directory):
+            clean_test_outputs(directory)
         self.custom_asserter = CustomDictAssertTest()
 
     def tearDown(self):
@@ -98,7 +136,8 @@ class IOTest(TestCase):
         # -------------------------------------------------------
 
         # Define input file path
-        file = amfe_dir('tests/meshes/gid_ascii_4_tets.msh')
+        here = dirname(abspath(__file__))
+        file = join(here, 'meshes', 'gid_ascii_4_tets.msh')
         # Define Reader Object, initialized with AmfeMeshConverter
         reader = GidAsciiMeshReader(file)
         # Parse mesh
@@ -153,7 +192,8 @@ class IOTest(TestCase):
             ('left_dirichlet', [1, 3, 6], [])
         ]
         # Define input file path
-        file = amfe_dir('tests/meshes/gid_json_4_tets.json')
+        here = dirname(abspath(__file__))
+        file = join(here, 'meshes', 'gid_json_4_tets.json')
         # Define Reader Object, initialized with AmfeMeshConverter
         reader = GidJsonMeshReader(file)
         # Parse mesh
@@ -296,9 +336,9 @@ class IOTest(TestCase):
     def test_dummy_to_hdf5_and_xdmf(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/.tests/hdf5_dummy')
-        if not os.path.exists(amfe_dir('results/.tests')):
-            os.makedirs(amfe_dir('results/.tests'))
+        filename = join('.results', 'hdf5_dummy')
+        if not os.path.exists('.results/'):
+            os.makedirs('.results')
         hdf5filename = filename + '.hdf5'
         if os.path.isfile(hdf5filename):
             os.remove(hdf5filename)
@@ -313,7 +353,7 @@ class IOTest(TestCase):
 
         self.set_dummy_input()
 
-        h5filename = amfe_dir('results/.tests/hdf5_dummy.hdf5')
+        h5filename = join('.results', 'hdf5_dummy.hdf5')
 
         meshreader = Hdf5MeshReader(h5filename, '/mesh')
         builder = DummyMeshConverter()
@@ -332,8 +372,9 @@ class IOTest(TestCase):
     def test_dummy_to_vtu(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/.tests/vtk_dummy.vtu')
-        check_dir(filename)
+        filename = join('.results', 'vtk_dummy.vtu')
+        if not os.path.exists('.results'):
+            makedirs('.results')
 
         converter = VtkMeshConverter(filename=filename)
         # Build nodes
@@ -343,8 +384,9 @@ class IOTest(TestCase):
     def test_dummy_to_vtk(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/.tests/vtk_dummy.vtk')
-        check_dir(filename)
+        filename = join('.results', 'vtk_dummy.vtk')
+        if not os.path.exists('.results'):
+            makedirs('.results')
 
         converter = VtkMeshConverter(filename=filename)
         # Run build commands
@@ -354,8 +396,9 @@ class IOTest(TestCase):
     def test_dummy_to_vtk_wrong_fileextension(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/.tests/vtk_dummy.abc')
-        check_dir(filename)
+        filename = join('.results', 'vtk_dummy.abc')
+        if not os.path.exists('.results'):
+            makedirs('.results')
 
         converter = VtkMeshConverter(filename=filename)
         # Build nodes
@@ -365,8 +408,9 @@ class IOTest(TestCase):
     def test_dummy_to_vtk_with_preallocation(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/.tests/vtk_dummy.vtk')
-        check_dir(filename)
+        filename = join('.results', 'vtk_dummy.vtk')
+        if not os.path.exists('.results'):
+            makedirs('.results')
 
         converter = VtkMeshConverter(filename=filename)
         # Build nodes
@@ -378,8 +422,9 @@ class IOTest(TestCase):
     def test_dummy_to_vtk_with_preallocation_too_late(self):
         self.set_dummy_input()
 
-        filename = amfe_dir('results/.tests/vtk_dummy.vtk')
-        check_dir(filename)
+        filename = join('.results', 'vtk_dummy.vtk')
+        if not os.path.exists('.results'):
+            makedirs('.results')
 
         converter = VtkMeshConverter(filename=filename)
         # Build nodes
@@ -426,7 +471,8 @@ class IOTest(TestCase):
                                             'default': 0}
                                            }
         # Define input file path
-        file = amfe_dir('tests/meshes/gmsh_ascii_8_tets.msh')
+        here = dirname(abspath(__file__))
+        file = join(here, 'meshes', 'gmsh_ascii_8_tets.msh')
         # Define Reader Object, initialized with AmfeMeshConverter
         reader = GmshAsciiMeshReader(file)
         # Parse dummy mesh
@@ -456,7 +502,8 @@ class IOTest(TestCase):
 
         dimension_desired = 3
         # Define input file path
-        file = amfe_dir('tests/meshes/gmsh_ascii_v2_hexa20.msh')
+        here = dirname(abspath(__file__))
+        file = join(here, 'meshes', 'gmsh_ascii_v2_hexa20.msh')
         # Define Reader Object, initialized with AmfeMeshConverter
         reader = GmshAsciiMeshReader(file)
         # Parse dummy mesh
@@ -476,7 +523,8 @@ class IOTest(TestCase):
         element_65_desired = (65, 'Tet10', [61, 9, 45, 72, 84, 85, 86, 87, 79, 88])
         dimension_desired = 3
         # Define input file path
-        file = amfe_dir('tests/meshes/gmsh_ascii_v2_tet10.msh')
+        here = dirname(abspath(__file__))
+        file = join(here, 'meshes', 'gmsh_ascii_v2_tet10.msh')
         # Define Reader Object, initialized with AmfeMeshConverter
         reader = GmshAsciiMeshReader(file)
         # Parse dummy mesh
@@ -616,7 +664,8 @@ class IOTest(TestCase):
                         }
 
         # Define input file path
-        file = amfe_dir('tests/meshes/3_surfaces_2_partitions_mesh.msh')
+        here = dirname(abspath(__file__))
+        file = join(here, 'meshes', '3_surfaces_2_partitions_mesh.msh')
         # Define Reader Object, initialized with AmfeMeshConverter
         reader = GmshAsciiMeshReader(file)
         # Parse dummy mesh
@@ -708,7 +757,8 @@ class IOTest(TestCase):
 
     def test_gmsh_parser_with_2_partitions(self):
 
-        msh_filename = amfe_dir('tests/meshes/2_partitions_2quad_mesh.msh')
+        here = dirname(abspath(__file__))
+        msh_filename = join(here, 'meshes', '2_partitions_2quad_mesh.msh')
         reader_obj = GmshAsciiMeshReader(msh_filename)
         converter = AmfeMeshConverter()
         reader_obj.parse(converter)
@@ -731,7 +781,8 @@ class IOTest(TestCase):
 
     def test_gmsh_parser_with_2_partitions_splitboundary(self):
 
-        msh_filename = amfe_dir('tests/meshes/2_partitions_2quad_mesh_splitboundary.msh')
+        here = dirname(abspath(__file__))
+        msh_filename = join(here, 'meshes', '2_partitions_2quad_mesh_splitboundary.msh')
         reader_obj = GmshAsciiMeshReader(msh_filename)
         converter = AmfeMeshConverter()
         reader_obj.parse(converter)
@@ -755,7 +806,8 @@ class IOTest(TestCase):
 
     def test_gmsh_parser_with_8_partitions(self):
 
-        msh_filename = amfe_dir('tests/meshes/retangule_5_by_2_quad_par_8_irreg.msh')
+        here = dirname(abspath(__file__))
+        msh_filename = join(here, 'meshes', 'retangule_5_by_2_quad_par_8_irreg.msh')
         reader_obj = GmshAsciiMeshReader(msh_filename)
         converter = AmfeMeshConverter()
         reader_obj.parse(converter)
@@ -769,9 +821,10 @@ class IOTest(TestCase):
         actual_list_2 = mesh_obj.el_df['partition_id'].tolist()
         actual_list_3 = mesh_obj.el_df['partitions_neighbors'].tolist()
 
-        desired_list_1 = load_object(amfe_dir('tests/pickle_obj/l1.pkl'))
-        desired_list_2 = load_object(amfe_dir('tests/pickle_obj/l2.pkl'))
-        desired_list_3 = load_object(amfe_dir('tests/pickle_obj/l3.pkl'))
+        here = dirname(abspath(__file__))
+        desired_list_1 = load_object(join(here, 'pickle_obj', 'l1.pkl'))
+        desired_list_2 = load_object(join(here, 'pickle_obj', 'l2.pkl'))
+        desired_list_3 = load_object(join(here, 'pickle_obj', 'l3.pkl'))
 
         def helper(x):
             if x is None:
@@ -793,6 +846,166 @@ class IOTest(TestCase):
         self.assertListEqual(actual_list_2, desired_list_2)
         self.assertListEqual(actual_list_3, desired_list_3)
 
+
+class PostProcessorTest(TestCase):
+    def setUp(self):
+        directory = join(dirname(abspath(__file__)), '.results')
+        if os.path.exists(directory):
+            clean_test_outputs(directory)
+
+    def tearDown(self):
+        pass
+
+    def _create_fields(self, dim=3):
+        amfemesh = create_amfe_obj()
+        self.meshreader = AmfeMeshObjMeshReader(amfemesh)
+
+        self.timesteps = np.arange(0, 0.8, 0.2)  # 4 timesteps
+        no_of_nodes = amfemesh.no_of_nodes
+        no_of_cells = amfemesh.no_of_elements
+        no_of_dofs = no_of_nodes * dim
+        # q = np.random.rand(no_of_dofs * len(timesteps)).reshape(no_of_dofs, len(timesteps))
+        q = np.ones((no_of_dofs, len(self.timesteps)))
+        q[:, 0] = q[:, 0] * 0.0
+        q[:, 1] = q[:, 1] * 0.1
+        q[:, 2] = q[:, 2] * 0.2
+        q[:, 3] = q[:, 3] * 0.3
+        q2 = -q
+
+        s = np.arange(no_of_cells * len(self.timesteps)).reshape(no_of_cells, len(self.timesteps))
+        volume_indices = amfemesh.el_df[amfemesh.el_df['is_boundary'] == False].index.values
+
+        self.fields_desired = {'Nodefield1': {'data_type': PostProcessDataType.VECTOR, 'timesteps': self.timesteps,
+                                              'data': q, 'index': amfemesh.nodes_df.index.values,
+                                              'mesh_entity_type': MeshEntityType.NODE},
+                               'Nodefield2': {'data_type': PostProcessDataType.VECTOR, 'timesteps': self.timesteps,
+                                              'data': q2, 'index': amfemesh.nodes_df.index.values,
+                                              'mesh_entity_type': MeshEntityType.NODE},
+                               'Elementfield1': {'data_type': PostProcessDataType.SCALAR, 'timesteps': self.timesteps,
+                                                 'data': s, 'index': volume_indices,
+                                                 'mesh_entity_type': MeshEntityType.ELEMENT}
+                               }
+        self.fields_no_of_nodes = no_of_nodes
+        self.fields_no_of_timesteps = len(self.timesteps)
+
+    def test_hdf5_postprocessor_writer_and_reader(self):
+        self._create_fields()
+
+        filename = join('.results', 'hdf5postprocessing.hdf5')
+
+        if os.path.isfile(filename):
+            os.remove(filename)
+
+        writer = Hdf5PostProcessorWriter(self.meshreader, filename, '/myresults')
+        fields = self.fields_desired
+        for fieldname in fields:
+            field = fields[fieldname]
+            if field['data_type'] == PostProcessDataType.VECTOR:
+                data = field['data'].reshape(self.fields_no_of_nodes, 3, self.fields_no_of_timesteps)
+            else:
+                data = field['data']
+            writer.write_field(fieldname, field['data_type'], field['timesteps'],
+                               data, field['index'], field['mesh_entity_type'])
+
+        self._create_fields()
+
+        h5filename = join('.results', 'hdf5postprocessing.hdf5')
+
+        postprocessorreader = AmfeHdf5PostProcessorReader(h5filename,
+                                                          meshrootpath='/mesh',
+                                                          resultsrootpath='/myresults')
+        meshreader = Hdf5MeshReader(h5filename, '/mesh')
+        postprocessorwriter = DummyPostProcessorWriter(meshreader)
+        postprocessorreader.parse(postprocessorwriter)
+        fields = postprocessorwriter.return_result()
+        # Check no of fields:
+        self.assertEqual(len(fields.keys()), len(self.fields_desired.keys()))
+        # Check each field:
+        for fieldname in self.fields_desired:
+            field_actual = fields[fieldname]
+            field_desired = self.fields_desired[fieldname]
+            assert_array_equal(field_actual['timesteps'], field_desired['timesteps'])
+            assert_array_equal(field_actual['data_type'], field_desired['data_type'])
+            assert_array_equal(field_actual['data'], field_desired['data'])
+            assert_array_equal(field_actual['index'], field_desired['index'])
+            assert_array_equal(field_actual['mesh_entity_type'], field_desired['mesh_entity_type'])
+
+    def test_write_xdmf_from_hdf5(self):
+        self._create_fields()
+        filename = join('.results', 'hdf5postprocessing.hdf5')
+        with h5py.File(filename, mode='r') as hdf5_fp:
+            filename = join('.results', 'hdf5postprocessing.xdmf')
+            with open(filename, 'wb') as xdmf_fp:
+                fielddict = self.fields_desired
+                for key in fielddict:
+                    fielddict[key].update({'hdf5path': '/myresults/{}'.format(key)})
+                    timesteps = fielddict[key]['timesteps']
+                # timesteps = np.arange(0, 0.8, 0.2)  # 4 timesteps
+                write_xdmf_from_hdf5(xdmf_fp, hdf5_fp, '/mesh/nodes', '/mesh/topology', timesteps, fielddict)
+
+    def test_amfe_solution_reader(self):
+        self._create_fields(2)
+
+        amfesolution = AmfeSolution()
+        sol = self.fields_desired['Nodefield1']
+        for t, q in zip(sol['timesteps'], sol['data'].T):
+            amfesolution.write_timestep(t, q, q, q)
+
+        mesh = create_amfe_obj()
+        meshcomponent = StructuralComponent(mesh)
+        # Set a material to get a mapping
+        material = KirchhoffMaterial()
+        meshcomponent.assign_material(material, 'Tri6', 'S', 'shape')
+
+        postprocessorreader = AmfeSolutionReader(amfesolution, meshcomponent)
+
+        meshreader = AmfeMeshObjMeshReader(mesh)
+        postprocessorwriter = DummyPostProcessorWriter(meshreader)
+        postprocessorreader.parse(postprocessorwriter)
+        fields_actual = postprocessorwriter.return_result()
+
+        field_desired = sol
+        q = field_desired['data']
+        dofs_x = meshcomponent.mapping.get_dofs_by_nodeids(meshcomponent.mesh.nodes_df.index.values, ('ux'))
+        dofs_y = meshcomponent.mapping.get_dofs_by_nodeids(meshcomponent.mesh.nodes_df.index.values, ('uy'))
+        q_x = q[dofs_x, :]
+        q_y = q[dofs_y, :]
+        data = np.empty((0, 3, 4), dtype=float)
+        for node in meshcomponent.mesh.get_nodeidxs_by_all():
+                data = np.concatenate((data, np.array([[q_x[node], q_y[node], np.zeros(q_x.shape[1])]])), axis=0)
+        field_desired['data'] = data
+        # Check no of fields:
+        self.assertEqual(len(fields_actual.keys()), 3)
+        # Check each field:
+        field_displacement_actual = fields_actual['displacement']
+        assert_array_equal(field_displacement_actual['timesteps'], field_desired['timesteps'])
+        assert_array_equal(field_displacement_actual['data_type'], field_desired['data_type'])
+        assert_array_equal(field_displacement_actual['data'], field_desired['data'])
+        assert_array_equal(field_displacement_actual['index'], field_desired['index'])
+        assert_array_equal(field_displacement_actual['mesh_entity_type'], field_desired['mesh_entity_type'])
+        field_velocity_actual = fields_actual['velocity']
+        assert_array_equal(field_velocity_actual['timesteps'], field_desired['timesteps'])
+        assert_array_equal(field_velocity_actual['data_type'], field_desired['data_type'])
+        assert_array_equal(field_velocity_actual['data'], field_desired['data'])
+        assert_array_equal(field_velocity_actual['index'], field_desired['index'])
+        assert_array_equal(field_velocity_actual['mesh_entity_type'], field_desired['mesh_entity_type'])
+        field_acceleration_actual = fields_actual['acceleration']
+        assert_array_equal(field_acceleration_actual['timesteps'], field_desired['timesteps'])
+        assert_array_equal(field_acceleration_actual['data_type'], field_desired['data_type'])
+        assert_array_equal(field_acceleration_actual['data'], field_desired['data'])
+        assert_array_equal(field_acceleration_actual['index'], field_desired['index'])
+        assert_array_equal(field_acceleration_actual['mesh_entity_type'], field_desired['mesh_entity_type'])
+
+
+def save_object(obj, filename):
+    with open(filename, 'wb') as output:
+        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
+
+
+def load_object(filename):
+    with open(filename, 'rb') as input:
+        obj = pickle.load(input)
+    return obj
 
 # Example for testing one certain test:
 # if __name__ == '__main__':

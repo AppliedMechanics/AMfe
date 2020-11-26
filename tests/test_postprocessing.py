@@ -6,6 +6,9 @@ from unittest import TestCase
 import numpy as np
 import os
 import h5py
+from os import makedirs
+from os.path import join, dirname, abspath
+
 from numpy.testing import assert_array_equal
 from copy import copy
 # Import Postprocessing Tools
@@ -13,8 +16,7 @@ from amfe.io import AmfeMeshObjMeshReader, AmfeSolutionReader, Hdf5PostProcessor
     Hdf5MeshReader, write_xdmf_from_hdf5
 from amfe.io.postprocessing.base import PostProcessorWriter
 from amfe.io.constants import PostProcessDataType, MeshEntityType
-from .tools import create_amfe_obj, clean_test_outputs
-from amfe.io.tools import amfe_dir
+from .io_tools import create_amfe_obj, clean_test_outputs
 from amfe.solver import AmfeSolution
 from amfe.component import StructuralComponent
 from amfe.material import KirchhoffMaterial
@@ -93,7 +95,9 @@ def create_fields(dim=3):
 
 class PostProcessorTest(TestCase):
     def setUp(self):
-        clean_test_outputs()
+        directory = join(dirname(abspath(__file__)), '.results')
+        if os.path.exists(directory):
+            clean_test_outputs(directory)
 
     def tearDown(self):
         pass
@@ -102,7 +106,8 @@ class PostProcessorTest(TestCase):
         self.timesteps, self.meshreader, self.fields_desired, \
         self.fields_no_of_nodes, self.fields_no_of_timesteps = create_fields()
 
-        filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
+        makedirs('.results', exist_ok=True)
+        filename = join('.results', 'hdf5postprocessing.hdf5')
 
         if os.path.isfile(filename):
             os.remove(filename)
@@ -124,7 +129,7 @@ class PostProcessorTest(TestCase):
         self.timesteps, self.meshreader, self.fields_desired, \
         self.fields_no_of_nodes, self.fields_no_of_timesteps = create_fields()
 
-        h5filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
+        h5filename = filename
 
         postprocessorreader = AmfeHdf5PostProcessorReader(h5filename,
                                                           meshrootpath='/mesh',
@@ -148,9 +153,9 @@ class PostProcessorTest(TestCase):
     def test_write_xdmf_from_hdf5(self):
         self.timesteps, self.meshreader, self.fields_desired, \
         self.fields_no_of_nodes, self.fields_no_of_timesteps = create_fields()
-        filename = amfe_dir('results/.tests/hdf5postprocessing.hdf5')
+        filename = join('.results', 'hdf5postprocessing.hdf5')
         with h5py.File(filename, mode='r') as hdf5_fp:
-            filename = amfe_dir('results/.tests/hdf5postprocessing.xdmf')
+            filename = join('.results', 'hdf5postprocessing.xdmf')
             with open(filename, 'wb') as xdmf_fp:
                 fielddict = self.fields_desired
                 for key in fielddict:

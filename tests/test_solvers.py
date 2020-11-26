@@ -5,11 +5,11 @@ Test for testing the solvers
 
 import unittest
 import numpy as np
-import scipy as sp
-import nose
 import re
+from os.path import join, dirname, abspath
+import pytest
 
-from numpy.testing import assert_allclose, assert_almost_equal
+from numpy.testing import assert_allclose
 import amfe
 
 
@@ -30,12 +30,13 @@ def read_grf(file):
     return data
 
 
-@unittest.skip("temporarily disabled")
+@pytest.mark.skip("temporarily disabled")
 class SolversTest(unittest.TestCase):
     def setUp(self):
         # define input-file and prefix for output
-        self.input_file = amfe.amfe_dir('meshes/gmsh/beam/Beam10x1Quad8.msh')
-        self.output_file_prefix = amfe.amfe_dir('results/beam/Beam10x1Quad8')
+        here = dirname(abspath(__file__))
+        self.input_file = join('..', 'meshes', 'gmsh', 'beam', 'Beam10x1Quad8.msh')
+        self.output_file_prefix = join(here, '.results', 'beam', 'Beam10x1Quad8')
         # setup mechanical system
         self.material = amfe.KirchhoffMaterial(E=2.1e11, nu=0.3, rho=7.867e3, plane_stress=False)
         self.system = amfe.MechanicalSystem()
@@ -84,8 +85,9 @@ class SolversTest(unittest.TestCase):
         self.solver.solve()
         x = np.array([self.system.T_output[:], [displacement[2] for displacement in self.system.u_output]])
         y = np.array([self.system.T_output[:], [displacement[3] for displacement in self.system.u_output]])
-        fnx = amfe.amfe_dir('tests/kratos/Kratos_beam10x1Quad8_nonlinear_dynamics_x_wbzalpha_rhoinf095_dt1e-6.grf')
-        fny = amfe.amfe_dir('tests/kratos/Kratos_beam10x1Quad8_nonlinear_dynamics_y_wbzalpha_rhoinf095_dt1e-6.grf')
+        here = dirname(abspath(__file__))
+        fnx = join(here, 'kratos', 'Kratos_beam10x1Quad8_nonlinear_dynamics_x_wbzalpha_rhoinf095_dt1e-6.grf')
+        fny = join(here, 'kratos', 'Kratos_beam10x1Quad8_nonlinear_dynamics_y_wbzalpha_rhoinf095_dt1e-6.grf')
         reference_x = read_grf(fnx)
         reference_y = read_grf(fny)
         assert_allclose(x[1, 1:], reference_x[1, 499::500], rtol=1e-12, atol=0.06)

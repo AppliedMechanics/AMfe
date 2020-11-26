@@ -2,6 +2,7 @@
 
 
 from unittest import TestCase
+from os.path import join, dirname, abspath
 import numpy as np
 from scipy.linalg import norm
 from numpy.testing import assert_allclose, assert_array_almost_equal
@@ -20,7 +21,8 @@ import amfe.ui as ui
 
 class StructuralComponentTest(TestCase):
     def setUp(self):
-        mesh_input = amfe_dir('tests/meshes/gid_json_4_tets.json')
+        here = dirname(abspath(__file__))
+        mesh_input = join(here, 'meshes', 'gid_json_4_tets.json')
         mesh_reader = GidJsonMeshReader(mesh_input)
         converter = AmfeMeshConverter()
         mesh_reader.parse(converter)
@@ -74,7 +76,8 @@ class StructuralComponentTest(TestCase):
 
         # 1D-deformation resulting in 1D-strains and -stresses
         # 2 Quad4-Elements
-        mesh_input = amfe_dir('tests/meshes/gmsh_2_quads.msh')
+        here = dirname(abspath(__file__))
+        mesh_input = join(here, 'meshes', 'gmsh_2_quads.msh')
         mesh_reader = GmshAsciiMeshReader(mesh_input)
         converter = AmfeMeshConverter()
         mesh_reader.parse(converter)
@@ -107,7 +110,8 @@ class StructuralComponentTest(TestCase):
         assert_array_almost_equal(stresses_actual, stresses_desired)
 
         # 8 Tri3-Elements
-        mesh_input = amfe_dir('tests/meshes/gmsh_8_tris.msh')
+        here = dirname(abspath(__file__))
+        mesh_input = join(here, 'meshes', 'gmsh_8_tris.msh')
         mesh_reader = GmshAsciiMeshReader(mesh_input)
         converter = AmfeMeshConverter()
         mesh_reader.parse(converter)

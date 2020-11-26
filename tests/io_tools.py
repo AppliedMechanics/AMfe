@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import pickle
 import os
-from amfe.io.tools import check_dir, amfe_dir
 from amfe.mesh import Mesh
 
 
@@ -75,10 +74,7 @@ def create_amfe_obj():
     return meshobj
 
 
-def clean_test_outputs():
-    directory = amfe_dir('results/.tests/')
-    check_dir(directory + 'test.txt')
-    directory = amfe_dir('results/.tests/')
+def clean_test_outputs(directory):
     for f in os.listdir(directory):
         if f == 'hdf5_dummy.hdf5' or f == 'hdf5postprocessing.hdf5':
             return
