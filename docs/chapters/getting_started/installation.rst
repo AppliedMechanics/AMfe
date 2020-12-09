@@ -85,3 +85,19 @@ Click on one of the following links for details:
 
 :ref:`3. Installation Already built code <installation_wheel>`
 
+
+Remarks on AMfe-versions
+------------------------
+Release-tags have three digits separated by points. These release-tags increase from one version of AMfe to the
+next one, depending on the amount and range of new features and changes. Each version of the Master-branch gets a
+new release-tag based on the following classification:
+
+X.Y.Z =>    X: major release => large amount of new features and changes or major restructuring compared to previous
+                                major release
+            Y: minor release => new features and contributions
+            Z: bug fixes     => bug fixes
+
+For users and developers it is generally recommended to check the release notes of a new version, because APIs
+might change especially when upgrading to a new major release.
+
+
