@@ -1,15 +1,18 @@
 #
-# Copyright (c) 2020 TECHNICAL UNIVERSITY OF MUNICH, DEPARTMENT OF MECHANICAL ENGINEERING, CHAIR OF APPLIED MECHANICS,
+# Copyright (c) 2020 TECHNICAL UNIVERSITY OF MUNICH,
+# DEPARTMENT OF MECHANICAL ENGINEERING, CHAIR OF APPLIED MECHANICS,
 # BOLTZMANNSTRASSE 15, 85748 GARCHING/MUNICH, GERMANY, RIXEN@TUM.DE.
 #
-# Distributed under 3-Clause BSD license. See LICENSE file for more information.
+# Distributed under 3-Clause BSD license.
+# See LICENSE file for more information.
 #
 # AUTHOR: Christian Meyer
 r"""
 .. versionadded:: 1.2.0
 
 This module implements abstract base classes for shape-functions.
-Each shape-function must implement the interface of the abstract base class to interact with other objects of amfe's
+Each shape-function must implement the interface of the abstract base class to
+interact with other objects of amfe's
 element module.
 
 Notes about methods returning the boundaries for integration
@@ -18,7 +21,8 @@ Notes about methods returning the boundaries for integration
 The order of integration over a shapefunction is assumed as follows:
 
 .. math::
-    \int\limits_{\xi_{\mathrm{lower}}}^{\xi_{\mathrm{upper}}} f(\xi)\ \mathrm{d}\xi
+    \int\limits_{\xi_{\mathrm{lower}}}^{\xi_{\mathrm{upper}}}
+    f(\xi)\ \mathrm{d}\xi
 
 for one dimensional shape-functions.
 
@@ -32,23 +36,47 @@ for two dimensional shape-functions.
 .. math::
     \int\limits_{\xi_{\mathrm{lower}}}^{\xi_{\mathrm{upper}}}
     \int\limits_{\eta_{\mathrm{lower}}(\xi)}^{\eta_{\mathrm{upper}}(\xi)}
-    \int\limits_{\zeta_{\mathrm{lower}}(\xi, \eta)}^{\zeta_{\mathrm{upper}}(\xi, \eta)}
+    \int\limits_{\zeta_{\mathrm{lower}}(\xi, \eta)}^{\zeta_{\mathrm{upper}}
+    (\xi, \eta)}
     f(\xi, \eta, \zeta) \ \mathrm{d}\zeta \ \mathrm{d}\eta \ \mathrm{d}\xi
 
 for three dimensional shape-functions.
 
 """
 
-__all__ = ['ShapeFunction1DBase',
+__all__ = ['Shape',
+           'ShapeFunction1DBase',
            'ShapeFunction2DBase',
            'ShapeFunction3DBase',
-           'ShapeFunctionFactoryBase'
+           'ShapeFunction1DFactoryBase',
+           'ShapeFunction2DFactoryBase',
+           'ShapeFunction3DFactoryBase',
            ]
 
 from abc import ABC, abstractmethod
+from enum import Enum
+
+
+class Shape(Enum):
+    """
+    This class defines constants to define shapes
+    """
+    LINE2 = 12
+    LINE3 = 13
+    TRI3 = 23
+    QUAD4 = 24
+    TRI6 = 26
+    QUAD8 = 28
+    TET4 = 34
+    HEXA8 = 38
+    TET10 = 310
+    HEXA20 = 320
 
 
 class ShapeFunction1DBase(ABC):
+    """
+    This class provides an interface for one-dimensional Shape-Functions
+    """
     @abstractmethod
     def evaluate(self, xi, out):
         """
@@ -59,7 +87,8 @@ class ShapeFunction1DBase(ABC):
         xi : float
             Value of local coordinate xi.
         out : array_like
-            Array object in which the evaluated shape-function coordinates are written.
+            Array object in which the evaluated shape-function coordinates are
+            written.
 
         Returns
         -------
@@ -116,7 +145,8 @@ class ShapeFunction1DBase(ABC):
         """
         Returns the number of nodes of the shape function.
 
-        This is typically the length of the array that must be passed to the evaluate function.
+        This is typically the length of the array that must be passed
+        to the evaluate function.
 
         Returns
         -------
@@ -129,12 +159,14 @@ class ShapeFunction1DBase(ABC):
     @abstractmethod
     def xi_lower():
         """
-        Returns the lowest value of coordinate xi for integration over the shape-function's domain.
+        Returns the lowest value of coordinate xi for integration over the
+        shape-function's domain.
 
         Returns
         -------
         xi_lower : float
-            Lowest value of coordinate xi for integration over the shape-function's domain.
+            Lowest value of coordinate xi for integration over
+            the shape-function's domain.
         """
         raise NotImplementedError
 
@@ -142,22 +174,28 @@ class ShapeFunction1DBase(ABC):
     @abstractmethod
     def xi_upper():
         """
-        Returns the upper value of coordinate xi for integration over the shape-function's domain.
+        Returns the upper value of coordinate xi for integration over the
+        shape-function's domain.
 
         Returns
         -------
         xi_upper : float
-            Upper value of coordinate xi for integration over the shape-function's domain.
+            Upper value of coordinate xi for integration over the
+            shape-function's domain.
         """
         raise NotImplementedError
 
 
 class ShapeFunction2DBase(ABC):
+    """
+    This class provides an interface for two-dimensional Shape-Functions
+    """
     @staticmethod
     @abstractmethod
     def eta_lower(xi):
         """
-        Returns the lowest value of coordinate eta for integration over the shape-function's domain.
+        Returns the lowest value of coordinate eta for integration over the
+        shape-function's domain.
 
         Parameters
         ----------
@@ -167,7 +205,8 @@ class ShapeFunction2DBase(ABC):
         Returns
         -------
         eta_lower : float
-            Lowest value of coordinate eta for integration over the shape-function's domain.
+            Lowest value of coordinate eta for integration over the
+            shape-function's domain.
         """
         raise NotImplementedError
 
@@ -175,7 +214,8 @@ class ShapeFunction2DBase(ABC):
     @abstractmethod
     def eta_upper(xi):
         """
-        Returns the upper value of coordinate eta for integration over the shape-function's domain.
+        Returns the upper value of coordinate eta for integration over the
+        shape-function's domain.
 
         Parameters
         ----------
@@ -185,7 +225,8 @@ class ShapeFunction2DBase(ABC):
         Returns
         -------
         eta_upper : float
-            Lowest value of coordinate xi for integration over the shape-function's domain.
+            Lowest value of coordinate xi for integration over the
+            shape-function's domain.
         """
         raise NotImplementedError
 
@@ -201,7 +242,8 @@ class ShapeFunction2DBase(ABC):
         eta : float
             Value of local coordinate eta.
         out : array_like
-            Array object in which the evaluated shape-function coordinates are written.
+            Array object in which the evaluated shape-function coordinates
+            are written.
 
         Returns
         -------
@@ -212,7 +254,8 @@ class ShapeFunction2DBase(ABC):
     @abstractmethod
     def jacobian(self, xi, eta, out):
         """
-        Evaluates the jacobian of the shape-function at (xi, eta) with respect to (xi, eta).
+        Evaluates the jacobian of the shape-function at (xi, eta)
+        with respect to (xi, eta).
 
         Parameters
         ----------
@@ -260,7 +303,8 @@ class ShapeFunction2DBase(ABC):
         """
         Returns the number of nodes of the shape function.
 
-        This is typically the length of the array that must be passed to the evaluate function.
+        This is typically the length of the array that must be passed
+        to the evaluate function.
 
         Returns
         -------
@@ -273,12 +317,14 @@ class ShapeFunction2DBase(ABC):
     @abstractmethod
     def xi_lower():
         """
-        Returns the lowest value of coordinate xi for integration over the shape-function's domain.
+        Returns the lowest value of coordinate xi for integration over the
+        shape-function's domain.
 
         Returns
         -------
         xi_lower : float
-            Lowest value of coordinate xi for integration over the shape-function's domain.
+            Lowest value of coordinate xi for integration over the
+            shape-function's domain.
         """
         raise NotImplementedError
 
@@ -286,22 +332,28 @@ class ShapeFunction2DBase(ABC):
     @abstractmethod
     def xi_upper():
         """
-        Returns the upper value of coordinate xi for integration over the shape-function's domain.
+        Returns the upper value of coordinate xi for integration over the
+        shape-function's domain.
 
         Returns
         -------
         xi_upper : float
-            Upper value of coordinate xi for integration over the shape-function's domain.
+            Upper value of coordinate xi for integration over the
+            shape-function's domain.
         """
         raise NotImplementedError
 
 
 class ShapeFunction3DBase(ABC):
+    """
+    This class provides an interface for three-dimensional Shape-Functions
+    """
     @staticmethod
     @abstractmethod
     def eta_lower(xi):
         """
-        Returns the lowest value of coordinate eta for integration over the shape-function's domain.
+        Returns the lowest value of coordinate eta for integration over the
+        shape-function's domain.
 
         Parameters
         ----------
@@ -311,7 +363,8 @@ class ShapeFunction3DBase(ABC):
         Returns
         -------
         eta_lower : float
-            Lowest value of coordinate eta for integration over the shape-function's domain.
+            Lowest value of coordinate eta for integration over the
+            shape-function's domain.
         """
         raise NotImplementedError
 
@@ -319,7 +372,8 @@ class ShapeFunction3DBase(ABC):
     @abstractmethod
     def eta_upper(xi):
         """
-        Returns the upper value of coordinate eta for integration over the shape-function's domain.
+        Returns the upper value of coordinate eta for integration over the
+        shape-function's domain.
 
         Parameters
         ----------
@@ -329,7 +383,8 @@ class ShapeFunction3DBase(ABC):
         Returns
         -------
         eta_upper : float
-            Upper value of coordinate eta for integration over the shape-function's domain.
+            Upper value of coordinate eta for integration over the
+            shape-function's domain.
         """
         raise NotImplementedError
 
@@ -347,7 +402,8 @@ class ShapeFunction3DBase(ABC):
         zeta : float
             Value of local coordinate zeta.
         out : array_like
-            Array object in which the evaluated shape-function coordinates are written.
+            Array object in which the evaluated shape-function
+            coordinates are written.
 
         Returns
         -------
@@ -358,7 +414,8 @@ class ShapeFunction3DBase(ABC):
     @abstractmethod
     def jacobian(self, xi, eta, zeta, out):
         """
-        Evaluates the jacobian of the shape-function at (xi, eta, zeta) with respect to (xi, eta, zeta).
+        Evaluates the jacobian of the shape-function at (xi, eta, zeta)
+        with respect to (xi, eta, zeta).
 
         Parameters
         ----------
@@ -408,7 +465,8 @@ class ShapeFunction3DBase(ABC):
         """
         Returns the number of nodes of the shape function.
 
-        This is typically the length of the array that must be passed to the evaluate function.
+        This is typically the length of the array that must be passed
+        to the evaluate function.
 
         Returns
         -------
@@ -421,12 +479,14 @@ class ShapeFunction3DBase(ABC):
     @abstractmethod
     def xi_lower():
         """
-        Returns the lowest value of coordinate xi for integration over the shape-function's domain.
+        Returns the lowest value of coordinate xi for integration over the
+        shape-function's domain.
 
         Returns
         -------
         xi_lower : float
-            Lowest value of coordinate xi for integration over the shape-function's domain.
+            Lowest value of coordinate xi for integration over the
+            shape-function's domain.
         """
         raise NotImplementedError
 
@@ -434,12 +494,14 @@ class ShapeFunction3DBase(ABC):
     @abstractmethod
     def xi_upper():
         """
-        Returns the upper value of coordinate xi for integration over the shape-function's domain.
+        Returns the upper value of coordinate xi for integration over the
+        shape-function's domain.
 
         Returns
         -------
         xi_upper : float
-            Upper value of coordinate xi for integration over the shape-function's domain.
+            Upper value of coordinate xi for integration over the
+            shape-function's domain.
         """
         raise NotImplementedError
 
@@ -447,7 +509,8 @@ class ShapeFunction3DBase(ABC):
     @abstractmethod
     def zeta_lower(xi, eta):
         """
-        Returns the lowest value of coordinate zeta for integration over the shape-function's domain.
+        Returns the lowest value of coordinate zeta for integration over the
+        shape-function's domain.
 
         Parameters
         ----------
@@ -459,7 +522,8 @@ class ShapeFunction3DBase(ABC):
         Returns
         -------
         zeta_lower : float
-            Lowest value of coordinate zeta for integration over the shape-function's domain.
+            Lowest value of coordinate zeta for integration over the
+            shape-function's domain.
         """
         raise NotImplementedError
 
@@ -467,7 +531,8 @@ class ShapeFunction3DBase(ABC):
     @abstractmethod
     def zeta_upper(xi, eta):
         """
-        Returns the upper value of coordinate zeta for integration over the shape-function's domain.
+        Returns the upper value of coordinate zeta for integration over the
+        shape-function's domain.
 
         Parameters
         ----------
@@ -479,12 +544,17 @@ class ShapeFunction3DBase(ABC):
         Returns
         -------
         zeta_upper : float
-            Upper value of coordinate zeta for integration over the shape-function's domain.
+            Upper value of coordinate zeta for integration over the
+            shape-function's domain.
         """
         raise NotImplementedError
 
 
-class ShapeFunctionFactoryBase(ABC):
+class ShapeFunction1DFactoryBase(ABC):
+    """
+    This class provides an interface for factory classes that create
+    Shape-Function objects for one dimensional shape functions
+    """
     @abstractmethod
     def set_shape(self, shape):
         """
@@ -492,8 +562,10 @@ class ShapeFunctionFactoryBase(ABC):
 
         Parameters
         ----------
-        shape : str
-            String indicating the shape of the shapefunction that is to be returned when invoking create().
+        shape : Shape
+            Shape constant of type Shape
+            indicating the shape of the shapefunction that is to be
+            returned when invoking create().
 
         Returns
         -------
@@ -508,7 +580,79 @@ class ShapeFunctionFactoryBase(ABC):
 
         Returns
         -------
-        obj : {ShapeFunction1DBase, ShapeFunction2DBase, ShapeFunction3DBase}
-            Shape-function object with interface of ShapeFunction1DBase, ShapeFunction2DBase or ShapeFunction3DBase.
+        obj : ShapeFunction1DBase
+            Shape-function object with interface of ShapeFunction1DBase.
+        """
+        raise NotImplementedError
+
+
+class ShapeFunction2DFactoryBase(ABC):
+    """
+    This class provides an interface for factory classes that create
+    Shape-Function objects for two dimensional shape functions
+    """
+    @abstractmethod
+    def set_shape(self, shape):
+        """
+        Set the shape of the shape-function to build.
+
+        Parameters
+        ----------
+        shape : Shape
+            Shape constant of type Shape
+            indicating the shape of the shapefunction that is to be
+            returned when invoking create().
+
+        Returns
+        -------
+        None
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def create(self):
+        """
+        Returns a shape-function object
+
+        Returns
+        -------
+        obj : ShapeFunction2DBase
+            Shape-function object with interface of ShapeFunction2DBase.
+        """
+        raise NotImplementedError
+
+
+class ShapeFunction3DFactoryBase(ABC):
+    """
+    This class provides an interface for factory classes that create
+    Shape-Function objects for three dimensional shape functions
+    """
+    @abstractmethod
+    def set_shape(self, shape):
+        """
+        Set the shape of the shape-function to build.
+
+        Parameters
+        ----------
+        shape : Shape
+            Shape constant of type Shape
+            indicating the shape of the shapefunction that is to be
+            returned when invoking create().
+
+        Returns
+        -------
+        None
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def create(self):
+        """
+        Returns a shape-function object
+
+        Returns
+        -------
+        obj : ShapeFunction3DBase
+            Shape-function object with interface of ShapeFunction1DBase.
         """
         raise NotImplementedError
