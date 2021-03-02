@@ -19,6 +19,8 @@ amfe.constraint improvements
 amfe.element improvements
 -------------------------
 - Added Shape-Function Base module.
+- Added Numpy-Implementation of Shapefunctions
+- Added Factory for Numpy-Implementation of Shapefunctions
 
 amfe.fortran improvements
 -------------------------
