@@ -12,13 +12,13 @@ AMfe structure...
 .. comment::
     .. toctree::
 
-        general
-        material
-        element
-        mesh
-        assembly
-        boundary_conditions
-        mechanical_system
-        solving
-        postprocessing
-        reduced_basis
+    general
+    material
+    element
+    mesh
+    assembly
+    boundary_conditions
+    mechanical_system
+    solving
+    postprocessing
+    reduced_basis
