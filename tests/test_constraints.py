@@ -526,7 +526,6 @@ class TestEqualDisplacementConstraint(TestCase):
         assert_array_equal(a_1, np.array([0.0], ndmin=1))
 
 
-@skip("temporarily disabled")
 class TestFixedDistanceToPlaneConstraint(TestCase):
     def setUp(self):
         """
