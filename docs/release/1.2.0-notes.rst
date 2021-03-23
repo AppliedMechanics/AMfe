@@ -15,6 +15,7 @@ amfe.assembly improvements
 
 amfe.constraint improvements
 ----------------------------
+- Added Fixed Distance to Plane constraint.
 
 amfe.element improvements
 -------------------------

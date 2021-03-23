@@ -41,8 +41,10 @@ The second time derivative of the constraint function describes the constraints 
 """
 
 import numpy as np
+from sympy import symbols, Matrix, lambdify
+from sympy import sqrt as sysqrt
 
-from ..linalg.norms import vector_norm
+from amfe.linalg.norms import vector_norm
 
 
 __all__ = ['NonholonomicConstraintBase',
@@ -1137,15 +1139,53 @@ class EqualDisplacementConstraint(HolonomicConstraintBase):
 
 class FixedDistanceToPlaneConstraint(HolonomicConstraintBase):
     """
-    Class to define a fixed distance to plane constraint where three nodes define the plane
-    and one node has a fixed distance to it.
+    Class to define a fixed distance to plane constraint where three nodes
+    define the plane and one node has a fixed distance to it.
+
+    The order of dofs is the following:
+    The first three points define the plane,
+    the fourth point shall have fixed distance:
+    The ordering is [x1 y1 z1 x2 y2 z2 x3 y3 z3 x4 y4 z4]
+    The same ordering is used for the X-coords in reference domain.
     """
     NO_OF_CONSTRAINTS = 1
 
     def __init__(self):
         super().__init__()
 
-        raise NotImplementedError('Theano is not compatible anymore, the constraint must be reimplemented')
+        x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4 = symbols('x1, x2 ,x3,'
+                                                                 'x4, y1, y2,'
+                                                                 'y3, y4, z1,'
+                                                                 'z2, z3, z4')
+
+        x_12 = x2 - x1
+        y_12 = y2 - y1
+        z_12 = z2 - z1
+        x_13 = x3 - x1
+        y_13 = y3 - y1
+        z_13 = z3 - z1
+        x_14 = x4 - x1
+        y_14 = y4 - y1
+        z_14 = z4 - z1
+
+        def cross(x_1, y_1, z_1, x_2, y_2, z_2):
+            x_3 = y_1 * z_2 - z_1 * y_2
+            y_3 = z_1 * x_2 - x_1 * z_2
+            z_3 = x_1 * y_2 - y_1 * x_2
+            return x_3, y_3, z_3
+
+        x_p, y_p, z_p = cross(x_12, y_12, z_12, x_13, y_13, z_13)
+        area = sysqrt(x_p ** 2 + y_p ** 2 + z_p ** 2)
+        x_n = x_p / area
+        y_n = y_p / area
+        z_n = z_p / area
+
+        g = x_14 * x_n + y_14 * y_n + z_14 * z_n
+        G = Matrix([g])
+        var = [x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4]
+        jac_g = G.jacobian(var)
+
+        self.func_jac = lambdify([var], jac_g, 'numpy')
 
     def g(self, X_local, u_local, t):
         """
@@ -1214,8 +1254,9 @@ class FixedDistanceToPlaneConstraint(HolonomicConstraintBase):
         B: ndarray
             Partial derivative of constraint function g w.r.t. displacements u
         """
-        raise NotImplementedError('Theano is not compatible to AMfe anymore. This constraint is not implemented'
-                                  'for now')
+        x = X_local + u_local
+
+        return self.func_jac(x)[0]
 
     def b(self, X, u, t):
         """
