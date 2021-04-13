@@ -16,3 +16,5 @@ Gabriel Erwin Gruber for implementation of many of the g and B functions of the 
 Ferdinand Elhardt for implementation of __str__ functions and enhancements in docs and ui
 Thej Kiran Ravichandran for helping implementing ECSW and DEIM methods
 Yifei Wang for implementation of stress recovery algorithms
+Tahar Arjoune for implementation helping to fix bugs and make enhancements in: Fixed Distance to Plane constraint, GMSH-Reader, Mechanical System, First Order System
+
