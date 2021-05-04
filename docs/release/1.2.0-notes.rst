@@ -28,6 +28,7 @@ amfe.fortran improvements
 
 amfe.io improvements
 --------------------
+- Added a reader for gmsh ascii files of version 4
 
 amfe.linalg improvements
 ------------------------

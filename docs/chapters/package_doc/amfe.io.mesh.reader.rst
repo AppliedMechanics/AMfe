@@ -39,6 +39,14 @@ io mesh reader gmsh_ascii_mesh_reader
     :undoc-members:
     :show-inheritance:
 
+io mesh reader gmsh_ascii_v4_mesh_reader
+----------------------------------------
+
+.. automodule:: amfe.io.mesh.reader.gmsh_ascii_v4_mesh_reader
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 io mesh reader hdf5_mesh_reader
 -------------------------------
 
