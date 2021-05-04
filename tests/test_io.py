@@ -39,7 +39,7 @@ from amfe.io.postprocessing.base import PostProcessorWriter
 from amfe.mesh import Mesh
 
 from tests.tools import CustomDictAssertTest
-from .io_tools import load_object, create_amfe_obj, clean_test_outputs
+from tests.io_tools import load_object, create_amfe_obj, clean_test_outputs
 
 
 class DummyMeshConverter(MeshConverter):

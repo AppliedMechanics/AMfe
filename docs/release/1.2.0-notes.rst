@@ -75,3 +75,5 @@ Backwards incompatible changes
 Other changes
 =============
 
+- Fixed import issue in tests for test_io
+
