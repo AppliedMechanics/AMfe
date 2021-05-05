@@ -47,6 +47,7 @@ amfe.parametric improvements
 
 amfe.solver improvements
 ------------------------
+- translators.py Removed unnecessary layer in creation of constrained systems from components to avoid double memoizing and to have a cleaner structure
 
 amfe.forces improvements
 ------------------------

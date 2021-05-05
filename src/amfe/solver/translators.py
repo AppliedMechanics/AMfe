@@ -314,12 +314,8 @@ def create_constrained_mechanical_system_from_component(structural_component, co
     system : amfe.solver.translators.MechanicalSystem
     formulation : amfe.constraint.ConstraintFormulation
     """
-    system_unconstrained = create_mechanical_system_from_structural_component(structural_component,
-                                                                              constant_mass=constant_mass,
-                                                                              constant_damping=constant_damping,
-                                                                              all_linear=all_linear)
-    constraint_formulation = _create_constraint_formulation(system_unconstrained, structural_component,
-                                                            constraint_formulation, **formulation_options)
+    constraint_formulation = _create_constraint_formulation(structural_component, constraint_formulation,
+                                                            **formulation_options)
 
     constants = _set_constants(constant_mass, constant_damping, all_linear)
 
@@ -351,7 +347,7 @@ def _set_constants(constant_mass, constant_damping, all_linear):
     return constants
 
 
-def _create_constraint_formulation(mechanical_system, component, formulation, **formulation_options):
+def _create_constraint_formulation(component, formulation, **formulation_options):
     """
     Internal method that creates a constraint formulation for a mechanical system combined with the constraints
     from a component
@@ -372,36 +368,36 @@ def _create_constraint_formulation(mechanical_system, component, formulation, **
     constraint_formulation : amfe.constraint.ConstraintFormulation
         A ConstraintFormulation object that applies the constraints on the mechanical system.
     """
-    no_of_dofs_unconstrained = mechanical_system.dimension
+    no_of_dofs_unconstrained = component.mapping.no_of_dofs
     if formulation == 'boolean':
 
         constraint_formulation = BooleanEliminationConstraintFormulation(no_of_dofs_unconstrained,
-                                                                         mechanical_system.M,
-                                                                         mechanical_system.f_int,
+                                                                         component.M,
+                                                                         component.f_int,
                                                                          component.B,
-                                                                         mechanical_system.f_ext,
-                                                                         mechanical_system.K,
-                                                                         mechanical_system.D,
+                                                                         component.f_ext,
+                                                                         component.K,
+                                                                         component.D,
                                                                          g_func=
                                                                          component.g_holo)
     elif formulation == 'lagrange':
         constraint_formulation = SparseLagrangeMultiplierConstraintFormulation(no_of_dofs_unconstrained,
-                                                                               mechanical_system.M,
-                                                                               mechanical_system.f_int,
+                                                                               component.M,
+                                                                               component.f_int,
                                                                                component.B,
-                                                                               mechanical_system.f_ext,
-                                                                               mechanical_system.K,
-                                                                               mechanical_system.D,
+                                                                               component.f_ext,
+                                                                               component.K,
+                                                                               component.D,
                                                                                g_func=
                                                                                component.g_holo)
     elif formulation == 'nullspace_elimination':
         constraint_formulation = NullspaceConstraintFormulation(no_of_dofs_unconstrained,
-                                                                mechanical_system.M,
-                                                                mechanical_system.f_int,
+                                                                component.M,
+                                                                component.f_int,
                                                                 component.B,
-                                                                mechanical_system.f_ext,
-                                                                mechanical_system.K,
-                                                                mechanical_system.D,
+                                                                component.f_ext,
+                                                                component.K,
+                                                                component.D,
                                                                 g_func=component.g_holo,
                                                                 b_func=component.b,
                                                                 a_func=component.a)
