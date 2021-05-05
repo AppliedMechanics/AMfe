@@ -10,15 +10,12 @@ import os
 import numpy as np
 import pandas as pd
 import h5py
-import pickle
-
-from numpy.testing import assert_allclose, assert_array_equal, \
-    assert_array_almost_equal
+from numpy.testing import assert_allclose, assert_array_equal
 from pandas.testing import assert_frame_equal
 
 from amfe.component import StructuralComponent
 from amfe.material import KirchhoffMaterial
-from amfe.solver import AmfeSolution, AmfeSolutionHdf5
+from amfe.solver import AmfeSolution
 
 # Import Mesh Reader
 from amfe.io.mesh.reader import GidAsciiMeshReader, GidJsonMeshReader, \
@@ -41,10 +38,8 @@ from amfe.io.postprocessing.reader import AmfeHdf5PostProcessorReader, \
 from amfe.io.postprocessing.writer import Hdf5PostProcessorWriter
 from amfe.io.postprocessing.base import PostProcessorWriter
 
-from amfe.mesh import Mesh
-
 from tests.tools import CustomDictAssertTest
-from tests.io_tools import load_object, create_amfe_obj, clean_test_outputs
+from tests.io_tools import create_amfe_obj, clean_test_outputs
 
 
 class DummyMeshConverter(MeshConverter):
@@ -1260,26 +1255,23 @@ class IOTest(TestCase):
         actual_list_2 = mesh_obj.el_df['partition_id'].tolist()
         actual_list_3 = mesh_obj.el_df['partitions_neighbors'].tolist()
 
-        here = dirname(abspath(__file__))
-        desired_list_1 = load_object(join(here, 'pickle_obj', 'l1.pkl'))
-        desired_list_2 = load_object(join(here, 'pickle_obj', 'l2.pkl'))
-        desired_list_3 = load_object(join(here, 'pickle_obj', 'l3.pkl'))
-
-        def helper(x):
-            if x is None:
-                return 0
-            return x
-
-        def helper2(x):
-            if x is None:
-                return ()
-            elif type(x) == int:
-                return (x,)
-            return x
-
-        desired_list_1 = [helper(val) for val in desired_list_1]
-        desired_list_2 = [helper(val) for val in desired_list_2]
-        desired_list_3 = [helper2(val) for val in desired_list_3]
+        desired_list_1 = [0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 2, 1, 1, 1, 2, 2,
+                          1, 1, 2, 2, 1, 2, 2, 2, 2, 1, 1, 1, 2, 2, 2, 2, 2, 1,
+                          2, 3, 3, 2, 2, 4, 4, 2, 2, 4, 4, 2, 2, 4, 4, 3, 3, 4,
+                          3, 2, 2, 3, 4, 3, 2, 3, 4, 3, 1, 2, 2, 1]
+        desired_list_2 = [0, 0, 0, 0, 0, 0, 8, 8, 8, 7, 7, 4, 2, 2, 2, 2, 2, 1,
+                          1, 1, 1, 3, 3, 3, 5, 5, 6, 6, 6, 6, 6, 8, 8, 6, 6, 6,
+                          8, 8, 6, 6, 8, 8, 5, 5, 7, 7, 5, 5, 7, 7, 3, 3, 4, 4,
+                          4, 3, 2, 4, 4, 3, 2, 2, 1, 1, 2, 2, 1, 1]
+        desired_list_3 = [(), (), (), (), (), (), (), (), (7,), (8,), (4,),
+                          (7, 2), (4,), (), (), (), (1,), (2,), (), (), (3,),
+                          (1,), (), (5,), (3,), (6,), (5,), (), (), (), (8,),
+                          (6,), (6,), (8,), (8,), (), (6,), (5, 6), (5, 8),
+                          (5,), (7,), (5, 6, 7), (6, 8, 7), (6,), (8,),
+                          (3, 5, 8), (3, 7, 8), (3,), (4,), (3, 4, 5),
+                          (4, 7, 5), (4, 5), (2, 7), (2, 3, 7), (3, 7),
+                          (4,), (4,), (1, 2), (1, 2, 3), (1, 4), (4,),
+                          (1, 4), (2, 4, 3), (3, 4), (), (1,), (2,), ()]
 
         self.assertListEqual(actual_list_1, desired_list_1)
         self.assertListEqual(actual_list_2, desired_list_2)
@@ -1499,18 +1491,6 @@ class PostProcessorTest(TestCase):
                            field_desired['index'])
         assert_array_equal(field_acceleration_actual['mesh_entity_type'],
                            field_desired['mesh_entity_type'])
-
-
-def save_object(obj, filename):
-    with open(filename, 'wb') as output:
-        pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
-
-
-def load_object(filename):
-    with open(filename, 'rb') as input:
-        obj = pickle.load(input)
-    return obj
-
 
 # Example for testing one certain test:
 if __name__ == '__main__':
