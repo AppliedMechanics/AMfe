@@ -75,6 +75,7 @@ Backwards incompatible changes
 
 Other changes
 =============
+- Removed Pickle files in tests since they are not safe for different python versions.
 
 - Fixed import issue in tests for test_io
 
