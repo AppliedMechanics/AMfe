@@ -77,9 +77,10 @@ class Mesh:
 
         # -- NODE INFORMATION --
         if dimension == 3:
-            self.nodes_df = pd.DataFrame(columns=('x', 'y', 'z'))
+            self.nodes_df = pd.DataFrame(columns=('x', 'y', 'z'),
+                                         dtype='float')
         elif dimension == 2:
-            self.nodes_df = pd.DataFrame(columns=('x', 'y'))
+            self.nodes_df = pd.DataFrame(columns=('x', 'y'), dtype='float')
         else:
             raise ValueError('Mesh dimension must be 2 or 3')
 
