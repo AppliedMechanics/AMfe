@@ -74,6 +74,10 @@ Deprecated features
 Backwards incompatible changes
 ==============================
 
+Bug Fixes
+=========
+- Fixed Bug in Mesh object where dtype of nodes_df can fail in some circumstances.
+
 Other changes
 =============
 - Removed Pickle files in tests since they are not safe for different python versions.
