@@ -9,77 +9,70 @@ stages:
 default:
   tags:
     - docker
-  image: hyperred/amfe-gitlab-ci:0.1.2
+  # image: hyperred/amfe-gitlab-ci:0.1.2
+  image: continuumio/miniconda3:4.8.2
   # This image already sets the path variable such that the python
   # is in /opt/conda/envs/amfe-dev/bin/python (the clean environment from docker image)
-
-build_without_fortran:
-  stage: build
-  script:
-    - python setup.py develop no_fortran
 
 build_with_fortran:
   stage: build
   script:
-    - /opt/conda/bin/conda install numpy -n amfe-dev
-    - python setup.py develop
+    - apt-get update
+    - apt-get install -y libgl1-mesa-glx gcc gfortran
+    - conda install pip wheel setuptools jinja2 Cython>=0.29.20 numpy sphinx pytest pytest-cov
+    - python setup.py sdist
+    - cd dist
+    - pip wheel --no-deps amfe-*.tar.gz
+    - cd ..
+  artifacts:
+    name: amfe-pip-pkg-linux
+    paths:
+      - dist/*
+    expire_in: 2 weeks
+
+build_without_fortran:
+  stage: build
+  script:
+    - python -m pip install wheel setuptools jinja2 Cython>=0.29.20 numpy sphinx pytest pytest-cov
+    - python setup.py develop no_fortran
 
 unittest:
   stage: test
   script:
-    - /opt/conda/bin/conda install numpy -n amfe-dev
-    - python setup.py develop
-    - /opt/conda/bin/conda install pytest coverage pylint mkl -n amfe-dev
-    - coverage run --source=./src/amfe/ -m pytest
-    - coverage report
-
+    - apt-get update
+    - apt-get install -y libgl1-mesa-glx gcc gfortran
+    - cd dist
+    - python -m pip install amfe --find-links .
+    - python -m pip install pytest pytest-cov
+    - cd ../tests
+    - pytest --cov=amfe .
 
 documentation_test:
   stage: test
   when: always
   script:
-    - /opt/conda/bin/conda install numpy -n amfe-dev
-    - python setup.py develop
-    - python setup.py build_sphinx
+    - cd dist
+    - python -m pip install amfe --find-links .
+    - cd ..
+    - sphinx-build -b html -d docs/_build/doctrees   ./docs docs/_build/html
 
 
 language_quality_test:
   stage: test
   when: always
   script:
-    - /opt/conda/bin/conda install pylint -n amfe-dev
+    - conda install pylint
+    - cd dist
+    - python -m pip install amfe --find-links .
+    - cd ..
     - pylint amfe || exit 0 # pylint always exits with nonzero...
-
-build_wheel_for_linux_developer:
-  stage: deploy
-  script:
-    - /opt/conda/bin/conda install numpy -n amfe-dev
-    - python setup.py bdist_wheel
-  artifacts:
-    name: AMfe-linux
-    paths:
-      - dist/*.whl
-    expire_in: 2 months
-  only:
-    - developer
-
-build_wheel_for_linux_master:
-  stage: deploy
-  script:
-    - /opt/conda/bin/conda install numpy -n amfe-dev
-    - python setup.py bdist_wheel
-  artifacts:
-    name: AMfe-linux
-    paths:
-      - dist/*.whl
-  only:
-    - master
 
 pages:
   stage: deploy
   script:
-    - /opt/conda/bin/conda install numpy -n amfe-dev
-    - python setup.py develop
+    - cd dist
+    - python -m pip install amfe --find-links .
+    - cd ..
     - sphinx-build -b html -d docs/_build/doctrees   ./docs docs/_build/html
     - mv docs/_build/html public
   artifacts:

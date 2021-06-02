@@ -1,8 +1,16 @@
 # This file includes all distributed files that are not recognized by setup.py
 include README.md
 include LICENSE
+include CONTRIBUTING.md
+include meta.cfg
+include pyproject.toml
+include THANKS.txt
+include pylintrc
 recursive-include docs *.rst build_doc *.bat Makefile *.py
+recursive-include src/amfe/fortran *.f90
+recursive-include src/amfe/fortran *.pyf
 prune docs/_build
+include setup.py
 recursive-include docs/static *
 recursive-include examples *
 recursive-include meshes *
