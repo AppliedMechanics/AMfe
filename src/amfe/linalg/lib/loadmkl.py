@@ -6,7 +6,8 @@
 # Universitaet Muenchen.
 #
 # and
-# Redistributed under BSD-3-Clause License. See LICENSE-File for more information
+# Redistributed under BSD-3-Clause License.
+# See LICENSE-File for more information
 #
 from ctypes import CDLL
 import sys
@@ -22,7 +23,8 @@ libname = {'linux': 'libmkl_rt.so',  # works for python3 on linux
 
 def get_mkl_lib():
     """
-    Returns a ctypes.CDLL object containing mkl library if available on the system
+    Returns a ctypes.CDLL object containing mkl library if available on the
+    system
 
     Returns
     -------
@@ -36,21 +38,34 @@ def get_mkl_lib():
         if mkllib is None:
             raise ImportError('MKLlib could not be found on your system')
         return mkllib
-    except Exception:
+    except Exception as e1:
         try:
             # Look for anaconda mkl
-            if 'Anaconda' in sys.version:
-                if platform in ['linux', 'linux2', 'darwin']:
+            if platform in ['linux', 'linux2', 'darwin']:
+                try:
                     libpath = ['/']+sys.executable.split('/')[:-2] + \
                               ['lib', libname[platform]]
-                elif platform == 'win32':
+                    mkllib = CDLL(os.path.join(*libpath))
+                    return mkllib
+                except OSError:
+                    try:
+                        libpath = ['/']+sys.executable.split('/')[:-2] + \
+                                  ['lib', libname[platform]+'.1']
+                        mkllib = CDLL(os.path.join(*libpath))
+                        return mkllib
+                    except OSError:
+                        raise e1
+
+            elif platform == 'win32':
+                try:
                     libpath = sys.executable.split(os.sep)[:-1] + \
-                              ['Library', 'bin', libname[platform]]
-                else:
-                    raise TypeError('platform {} unknown'.format(platform))
-                mkllib = CDLL(os.path.join(*libpath))
-                return mkllib
+                          ['Library', 'bin', libname[platform]]
+                    mkllib = CDLL(os.path.join(*libpath))
+                    return mkllib
+                except OSError:
+                    raise e1
             else:
-                raise ImportError('MKLlib could not be found on your system')
-        except ImportError as e:
-            raise e
+                raise TypeError('platform {} unknown'.format(platform))
+
+        except Exception:
+            raise e1
